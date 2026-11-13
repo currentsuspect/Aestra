@@ -117,6 +117,7 @@ public:
 
 protected:
     // Override these for custom progress bar styles
+    NUIRect slotRect() const; ///< the 6px sunk slot (Design Spec, Progress)
     virtual void drawLinearProgress(NUIRenderer& renderer);
     virtual void drawCircularProgress(NUIRenderer& renderer);
     virtual void drawIndeterminateProgress(NUIRenderer& renderer);

@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIProgressBar.h"
+#include "../Graphics/NUIDepth.h"
 #include "NUIRenderer.h"
 #include "NUITheme.h"
 #include "NUIThemeSystem.h"
@@ -51,7 +52,7 @@ void NUIProgressBar::onThemeChanged(const NUIThemeProperties& theme)
 {
     if (!customColors_) {
         backgroundColor_ = theme.meterBackground;
-        progressColor_ = theme.meterActive;
+        progressColor_ = theme.primary; // Design Spec, Progress: the fill is primary
         borderColor_ = theme.borderSubtle;
         textColor_ = theme.textPrimary;
         borderRadius_ = theme.radiusS;
@@ -260,36 +261,36 @@ std::string NUIProgressBar::getDisplayText() const
     return result;
 }
 
+// Design Spec, Progress (locked 12 Nov 2026): a 6px sunk slot of meterBackground, cut in with an inset shade,
+// centred in the bar's bounds. Never an outline.
+NUIRect NUIProgressBar::slotRect() const
+{
+    const NUIRect b = getBounds();
+    constexpr float kSlot = 6.0f;
+    if (orientation_ == Orientation::Horizontal)
+        return {b.x, std::round(b.y + (b.height - kSlot) * 0.5f), b.width, std::min(kSlot, b.height)};
+    return {std::round(b.x + (b.width - kSlot) * 0.5f), b.y, std::min(kSlot, b.width), b.height};
+}
+
 void NUIProgressBar::drawLinearProgress(NUIRenderer& renderer)
 {
-    NUIRect bounds = getBounds();
-    
-    // Draw background
-    renderer.fillRoundedRect(bounds, borderRadius_, backgroundColor_);
-    
-    // Draw border
-    renderer.strokeRoundedRect(bounds, borderRadius_, borderWidth_, borderColor_);
-    
-    // Draw progress
+    const NUIRect slot = slotRect();
+    const float rad = Depth::Radius::pill(std::min(slot.width, slot.height));
+    Depth::bed(renderer, slot, rad, backgroundColor_, Depth::Cut::Slot);
+
+    // Known length: the slot fills with primary from the left (or the bottom).
     if (currentProgress_ > minValue_)
     {
-        double progressRatio = (currentProgress_ - minValue_) / (maxValue_ - minValue_);
-        progressRatio = std::clamp(progressRatio, 0.0, 1.0);
-        
-        NUIRect progressRect;
+        const double ratio = std::clamp((currentProgress_ - minValue_) / (maxValue_ - minValue_), 0.0, 1.0);
+        NUIRect fill = slot;
         if (orientation_ == Orientation::Horizontal)
-        {
-            float progressWidth = bounds.width * static_cast<float>(progressRatio);
-            progressRect = NUIRect(bounds.x, bounds.y, progressWidth, bounds.height);
-        }
+            fill.width = slot.width * static_cast<float>(ratio);
         else
         {
-            float progressHeight = bounds.height * static_cast<float>(progressRatio);
-            progressRect = NUIRect(bounds.x, bounds.y + bounds.height - progressHeight, 
-                                 bounds.width, progressHeight);
+            fill.height = slot.height * static_cast<float>(ratio);
+            fill.y = slot.bottom() - fill.height;
         }
-        
-        renderer.fillRoundedRect(progressRect, borderRadius_, progressColor_);
+        renderer.fillRoundedRect(fill, rad, progressColor_);
     }
 }
 
@@ -317,20 +318,14 @@ void NUIProgressBar::drawCircularProgress(NUIRenderer& renderer)
 
 void NUIProgressBar::drawIndeterminateProgress(NUIRenderer& renderer)
 {
-    NUIRect bounds = getBounds();
-    
-    // Draw background
-    renderer.fillRoundedRect(bounds, borderRadius_, backgroundColor_);
-    
-    // Draw border
-    renderer.strokeRoundedRect(bounds, borderRadius_, borderWidth_, borderColor_);
-    
-    // Draw animated progress bar
-    float barWidth = bounds.width * 0.3f; // Width of the moving bar
-    float barX = bounds.x + (bounds.width - barWidth) * static_cast<float>(indeterminatePhase_);
-    
-    NUIRect barRect(barX, bounds.y, barWidth, bounds.height);
-    renderer.fillRoundedRect(barRect, borderRadius_, progressColor_);
+    // Unknown length: the same slot with a primary segment sweeping across, easing in and out at each end.
+    const NUIRect slot = slotRect();
+    const float rad = Depth::Radius::pill(std::min(slot.width, slot.height));
+    Depth::bed(renderer, slot, rad, backgroundColor_, Depth::Cut::Slot);
+    const double t = std::clamp(indeterminatePhase_, 0.0, 1.0);
+    const float eased = static_cast<float>(t < 0.5 ? 2.0 * t * t : 1.0 - 2.0 * (1.0 - t) * (1.0 - t));
+    const float segW = slot.width * 0.3f;
+    renderer.fillRoundedRect({slot.x + (slot.width - segW) * eased, slot.y, segW, slot.height}, rad, progressColor_);
 }
 
 void NUIProgressBar::drawText(NUIRenderer& renderer)

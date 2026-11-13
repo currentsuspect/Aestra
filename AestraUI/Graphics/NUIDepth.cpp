@@ -150,6 +150,13 @@ void knobCap(NUIRenderer& renderer, const NUIPoint& centre, float radius, float 
                       {centre.x + std::cos(angle) * (r - 2.0f), centre.y + std::sin(angle) * (r - 2.0f)}, 2.0f, ink);
 }
 
+void emptyWell(NUIRenderer& renderer, const NUIRect& area) {
+    const NUIRect well{area.x + 8.0f, area.y + 8.0f, std::max(0.0f, area.width - 16.0f),
+                       std::max(0.0f, area.height - 16.0f)};
+    if (!well.isEmpty())
+        bed(renderer, well, Radius::medium, Cut::Shallow);
+}
+
 void restingPanel(NUIRenderer& renderer, const NUIRect& rect, float radius, const NUIColor& fill) {
     const auto& t = theme();
     renderer.drawShadow(rect, 0.0f, 2.0f, 4.0f, scaledAlpha(t.neuLo, 0.5f));

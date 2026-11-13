@@ -154,9 +154,6 @@ void ConfirmationDialog::onRender(AestraUI::NUIRenderer& renderer) {
     const AestraUI::NUIRect parentBounds = getBounds();
     renderer.fillRect(parentBounds, theme.overlay);
 
-    // Soft drop shadow (offsetX, offsetY, blur, color).
-    renderer.drawShadow(m_dialogRect, 0.0f, theme.spacingS, theme.spacingL, theme.shadow);
-
     // Surface and title bar come from the shared dialog chrome (spec 2 §5), so
     // this reads as an Aestra panel rather than as a generic alert box. The
     // title moves into the title bar; the "unsaved" dot stays with the message,

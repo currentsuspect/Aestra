@@ -172,6 +172,15 @@ int main() {
         check(!dialog.isVisible(), "and the dialog closes");
     }
 
+    std::cout << "[t] the time left is said in plain words (Design Spec, Progress)\n";
+    {
+        check(ExportDialog::formatTimeLeft(0.2, 0.5) == "Working out the time left", "too early to judge says so");
+        check(ExportDialog::formatTimeLeft(10.0, 0.01) == "Working out the time left", "so does too little progress");
+        check(ExportDialog::formatTimeLeft(3.0, 0.5) == "About 3 s left", "half done after 3 s: about 3 s left");
+        check(ExportDialog::formatTimeLeft(60.0, 0.25) == "About 3 min left", "minutes past a minute");
+        check(ExportDialog::formatTimeLeft(10.0, 1.0) == "Almost done", "nothing left says almost done");
+    }
+
     std::cout << (g_failures == 0 ? "ALL PASS\n" : "FAILURES\n");
     return g_failures == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }

@@ -12,15 +12,21 @@
 #include "AestraPanelWindow.h"
 
 #include "NUIRenderer.h"
+#include "../Graphics/NUIDepth.h"
 #include "NUIThemeSystem.h"
 
 #include <algorithm>
 
 namespace AestraUI {
 
+namespace {
+constexpr float kDialogRadius = 12.0f; // Design Spec, Dialog
+constexpr float kDialogPad = 18.0f;
+} // namespace
+
 NUIRect dialogCloseButtonRect(const NUIRect& panel)
 {
-    return NUIRect{panel.right() - 28.0f, panel.y + 4.0f, 24.0f, 24.0f};
+    return NUIRect{panel.right() - 34.0f, panel.y + 8.0f, 24.0f, 24.0f};
 }
 
 NUIRect drawDialogChrome(NUIRenderer& renderer, const DialogChrome& chrome)
@@ -29,36 +35,29 @@ NUIRect drawDialogChrome(NUIRenderer& renderer, const DialogChrome& chrome)
     if (b.isEmpty()) return NUIRect();
 
     auto& theme = NUIThemeManager::getInstance();
-    const NUIColor border = theme.getColor("borderSubtle");
 
-    // Same surface, radius (none), border and title-bar height as AestraPanelWindow, so
-    // a dialog and a plugin editor read as the same object family.
-    renderer.fillRoundedRect(b, AestraPanelWindow::kRadius, theme.getColor("elevatedPanel"));
-
-    renderer.drawLine({b.x, b.y + AestraPanelWindow::TITLE_BAR_H - 0.5f},
-                      {b.right(), b.y + AestraPanelWindow::TITLE_BAR_H - 0.5f}, 0.5f, border);
+    // Design Spec, Dialog (locked 12 Nov 2026): a floating card of backgroundSecondary, 12px round, on a deep soft
+    // shadow, with no outline and no rule under the heading. The question is the heading, in the panel size.
+    Depth::floatingCard(renderer, b, kDialogRadius, theme.getColor("backgroundSecondary"), 2.0f);
 
     if (!chrome.title.empty()) {
-        const NUIRect textRect{b.x, b.y, b.width, AestraPanelWindow::TITLE_BAR_H};
-        renderer.drawText(chrome.title, {b.x + 12.0f, renderer.calculateTextY(textRect, 12.0f)}, 12.0f,
-                          theme.getColor("textSecondary"));
+        const NUIRect textRect{b.x, b.y + 4.0f, b.width, AestraPanelWindow::TITLE_BAR_H};
+        renderer.drawText(chrome.title, {b.x + kDialogPad, renderer.calculateTextY(textRect, 16.0f)}, 16.0f,
+                          theme.getColor("textPrimary"));
     }
 
     if (chrome.showClose) {
+        // Esc and Cancel are the way out; the close mark stays quiet, never a red alarm.
         const NUIRect closeBtn = dialogCloseButtonRect(b);
-        if (chrome.closeHovered) {
-            renderer.fillRoundedRect(closeBtn, 6.0f, theme.getColor("error").withAlpha(0.22f));
-        }
+        if (chrome.closeHovered)
+            renderer.fillRoundedRect(closeBtn, Depth::Radius::pill(closeBtn.height), theme.getColor("hover"));
         const float cx = closeBtn.x + closeBtn.width * 0.5f;
         const float cy = closeBtn.y + closeBtn.height * 0.5f;
-        constexpr float d = 5.0f;
-        const NUIColor xColor =
-            chrome.closeHovered ? theme.getColor("error") : theme.getColor("textDisabled");
+        constexpr float d = 4.5f;
+        const NUIColor xColor = chrome.closeHovered ? theme.getColor("textPrimary") : theme.getColor("textMuted");
         renderer.drawLine({cx - d, cy - d}, {cx + d, cy + d}, 1.5f, xColor);
         renderer.drawLine({cx + d, cy - d}, {cx - d, cy + d}, 1.5f, xColor);
     }
-
-    renderer.strokeRoundedRect(b, AestraPanelWindow::kRadius, 1.0f, border);
 
     return NUIRect{b.x, b.y + AestraPanelWindow::TITLE_BAR_H, b.width,
                    std::max(0.0f, b.height - AestraPanelWindow::TITLE_BAR_H)};

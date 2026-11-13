@@ -14,7 +14,7 @@ namespace AestraUI {
  * @brief The strip's insert chain by name (V81-M1, FD-28 point 3): "Aestra EQ", "Saturator" ...
  *
  * Bypassed inserts stay listed but dim with a strike, so the chain reads as it is. Rows that do not fit
- * collapse into "+N more". An empty chain shows a single quiet "+ insert" invitation. A click anywhere
+ * collapse into "+N more". An empty chain shows a single quiet "+ Add an effect" row ("+" when narrow). A click anywhere
  * calls @ref onClicked; the owner decides whether that adds or opens the inspector.
  */
 class UIMixerInsertList : public NUIComponent {
