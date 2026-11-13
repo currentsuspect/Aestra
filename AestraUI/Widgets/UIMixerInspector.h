@@ -52,7 +52,7 @@ public:
     std::function<void(uint32_t channelId, float width)> onWidthEdited;
     /// "Show in routing graph →": open the full routing graph focused on this channel.
     std::function<void(uint32_t channelId)> onShowRoutingGraph;
-    /// Input monitoring switched On/Off (the track header's Input Monitoring setting, not the arm state).
+    /// Input monitoring switched On/Off (the strip's IN key and the track header's Input Monitoring; not record arm).
     std::function<void(uint32_t channelId, bool monitored)> onMonitorEdited;
 
     std::shared_ptr<EffectChainRack> getEffectRack() const { return m_effectRack; }

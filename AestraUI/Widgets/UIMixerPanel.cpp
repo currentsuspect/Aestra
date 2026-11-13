@@ -75,14 +75,13 @@ UIMixerPanel::UIMixerPanel(std::shared_ptr<Aestra::MixerViewModel> viewModel,
         vm->width = width;
         if (vm->channel) vm->channel->setWidth(width);
     };
-    // Input monitoring from the inspector, the same steps as the track header's Input Monitoring menu.
+    // Input monitoring from the inspector: the same undoable command as the strip's IN key.
     m_inspector->onMonitorEdited = [this](uint32_t channelId, bool monitored) {
         if (!m_trackManager) return;
         auto* mixerChannel = m_trackManager->getChannelById(channelId);
         if (!mixerChannel) return;
-        mixerChannel->setMonitoringEnabled(monitored);
-        m_trackManager->publishInputMonitoringSnapshot();
-        m_trackManager->markModified();
+        m_trackManager->getCommandHistory().pushAndExecute(
+            std::make_shared<Aestra::Audio::SetMonitoringCommand>(*m_trackManager, *mixerChannel, monitored));
     };
     addChild(m_inspector);
 
