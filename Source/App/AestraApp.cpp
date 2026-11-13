@@ -877,7 +877,6 @@ void AestraApp::buildMenuBar() {
         auto menu = std::make_shared<AestraUI::NUIContextMenu>();
 
         menu->addItem("New Project", [this]() { confirmLeaveProject("starting a new project", [this]() { createNewProject(); }); });
-
         menu->addItem("Open Project...", [this]() { confirmLeaveProject("opening another project", [this]() {
             const std::string filter = std::string("Aestra Project\0*.aes\0All Files\0*.*\0",
                                                    sizeof("Aestra Project\0*.aes\0All Files\0*.*\0") - 1);
@@ -889,7 +888,7 @@ void AestraApp::buildMenuBar() {
                 }
             });
         }); });
-
+        addOpenRecentMenu(*menu); // ProjectLifecycle.cpp
         menu->addSeparator();
 
         auto saveItem = std::make_shared<AestraUI::NUIContextMenuItem>("Save");
@@ -2146,6 +2145,7 @@ bool AestraApp::saveProjectToPath(const std::string& path, bool establishCanonic
 
     if (ok && path == m_documentState.canonicalPath()) {
         m_documentState.adoptCanonical(path);
+        rememberRecentProject(path);
         if (saveActiveTakeSnapshot(&uiState)) {
             m_content->getTrackManager()->setModified(false);
             m_autoSaveManager.markClean();

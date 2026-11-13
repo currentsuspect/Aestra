@@ -613,6 +613,12 @@ bool NUIContextMenu::hasLiveOwner() const
     return !ownerBound_ || !owner_.expired();
 }
 
+bool NUIContextMenu::containsPointInMenuTree(const NUIPoint& point) const
+{
+    if (getBounds().contains(point)) return true;
+    return activeSubmenu_ && activeSubmenu_->isVisible() && activeSubmenu_->containsPointInMenuTree(point);
+}
+
 void NUIContextMenu::setOnItemClick(std::function<void(std::shared_ptr<NUIContextMenuItem>)> callback)
 {
     onItemClickCallback_ = callback;
