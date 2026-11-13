@@ -1,7 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "Commands/Footprint.h"
+#include "Footprint.h"
 
 #include <chrono>
 #include <cstdint>

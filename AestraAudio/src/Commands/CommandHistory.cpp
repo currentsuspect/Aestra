@@ -1,6 +1,8 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "Commands/CommandHistory.h"
 
+#include <cstddef>
+
 #include <iostream>
 
 namespace Aestra {
@@ -175,6 +177,72 @@ void CommandHistory::rollbackTransaction() {
 bool CommandHistory::isTransactionActive() const {
     std::lock_guard<std::mutex> lock(m_mutex);
     return m_transactionNestingLevel > 0;
+}
+
+PickedUndo CommandHistory::undoJust(size_t index, bool withDependants) {
+    PickedUndo out;
+    std::lock_guard<std::mutex> opLock(m_operationMutex);
+
+    // Phase 1: decide, and take the steps out of the stack, under lock.
+    std::vector<size_t> picked;                    // stack indices, oldest first
+    std::vector<std::shared_ptr<ICommand>> steps;  // the same steps
+    std::vector<std::shared_ptr<ICommand>> before; // the whole stack, to put back on failure
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (m_activeTransaction && m_transactionNestingLevel > 0) {
+            out.result = PickResult::Busy;
+            return out;
+        }
+        if (index >= m_undoStack.size()) return out; // NothingThere
+        out.dependants = dependantsOf(m_undoStack, index);
+        if (!out.dependants.empty() && !withDependants) {
+            out.result = PickResult::HasDependants;
+            return out;
+        }
+        picked.push_back(index);
+        picked.insert(picked.end(), out.dependants.begin(), out.dependants.end());
+        before = m_undoStack;
+        for (size_t i : picked) steps.push_back(m_undoStack[i]);
+        for (auto it = picked.rbegin(); it != picked.rend(); ++it) {
+            m_undoStack.erase(m_undoStack.begin() + static_cast<std::ptrdiff_t>(*it));
+        }
+    }
+
+    // Phase 2: undo them newest first, outside the lock (an undo may re-enter this class). If one fails, redo
+    // the ones already undone and put the stack back exactly as it was.
+    size_t undone = 0;
+    bool failed = false;
+    try {
+        for (auto it = steps.rbegin(); it != steps.rend(); ++it, ++undone) (*it)->undo();
+    } catch (const std::exception& e) {
+        std::cerr << "Pickable undo failed: " << e.what() << std::endl;
+        failed = true;
+    } catch (...) {
+        std::cerr << "Pickable undo failed with unknown exception" << std::endl;
+        failed = true;
+    }
+    if (failed) {
+        try {
+            for (size_t k = steps.size() - undone; k < steps.size(); ++k) steps[k]->redo();
+        } catch (...) {
+            std::cerr << "Pickable undo: could not restore after a failed undo" << std::endl;
+        }
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_undoStack = std::move(before);
+        out.result = PickResult::Failed;
+        return out;
+    }
+
+    // Phase 3: one new step records what was undone; nothing is erased.
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_undoStack.push_back(std::make_shared<PickedSteps>(std::move(steps)));
+        m_redoStack.clear();
+        trimHistory();
+    }
+    notifyStateChanged();
+    out.result = PickResult::Done;
+    return out;
 }
 
 bool CommandHistory::undo() {
