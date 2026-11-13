@@ -1168,8 +1168,8 @@ void TrackManagerUI::renderPlayhead(AestraUI::NUIRenderer& renderer) {
     // Draw if playhead center is within the visible timeline bounds
     // Allow triangle to extend outside as long as center line is visible
     if (playheadX >= gridStartX && playheadX <= playheadEndX) {
-        // Flat and filled: a solid 2 px line and a filled head (PlayheadMarker.h).
-        const AestraUI::NUIColor playheadColor = themeManager.getColor("accentPrimary");
+        // Flat and filled: a 1 px textPrimary line and a filled head (PlayheadMarker.h, Design Spec Clip).
+        const AestraUI::NUIColor playheadColor = themeManager.getColor("textPrimary");
         AestraUI::Playhead::drawLine(renderer, playheadX, playheadStartY, playheadEndY, playheadColor);
         AestraUI::Playhead::drawHead(renderer, playheadX, playheadStartY, playheadColor);
     }
