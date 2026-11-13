@@ -1,5 +1,6 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIParamBar.h"
+#include "../Graphics/NUIDepth.h"
 
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
@@ -67,7 +68,6 @@ void UIParamBar::onRender(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
     const NUIColor text = theme.getColor("textPrimary");
     const NUIColor muted = theme.getColor("textSecondary");
-    const NUIColor track = theme.getColor("border").withAlpha(0.45f);
     const NUIColor fill = (m_hovered || m_dragging) ? text : text.withAlpha(0.82f);
 
     NUIRect bar = barRect();
@@ -82,19 +82,18 @@ void UIParamBar::onRender(NUIRenderer& renderer) {
         renderer.drawText(valueText, {b.right() - w, b.y + (b.height - kFont) * 0.5f - 1.0f}, kFont, text.withAlpha(0.95f));
     }
 
-    renderer.fillRect(bar, track);
-    const float t = (m_value - m_min) / (m_max - m_min);
-    const float x = bar.x + t * bar.width;
-    if (m_bipolar) {
-        const float mid = bar.x + bar.width * 0.5f;
-        renderer.fillRect(NUIRect{std::min(mid, x), bar.y, std::max(1.0f, std::fabs(x - mid)), bar.height},
-                          fill.withAlpha(0.35f));
-        renderer.fillRect(NUIRect{mid - 0.5f, bar.y - 3.0f, 1.0f, bar.height + 6.0f}, muted.withAlpha(0.55f));
+    // Design Spec, Slider (locked): a sunk slot with the travel in primary (from the centre when bipolar). A row
+    // carries the fader cap on its side; the compact bar under a strip keeps a 2 px marker, where a cap would crowd it.
+    const float t = std::clamp((m_value - m_min) / (m_max - m_min), 0.0f, 1.0f);
+    if (m_look == Look::Bar) {
+        Depth::sliderSlot(renderer, bar, t, m_bipolar ? 0.5f : 0.0f);
+        const float x = bar.x + t * bar.width;
+        renderer.fillRect(NUIRect{std::clamp(x - 1.0f, bar.x, bar.right() - 2.0f), bar.y - 2.0f, 2.0f, bar.height + 4.0f}, fill);
     } else {
-        renderer.fillRect(NUIRect{bar.x, bar.y, std::max(0.0f, x - bar.x), bar.height}, fill.withAlpha(0.35f));
+        const NUIRect slot{bar.x + 11.0f, bar.y, std::max(1.0f, bar.width - 22.0f), bar.height};
+        Depth::sliderSlot(renderer, slot, t, m_bipolar ? 0.5f : 0.0f);
+        Depth::sliderCap(renderer, {slot.x + t * slot.width, slot.y + slot.height * 0.5f}, m_dragging);
     }
-    // The marker: a 2 px line taller than the bar, so the value reads even where the fill is faint.
-    renderer.fillRect(NUIRect{std::clamp(x - 1.0f, bar.x, bar.right() - 2.0f), bar.y - 2.0f, 2.0f, bar.height + 4.0f}, fill);
 }
 
 void UIParamBar::onMouseLeave() {

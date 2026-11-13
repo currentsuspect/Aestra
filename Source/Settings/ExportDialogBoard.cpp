@@ -4,6 +4,7 @@
 // WHAT: the song, the loop or the selection, and one file or stems plus the master. WHERE: a name and a folder, with
 // the full path underneath. FORMAT: compact chips (format, depth, rate, tail). Then one line worked out before you
 // press Export: how long the file will be, roughly how big, and how many files.
+#include "../AestraUI/Graphics/NUIDepth.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
 #include "AudioEngine.h"
 #include "ExportDialog.h"
@@ -256,19 +257,19 @@ void ExportDialog::paintSettingsBoard(AestraUI::NUIRenderer& renderer) {
     caption(m_whereCaption, "WHERE");
     caption(m_formatCaption, "FORMAT");
 
-    // A segmented control: one outline, the chosen segment filled.
+    // Design Spec, Segment switch: a sunk pill track, the choice on a lit thumb, flat text, no outline.
     const auto segmented = [&](const auto& segments, const char* const* labels, int chosen) {
         const AestraUI::NUIRect all(segments.front().x, segments.front().y,
                                     segments.back().right() - segments.front().x, segments.front().height);
-        renderer.strokeRoundedRect(all, 4.0f, 1.0f, border);
+        AestraUI::Depth::bed(renderer, all, all.height * 0.5f, AestraUI::Depth::Cut::Shallow);
         for (size_t i = 0; i < segments.size(); ++i) {
             const auto& s = segments[i];
             const bool on = static_cast<int>(i) == chosen;
             if (on) {
-                renderer.fillRoundedRect({s.x + 3.0f, s.y + 3.0f, s.width - 6.0f, s.height - 6.0f}, 3.0f,
-                                         theme.getColor("primary").withAlpha(0.24f));
+                const AestraUI::NUIRect thumb{s.x + 3.0f, s.y + 3.0f, s.width - 6.0f, s.height - 6.0f};
+                AestraUI::Depth::object(renderer, thumb, thumb.height * 0.5f);
             }
-            renderer.drawTextCentered(labels[i], s, 13.0f, theme.getColor(on ? "textPrimary" : "textSecondary"));
+            renderer.drawTextCentered(labels[i], s, 13.0f, theme.getColor(on ? "textPrimary" : "textMuted"));
         }
     };
     static const char* const kScope[] = {"Full song", "Loop", "Selection"};

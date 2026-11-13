@@ -457,6 +457,7 @@ void NUITextInput::setBorderWidth(float width)
 void NUITextInput::setBorderRadius(float radius)
 {
     borderRadius_ = radius;
+    pillShape_ = false;
     setDirty(true);
 }
 
@@ -1399,34 +1400,22 @@ void NUITextInput::triggerEscapeKey()
 
 void NUITextInput::drawEnhancedBackground(NUIRenderer& renderer)
 {
+    // Design Spec, Field (locked 12 Nov 2026): a sunk well, shaded on its top-left inner edge, with no outline at
+    // rest, on hover or while typing; the caret says where the typing goes. Only a validation result draws an edge.
     NUIRect bounds = getBounds();
     auto& theme = NUIThemeManager::getInstance();
-    renderer.fillRoundedRect(bounds, borderRadius_,
-                             isEnabled() ? backgroundColor_ : backgroundColor_.withAlpha(0.55f));
-    
-    // Border with validation highlighting
-    NUIColor borderColor = borderColor_;
-    float borderWidth = borderWidth_; // Use component's border width, not hardcoded
-    
-    if (isFocused())
-    {
-        borderColor = focusedBorderColor_;
-        borderWidth = std::max(borderWidth, 1.5f);
-    }
-    else if (hasValidationError_)
-    {
-        borderColor = theme.getColor("error");
-    }
+    const auto& props = theme.getCurrentTheme();
+    const float radius = pillShape_ ? bounds.height * 0.5f : borderRadius_;
+    renderer.fillRoundedRect(bounds, radius, isEnabled() ? backgroundColor_ : backgroundColor_.withAlpha(0.55f));
+    renderer.drawInnerShadow(bounds, radius, 2.0f, 2.0f, props.neuLo);
+    renderer.drawInnerShadow(bounds, radius, -1.0f, 1.5f, props.neuHi);
+
+    if (hasValidationError_)
+        renderer.strokeRoundedRect(bounds, radius, 1.0f, theme.getColor("error"));
     else if (hasValidationSuccess_)
-    {
-        borderColor = theme.getColor("success");
-    }
-    else if (!isEnabled())
-    {
-        borderColor = theme.getColor("borderSubtle").withAlpha(0.45f);
-    }
-    
-    renderer.strokeRoundedRect(bounds, borderRadius_, borderWidth, borderColor);
+        renderer.strokeRoundedRect(bounds, radius, 1.0f, theme.getColor("success"));
+    else if (props.neuEdge.a > 0.0f)
+        renderer.strokeRoundedRect(bounds, radius, 1.0f, props.neuEdge); // high contrast keeps it findable
 }
 
 void NUITextInput::drawAnimatedCaret(NUIRenderer& renderer)

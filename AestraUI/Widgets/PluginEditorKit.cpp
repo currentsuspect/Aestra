@@ -1,5 +1,6 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "PluginEditorKit.h"
+#include "../Graphics/NUIDepth.h"
 
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
@@ -274,11 +275,11 @@ void drawEmberSlider(NUIRenderer& renderer, const NUIRect& rect, float labelWidt
     const float tx = g.x0 + (g.x1 - g.x0) * v;
 
     drawTextLeft(renderer, label, rect.x, cy, 11.0f, lit ? c.ink : c.inkSoft);
-    renderer.fillRect(NUIRect(g.x0, cy - 1.0f, g.x1 - g.x0, 2.0f), c.edge);
-    const NUIColor fill = (bypassed || state == ControlState::Disabled) ? c.inkOff : lit ? c.primaryHover : c.primary;
-    renderer.fillRect(NUIRect(g.x0, cy - 2.0f, tx - g.x0, 4.0f), fill);
-    renderer.fillRect(NUIRect(std::round(tx) - 2.0f, cy - 8.0f, 4.0f, 16.0f),
-                      state == ControlState::Disabled ? c.inkMuted : c.ink);
+    // Design Spec, Slider (locked): a sunk slot, the travel in primary, the fader cap on its side.
+    (void)tx;
+    const bool live = !bypassed && state != ControlState::Disabled;
+    Depth::sliderSlot(renderer, NUIRect(g.x0, cy - 3.0f, g.x1 - g.x0, 6.0f), v, 0.0f, live);
+    Depth::sliderCap(renderer, {g.x0 + (g.x1 - g.x0) * v, cy}, state == ControlState::Drag);
     if (state == ControlState::Drag) {
         const float w = renderer.measureText(valueText, 12.0f).width + 16.0f;
         const NUIRect pill(rect.right() - w, cy - 10.0f, w, 20.0f);
