@@ -1,6 +1,8 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "RumbleInstance.h"
 
+#include <optional>
+
 #include "AestraJSON.h"
 #include "RumblePluginRegistration.h"
 #include "RumblePresetBank.h"
@@ -441,12 +443,12 @@ std::vector<uint8_t> RumbleInstance::saveState() const {
     return std::vector<uint8_t>(text.begin(), text.end());
 }
 
-bool RumbleInstance::loadState(const std::vector<uint8_t>& state) {
+std::optional<RumbleSound> RumbleInstance::soundOfState(const std::vector<uint8_t>& state) {
     const std::string text(state.begin(), state.end());
     Aestra::JSON json = Aestra::JSON::parse(text);
     if (!json.isObject() || !json.has("schema") || !json["schema"].isString() ||
         json["schema"].asString() != "rumble-sound" || !json.has("params") || !json["params"].isObject()) {
-        return false; // includes the old engine's states: nobody used it (founder, 2026-11-12)
+        return std::nullopt; // includes the old engine's states: nobody used it (founder, 2026-11-12)
     }
     RumbleSound loaded = rumbleDefaultSound();
     auto& params = json["params"];
@@ -461,11 +463,19 @@ bool RumbleInstance::loadState(const std::vector<uint8_t>& state) {
             loaded.seed = static_cast<uint32_t>(seed); // anything else is a damaged file: keep the default grain
         }
     }
-    setSound(loaded);
+    return loaded;
+}
+
+bool RumbleInstance::loadState(const std::vector<uint8_t>& state) {
+    const std::optional<RumbleSound> loaded = soundOfState(state);
+    if (!loaded) return false;
+    setSound(*loaded);
     // A project carries Velocity; a sound on its own (a factory or kept preset) does not, and leaves it as it is.
+    const std::string text(state.begin(), state.end());
+    Aestra::JSON json = Aestra::JSON::parse(text);
     const char* velocityKey = parameterKey(kVelocity);
-    if (params.has(velocityKey) && params[velocityKey].isNumber()) {
-        setParameter(kVelocity, static_cast<float>(params[velocityKey].asNumber()));
+    if (json["params"].has(velocityKey) && json["params"][velocityKey].isNumber()) {
+        setParameter(kVelocity, static_cast<float>(json["params"][velocityKey].asNumber()));
     }
     return true;
 }
