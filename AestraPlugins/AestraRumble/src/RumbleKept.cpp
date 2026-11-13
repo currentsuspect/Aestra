@@ -5,6 +5,9 @@
 #include "RumbleInstance.h"
 #include "RumblePresetBank.h"
 
+#include <algorithm>
+#include <cctype>
+#include <cmath>
 #include <set>
 #include <utility>
 
@@ -15,24 +18,45 @@ namespace {
 namespace Presets = Aestra::Audio::Presets;
 constexpr const char* kRumbleId = "com.Aestrastudios.rumble";
 
+// Which of Rumble's settings a preset entry sets: by id and name, then by name, then by id, as
+// Presets::apply matches them, so the shelf and the preset bar load the same sound.
+int settingOf(const Presets::PresetParam& param) {
+    const auto named = [&](uint32_t id) { return param.name == RumbleInstance::parameterName(id); };
+    if (param.id < RumbleSound::Count && named(param.id)) return static_cast<int>(param.id);
+    if (!param.name.empty()) {
+        for (uint32_t id = 0; id < RumbleSound::Count; ++id) {
+            if (named(id)) return static_cast<int>(id);
+        }
+    }
+    if (param.id != Presets::PresetParam::kNoId && param.id < RumbleSound::Count) return static_cast<int>(param.id);
+    return -1;
+}
+
 RumbleKept::Kept keptOf(const Presets::Preset& preset) {
     RumbleKept::Kept kept;
     kept.name = preset.name;
     kept.path = preset.path;
-    kept.state = preset.state;
-    if (auto sound = RumbleInstance::soundOfState(preset.state)) {
-        kept.sound = *sound;
-    } else {
-        // A preset without Rumble's state (hand-made, or from an older bar): read its settings by name.
-        kept.sound = rumbleDefaultSound();
-        for (const auto& param : preset.params) {
-            for (uint32_t id = 0; id < RumbleSound::Count; ++id) {
-                if (param.name == RumbleInstance::parameterName(id)) kept.sound[id] = param.value;
-            }
-        }
-        kept.state = RumbleInstance::stateOfSound(kept.sound);
+    // As the preset bar loads it: Rumble's state first (it carries the grain), then each setting over it.
+    const auto fromState = RumbleInstance::soundOfState(preset.state);
+    kept.sound = fromState ? *fromState : rumbleDefaultSound();
+    bool overridden = false;
+    for (const auto& param : preset.params) {
+        const int id = settingOf(param);
+        if (id < 0 || !std::isfinite(param.value)) continue;
+        double& setting = kept.sound[static_cast<size_t>(id)];
+        // Keep writes each setting as a float beside the exact state: the same value is not an override.
+        if (fromState && static_cast<float>(setting) == param.value) continue;
+        setting = std::clamp(static_cast<double>(param.value), 0.0, 1.0);
+        overridden = true;
     }
+    kept.state = fromState && !overridden ? preset.state : RumbleInstance::stateOfSound(kept.sound);
     return kept;
+}
+
+// The library treats names that differ only in case as the same preset.
+std::string lowered(std::string s) {
+    for (char& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    return s;
 }
 } // namespace
 
@@ -47,9 +71,9 @@ std::vector<RumbleKept::Kept> RumbleKept::list() const {
 std::optional<RumbleKept::Kept> RumbleKept::keep(const RumbleSound& sound, const std::string& name) const {
     Presets::PresetLibrary library(m_root);
     std::set<std::string> taken;
-    for (const auto& preset : library.userPresets(kRumbleId)) taken.insert(preset.name);
+    for (const auto& preset : library.userPresets(kRumbleId)) taken.insert(lowered(preset.name));
     std::string unique = name;
-    for (int n = 2; taken.count(unique) != 0; ++n) unique = name + " " + std::to_string(n);
+    for (int n = 2; taken.count(lowered(unique)) != 0; ++n) unique = name + " " + std::to_string(n);
 
     Presets::Preset preset;
     preset.name = unique;

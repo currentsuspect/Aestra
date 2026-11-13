@@ -5,6 +5,7 @@
 #include "RumbleInstance.h"
 #include "RumbleKept.h"
 #include "RumblePresetBank.h"
+#include "Presets/PresetLibrary.h"
 
 #include <cmath>
 #include <filesystem>
@@ -63,6 +64,37 @@ void namesNeverOverwrite() {
     check(kept.list().size() == 3, "all three are kept");
 }
 
+void caseOnlyNamesGetANumberToo() {
+    RumbleKept kept(freshRoot());
+    kept.keep(aSound(1), "Long dirty");
+    const auto second = kept.keep(aSound(2), "long dirty");
+    check(second && second->name == "long dirty 2",
+          "a name differing only in case is the same name to the library, so it is numbered, not refused");
+}
+
+// The shelf loads a kept sound the way the preset bar does: the state first, then the settings over it.
+void theShelfLoadsLikeThePresetBar() {
+    const fs::path root = freshRoot();
+    RumbleSound inState = aSound(9);
+    inState[RumbleSound::Tail] = 0.2;
+    namespace Presets = Aestra::Audio::Presets;
+    Presets::Preset preset;
+    preset.name = "Edited by hand";
+    preset.pluginId = "com.Aestrastudios.rumble";
+    preset.pluginName = "Aestra Rumble";
+    preset.state = RumbleInstance::stateOfSound(inState);
+    preset.params.push_back({RumbleSound::Tail, RumbleInstance::parameterName(RumbleSound::Tail), 0.8f});
+    preset.params.push_back({RumbleSound::Punch, RumbleInstance::parameterName(RumbleSound::Punch), 1.7f});
+    check(Presets::PresetLibrary(root).saveUser(preset, false).has_value(), "the hand-edited preset is written");
+    const auto all = RumbleKept(root).list();
+    check(all.size() == 1, "it is listed");
+    if (all.size() != 1) return;
+    check(std::fabs(all[0].sound[RumbleSound::Tail] - 0.8) < 1e-6, "a setting overrides the state, as on the bar");
+    check(all[0].sound[RumbleSound::Punch] == 1.0, "and is clamped to its range");
+    check(all[0].sound.seed == 9 && all[0].sound[RumbleSound::Weight] == inState[RumbleSound::Weight],
+          "the rest, the grain included, comes from the state");
+}
+
 void aKeepCanBeUndone() {
     RumbleKept kept(freshRoot());
     const auto k = kept.keep(aSound(5), "Short knock");
@@ -99,6 +131,8 @@ void otherPluginsPresetsAreNotListed() {
 } // namespace
 
 int main() {
+    caseOnlyNamesGetANumberToo();
+    theShelfLoadsLikeThePresetBar();
     keepWritesTheSoundExactly();
     namesNeverOverwrite();
     aKeepCanBeUndone();

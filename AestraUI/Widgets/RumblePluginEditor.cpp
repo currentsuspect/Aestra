@@ -219,6 +219,7 @@ void RumblePluginEditor::startFromKept(size_t index) {
 void RumblePluginEditor::keep() {
     const auto kept = m_keptStore->keep(m_session->current(), m_session->currentName());
     if (!kept) {
+        m_lastKept.reset(); // Undo must never reach back to an earlier keep
         m_editorSaid = "Could not keep it: the presets folder could not be written.";
     } else {
         m_lastKept = kept;
@@ -230,7 +231,13 @@ void RumblePluginEditor::keep() {
 
 void RumblePluginEditor::undoKeep() {
     if (!m_lastKept) return;
-    if (m_keptStore->unkeep(*m_lastKept)) m_editorSaid = "Took " + m_lastKept->name + " back out of Your 808s.";
+    if (!m_keptStore->unkeep(*m_lastKept)) {
+        // Still kept: say so and leave Undo there to try again.
+        m_editorSaid = "Could not take " + m_lastKept->name + " out of Your 808s. Try Undo again.";
+        setDirty(true);
+        return;
+    }
+    m_editorSaid = "Took " + m_lastKept->name + " back out of Your 808s.";
     m_lastKept.reset();
     refreshKept();
 }
@@ -730,6 +737,7 @@ void RumblePluginEditor::dragHandle(const NUIPoint& p) {
         const float span = m_picture.height - kPicTop - kPicBottom - 8.0f;
         m_session->shape(RumbleSound::Punch, (bottom - p.y) / span);
     }
+    moved();
     soundChanged();
 }
 
@@ -802,6 +810,7 @@ bool RumblePluginEditor::onMouseEvent(const NUIMouseEvent& event) {
             m_lastClickPos = event.position;
             if (twice) {
                 m_session->putBack(id);
+                moved();
                 soundChanged();
                 return true;
             }
@@ -830,6 +839,7 @@ bool RumblePluginEditor::onMouseEvent(const NUIMouseEvent& event) {
                                return;
                            }
                            m_session->shape(id, v);
+                           moved(); // the kept sound is not this one any more
                            soundChanged();
                        })) {
         return true;
