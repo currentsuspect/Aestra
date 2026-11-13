@@ -1136,7 +1136,7 @@ public:
         std::array<RtInputMonitorRoute, 32> routes{};
         uint32_t count = 0;
         for (const auto& channel : m_channels) {
-            if (!channel || !channel->isArmed() || !channel->isMonitoringEnabled()) {
+            if (!channel || !channel->isMonitoringEnabled()) { // monitoring alone, not arm (as in other DAWs)
                 continue;
             }
             const int requestedInput = channel->getInputChannelIndex();

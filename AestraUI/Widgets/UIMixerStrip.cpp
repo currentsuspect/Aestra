@@ -230,14 +230,13 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
         auto* channel = m_viewModel->getChannelById(m_channelId);
         if (!channel || channel->id == 0) return;
 
-        // FD-14 #6: the mixer slot is input monitoring, not record arm. The
-        // engine's monitor routes gate on channel armed + monitorInput.
+        // FD-14 #6: the mixer slot is input monitoring, not record arm; the
+        // engine routes a channel's input whenever its monitoring is on.
         channel->monitored = monitored;
         invalidateStaticCache();
 
         // Engine side goes through the command history (SetMonitoringCommand)
-        // for dirty/undo parity with mute/solo/pan. The snapshot refresh
-        // rides setArmed's own notification.
+        // for dirty/undo parity with mute/solo/pan.
         if (onMonitorToggled) onMonitorToggled(monitored);
     };
     addChild(m_buttons);
@@ -644,9 +643,8 @@ void UIMixerStrip::onUpdate(double deltaTime)
     if (m_buttons && m_buttons->isVisible()) {
         m_buttons->setMuted(channel->muted);
         m_buttons->setSoloed(channel->soloed);
-        // The monitor button reflects the engine's arm flag — post-FD-14 #6
-        // that flag is the input-monitoring gate, never a recording control.
-        m_buttons->setMonitored(channel->armed);
+        // IN shows input monitoring (FD-14 #6), not record arm.
+        m_buttons->setMonitored(channel->monitored);
     }
 
     if (m_panBar && m_panBar->isVisible() && !m_panBar->isDragging()) {
