@@ -122,6 +122,7 @@ void TrackManagerUI::createToolIcons() {
         std::make_shared<AestraUI::NUIIcon>(AestraUI::nuiCursorSvg(AestraUI::NUICursorStyle::ResizeEW));
     // Minimap window-resize cursor: the canonical high-contrast ResizeEW glyph.
     m_resizeCursorIcon = std::make_shared<AestraUI::NUIIcon>(AestraUI::nuiCursorSvg(AestraUI::NUICursorStyle::ResizeEW));
+    m_resizeNSCursorIcon = std::make_shared<AestraUI::NUIIcon>(AestraUI::nuiCursorSvg(AestraUI::NUICursorStyle::ResizeNS));
     // Ruler / minimap-pan hand cursor: the canonical grab glyph.
     m_grabCursorIcon = std::make_shared<AestraUI::NUIIcon>(AestraUI::nuiCursorSvg(AestraUI::NUICursorStyle::Grab));
     // The same hand closed, shown only while the drag is actually happening.
@@ -250,6 +251,11 @@ bool TrackManagerUI::isCustomCursorActive() const {
         if (gridBounds.contains(m_lastMousePos)) {
             return true;
         }
+    }
+
+    // Track resize: a header's bottom edge, or a resize in progress.
+    if (m_resizingRow >= 0 || (hoverCurrent && trackResizeEdgeAt(m_lastMousePos) >= 0)) {
+        return true;
     }
 
     // 3. Minimap resize cursor
@@ -944,6 +950,11 @@ void TrackManagerUI::renderCursorOverlay(AestraUI::NUIRenderer& renderer) {
     // Drawn where the pointer really is. m_lastMousePos is only what the timeline last heard (the title bar takes
     // moves over it, so the hand froze at its edge) and a clip drag clamps it to the grid.
     const AestraUI::NUIPoint at = m_hasWindowPointerPos ? m_windowPointerPos : m_lastMousePos;
+    if ((m_resizingRow >= 0 || trackResizeEdgeAt(at) >= 0) && m_resizeNSCursorIcon) {
+        m_resizeNSCursorIcon->setBounds(AestraUI::NUIRect(at.x - 9, at.y - 9, 18, 18));
+        m_resizeNSCursorIcon->onRender(renderer);
+        return;
+    }
     renderToolCursor(renderer, at);
     renderMinimapResizeCursor(renderer, at);
 }

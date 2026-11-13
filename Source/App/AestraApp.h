@@ -157,6 +157,9 @@ private:
     /// File > Open Recent listing them (newest first, missing files left out).
     void rememberRecentProject(const std::string& path);
     void addOpenRecentMenu(AestraUI::NUIContextMenu& menu);
+    /// The timeline's view in the project's UI state: track heights (ProjectLifecycle.cpp).
+    void captureTimelineView(ProjectSerializer::UIState& state) const;
+    void applyTimelineView(const ProjectSerializer::UIState& state);
     void requestClose();
     /// Save, or Save As when the document has no path yet. Save As shows a
     /// picker off the UI thread, so the outcome arrives through @p onDone

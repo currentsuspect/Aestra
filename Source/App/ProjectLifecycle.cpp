@@ -7,6 +7,7 @@
 #include "Commands/MuseGrammar.h"
 #include "Commands/MuseService.h"
 #include "Core/AestraContent.h"
+#include "Components/TrackManagerUI.h"
 #include "Core/ProjectSerializer.h"
 #include "Models/ProjectReset.h"
 #include "MuseProjectLoadReport.h"
@@ -182,6 +183,25 @@ void AestraApp::addOpenRecentMenu(AestraUI::NUIContextMenu& menu) {
         });
     }
     menu.addSubmenu("Open Recent", recent);
+}
+
+// --- Timeline view in the project --------------------------------------------
+
+void AestraApp::captureTimelineView(ProjectSerializer::UIState& state) const {
+    auto timeline = m_content ? m_content->getTrackManagerUI() : nullptr;
+    if (!timeline) return;
+    state.trackHeight = timeline->defaultTrackHeight();
+    state.trackHeights.assign(timeline->rowHeightOverrides().begin(), timeline->rowHeightOverrides().end());
+}
+
+void AestraApp::applyTimelineView(const ProjectSerializer::UIState& state) {
+    auto timeline = m_content ? m_content->getTrackManagerUI() : nullptr;
+    if (!timeline) return;
+    if (state.trackHeight <= 0.0f) { // a file saved without heights opens at the default, not the last project's
+        timeline->restoreTrackHeights(Aestra::Audio::TrackManagerUI::kDefaultTrackHeight, {});
+        return;
+    }
+    timeline->restoreTrackHeights(state.trackHeight, {state.trackHeights.begin(), state.trackHeights.end()});
 }
 
 // --- The verbs ---------------------------------------------------------------

@@ -544,3 +544,23 @@ target_include_directories(FactoryPresetsTest PRIVATE
 )
 add_test(NAME FactoryPresetsTest COMMAND FactoryPresetsTest)
 set_tests_properties(FactoryPresetsTest PROPERTIES TIMEOUT 120 LABELS "commands;plugins;presets;contract:application")
+
+# MoveTrackCommandTest — reorder tracks (DAW Essentials Checklist P0): a row moves, its lanes travel, undo restores.
+add_executable(MoveTrackCommandTest Commands/MoveTrackCommandTest.cpp)
+target_link_libraries(MoveTrackCommandTest PRIVATE AestraAudioCore)
+target_include_directories(MoveTrackCommandTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MoveTrackCommandTest COMMAND MoveTrackCommandTest)
+set_tests_properties(MoveTrackCommandTest PROPERTIES TIMEOUT 120 LABELS "commands;timeline;contract:application")
+
+# RenameCommandTest — rename tracks and mixer channels; names that matched stay matched; one undo step.
+add_executable(RenameCommandTest Commands/RenameCommandTest.cpp)
+target_link_libraries(RenameCommandTest PRIVATE AestraAudioCore)
+target_include_directories(RenameCommandTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME RenameCommandTest COMMAND RenameCommandTest)
+set_tests_properties(RenameCommandTest PROPERTIES TIMEOUT 120 LABELS "commands;timeline;mixer;contract:application")

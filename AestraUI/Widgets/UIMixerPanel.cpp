@@ -15,6 +15,7 @@
 #include "Commands/SetPanCommand.h"
 #include "Commands/SetTrimCommand.h"
 #include "Commands/SetMonitoringCommand.h"
+#include "Commands/RenameCommand.h"
 #include "TrackManager.h"
 #include "PluginManager.h"
 #include "Commands/PluginCommands.h"
@@ -250,6 +251,8 @@ void UIMixerPanel::refreshChannels()
             m_trackManager->getCommandHistory().pushAndExecute(
                 std::make_shared<Aestra::Audio::SetPanCommand>(*m_trackManager, *mixerChannel, pan));
         };
+
+        strip->onRenameRequested = [this](uint32_t channelId, const NUIRect& plate) { beginChannelRename(channelId, plate); };
 
         // Wire input monitoring to CommandHistory for undo/redo + dirty parity
         strip->onMonitorToggled = [this, chId](bool monitored) {
@@ -686,6 +689,7 @@ void UIMixerPanel::onResize(int width, int height)
 void UIMixerPanel::onUpdate(double deltaTime)
 {
     ensureDropTargetRegistration();
+    m_channelRename.onUpdate(deltaTime);
 
     const float maxScroll = getChannelMaxScroll();
     m_targetScrollX = safeClampMixerScroll(m_targetScrollX, maxScroll);
@@ -853,14 +857,37 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
         renderer.strokeRoundedRect(m_masterStrip->getBounds(), 6.0f, 2.0f, accent);
     }
 
+    m_channelRename.render(renderer); // the rename field sits over a strip's nameplate
+
     // Plugin dropdown renders as a floating overlay on top of everything.
     if (m_pluginDropdown && m_pluginDropdown->isVisible()) {
         m_pluginDropdown->onRender(renderer);
     }
 }
 
+void UIMixerPanel::beginChannelRename(uint32_t channelId, const NUIRect& nameplate)
+{
+    if (!m_viewModel || !m_trackManager || channelId == 0) return;
+    const auto* channel = m_viewModel->getChannelById(channelId);
+    if (!channel) return;
+    NUIRect field = nameplate;
+    field.width = std::max(field.width, 120.0f); // a narrow strip still gets room to type
+    m_channelRename.begin(field, channel->name, [this, channelId](const std::string& name) {
+        auto cmd = Aestra::Audio::RenameCommand::forChannel(*m_trackManager, channelId, name);
+        if (cmd->empty()) return;
+        m_trackManager->getCommandHistory().pushAndExecute(cmd);
+        if (auto* vm = m_viewModel->getChannelById(channelId)) vm->name = Aestra::Audio::RenameCommand::cleaned(name);
+        repaint();
+    }, [this]() { repaint(); });
+}
+
 bool UIMixerPanel::onMouseEvent(const NUIMouseEvent& event)
 {
+    // An open strip rename takes its own clicks; a press elsewhere commits it and goes on as usual.
+    if (m_channelRename.onMouseEvent(event)) {
+        repaint();
+        return true;
+    }
     const NUIRect minimapRect = getMinimapRect();
     const float maxScroll = getChannelMaxScroll();
 

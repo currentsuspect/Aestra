@@ -162,6 +162,39 @@ void testNarrowAndShortComponentsStayNonNegative() {
 
 } // namespace
 
+// Resize a track / vertical zoom: rows at their own heights. With every row at the shared height the per-row
+// helpers must agree with the uniform ones exactly; with one tall row, everything below it moves down by the extra.
+void testRowsOfTheirOwnHeight() {
+    const auto layout = resolveTimelineLayout(1280.0f, 720.0f, kControls);
+    TimelineRowHeights uniform;
+    uniform.fallback = kRowHeight;
+    uniform.heights.assign(24, kRowHeight);
+    const auto a = arrangeTimelineRows(layout, kRowHeight, 0.0f, 24, 13.0f);
+    const auto b = arrangeTimelineRows(layout, uniform, 0.0f, 24, 13.0f);
+    bool same = a.size() == b.size();
+    for (size_t i = 0; same && i < a.size(); ++i)
+        same = sameRect(b[i].rect, a[i].rect.x, a[i].rect.y, a[i].rect.width, a[i].rect.height) && a[i].visible == b[i].visible;
+    check(same, "uniform heights lay rows exactly as the shared-height stack");
+    for (float y = 0.0f; y < 720.0f; y += 3.0f)
+        if (timelineRowSlotAt(layout, uniform, 0.0f, 13.0f, y) != timelineRowSlotAt(layout, kRowHeight, 0.0f, 13.0f, y))
+            check(false, "uniform slot differs at y=" + std::to_string(y));
+    check(nearly(timelineRowsContentHeight(uniform, 0.0f, 24), timelineRowsContentHeight(kRowHeight, 0.0f, 24)),
+          "uniform content height matches");
+
+    TimelineRowHeights tall = uniform;
+    tall.heights[1] = 160.0f; // track 2 made much larger than the rest
+    const auto rows = arrangeTimelineRows(layout, tall, 0.0f, 24, 0.0f);
+    check(nearly(rows[1].rect.height, 160.0f), "the resized row is 160 tall");
+    check(nearly(rows[2].rect.y, layout.rows.y + kRowHeight + 160.0f), "the row under it starts below it");
+    check(nearly(rows[0].rect.y, layout.rows.y) && nearly(rows[0].rect.height, kRowHeight), "the row above is untouched");
+    check(timelineRowSlotAt(layout, tall, 0.0f, 0.0f, layout.rows.y + kRowHeight + 150.0f) == 1, "a point inside the tall row is row 1");
+    check(timelineRowSlotAt(layout, tall, 0.0f, 0.0f, layout.rows.y + kRowHeight + 161.0f) == 2, "just below it is row 2");
+    check(nearly(timelineRowTopY(layout, tall, 0.0f, 3, 0.0f), layout.rows.y + kRowHeight * 2.0f + 160.0f), "row 3's top");
+    check(nearly(timelineRowsContentHeight(tall, 0.0f, 24), kRowHeight * 23.0f + 160.0f), "content grows by the extra");
+    check(timelineRowSlotAt(layout, tall, 0.0f, 0.0f, layout.rows.y + kRowHeight * 23.0f + 160.0f + 1.0f) == 24,
+          "below the last row the slots go on (a new row)");
+}
+
 int main() {
     testRegionsMatchLayoutTracks();
     testRowsMatchLayoutTracks();
@@ -169,6 +202,7 @@ int main() {
     testSlotsMatchTheHandWrittenHitTests();
     testScrollRange();
     testNarrowAndShortComponentsStayNonNegative();
+    testRowsOfTheirOwnHeight();
 
     if (g_failures != 0) {
         std::cerr << g_failures << " check(s) failed\n";

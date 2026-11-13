@@ -295,8 +295,8 @@ bool TrackManagerUI::placeFileOnTimeline(const std::string& filePath, const std:
     auto& theme = AestraUI::NUIThemeManager::getInstance();
     const auto bounds = getBounds();
     const float y = bounds.y +
-                    timelineRowTopY(currentTimelineLayout(), static_cast<float>(m_trackHeight),
-                                    static_cast<float>(m_trackSpacing), targetLane, m_scrollOffset) +
+                    timelineRowTopY(currentTimelineLayout(), rowHeights(), static_cast<float>(m_trackSpacing),
+                                    targetLane, m_scrollOffset) +
                     2.0f;
     const float gridStartX = timelineGridStartX(0.0f, theme.getLayoutDimensions().trackControlsWidth);
     const double playheadBeats =
@@ -330,8 +330,8 @@ bool TrackManagerUI::placePatternOnTimeline(PatternID patternId) {
     auto& theme = AestraUI::NUIThemeManager::getInstance();
     const auto bounds = getBounds();
     const float y = bounds.y +
-                    timelineRowTopY(currentTimelineLayout(), static_cast<float>(m_trackHeight),
-                                    static_cast<float>(m_trackSpacing), targetLane, m_scrollOffset) +
+                    timelineRowTopY(currentTimelineLayout(), rowHeights(), static_cast<float>(m_trackSpacing),
+                                    targetLane, m_scrollOffset) +
                     2.0f;
     const float gridStartX = timelineGridStartX(0.0f, theme.getLayoutDimensions().trackControlsWidth);
     const double playheadBeats =

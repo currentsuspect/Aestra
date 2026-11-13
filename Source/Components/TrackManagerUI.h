@@ -23,10 +23,12 @@
 #include "TimelineSummaryCache.h"
 #include "TimelineInteractionPolicy.h"
 #include "TimelineMarquee.h"
+#include "../AestraUI/Widgets/InlineRename.h"
 #include "TrackManagerUILayout.h"
 #include "TrackManagerUIMath.h"
 #include "WaveformCache.h"
 
+#include <atomic>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -156,6 +158,21 @@ public:
     void setOnCursorVisibilityChanged(std::function<void(bool)> callback) { m_onCursorVisibilityChanged = callback; }
     bool isMinimapResizeCursorActive() const;
     bool isCustomCursorActive() const; // Returns true if any tool/resize cursor is active
+
+    // --- Track heights (TrackManagerUIView.cpp) ---
+    static constexpr float kMinTrackHeight = 30.0f;
+    static constexpr float kDefaultTrackHeight = 46.0f; ///< m_trackHeight's starting value
+    static constexpr float kMaxTrackHeight = 320.0f;
+    /// Every row's height, top to bottom.
+    TimelineRowHeights rowHeights() const;
+    /// Set one row's height (clamped); the others keep theirs.
+    void setRowHeight(PlaylistLaneID laneId, float height);
+    /// Scale every row (vertical zoom): the shared height and each resized row together.
+    void zoomTrackHeights(float factor);
+    /// The shared height and the rows that differ from it, for the project's UI state; and back.
+    float defaultTrackHeight() const { return static_cast<float>(m_trackHeight); }
+    const std::unordered_map<std::string, float>& rowHeightOverrides() const { return m_rowHeightOverrides; }
+    void restoreTrackHeights(float defaultHeight, const std::unordered_map<std::string, float>& overrides);
     /** @brief True while the timeline ruler row is the interaction (playhead
      *  scrub, loop markers, ruler selection) — grab-hand cursor territory. */
     bool isRulerPointerActive() const;
@@ -237,6 +254,9 @@ public:
     void openTrackContextMenu(const ::AestraUI::NUIPoint& position, std::function<void()> onSendToAudition,
                               TrackUIComponent* target = nullptr);
     void deleteLane(PlaylistLaneID laneId);
+    /// Rename the track on @p row in place (header double-click, or "Rename Track" in its menu); one undo step.
+    void beginTrackRename(TrackUIComponent* row);
+    bool isRenamingTrack() const { return m_trackRename.active(); }
 
     // Snap-to-Grid control
     // Choke point: propagates to every row so trim/resize honors the same
@@ -460,6 +480,12 @@ private:
     // Contiguous rows (2026-08 plane redesign): the grid plane is continuous,
     // so rows carry no seam — a quiet separator line marks each boundary.
     int m_trackSpacing{0};
+    // Resize a track (drag its header's bottom edge) and vertical zoom (Alt+wheel over the tracks). A row with no
+    // entry here is m_trackHeight tall. Keyed by the row's lane id, so it survives reordering and refreshTracks().
+    std::unordered_map<std::string, float> m_rowHeightOverrides;
+    int m_resizingRow = -1;      ///< the row whose bottom edge is being dragged
+    float m_resizeStartY = 0.0f; ///< pointer y and row height when the drag began
+    float m_resizeStartH = 0.0f;
     float m_scrollOffset{0.0f};
     float m_targetScrollOffset{0.0f};
     std::unordered_set<uint64_t> m_collapsedTrackIds;
@@ -631,6 +657,11 @@ private:
     // endpoint updates); this widget keeps only the screen mapping and the
     // selection application on finalize.
     ::Aestra::Components::TimelineMarqueeDrag m_marquee;
+    AestraUI::InlineRename m_trackRename; ///< the track-name field while a rename is open
+    AestraUI::DoubleClickTimer m_headerDoubleClick; ///< a header name (rename) or a header's bottom edge (reset height)
+    /// Set by the command history (rename, undo, redo); onUpdate then re-reads every row's name. Shared so the
+    /// history's listener stays safe if this view goes first.
+    std::shared_ptr<std::atomic<bool>> m_namesDirty = std::make_shared<std::atomic<bool>>(false);
     ::Aestra::Components::MarqueeOrigin m_marqueeOrigin = ::Aestra::Components::MarqueeOrigin::Tool;
 
     // === SMOOTH ZOOM ANIMATION ===
@@ -859,6 +890,11 @@ private:
     // row and select it, so clicks between rows are not silently swallowed.
     bool handleTrackSeamSelect(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
     void renderMinimapResizeCursor(::AestraUI::NUIRenderer& renderer, const ::AestraUI::NUIPoint& position);
+    /// The row whose header bottom edge is under @p windowPos (within a few px), or -1.
+    int trackResizeEdgeAt(const ::AestraUI::NUIPoint& windowPos) const;
+    /// A press on a header's bottom edge starts a resize (double-click resets it); the drag and release follow.
+    bool handleTrackResizeMouse(const ::AestraUI::NUIMouseEvent& event, bool doubleClick);
+    std::shared_ptr<::AestraUI::NUIIcon> m_resizeNSCursorIcon;
 
     // Split tool
     void performSplitAtPosition(int trackIndex, double timeSeconds);

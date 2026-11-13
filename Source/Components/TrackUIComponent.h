@@ -50,6 +50,13 @@ public:
     ~TrackUIComponent() override;
 
     PlaylistLaneID getLaneId() const { return m_laneId; }
+    /// Where the header draws the track's name (the timeline lays its rename field there).
+    AestraUI::NUIRect getNameBounds() const { return m_nameLabel ? m_nameLabel->getBounds() : AestraUI::NUIRect{}; }
+    /// Show @p name (a rename, or its undo). Empty shows "Track", as a new row does.
+    void syncName(const std::string& name) {
+        const std::string shown = name.empty() ? "Track" : name;
+        if (m_nameLabel && m_nameLabel->getText() != shown) { m_nameLabel->setText(shown); repaint(); }
+    }
     std::shared_ptr<MixerChannel> getMixerChannel() const { return m_channel; }
     
     // Legacy mapping (for easier refactoring transition)

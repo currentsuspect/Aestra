@@ -383,7 +383,7 @@ void ArsenalPanel::refreshUnits() {
         });
         row->setOnRenameUnit([this](UnitID id, const std::string& name) {
             if (!m_trackManager) return;
-            m_trackManager->getUnitManager().setUnitName(id, name);
+            m_trackManager->getUnitManager().setUnitName(id, name); m_trackManager->markModified(); // a rename is a change to save
             refreshUnits();
         });
         row->setOnDeleteUnit([this](UnitID id) {

@@ -222,6 +222,8 @@ void TrackManagerUI::onRender(AestraUI::NUIRenderer& renderer) {
         }
     }
 
+    m_trackRename.render(renderer); // the rename field sits over a header name, above the cached rows
+
     // Render Context Menu LAST (Topmost Z-order, not clipped)
     if (m_activeContextMenu && m_activeContextMenu->isVisible()) {
         m_activeContextMenu->onRender(renderer);
@@ -533,6 +535,14 @@ void TrackManagerUI::renderChildren(AestraUI::NUIRenderer& renderer) {
 }
 
 void TrackManagerUI::onUpdate(double deltaTime) {
+    m_trackRename.onUpdate(deltaTime);
+    if (m_namesDirty->exchange(false) && m_trackManager) {
+        for (auto& row : m_trackUIComponents) {
+            if (const auto* lane = row ? m_trackManager->getPlaylistModel().getLane(row->getLaneId()) : nullptr)
+                row->syncName(lane->name);
+        }
+        invalidateCache();
+    }
     // Process pending main-thread tasks (e.g., from async loaders)
     {
         std::vector<std::function<void()>> tasks;
@@ -1387,11 +1397,13 @@ void Aestra::Audio::TrackManagerUI::renderPendingImports(AestraUI::NUIRenderer& 
     for (auto& item : m_pendingImports) {
         // Find Y position based on Lane ID
         float yPos = -1.0f;
+        float height = static_cast<float>(m_trackHeight);
 
         // Find track index for this lane
         for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
             if (m_trackUIComponents[i] && m_trackUIComponents[i]->getLaneId() == item.laneId) {
                 yPos = m_trackUIComponents[i]->getBounds().y;
+                height = m_trackUIComponents[i]->getBounds().height;
                 break;
             }
         }
@@ -1403,7 +1415,6 @@ void Aestra::Audio::TrackManagerUI::renderPendingImports(AestraUI::NUIRenderer& 
         // Calculate X position
         float xPos = gridStartX + (static_cast<float>(item.startBeat) * m_pixelsPerBeat) - m_timelineScrollOffset;
         float width = static_cast<float>(item.estimatedDurationBeats) * m_pixelsPerBeat;
-        float height = static_cast<float>(m_trackHeight);
 
         AestraUI::NUIRect rect(xPos, yPos, width, height);
 
