@@ -116,6 +116,11 @@ public:
     void beginDrag(const DragData& data, const NUIPoint& startPosition, NUIComponent* source);
     void updateDrag(const NUIPoint& position);
     void endDrag(const NUIPoint& position);
+
+    // Why a drop at @p position would land nowhere, in one line for the log: every registered target under the
+    // pointer and why it cannot take the drop (hidden, takes no pointer, transparent, covered by what is drawn
+    // on top), or that none is there. endDrag logs it whenever a started drag finds no target.
+    std::string describeDropPoint(const NUIPoint& position);
     void cancelDrag();
     
     // State queries

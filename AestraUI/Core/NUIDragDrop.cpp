@@ -117,6 +117,9 @@ void NUIDragDropManager::endDrag(const NUIPoint& position) {
     } else {
         result.accepted = false;
         result.message = "Drag cancelled or not started";
+        // A started drag that lands nowhere used to leave no trace at all; say why, so a miss can be traced from
+        // the log alone (a restart can clear the state that caused it).
+        if (m_dragStarted) Aestra::Log::info("[DragDrop] Drop landed nowhere " + describeDropPoint(position));
     }
     
     if (m_onDragEnd) {
@@ -259,6 +262,62 @@ std::shared_ptr<IDropTarget> NUIDragDropManager::findTargetAt(const NUIPoint& po
     // Something that takes no drops covers every target here (piano roll over the timeline).
     Aestra::Log::trace("[DragDrop] Drop point covered by a non-target");
     return nullptr;
+}
+
+namespace {
+std::string nameOf(const NUIComponent* node) {
+    if (!node) return "(nothing)";
+    const std::string id = node->getId();
+    return id.empty() ? std::string("(unnamed)") : id;
+}
+
+// Why a component cannot take a drop, from itself up through its parents; empty when it can.
+std::string whyNotEligible(const NUIComponent* component) {
+    for (const NUIComponent* node = component; node != nullptr; node = node->getParent()) {
+        const char* why = !node->isVisible()          ? "hidden"
+                          : !node->isHitTestVisible() ? "takes no pointer"
+                          : node->getOpacity() <= 0.0f ? "transparent"
+                                                       : nullptr;
+        if (why) return node == component ? std::string(why) : std::string(why) + " by " + nameOf(node);
+    }
+    return {};
+}
+} // namespace
+
+std::string NUIDragDropManager::describeDropPoint(const NUIPoint& position) {
+    std::string out = "at " + std::to_string(static_cast<int>(position.x)) + "," +
+                      std::to_string(static_cast<int>(position.y)) + ": ";
+    size_t live = 0;
+    std::string under;
+    NUIComponent* root = nullptr;
+    for (const auto& weak : m_dropTargets) {
+        auto target = weak.lock();
+        if (!target) continue;
+        ++live;
+        if (!target->getDropBounds().contains(position)) continue;
+        auto* component = dynamic_cast<NUIComponent*>(target.get());
+        if (!component) {
+            under += " [a target outside the component tree]";
+            continue;
+        }
+        if (!root) root = rootOf(component);
+        const std::string why = whyNotEligible(component);
+        under += " [" + nameOf(component) + (why.empty() ? std::string(": can take it") : ": " + why) + "]";
+    }
+    if (under.empty()) return out + "no drop target there (" + std::to_string(live) + " registered)";
+    out += std::to_string(live) + " registered; under the pointer:" + under;
+    if (root) {
+        // What is drawn on top there, and what holds it: a cover that takes no drops shows up here.
+        const NUIComponent* hit = topmostDrawnAt(root, position);
+        out += "; drawn on top: ";
+        int depth = 0;
+        for (const NUIComponent* node = hit; node && depth < 4; node = node->getParent(), ++depth) {
+            if (depth > 0) out += " < ";
+            out += nameOf(node);
+        }
+        if (!hit) out += "(nothing)";
+    }
+    return out;
 }
 
 void NUIDragDropManager::updateCurrentTarget(const NUIPoint& position) {
