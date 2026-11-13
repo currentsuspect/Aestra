@@ -333,19 +333,18 @@ void PluginPresetBar::render(NUIRenderer& r, const NUIRect& titleBar) {
     r.drawLine({vx, vy + 1.5f}, {vx + 3.0f, vy - 1.5f}, 1.3f, c.text2);
 
     // Save
-    r.fillRoundedRect(l.save, 4.0f, m_hoverControl == 3 ? c.raised : c.surface);
-    r.strokeRoundedRect(l.save, 4.0f, 1.0f, m_popover == Popover::Save ? c.accent : c.border);
+    // Save: a soft pill that sinks while its card is open (Design Spec, Button); no outline.
+    if (m_popover == Popover::Save)
+        Depth::bed(r, l.save, Depth::Radius::pill(l.save.height), Depth::Cut::Deep);
+    else
+        EditorKit::drawPushButton(r, l.save, std::string(), m_hoverControl == 3);
     r.drawTextCentered("Save", l.save, 11.5f, c.text);
 
-    // A | B
+    // A | B: the Segment switch, as in the two-row header. A reads as chosen until a comparison starts.
     const bool cmp = m_session->comparing();
     const int slot = m_session->activeSlot();
-    r.fillRoundedRect(l.ab, 4.0f, c.surface);
-    if (cmp) r.fillRoundedRect(slot == 0 ? l.a : l.b, 4.0f, c.accent);
-    r.strokeRoundedRect(l.ab, 4.0f, 1.0f, c.border);
-    r.drawLine({l.b.x, l.b.y}, {l.b.x, l.b.bottom()}, 1.0f, c.border);
-    r.drawTextCentered("A", l.a, 11.5f, cmp && slot == 0 ? c.bed : c.text2);
-    r.drawTextCentered("B", l.b, 11.5f, cmp && slot == 1 ? c.bed : c.text2);
+    static const std::string kAB[2] = {"A", "B"};
+    EditorKit::drawSegmented(r, l.ab, kAB, 2, (!cmp || slot == 0) ? 0 : 1, -1, false);
 }
 
 // The FD-73 look: flat, sharp, one edge colour, painted by the shared control kit's colours.
@@ -354,9 +353,12 @@ void PluginPresetBar::renderTwoRow(NUIRenderer& r, const NUIRect&) {
     const Layout& l = m_layout;
     const bool bypassed = m_actions.isBypassed && m_actions.isBypassed();
 
+    // Save and ··· are soft pills (Design Spec, Button); Save sinks while its card is open, like the picker.
     auto button = [&](const NUIRect& rc, bool hover, bool open) {
-        r.fillRect(rc, hover ? k.raised : k.body);
-        r.strokeRect(rc, 1.0f, open ? k.primary : k.edge);
+        if (open)
+            Depth::bed(r, rc, Depth::Radius::pill(rc.height), Depth::Cut::Deep);
+        else
+            EditorKit::drawPushButton(r, rc, std::string(), hover);
     };
     pickerPill(r, l.prev, l.name, l.next, m_popover == Popover::Browse, m_hoverControl);
     auto arrow = [&](const NUIRect& rc, bool left, bool hover) {
@@ -391,21 +393,12 @@ void PluginPresetBar::renderTwoRow(NUIRenderer& r, const NUIRect&) {
     button(l.save, m_hoverControl == 3, m_popover == Popover::Save);
     r.drawTextCentered("Save", l.save, 12.0f, m_hoverControl == 3 ? k.ink : k.inkSoft);
 
-    // A | B
+    // A | B: the 24px Segment switch with letters (Design Spec, Plugin header). A is the sound now until a
+    // comparison starts, so it reads as the chosen side.
     const bool cmp = m_session->comparing();
     const int slot = m_session->activeSlot();
-    r.fillRect(l.ab, k.body);
-    {
-        // A is the sound now until a comparison starts, so it reads as the selected side.
-        const NUIRect on = (!cmp || slot == 0) ? l.a : l.b;
-        r.fillRect(on, k.selected);
-        r.fillRect({on.x, on.bottom() - 2.0f, on.width, 2.0f}, k.primary);
-    }
-    r.fillRect({l.b.x, l.b.y + 1.0f, 1.0f, l.b.height - 2.0f}, k.border);
-    r.strokeRect(l.ab, 1.0f, k.edge);
-    const bool aOn = !cmp || slot == 0;
-    r.drawTextCentered("A", l.a, 12.0f, aOn ? k.ink : k.inkSoft);
-    r.drawTextCentered("B", l.b, 12.0f, !aOn ? k.ink : k.inkSoft);
+    static const std::string kAB[2] = {"A", "B"};
+    EditorKit::drawSegmented(r, l.ab, kAB, 2, (!cmp || slot == 0) ? 0 : 1, -1, false);
 
     // ···
     button(l.more, m_hoverControl == 6, false);
