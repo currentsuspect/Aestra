@@ -101,7 +101,7 @@ int main() {
     std::cout << "[1] settings screen\n";
     std::vector<std::shared_ptr<NUIComponent>> shown;
     visibleControls(std::shared_ptr<NUIComponent>(&dialog, [](NUIComponent*) {}), shown);
-    check(shown.size() == 8, "name, folder, format, depth, rate, tail, export and cancel are shown (" +
+    check(shown.size() == 9, "name, folder, format, depth, rate, loudness, tail, export and cancel are shown (" +
                                  std::to_string(shown.size()) + ")");
     // Board 3: 560 x 392, centred.
     const NUIRect dialogRect(1280 * 0.5f - 280.0f, 400.0f - 196.0f, 560.0f, 392.0f);

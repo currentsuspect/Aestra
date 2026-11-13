@@ -133,6 +133,17 @@ public:
          *        is logged as a warning and the export still succeeds.
          */
         bool failOnTruePeakExceeded = false;
+
+        /**
+         * @brief Loudness target (DAW Essentials Checklist: loudness target on export).
+         *
+         * When true the range is rendered to memory, measured (ITU-R BS.1770-4 integrated loudness, AudioAnalysis),
+         * and raised or lowered by one gain so it lands on @ref loudnessTargetLufs, then written to the file or the
+         * block sink. The gain never pushes the true peak above @ref truePeakCeilingdBTP: a mix too dense to reach
+         * the target stops short, and the result says so. Silence is left as it is. No limiter is added.
+         */
+        bool targetLoudness = false;
+        double loudnessTargetLufs = -14.0;
     };
 
     /**
@@ -157,6 +168,14 @@ public:
 
         /** @brief Whether the configured true-peak ceiling was exceeded. */
         bool truePeakCeilingExceeded = false;
+
+        /** @brief With Config::targetLoudness: the loudness as rendered, the gain applied, and the result. */
+        bool loudnessApplied = false;
+        double measuredLufs = -200.0;
+        double loudnessGainDb = 0.0;
+        double finalLufs = -200.0;
+        /** @brief The target was not reached because the true-peak ceiling capped the gain. */
+        bool loudnessLimitedByPeak = false;
 
         /**
          * @brief Convenience predicate for success checks.
@@ -241,6 +260,14 @@ public:
      * tests hold for the file path holds here by construction.
      */
     Result renderToBuffer(Config config, RenderedAudio& out);
+
+    /**
+     * @brief The gain (dB) that takes audio measured at @p measuredLufs with true peak @p truePeakDbtp to
+     *        @p targetLufs without the true peak passing @p ceilingDbtp. @p limited says the ceiling capped it.
+     *        Silence (no measurable loudness) gets 0 dB.
+     */
+    static double loudnessGainDb(double measuredLufs, double truePeakDbtp, double targetLufs, double ceilingDbtp,
+                                 bool& limited);
 
     /**
      * @brief Convenience helper matching AudioEngine::bounceRangeToWav signature.

@@ -2095,6 +2095,18 @@ target_include_directories(StemExportTest PRIVATE
 add_test(NAME StemExportTest COMMAND StemExportTest)
 set_tests_properties(StemExportTest PROPERTIES LABELS "audio;export;stems;contract:audio" TIMEOUT 180)
 
+# Loudness target on export: lands on the target, the true-peak ceiling caps the gain, silence is left alone.
+add_executable(LoudnessExportTest AestraAudio/LoudnessExportTest.cpp)
+target_link_libraries(LoudnessExportTest PRIVATE AestraAudio)
+target_include_directories(LoudnessExportTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME LoudnessExportTest COMMAND LoudnessExportTest)
+set_tests_properties(LoudnessExportTest PROPERTIES LABELS "audio;export;contract:audio" TIMEOUT 180)
+
 # V8-A7: automation clips -- the operations, undo through the lane, and the project format.
 add_executable(AutomationRegionsTest AestraAudio/AutomationRegionsTest.cpp)
 target_link_libraries(AutomationRegionsTest PRIVATE AestraAudio)
