@@ -64,12 +64,9 @@ public:
     bool autoSaveEnabled = true;
     int autoSaveIntervalSeconds = 300;
 
-    // --- Recent files: NOT WIRED ---------------------------------------------
-    // The storage, cap, and add/clear helpers below are implemented and correct;
-    // nothing calls them and no UI surfaces the list. Kept rather than deleted
-    // because a Recent Files menu is a plausible near-term feature and this is
-    // the plumbing it would need — but until something calls addRecentFile(),
-    // this list is always empty.
+    // --- Recent files ----------------------------------------------------------
+    // Filled by AestraApp::rememberRecentProject (a project opened, or saved as the
+    // document) and listed by File > Open Recent (ProjectLifecycle.cpp).
     std::vector<std::string> recentFiles;
     static constexpr size_t MAX_RECENT_FILES = 10;
     

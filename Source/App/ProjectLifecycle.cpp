@@ -10,6 +10,8 @@
 #include "Core/ProjectSerializer.h"
 #include "Models/ProjectReset.h"
 #include "MuseProjectLoadReport.h"
+#include "Preferences.h"
+#include "../AestraUI/Base/NUIContextMenu.h"
 
 #include "AestraLog.h"
 #include "Settings/ConfirmationDialog.h"
@@ -31,6 +33,7 @@
 // namespace Aestra.
 using Aestra::Log;
 using Aestra::JSON;
+using Aestra::Preferences;
 using Aestra::MuseProjectLoadOrigin;
 using Aestra::makeMuseProjectLoadReport;
 using Aestra::Audio::FlagType;
@@ -137,10 +140,48 @@ ProjectSerializer::LoadResult AestraApp::openProjectFromPath(const std::string& 
     auto result = loadProjectFromPath(path);
     if (result.ok) {
         cleanupUnreferencedRecordings(oldKeeperPath);
+        rememberRecentProject(path);
     } else {
         Log::error("Failed to load project: " + path + " (" + result.errorMessage + ")");
     }
     return result;
+}
+
+// --- Recent projects ---------------------------------------------------------
+
+void AestraApp::rememberRecentProject(const std::string& path) {
+    std::error_code ec;
+    const auto absolute = std::filesystem::weakly_canonical(path, ec);
+    auto& prefs = Preferences::instance();
+    prefs.addRecentFile(ec ? path : absolute.string());
+    prefs.save();
+}
+
+void AestraApp::addOpenRecentMenu(AestraUI::NUIContextMenu& menu) {
+    auto recent = std::make_shared<AestraUI::NUIContextMenu>();
+    int shown = 0;
+    for (const auto& path : Preferences::instance().recentFiles) {
+        std::error_code ec;
+        if (path.empty() || !std::filesystem::exists(path, ec))
+            continue; // moved or deleted since: leave it out rather than offer a dead entry
+        const std::filesystem::path p(path);
+        recent->addItem(p.stem().string() + "  \xc2\xb7  " + p.parent_path().filename().string(), [this, path]() {
+            confirmLeaveProject("opening another project", [this, path]() { openProjectFromPath(path); });
+        });
+        ++shown;
+    }
+    if (shown == 0) {
+        auto none = std::make_shared<AestraUI::NUIContextMenuItem>("No recent projects");
+        none->setEnabled(false);
+        recent->addItem(none);
+    } else {
+        recent->addSeparator();
+        recent->addItem("Clear the list", []() {
+            Preferences::instance().clearRecentFiles();
+            Preferences::instance().save();
+        });
+    }
+    menu.addSubmenu("Open Recent", recent);
 }
 
 // --- The verbs ---------------------------------------------------------------

@@ -204,6 +204,8 @@ public:
 
     /** @brief False only when an owner was bound and has since been destroyed. */
     bool hasLiveOwner() const;
+    /// True when @p point is on this menu or on any submenu open under it (a submenu lies outside its parent's rect).
+    bool containsPointInMenuTree(const NUIPoint& point) const;
 
     // Utility
     std::vector<std::shared_ptr<NUIContextMenuItem>> getItems() const { return items_; }

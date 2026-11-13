@@ -36,6 +36,7 @@
 #include "../Core/RecoveryInfo.h"
 #include "../Panels/AuditionBounceTile.h"
 namespace Aestra { enum class RecoveryResponse; class UpdateNotifier; class SettingsDialog; namespace Audio { class TakesPanel; } }
+namespace AestraUI { class NUIContextMenu; }
 
 class AestraApp {
 public:
@@ -152,6 +153,10 @@ private:
         @p proceed after a save that landed or after Don't Save; Cancel runs nothing (FD-50). */
     void confirmLeaveProject(const std::string& what, std::function<void()> proceed);
     ProjectSerializer::LoadResult openProjectFromPath(const std::string& path);
+    /// Recent projects (ProjectLifecycle.cpp): remember a project opened or saved as the document, and
+    /// File > Open Recent listing them (newest first, missing files left out).
+    void rememberRecentProject(const std::string& path);
+    void addOpenRecentMenu(AestraUI::NUIContextMenu& menu);
     void requestClose();
     /// Save, or Save As when the document has no path yet. Save As shows a
     /// picker off the UI thread, so the outcome arrives through @p onDone

@@ -407,8 +407,8 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
             // Only hide the menu if clicking OUTSIDE of it
             if (m_activeMenu && m_activeMenu->isVisible()) {
                 AestraUI::NUIPoint clickPos(static_cast<float>(m_lastMouseX), static_cast<float>(m_lastMouseY));
-                AestraUI::NUIRect menuBounds = m_activeMenu->getBounds();
-                if (!menuBounds.contains(clickPos)) {
+                // The menu or a submenu open under it: a submenu lies outside its parent's rect.
+                if (!m_activeMenu->containsPointInMenuTree(clickPos)) {
                     hideActiveMenu();
                 }
                 // If clicking inside the menu, let the event propagate to the menu component
