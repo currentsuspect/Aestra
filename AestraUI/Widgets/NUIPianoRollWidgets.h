@@ -230,6 +230,8 @@ public:
     void setPlayheadBeat(double beat) { const auto next = beat; if (playheadBeat_ == next) return; playheadBeat_ = next; repaint(); }
 
     // Callback: delta (wheel), mouseX (local)
+    /// Name every beat ("1.2", "1.3"...) with a short tick when there is room (Design Spec, Arsenal).
+    void setShowBeatNumbers(bool on) { if (showBeatNumbers_ == on) return; showBeatNumbers_ = on; repaint(); }
     std::function<void(float delta, float mouseX)> onZoomRequested; // ADDED
     /** @brief Called while the user clicks or drags the ruler playhead. */
     std::function<void(double beat, bool active)> onPlayheadScrubbed;
@@ -268,6 +270,7 @@ private:
     bool isScrubbing_ = false;
     bool isDrawingZone_ = false;
     NUIMouseButton zoneButton_ = NUIMouseButton::None;
+    bool showBeatNumbers_ = false;
     double zoneAnchorBeat_ = 0.0;
     double zoneDragBeat_ = 0.0;
     bool allowLoopZone_ = true;

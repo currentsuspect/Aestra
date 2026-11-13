@@ -438,19 +438,23 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     const int playStep = (playBeat >= 0.0) ? static_cast<int>(std::floor(playBeat / 0.25)) : -1;
     const NUIColor playheadAccent = theme.getColor("accentPrimary");
 
-    const NUIColor inactiveFill = theme.getColor("surfaceTertiary").lightened(0.05f);
-    const NUIColor inactiveStroke = theme.getColor("border").withAlpha(0.14f);
-    // The beat-group seam after every fourth pad.
+    // Design Spec, Arsenal (locked 13 Nov): resting pads come in beat groups of four that alternate shade (beats 1, 3
+    // surfaceTertiary; 2, 4 surfaceRaised), so "the 2" is a place you see, not count to. No pad outlines.
+    const NUIColor restEven = theme.getColor("surfaceTertiary"), restOdd = theme.getColor("surfaceRaised").lightened(0.10f);
+    const auto restFill = [&](int step) { return ((step / 4) & 1) != 0 ? restOdd : restEven; };
+    // The seam in the gap after every fourth pad; the one closing a bar is stronger, so bars read as blocks.
     const auto drawSeam = [&](int step, const NUIRect& cellRect, float cellGap) {
         if ((step + 1) % 4 != 0 || step + 1 >= m_stepCount) return;
+        const bool barEnd = (step + 1) % 16 == 0;
         const float seamX = cellRect.right() + (cellGap + kStepGroupGap) * 0.5f;
-        renderer.drawLine(NUIPoint(seamX, timelineStrip.y + 2.0f), NUIPoint(seamX, timelineStrip.bottom() - 2.0f), 1.0f,
-                          theme.getColor("border").withAlpha(0.18f));
+        renderer.drawLine(NUIPoint(seamX, timelineStrip.y + (barEnd ? 0.0f : 4.0f)),
+                          NUIPoint(seamX, timelineStrip.bottom() - (barEnd ? 0.0f : 4.0f)), 1.0f,
+                          barEnd ? theme.getColor("textMuted").withAlpha(0.7f) : theme.getColor("gridMinor"));
     };
 
     if (m_type == Aestra::Audio::UnitType::Sampler && !noteRollMode) {
         const NUIColor activeFill = identityColor();
-        const float cellGap = 3.0f;
+        const float cellGap = padGap(stepWidth);
         const float cellRadius = 2.0f; // flat pads (the Arsenal mock: sharp, opaque)
         const float cellHeight = std::max(10.0f, timelineStrip.height - 6.0f);
         const float cellY = timelineStrip.y + (timelineStrip.height - cellHeight) * 0.5f;
@@ -468,8 +472,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
             const bool isPlayhead = (step == playStep);
             const bool isSelected = isStepSelected(step);
             NUIRect cellRect(cellX, cellY, cellWidth, cellHeight);
-            NUIColor cellFill = isActive ? activeFill : inactiveFill;
-            if (((step / 4) & 1) != 0 && !isActive) cellFill = cellFill.lightened(0.06f); // neutral beat-group tint
+            NUIColor cellFill = isActive ? activeFill : restFill(step);
             if (isPlayhead && isActive) {
                 cellFill = activeFill.lightened(0.35f); // note lights up under the playhead
             }
@@ -488,7 +491,6 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
             } else {
                 renderer.fillRoundedRect(cellRect, cellRadius, cellFill);
             }
-            renderer.strokeRoundedRect(cellRect, cellRadius, 1.0f, inactiveStroke);
             if (isActive && !isSelected) {
                 // Subtle inner rim keeps adjacent active pads legible as
                 // individual steps instead of one merged bar.
@@ -512,7 +514,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     } else if (m_type == Aestra::Audio::UnitType::PitchedSampler) {
         const NUIColor activeFill = identityColor();
         const NUIColor pitchText = theme.getColor("textSecondary").withAlpha(0.72f);
-        const float cellGap = 3.0f;
+        const float cellGap = padGap(stepWidth);
         const float topHeight = std::max(8.0f, timelineStrip.height * 0.58f);
         const float pitchLaneHeight = std::max(8.0f, timelineStrip.height * 0.24f);
         const float lengthLaneHeight = std::max(3.0f, timelineStrip.height * 0.10f);
@@ -533,8 +535,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
             const bool isPlayhead = (step == playStep);
             const bool isSelected = isStepSelected(step);
             NUIRect cellRect(cellX, topY, cellWidth, topHeight);
-            NUIColor cellFill = isActive ? activeFill : inactiveFill;
-            if (((step / 4) & 1) != 0 && !isActive) cellFill = cellFill.lightened(0.06f); // neutral beat-group tint
+            NUIColor cellFill = isActive ? activeFill : restFill(step);
             if (isPlayhead && isActive) {
                 cellFill = activeFill.lightened(0.35f);
             }
@@ -542,7 +543,6 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                 cellFill = cellFill.lightened(0.28f); // selection brightens the note
             }
             renderer.fillRoundedRect(cellRect, 3.0f, cellFill);
-            renderer.strokeRoundedRect(cellRect, 3.0f, 1.0f, inactiveStroke);
             if (isSelected) {
                 const NUIRect haloRect(cellRect.x - 1.5f, cellRect.y - 1.5f,
                                        cellRect.width + 3.0f, cellRect.height + 3.0f);
@@ -566,7 +566,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
             }
 
             const NUIRect lengthBg(cellX, lengthY, cellWidth, lengthLaneHeight);
-            renderer.fillRoundedRect(lengthBg, 1.5f, inactiveStroke.withAlpha(0.35f));
+            renderer.fillRoundedRect(lengthBg, 1.5f, theme.getColor("border").withAlpha(0.05f));
             if (stepLength[step] > 0.0f) {
                 const float ratio = std::clamp(stepLength[step] / 1.0f, 0.15f, 1.0f);
                 NUIRect lengthFill(cellX, lengthY, std::max(2.0f, cellWidth * ratio), lengthLaneHeight);
@@ -751,7 +751,7 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
         // Exact pad containment: 4-step groups carry a structural gap, and the
         // 3px lane gap between pads is not clickable — only the drawn cell
         // itself registers (bounded, 32 steps max -> trivial loop).
-        constexpr float kCellGap = 3.0f;
+        const float kCellGap = padGap(stepWidth);
         const float contentX = relativeX + m_scrollX;
         for (int s = 0; s < m_stepCount; ++s) {
             const float slotLeft = s * stepWidth + static_cast<float>(s / 4) * kStepGroupGap;
