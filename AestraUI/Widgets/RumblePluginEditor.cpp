@@ -109,22 +109,40 @@ RumblePluginEditor::RumblePluginEditor(std::shared_ptr<Aestra::Audio::IPluginIns
     setSize(kWindowWidth, kWindowHeight);
     setEnforceParentBounds(true);
 
+    startFromInstrument();
+    layout();
+}
+
+namespace {
+bool sameSound(const RumbleSound& a, const RumbleSound& b) {
+    // The instrument keeps its settings as floats, so compare to well under a knob step.
+    for (size_t id = 0; id < RumbleSound::Count; ++id) {
+        if (!(std::abs(a[id] - b[id]) < 1.0e-4)) return false;
+    }
+    return a.seed == b.seed;
+}
+} // namespace
+
+void RumblePluginEditor::startFromInstrument() {
     // Start from the sound the track already has, named after the starting sound it matches.
     const RumbleSound start = instrumentSound();
     std::string name = "Your sound";
+    m_startPreset = kPresetSlots; // none of the starting sounds, unless it matches one
     for (size_t i = 0; i < Aestra::Plugins::kRumbleFactoryPresets.size(); ++i) {
-        const RumbleSound preset = Aestra::Plugins::rumbleSoundOf(Aestra::Plugins::kRumbleFactoryPresets[i]);
-        bool match = true;
-        for (size_t id = 0; id < RumbleSound::Count && match; ++id) match = std::abs(preset[id] - start[id]) < 1.0e-4;
-        if (match) {
+        if (sameSound(Aestra::Plugins::rumbleSoundOf(Aestra::Plugins::kRumbleFactoryPresets[i]), start)) {
             name = std::string(Aestra::Plugins::kRumbleFactoryPresets[i].name);
             m_startPreset = i;
             break;
         }
     }
+    m_outlines->forgetPending();
     m_session = std::make_unique<RumbleFindSession>(start, name, static_cast<uint64_t>(nowMs()));
+    m_lastPicture.reset();
     soundChanged();
-    layout();
+}
+
+void RumblePluginEditor::followInstrument() {
+    if (m_session && !sameSound(instrumentSound(), m_session->current())) startFromInstrument();
 }
 
 RumblePluginEditor::~RumblePluginEditor() = default;
@@ -232,6 +250,7 @@ float RumblePluginEditor::pictureDropY(double semitones) const {
 
 void RumblePluginEditor::drawContent(NUIRenderer& renderer, const NUIRect& contentRect) {
     (void)contentRect;
+    followInstrument();
     layout();
     const NUIRect b = getBounds();
     renderer.fillRect({b.x, b.y + headerHeight(), b.width, b.height - headerHeight()}, token("backgroundSecondary"));
@@ -269,26 +288,48 @@ void RumblePluginEditor::drawShelf(NUIRenderer& r) {
 
 void RumblePluginEditor::drawTrail(NUIRenderer& r) {
     const size_t steps = m_session->stepCount();
-    const size_t shown = std::min<size_t>(steps, m_trailPills.size());
-    const size_t first = steps - shown;
+    const auto textOf = [this](size_t i) {
+        return i == 0 ? "Start: " + m_session->step(0).parentName : m_session->step(i).parentName;
+    };
+    // The steps that fit around the current one; a "..." either side reaches the hidden ones (kOverflow each).
+    // The UI font has no single-angle quotes, so the ends are dots.
+    constexpr float kOverflow = 40.0f;
+    constexpr size_t kMaxSteps = 16;
+    std::vector<float> widths(steps);
+    for (size_t i = 0; i < steps; ++i) widths[i] = r.measureText(textOf(i), 11.0f).width + 20.0f + 14.0f;
+    auto window = Aestra::Plugins::fitTrail(widths, m_trail.width - 120.0f - 2.0f * kOverflow, m_session->currentStep());
+    if (window.end - window.first > kMaxSteps) {
+        window.first = std::max(window.first, std::min(m_session->currentStep(), window.end - kMaxSteps));
+        window.end = std::min(window.end, window.first + kMaxSteps);
+    }
+
     float x = m_trail.x;
     m_trailPillCount = 0;
-    for (size_t k = 0; k < shown; ++k) {
-        const size_t i = first + k;
-        const std::string text = i == 0 ? "Start: " + m_session->step(0).parentName : m_session->step(i).parentName;
+    const auto pill = [&](const std::string& text, size_t step, bool current) {
         const float w = r.measureText(text, 11.0f).width + 20.0f;
-        if (x + w > m_trail.right() - 120.0f) break;
-        if (k > 0) {
-            r.drawText(">", {x + 1.0f, r.calculateOpticalTextY(m_trail, 10.0f)}, 10.0f, token("textMuted"));
-            x += 12.0f;
-        }
         const NUIRect pillRect{x, m_trail.y + 1.0f, w, 22.0f};
-        m_trailPills[m_trailPillCount++] = pillRect;
-        const bool current = i == m_session->currentStep();
+        m_trailPills[m_trailPillCount] = pillRect;
+        m_trailSteps[m_trailPillCount++] = step;
         const bool hovered = pillRect.contains(m_hover);
         if (current || hovered) r.fillRoundedRect(pillRect, 11.0f, token(current ? "surfaceRaised" : "surfaceTertiary"));
         r.drawTextCentered(text, pillRect, 11.0f, token(current || hovered ? "textPrimary" : "textMuted"));
         x += w + 2.0f;
+    };
+    const auto arrow = [&]() {
+        r.drawText(">", {x + 1.0f, r.calculateOpticalTextY(m_trail, 10.0f)}, 10.0f, token("textMuted"));
+        x += 12.0f;
+    };
+    if (window.first > 0) {
+        pill("...", window.first - 1, false); // one step further back
+        arrow();
+    }
+    for (size_t i = window.first; i < window.end; ++i) {
+        if (i > window.first) arrow();
+        pill(textOf(i), i, i == m_session->currentStep());
+    }
+    if (window.end < steps) {
+        arrow();
+        pill("...", window.end, false); // the next hidden step
     }
     const std::string count = std::to_string(steps) + (steps == 1 ? " step, " : " steps, ") +
                               std::to_string(m_session->soundsMade()) + " sounds";
@@ -485,9 +526,7 @@ bool RumblePluginEditor::handlePress(const NUIPoint& p) {
     }
     for (size_t k = 0; k < m_trailPillCount; ++k) {
         if (m_trailPills[k].contains(p)) {
-            const size_t steps = m_session->stepCount();
-            const size_t first = steps - std::min<size_t>(steps, m_trailPills.size());
-            m_session->goToStep(first + k);
+            m_session->goToStep(m_trailSteps[k]);
             soundChanged();
             return true;
         }
@@ -556,8 +595,11 @@ bool RumblePluginEditor::onMouseEvent(const NUIMouseEvent& event) {
     if (!isVisible()) return false;
     if (AestraPanelWindow::onMouseEvent(event)) return true;
 
+    followInstrument();
+
     if (m_dragging != Handle::None) {
-        if (event.released) {
+        // A release that never arrives (focus loss) leaves no button held: stop the drag.
+        if (event.released || (!event.pressed && !NUIComponent::isPointerButtonHeld())) {
             m_dragging = Handle::None;
             setDirty(true);
         } else {
@@ -586,7 +628,11 @@ bool RumblePluginEditor::onMouseEvent(const NUIMouseEvent& event) {
     }
 
     std::array<KnobTarget, kControlCount> knobs{};
-    for (size_t i = 0; i < kControlCount; ++i) knobs[i] = {m_controls[i], kControlIds[i]};
+    for (size_t i = 0; i < kControlCount; ++i) {
+        // Centred on the drawn knob (16 px down, kKnobSize across), so the cursor comes back to the knob.
+        const NUIRect& col = m_controls[i];
+        knobs[i] = {{col.x, col.y, col.width, 2.0f * (16.0f + kKnobSize * 0.5f)}, kControlIds[i]};
+    }
     if (handleKnobDrag(event, knobs.data(), knobs.size(), kKnobRange,
                        [this](uint32_t id) { return static_cast<float>(m_session->current()[id]); },
                        [this](uint32_t id, float v) {

@@ -84,5 +84,13 @@ private:
     std::string m_said;
 };
 
+// Which trail steps fit a row @p room wide, given each pill's width: always the current step, then as many as
+// fit, later steps first. Steps outside [first, end) are hidden; the row offers a way to them.
+struct TrailWindow {
+    size_t first = 0;
+    size_t end = 0;
+};
+TrailWindow fitTrail(const std::vector<float>& widths, float room, size_t current);
+
 } // namespace Plugins
 } // namespace Aestra

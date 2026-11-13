@@ -8,6 +8,7 @@
 #include <cmath>
 #include <iostream>
 #include <string>
+#include <vector>
 
 using namespace Aestra::Plugins;
 using RumbleVariation::Distance;
@@ -158,6 +159,32 @@ void shapingIsCarriedAndCanBePutBack() {
     check(s.current()[RumbleSound::Punch] == 1.0, "settings stay in range");
 }
 
+void shapingIgnoresValuesThatAreNotNumbers() {
+    auto s = fresh();
+    s.select(2);
+    const double before = s.current()[RumbleSound::Weight];
+    s.shape(RumbleSound::Weight, std::nan(""));
+    check(s.current()[RumbleSound::Weight] == before && !s.shaped(2), "NaN leaves the setting as it was");
+    s.shape(RumbleSound::Weight, INFINITY);
+    check(s.current()[RumbleSound::Weight] == before && !s.shaped(2), "so does infinity");
+}
+
+// The trail row: the current step is always shown, and every hidden step is one click away.
+void theTrailAlwaysShowsWhereYouAre() {
+    const std::vector<float> ten(10, 50.0f);
+    auto w = fitTrail(ten, 1000.0f, 9);
+    check(w.first == 0 && w.end == 10, "all ten fit: all shown");
+    w = fitTrail(ten, 200.0f, 9);
+    check(w.end == 10 && w.first == 6, "too many: the latest that fit, ending at the current one");
+    w = fitTrail(ten, 200.0f, 2);
+    check(w.first <= 2 && 2 < w.end && w.end - w.first == 4, "gone back: the current step is still shown");
+    check(w.end < 10, "and later steps are hidden, so the row offers a way to them");
+    w = fitTrail(ten, 10.0f, 5);
+    check(w.first == 5 && w.end == 6, "no room at all: the current step alone");
+    w = fitTrail({}, 100.0f, 0);
+    check(w.first == 0 && w.end == 0, "no steps: nothing");
+}
+
 void everyMoveSaysSomething() {
     auto s = fresh();
     std::string last = s.said();
@@ -183,6 +210,8 @@ int main() {
     distanceSetsHowFar();
     arrowsWrapThroughTheParent();
     shapingIsCarriedAndCanBePutBack();
+    shapingIgnoresValuesThatAreNotNumbers();
+    theTrailAlwaysShowsWhereYouAre();
     everyMoveSaysSomething();
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";

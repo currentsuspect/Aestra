@@ -54,6 +54,11 @@ private:
 
     void layout();
     void startFrom(size_t presetIndex);
+    // Start again from whatever the instrument plays now (opening, or a preset load, Undo or A/B elsewhere).
+    void startFromInstrument();
+    // When the instrument's sound changed outside this screen, start from it, so a later move never writes
+    // the old sound back over the change.
+    void followInstrument();
     void soundChanged(); // hand the current sound to the instrument; ask for outlines
     Aestra::Plugins::RumbleSound instrumentSound() const;
 
@@ -84,7 +89,8 @@ private:
     NUIRect m_shelf;
     std::array<NUIRect, kPresetSlots> m_shelfRows{};
     NUIRect m_trail;
-    std::array<NUIRect, 16> m_trailPills{};
+    std::array<NUIRect, 18> m_trailPills{}; // the steps that fit, and a "..." either side for the hidden ones
+    std::array<size_t, 18> m_trailSteps{};  // the step each pill goes to
     size_t m_trailPillCount = 0;
     std::array<NUIRect, 7> m_cards{}; // [0] the parent, then the six
     NUIRect m_more;

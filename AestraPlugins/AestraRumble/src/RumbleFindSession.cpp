@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cmath>
 #include <cstdio>
 #include <utility>
 
@@ -216,7 +217,7 @@ bool RumbleFindSession::held(Quality quality) const {
 }
 
 void RumbleFindSession::shape(uint32_t settingId, double value) {
-    if (settingId >= RumbleSound::Count) return;
+    if (settingId >= RumbleSound::Count || !std::isfinite(value)) return;
     RumbleSound& sound = currentMutable();
     const double before = sound[settingId];
     sound[settingId] = std::clamp(value, 0.0, 1.0);
@@ -230,6 +231,16 @@ void RumbleFindSession::putBack(uint32_t settingId) {
     currentMutable()[settingId] = arrivedOf(selected())[settingId];
     refreshShaped(selected());
     m_said = std::string(kSettingNames[settingId]) + " back to how " + lowerFirst(currentName()) + " arrived.";
+}
+
+TrailWindow fitTrail(const std::vector<float>& widths, float room, size_t current) {
+    if (widths.empty()) return {};
+    current = std::min(current, widths.size() - 1);
+    TrailWindow w{current, current + 1};
+    float used = widths[current];
+    while (w.end < widths.size() && used + widths[w.end] <= room) used += widths[w.end++];
+    while (w.first > 0 && used + widths[w.first - 1] <= room) used += widths[--w.first];
+    return w;
 }
 
 } // namespace Plugins
