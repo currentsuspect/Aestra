@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <vector>
 #include <cmath>
 #include <string>
 #include <utility>
@@ -161,11 +162,25 @@ void drawSectionHeader(NUIRenderer& renderer, float x, float y, float width, con
     renderer.fillRect(NUIRect(x + tw + 8.0f, y + 6.0f, std::max(0.0f, width - tw - 8.0f), 1.0f), c.border);
 }
 
-void drawWell(NUIRenderer& renderer, const NUIRect& rect) {
-    const auto c = emberColors();
-    renderer.fillRect(rect, c.well);
-    renderer.strokeRect(rect, 1.0f, c.border);
+namespace {
+std::vector<NUIRect>& pendingGlass() {
+    static std::vector<NUIRect> wells; // UI thread only, like every draw call
+    return wells;
 }
+} // namespace
+
+void drawWell(NUIRenderer& renderer, const NUIRect& rect) {
+    Depth::bed(renderer, rect, Depth::Radius::sharp, emberColors().well, Depth::Cut::Slot);
+    pendingGlass().push_back(rect);
+}
+
+void drawPendingGlass(NUIRenderer& renderer) {
+    for (const NUIRect& r : pendingGlass())
+        Depth::glass(renderer, r, Depth::Radius::sharp);
+    pendingGlass().clear();
+}
+
+void discardPendingGlass() { pendingGlass().clear(); }
 
 void drawEmberKnob(NUIRenderer& renderer, const NUIPoint& cell, KnobSize size, float value, const std::string& label,
                    const std::string& valueText, ControlState state, bool bipolar, bool bypassed) {

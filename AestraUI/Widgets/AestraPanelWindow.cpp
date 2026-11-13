@@ -250,14 +250,17 @@ void AestraPanelWindow::onRender(NUIRenderer& renderer)
     auto b = getBounds();
     if (b.isEmpty()) return;
 
-    // Window body
+    // Design Spec, Plugin header (locked): the window is square with no outline; it floats on its shadow.
+    renderer.drawShadow(b, 0.0f, 10.0f, 24.0f, NUIThemeManager::getInstance().getColor("shadow"));
     renderer.fillRoundedRect(b, kRadius, m_bg);
 
-    // Content area (clipped, global coordinates)
+    // Content area (clipped, global coordinates); graphs drawn in it get the display glass on top.
     NUIRect content = getContentRect();
+    EditorKit::discardPendingGlass();
     if (!content.isEmpty()) {
         renderer.setClipRect(content);
         drawContent(renderer, content);
+        EditorKit::drawPendingGlass(renderer);
         renderer.clearClipRect();
     }
 
@@ -265,9 +268,6 @@ void AestraPanelWindow::onRender(NUIRenderer& renderer)
     drawTitleBar(renderer);
     if (m_accessory && b.width >= m_accessory->minimumWidth()) m_accessory->renderOverlay(renderer, b);
     drawOverlay(renderer);
-
-    // Border stroke on top of everything
-    renderer.strokeRoundedRect(b, kRadius, 1.0f, m_border);
 }
 
 bool AestraPanelWindow::onMouseEvent(const NUIMouseEvent& event)
