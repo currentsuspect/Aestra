@@ -20,6 +20,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -51,6 +52,11 @@ public:
     bool onKeyEvent(const NUIKeyEvent& event) override;
     void onResize(int width, int height) override;
 
+    // How an audition reaches the audio engine: the app plays @p key on the unit that owns @p instance, as the
+    // Sample Editor's Preview does. Set once at start-up (AestraContent); unset in tests.
+    using AuditionSink = std::function<void(const Aestra::Audio::IPluginInstance* instance, int key)>;
+    static void setAuditionSink(AuditionSink sink);
+
     // For tests and the screenshot recipe: the session the screen draws.
     const Aestra::Plugins::RumbleFindSession& session() const { return *m_session; }
 
@@ -70,6 +76,7 @@ private:
     void refreshKept();
     void moved() { m_editorSaid.clear(); } // a move replaces what Keep or Undo said
     void soundChanged(); // hand the current sound to the instrument; ask for outlines
+    void audition();     // play the current sound once at C3, its home pitch (R6)
     Aestra::Plugins::RumbleSound instrumentSound() const;
 
     void drawShelf(NUIRenderer& renderer);

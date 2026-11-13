@@ -3,17 +3,36 @@
 // The Sample Editor's one-off actions (normalize, reverse) and both editors' Preview. Preview in the Sample Editor
 // sounds the unit itself (AuditionUnit at its root note, for the trimmed sample's length), so trim, envelope and
 // pitch are all heard; in the Audio Clip Editor it plays the clip's part of its source through the preview engine.
+// Rumble's editor auditions a picked sound on its own unit the same way (SPEC-025 R6).
 #include "../Panels/AudioClipEditorPanel.h"
 #include "../Panels/SampleEditorPanel.h"
 #include "AestraContent.h"
 #include "AudioEngine.h"
 #include "Plugin/SamplerPlugin.h"
 #include "PreviewEngine.h"
+#include "RumblePluginEditor.h"
 #include "TrackManager.h"
 
 void AestraContent::wireEditorActions() {
     if (!m_sampleEditorPanel || !m_audioClipEditorPanel)
         return; // called once both editors are built
+    // The engine only runs an instrument that has something to play, so Rumble's audition is an AuditionUnit on the
+    // unit that owns the instrument, like the Sample Editor's Preview. A one-shot rings for its own length.
+    AestraUI::RumblePluginEditor::setAuditionSink([this](const Aestra::Audio::IPluginInstance* instance, int key) {
+        if (!m_audioEngine || !m_trackManager || !instance) return;
+        auto& units = m_trackManager->getUnitManager();
+        for (const auto id : units.getAllUnitIDs()) {
+            if (units.getUnitPlugin(id).get() != instance) continue;
+            Aestra::Audio::AudioQueueCommand cmd;
+            cmd.type = Aestra::Audio::AudioQueueCommandType::AuditionUnit; // as the Sample Editor's Preview
+            cmd.trackIndex = static_cast<uint32_t>(id);
+            cmd.value1 = static_cast<float>(key);
+            cmd.value2 = 1.0f;                                                              // full velocity
+            cmd.samplePos = static_cast<uint64_t>(0.1 * m_audioEngine->getSampleRate()); // a short key press
+            m_audioEngine->commandQueue().push(cmd);
+            return;
+        }
+    });
     m_sampleEditorPanel->onNormalizeRequested = [this]() {
         if (!m_trackManager || !m_sampleEditorUnitId) {
             return;

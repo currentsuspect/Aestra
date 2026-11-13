@@ -191,6 +191,28 @@ void RumblePluginEditor::soundChanged() {
     setDirty(true);
 }
 
+namespace {
+RumblePluginEditor::AuditionSink& auditionSink() {
+    static RumblePluginEditor::AuditionSink sink;
+    return sink;
+}
+} // namespace
+
+void RumblePluginEditor::setAuditionSink(AuditionSink sink) {
+    auditionSink() = std::move(sink);
+}
+
+void RumblePluginEditor::audition() {
+    // C3: the sound at its home pitch. Through the engine's live-MIDI path when the app provides one, since the
+    // engine only runs an instrument that has something to play; straight to the instrument otherwise.
+    constexpr int key = Aestra::Plugins::RumbleInstance::kKeyShift + 24;
+    if (auditionSink()) {
+        auditionSink()(m_instance.get(), key);
+    } else if (auto* rumble = dynamic_cast<Aestra::Plugins::RumbleInstance*>(m_instance.get())) {
+        rumble->audition(key);
+    }
+}
+
 void RumblePluginEditor::startFrom(size_t presetIndex) {
     const auto& preset = Aestra::Plugins::kRumbleFactoryPresets[presetIndex % Aestra::Plugins::kRumbleFactoryPresets.size()];
     m_startPreset = presetIndex;
@@ -200,6 +222,7 @@ void RumblePluginEditor::startFrom(size_t presetIndex) {
                                                     static_cast<uint64_t>(nowMs()));
     m_lastPicture.reset();
     soundChanged();
+    audition();
 }
 
 void RumblePluginEditor::refreshKept() {
@@ -214,6 +237,7 @@ void RumblePluginEditor::startFromKept(size_t index) {
     m_session = std::make_unique<RumbleFindSession>(m_kept[index].sound, m_kept[index].name, static_cast<uint64_t>(nowMs()));
     m_lastPicture.reset();
     soundChanged();
+    audition();
 }
 
 void RumblePluginEditor::keep() {
@@ -677,6 +701,7 @@ bool RumblePluginEditor::handlePress(const NUIPoint& p) {
         if (m_cards[i].contains(p)) {
             m_session->select(static_cast<int>(i) - 1);
             soundChanged();
+            audition();
             return true;
         }
     }
@@ -684,6 +709,7 @@ bool RumblePluginEditor::handlePress(const NUIPoint& p) {
         m_outlines->forgetPending();
         m_session->more();
         soundChanged();
+        audition();
         return true;
     }
     for (size_t i = 0; i < m_distance.size(); ++i) {
@@ -703,6 +729,7 @@ bool RumblePluginEditor::handlePress(const NUIPoint& p) {
     if (m_back.contains(p)) {
         m_session->back();
         soundChanged();
+        audition();
         return true;
     }
     if (!m_showEverything && m_picture.contains(p)) {
@@ -760,11 +787,15 @@ bool RumblePluginEditor::onKeyEvent(const NUIKeyEvent& event) {
     case NUIKeyCode::Enter:
         keep();
         return true;
+    case NUIKeyCode::Space: // plays the picked sound (SPEC-025 keys); the transport keeps Space everywhere else
+        audition();
+        return true;
     default:
         return AestraPanelWindow::onKeyEvent(event);
     }
     moved();
     soundChanged();
+    audition();
     return true;
 }
 
