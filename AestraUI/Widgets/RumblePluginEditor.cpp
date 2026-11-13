@@ -650,6 +650,7 @@ bool RumblePluginEditor::onKeyEvent(const NUIKeyEvent& event) {
     if (!isVisible()) return false;
     if (routeKeyToAccessory(event)) return true; // the preset bar's browser or Save form takes typing first
     if (!event.pressed) return AestraPanelWindow::onKeyEvent(event);
+    followInstrument(); // a key must not move from a sound the track no longer has
     switch (event.keyCode) {
     case NUIKeyCode::Left:
         m_session->moveSelection(-1);
