@@ -41,6 +41,10 @@ void object(NUIRenderer& renderer, const NUIRect& rect, float radius, const Obje
 /// The default object: surfaceRaised, not held.
 void object(NUIRenderer& renderer, const NUIRect& rect, float radius, bool held = false);
 
+/// A surface resting on a bed (Design Spec, Mixer: a strip on the mixer bed): a flat fill of @p fill, set apart by
+/// a soft shadow under it, never by a line.
+void restingPanel(NUIRenderer& renderer, const NUIRect& rect, float radius, const NUIColor& fill);
+
 /// A floating card: menus, folds, tooltips, toasts and dialogs. @p lift scales the shadow (1 for menus,
 /// 2 for a dialog over the dimmed window).
 void floatingCard(NUIRenderer& renderer, const NUIRect& rect, float radius, const NUIColor& fill, float lift = 1.0f);
@@ -59,6 +63,17 @@ void sliderSlot(NUIRenderer& renderer, const NUIRect& track, float t, float orig
 /// The slider's cap: the fader cap turned 90 degrees, 22 by 16, lit on top, vertical grip ridges and one
 /// textPrimary centre line; @p held lifts it.
 void sliderCap(NUIRenderer& renderer, const NUIPoint& centre, bool held = false);
+
+/// Design Spec, Mixer (locked): a fader cap you could pick up. Lit on top, grip ridges, one centre line, a shadow cast
+/// down into the slot; @p held lifts it. A channel cap is surfaceRaised with a textPrimary line; the master cap is
+/// mixed from textPrimary (silver on dark themes, graphite on light) with a primary line, so it always reads as the
+/// master.
+void faderCap(NUIRenderer& renderer, const NUIRect& cap, bool master, bool held = false);
+
+/// Design Spec, Knob (locked): the cap is a lit disc of @p radius at @p centre, shaded underneath and casting a soft
+/// shadow, with a textPrimary pointer at @p angle (radians). The pointer turns; the light does not. @p held lifts it.
+void knobCap(NUIRenderer& renderer, const NUIPoint& centre, float radius, float angle, bool held = false,
+             bool enabled = true);
 
 /// The radius scale (Design Spec rule 4). Clips, the timeline and plugin windows are sharp.
 namespace Radius {

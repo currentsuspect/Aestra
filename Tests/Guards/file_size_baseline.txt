@@ -6,7 +6,7 @@
 2328 AestraAudio/include/Plugin/AestraEQ.h
 1984 AestraAudio/include/Plugin/AestraVerb.h
 4341 AestraAudio/src/Core/AudioEngine.cpp
-3606 AestraUI/Graphics/OpenGL/NUIRendererGL.cpp
+3605 AestraUI/Graphics/OpenGL/NUIRendererGL.cpp
 5646 AestraUI/Widgets/AestraEQEditor.cpp
 1585 AestraUI/Widgets/AestraVerbEditor.cpp
 1927 AestraUI/Widgets/PianoRollNoteLayer.cpp

@@ -1,5 +1,6 @@
 // ¶¸ 2025 Aestra Studios ƒ?" All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerKnob.h"
+#include "../Graphics/NUIDepth.h"
 
 #include "NUIThemeSystem.h"
 #include "NUIRenderer.h"
@@ -196,7 +197,7 @@ void UIMixerKnob::onRender(NUIRenderer& renderer)
     
     // 1. Background Track Arc (Dark Grey)
     // Full scale from 7 o'clock to 5 o'clock
-    NUIColor trackColor = NUIThemeManager::getInstance().getColor("background").withAlpha(0.5f);
+    NUIColor trackColor = NUIThemeManager::getInstance().getColor("meterBackground");
     drawRoughArc(renderer, {cx, cy}, r, ARC_START, ARC_END, 3.0f, trackColor);
 
     // 2. Active Value Arc (Accent Color)
@@ -222,32 +223,8 @@ void UIMixerKnob::onRender(NUIRenderer& renderer)
     
     drawRoughArc(renderer, {cx, cy}, r, std::min(startAng, currentAng), std::max(startAng, currentAng), 3.0f, activeColor);
 
-    // 3. Knob Cap (Inner Circle)
-    // Slightly smaller than the ring
-    float capR = r * 0.75f;
-
-    // Flat modern look: Dark grey cap
-    NUIColor capColor = m_bg;
-    if (hovered) capColor = m_bgHover;
-
-    // Flat cap: no drop shadow. The edge highlight below defines it.
-    renderer.fillCircle({cx, cy}, capR, capColor);
-
-    // Edge highlight for 3D feel
-    renderer.strokeCircle({cx, cy}, capR, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.1f));
-
-    // 4. Pointer Line on Cap
-    // Points exactly to current value
-    const float ptrLen = capR * 0.8f;
-    const float ptrAng = ARC_START + t * (ARC_END - ARC_START);
-    NUIPoint ptrStart = {cx, cy};
-    NUIPoint ptrEnd = {
-        cx + std::cos(ptrAng) * ptrLen,
-        cy + std::sin(ptrAng) * ptrLen
-    };
-
-    // White pointer for contrast
-    renderer.drawLine(ptrStart, ptrEnd, 2.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.9f));
+    // 3. The cap: a lit disc in the sunk ring (Design Spec, Knob), the pointer at the value, lifting while dragged.
+    Depth::knobCap(renderer, {cx, cy}, r * 0.75f, ARC_START + t * (ARC_END - ARC_START), m_dragging);
 
     // 5. Label: always shown. Three identical unlabelled knobs made the row a
     // guessing game; the word sits quiet and brightens under the pointer.
