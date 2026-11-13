@@ -1494,6 +1494,8 @@ public:
      * a deferred recording start pinned outside that region can therefore
      * never be reached, and capture would skip every block forever.
      */
+    /// Loop record: a recording across timeline loop wraps becomes one take per pass (LoopRecordPasses.h).
+    void setLoopRecordEnabled(bool on) { m_loopRecordEnabled.store(on, std::memory_order_relaxed); }
     void setTransportLoopRegion(double startBeats, double endBeats, bool enabled) {
         m_timelineLoopStart.store(startBeats, std::memory_order_relaxed);
         m_timelineLoopEnd.store(endBeats, std::memory_order_relaxed);
@@ -1650,16 +1652,13 @@ public:
     /** @brief Effective loop = pattern override when active, else timeline region. */
     void recomputeEffectiveLoop() {
         if (m_patternOverrideActive.load(std::memory_order_relaxed)) {
-            m_loopStartBeats.store(m_patternLoopStart.load(std::memory_order_relaxed),
-                                   std::memory_order_relaxed);
+            m_loopStartBeats.store(m_patternLoopStart.load(std::memory_order_relaxed), std::memory_order_relaxed);
             m_loopEndBeats.store(m_patternLoopEnd.load(std::memory_order_relaxed), std::memory_order_relaxed);
             m_loopEnabled.store(true, std::memory_order_release);
         } else {
-            m_loopStartBeats.store(m_timelineLoopStart.load(std::memory_order_relaxed),
-                                   std::memory_order_relaxed);
+            m_loopStartBeats.store(m_timelineLoopStart.load(std::memory_order_relaxed), std::memory_order_relaxed);
             m_loopEndBeats.store(m_timelineLoopEnd.load(std::memory_order_relaxed), std::memory_order_relaxed);
-            m_loopEnabled.store(m_timelineLoopEnabled.load(std::memory_order_relaxed),
-                                std::memory_order_release);
+            m_loopEnabled.store(m_timelineLoopEnabled.load(std::memory_order_relaxed), std::memory_order_release);
         }
     }
 
@@ -2635,6 +2634,7 @@ private:
     std::atomic<double> m_timelineLoopEnd{0.0};
     std::atomic<bool> m_timelineLoopEnabled{false};
     std::atomic<bool> m_patternOverrideActive{false};
+    std::atomic<bool> m_loopRecordEnabled{false};
     std::atomic<double> m_patternLoopStart{0.0};
     std::atomic<double> m_patternLoopEnd{0.0};
     std::atomic<bool> m_metronomeEnabled{false};

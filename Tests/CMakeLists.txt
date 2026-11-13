@@ -1917,6 +1917,28 @@ target_include_directories(RecordingTakeLengthTest PRIVATE
 add_test(NAME RecordingTakeLengthTest COMMAND RecordingTakeLengthTest)
 set_tests_properties(RecordingTakeLengthTest PROPERTIES LABELS "audio;recording;regression;durability;contract:audio")
 
+# Loop record: one take per pass of the timeline loop.
+add_executable(LoopRecordTest
+    AestraAudio/LoopRecordTest.cpp
+)
+target_link_libraries(LoopRecordTest PRIVATE AestraAudio)
+target_include_directories(LoopRecordTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+)
+add_test(NAME LoopRecordTest COMMAND LoopRecordTest)
+set_tests_properties(LoopRecordTest PROPERTIES LABELS "audio;recording;regression;contract:audio")
+
 # FD-14 phase-5: lane deletion is undoable and identity-stable (DeleteLaneCommand).
 add_executable(DeleteLaneCommandTest
     AestraAudio/DeleteLaneCommandTest.cpp
