@@ -52,12 +52,16 @@ public:
     std::function<void(uint32_t channelId, float width)> onWidthEdited;
     /// "Show in routing graph →": open the full routing graph focused on this channel.
     std::function<void(uint32_t channelId)> onShowRoutingGraph;
+    /// Input monitoring switched On/Off (the track header's Input Monitoring setting, not the arm state).
+    std::function<void(uint32_t channelId, bool monitored)> onMonitorEdited;
 
     std::shared_ptr<EffectChainRack> getEffectRack() const { return m_effectRack; }
 
     /// What the column currently lays out, for tests and for the panel.
     NUIRect showInGraphRect() const { return m_linkRect; }
     NUIRect addSendRect() const { return m_addFxRect; }
+    NUIRect monitorAutoRect() const { return m_monitorAutoRect; }
+    NUIRect monitorArmedRect() const { return m_monitorArmedRect; }
     NUIRect viewportRect() const { return m_viewportRect; }
     float scrollOffset() const { return m_scrollOffset; }
     float maxScrollOffset() const { return m_maxScrollOffset; }
@@ -154,6 +158,10 @@ private:
     NUIRect m_inputRowRect{};
     NUIRect m_inputMetaRect{};
     NUIRect m_inputMeterRect{};
+    NUIRect m_levelHeadRect{};
+    NUIRect m_monitorAutoRect{};   ///< the Monitor switch's "Auto" segment
+    NUIRect m_monitorArmedRect{};  ///< and its "Armed only" segment
+    int m_hoveredMonitor{-1};
     float m_sectionOffset[3]{0.0f, 0.0f, 0.0f}; ///< column offsets of Inserts / Sends / Output (for scrolling to)
     bool m_linkHovered{false};
     // Sends as one-line rows; the open one unfolds into the full send card in place (board 8, "Editing a send").

@@ -6,6 +6,7 @@
 #include "NUIDragDrop.h"
 #include "NUIContextMenu.h"
 #include "NUIThemeSystem.h"
+#include "../Graphics/NUIDepth.h"
 #include "../../AestraCore/include/AestraJSON.h"
 #include <algorithm>
 #include <chrono>
@@ -60,6 +61,9 @@ namespace Colors {
 }
 
 namespace {
+/// The power key on an insert row, after the chain number (Design Spec, "Panels: inspector").
+NUIRect powerKeyRect(const NUIRect& slot) { return {slot.x + 20.0f, slot.y + slot.height * 0.5f - 9.0f, 18.0f, 18.0f}; }
+
 std::string fitText(NUIRenderer& renderer, const std::string& text, float fontSize, float maxWidth) {
     if (text.empty() || renderer.measureText(text, fontSize).width <= maxWidth) {
         return text;
@@ -842,8 +846,8 @@ void EffectChainRack::onRender(NUIRenderer& renderer) {
     auto bounds = getBounds();
     const auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
 
-    // The inspector already provides the surface. The rack contributes only
-    // actual insert rows, avoiding another nested panel around an empty list.
+    // Design Spec, "Panels: inspector": the chain sits in a sunk well.
+    Depth::bed(renderer, bounds, 8.0f);
 
     // Enable clipping
     renderer.setClipRect(bounds);
@@ -870,171 +874,88 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
     const auto& slot = m_slots[index];
     const bool isHovered = (index == m_hoveredSlot);
 
-    // Premium Glass Styling
-    NUIColor bgColor;
-    NUIColor borderColor;
-    // Drag Reorder: If this is the source slot, render faintly
-    bool isBeingDragged = (m_isDraggingReorder && index == m_draggingSlotIndex);
-
-    if (slot.isEmpty && !isBeingDragged) {
-        // Empty Slot: Subtle transparency or very faint glass
-        // Using Aestra "Deep Glass" tokens if available, otherwise manual
-        bgColor = isHovered ? Colors::buttonBackgroundHover().withAlpha(0.64f) : Colors::buttonBackground().withAlpha(0.48f);
-        borderColor = isHovered ? Colors::accentPrimary().withAlpha(0.30f) : Colors::panelBorder().withAlpha(0.30f);
-    } else {
-        // Populated: Solid dark glass
-        // If bypassed, make it slightly dimmer/transparent
-        if (isBeingDragged) {
-            bgColor = isHovered ? Colors::buttonBackgroundHover().withAlpha(0.72f) : Colors::buttonBackground().withAlpha(0.62f);
-            borderColor = Colors::accentPrimary().withAlpha(0.2f);
-        } else if (slot.bypassed) {
-             bgColor = theme.bypassed.withAlpha(0.14f);
-             borderColor = theme.bypassed.withAlpha(0.62f);
-        } else {
-             bgColor = isHovered ? Colors::buttonBackgroundHover().withAlpha(0.84f) : Colors::buttonBackground().withAlpha(0.72f);
-             borderColor = isHovered ? Colors::accentPrimary().withAlpha(0.76f) : Colors::accentPrimary().withAlpha(0.20f);
-        }
-    }
-
-    renderer.fillRoundedRect(slotRect, theme.radiusM, bgColor);
-
-    // Dashed border for empty slots to signal droppability
-    if (slot.isEmpty && !isBeingDragged) {
-        renderer.strokeRoundedRect(slotRect, theme.radiusM, theme.layout.dividerWidth, borderColor);
-        renderer.fillRoundedRect({slotRect.x + 6.0f, slotRect.y + slotRect.height * 0.5f - 0.5f,
-                                  slotRect.width - 12.0f, 1.0f},
-                                 0.5f,
-                                 isHovered ? Colors::accentPrimary().withAlpha(0.12f)
-                                           : Colors::panelBorder().withAlpha(0.16f));
-    } else {
-        renderer.strokeRoundedRect(slotRect, theme.radiusM, theme.layout.dividerWidth, borderColor);
-    }
-
-    // DEBUG: Visual indicator for pending removal
-    if (slot.pendingRemoval) {
-        renderer.strokeRoundedRect(slotRect, 4.0f, 2.0f, NUIThemeManager::getInstance().getColor("error").withAlpha(0.8f));
-    }
-
-    // Shared vertical midline for the slot row — center everything around it
+    // Design Spec, "Panels: inspector": a filled slot is a flat row, an empty one a quiet row; no outlines.
+    const bool isBeingDragged = (m_isDraggingReorder && index == m_draggingSlotIndex);
     const float slotMid = slotRect.y + slotRect.height * 0.5f;
+    const NUIColor muted = theme.textMuted;
 
-    // Slot Number (Left side, stylistic) — centered on slotMid.
-    // Populated slots get a solid index chip (it shows chain order). Empty slots
-    // stay quiet — a faint bare number revealed only on hover — so an empty rack
-    // reads as a column of available slots rather than a numbered debug table.
+    if (slot.isEmpty && !isBeingDragged) {
+        // The single trailing empty row is the rack's call to action, so it is always labelled. Spare slots exposed
+        // during a reorder drag stay quiet and only name themselves on hover.
+        const bool isAddRow = (index == lastPopulatedSlot() + 1);
+        if (isHovered) renderer.fillRoundedRect(slotRect, 6.0f, theme.surfaceTertiary);
+        if (isAddRow || isHovered) {
+            const NUIColor ink = isHovered ? theme.textPrimary : muted;
+            const float px = slotRect.x + 14.0f;
+            renderer.drawLine({px - 4.5f, slotMid}, {px + 4.5f, slotMid}, 1.5f, ink);
+            renderer.drawLine({px, slotMid - 4.5f}, {px, slotMid + 4.5f}, 1.5f, ink);
+            renderer.drawText("Add an effect", {slotRect.x + 26.0f, slotMid - theme.fontSizeS * 0.62f}, theme.fontSizeS, ink);
+        }
+        return;
+    }
+
+    renderer.fillRoundedRect(slotRect, 6.0f, (isHovered || isBeingDragged) ? theme.surfaceRaised : theme.surfaceTertiary);
+    if (slot.pendingRemoval) {
+        renderer.strokeRoundedRect(slotRect, 6.0f, 2.0f, NUIThemeManager::getInstance().getColor("error").withAlpha(0.8f));
+    }
+
+    // Chain order, then the power key (the plugin header's key), then the name.
     char numBuf[8];
     std::snprintf(numBuf, sizeof(numBuf), "%d", index + 1);
-    const float chipH = 14.0f;
-    const NUIRect indexChip{slotRect.x + 8.0f, slotMid - chipH * 0.5f, 18.0f, chipH};
-    if (!slot.isEmpty) {
-        renderer.fillRoundedRect(indexChip, 7.0f, Colors::buttonBackgroundHover().withAlpha(0.76f));
-        renderer.strokeRoundedRect(indexChip, 7.0f, 1.0f, Colors::panelBorder().withAlpha(0.35f));
-        renderer.drawTextCentered(numBuf, indexChip, theme.fontSizeMicro, Colors::textDisabled().withAlpha(0.68f));
-    } else if (isHovered) {
-        renderer.drawTextCentered(numBuf, indexChip, theme.fontSizeMicro, Colors::textDisabled().withAlpha(0.55f));
+    renderer.drawTextCentered(numBuf, {slotRect.x + 2.0f, slotRect.y, 16.0f, slotRect.height}, theme.fontSizeMicro, muted);
+
+    const bool on = !slot.bypassed;
+    const NUIRect key = powerKeyRect(slotRect);
+    renderer.fillRoundedRect(key, 3.0f, on ? theme.primary : theme.surfaceRaised);
+    {
+        const NUIColor glyph = on ? theme.textOnPrimary : muted;
+        const NUIPoint c = key.center();
+        constexpr int kSeg = 12;
+        NUIPoint pts[kSeg + 1];
+        for (int i = 0; i <= kSeg; ++i) {
+            const float t = -0.75f * 3.14159f + 1.5f * 3.14159f * (static_cast<float>(i) / kSeg); // from the top left, round the bottom, to the top right
+            pts[i] = {c.x + std::sin(t) * 3.6f, c.y + 0.6f + std::cos(t) * 3.6f};
+        }
+        renderer.drawPolyline(pts, kSeg + 1, 1.5f, glyph);
+        renderer.drawLine({c.x, c.y - 4.6f}, {c.x, c.y - 0.2f}, 1.5f, glyph);
     }
 
-    // Available text area to the right of the chip.
-    // Use the same vertical extent as the chip so drawTextCentered aligns identically.
-    const float textX = slotRect.x + 36.0f;
-    const float textW = slot.isEmpty ? slotRect.width - 44.0f : slotRect.width - 76.0f;
-    const float rowH = chipH; // 14 px — same height as the index chip
-
-    if (slot.isEmpty) {
-        // The single trailing empty row is the rack's call to action, so it is
-        // always labelled. Spare slots exposed during a reorder drag stay quiet
-        // and only name themselves on hover.
-        const bool isAddRow = (index == lastPopulatedSlot() + 1);
-        if (isAddRow || isHovered) {
-            const NUIRect textRect{textX, slotMid - rowH * 0.5f, textW, rowH};
-            renderer.drawTextCentered("+ Add Insert", textRect, theme.fontSizeXS,
-                                      Colors::textPrimary());
-        }
-    } else {
-        // Bypass uses color plus an explicit badge so it cannot be confused with
-        // a disabled slot. Auto-quarantine remains a distinct warning state.
-        const bool autoFaulted = slot.bypassed && slot.nonFiniteOutputFault;
-        NUIColor nameColor = slot.bypassed ? theme.textMuted : Colors::textPrimary();
-        if (autoFaulted) {
-            const NUIRect nameRect{textX, slotMid - rowH, textW, rowH};
-            renderer.drawText(fitText(renderer, slot.name, theme.fontSizeS, nameRect.width),
-                              {nameRect.x, nameRect.y + 2.0f},
-                              theme.fontSizeS,
-                              nameColor);
-            const NUIRect statusRect{textX, slotMid, textW, rowH};
-            renderer.drawText("Output fault", {statusRect.x, statusRect.y + 2.0f}, theme.fontSizeMicro,
-                              NUIThemeManager::getInstance().getColor("warning").withAlpha(0.92f));
-        } else {
-            renderer.drawTextCentered(fitText(renderer, slot.name, theme.fontSizeS, textW),
-                                      {textX, slotRect.y, textW, slotRect.height},
-                                      theme.fontSizeS,
-                                      nameColor);
-        }
-
-        // Active indicator / Bypass toggle
-        float rightEdge = slotRect.x + slotRect.width;
-        float knobSize = 18.0f;
-        float knobX = rightEdge - knobSize - 4.0f;
-        float knobY = yOffset + (SLOT_HEIGHT - 4 - knobSize) * 0.5f;
-
-        // Dry/Wet Knob Rendering
-        NUIRect knobRect = {knobX, knobY, knobSize, knobSize};
-
-        if (slot.bypassed && !autoFaulted) {
-            const NUIRect bypassBadge{knobX - 39.0f, slotMid - 7.0f, 24.0f, 14.0f};
-            renderer.fillRoundedRect(bypassBadge, theme.radiusS, theme.bypassed.withAlpha(0.22f));
-            renderer.strokeRoundedRect(bypassBadge, theme.radiusS, theme.layout.dividerWidth,
-                                       theme.bypassed.withAlpha(0.72f));
-            renderer.drawTextCentered("BYP", bypassBadge, theme.fontSizeMicro, theme.bypassed);
-        }
-
-        // Helper to draw arc
-        auto drawArcPoly = [&](float startAngle, float endAngle, float width, NUIColor col) {
-            NUIPoint center = knobRect.center();
-            float radius = knobSize * 0.5f - 2.0f;
-            std::vector<NUIPoint> points;
-            int segments = 16;
-            for(int i=0; i<=segments; ++i) {
-                float t = (float)i / segments;
-                float ang = startAngle + (endAngle - startAngle) * t;
-                points.push_back({
-                    center.x + std::cos(ang) * radius,
-                    center.y + std::sin(ang) * radius
-                });
-            }
-            if (!points.empty())
-                renderer.drawPolyline(points.data(), (int)points.size(), width, col);
-        };
-
-        // Background Arc
-        drawArcPoly(0.75f * 3.14159f, 2.25f * 3.14159f, 2.0f, Colors::textDisabled().withAlpha(0.2f));
-
-        // Value Arc (Dim if bypassed)
-        float startAng = 0.75f * 3.14159f;
-        float range = 1.5f * 3.14159f;
-        float endAng = startAng + range * slot.dryWet;
-        NUIColor arcColor = slot.bypassed ? Colors::textDisabled().withAlpha(0.3f) : Colors::accentPrimary();
-        drawArcPoly(startAng, endAng, 2.0f, arcColor);
-
-        // Bypass Indicator (Dot left of knob)
-        // Center vertically better
-        float dotSize = 6.0f;
-        float dotY = slotRect.y + (slotRect.height - dotSize) * 0.5f;
-        NUIRect statusDot = {knobX - 12, dotY, dotSize, dotSize};
-
-        if (!slot.bypassed) {
-            // Active: LED On
-            renderer.fillRoundedRect(statusDot, 3.0f, Colors::accentPrimary());
-        } else {
-             // Bypassed: LED Off (Dark/Stroked)
-             renderer.strokeRoundedRect(statusDot, 3.0f, 1.0f, Colors::textDisabled().withAlpha(0.5f));
-        }
+    const bool autoFaulted = slot.bypassed && slot.nonFiniteOutputFault;
+    const float knobSize = 18.0f;
+    const float knobX = slotRect.right() - knobSize - 4.0f;
+    const char* status = autoFaulted ? "Output fault" : (slot.bypassed ? "Bypassed" : nullptr);
+    const float statusW = status ? renderer.measureText(status, theme.fontSizeMicro).width : 0.0f;
+    if (status) {
+        renderer.drawText(status, {knobX - 6.0f - statusW, slotMid - theme.fontSizeMicro * 0.62f}, theme.fontSizeMicro,
+                          autoFaulted ? NUIThemeManager::getInstance().getColor("warning") : muted);
     }
+    const float textX = key.right() + 8.0f;
+    const float textW = std::max(0.0f, knobX - 6.0f - (status ? statusW + 8.0f : 0.0f) - textX);
+    renderer.drawText(fitText(renderer, slot.name, theme.fontSizeS, textW), {textX, slotMid - theme.fontSizeS * 0.62f},
+                      theme.fontSizeS, slot.bypassed ? muted : theme.textPrimary);
+
+    // Dry/wet: a quiet arc at the row's end (drag it).
+    const NUIRect knobRect{knobX, slotMid - knobSize * 0.5f, knobSize, knobSize};
+    auto drawArc = [&](float startAngle, float endAngle, const NUIColor& col) {
+        const NUIPoint center = knobRect.center();
+        const float radius = knobSize * 0.5f - 3.0f;
+        constexpr int kArc = 16;
+        NUIPoint pts[kArc + 1];
+        for (int i = 0; i <= kArc; ++i) {
+            const float ang = startAngle + (endAngle - startAngle) * (static_cast<float>(i) / kArc);
+            pts[i] = {center.x + std::cos(ang) * radius, center.y + std::sin(ang) * radius};
+        }
+        renderer.drawPolyline(pts, kArc + 1, 2.0f, col);
+    };
+    const float startAng = 0.75f * 3.14159f;
+    const float range = 1.5f * 3.14159f;
+    drawArc(startAng, startAng + range, theme.backgroundPrimary);
+    drawArc(startAng, startAng + range * slot.dryWet, on ? theme.textSecondary : muted.withAlpha(0.5f));
 }
 
 NUIRect EffectChainRack::slotRectForTop(float slotY) const {
     auto bounds = getBounds();
-    return {bounds.x + 8.0f, slotY, bounds.width - 16.0f, SLOT_HEIGHT - 6.0f};
+    return {bounds.x + 4.0f, slotY, bounds.width - 8.0f, SLOT_HEIGHT - 6.0f};
 }
 
 NUIRect EffectChainRack::getSlotBounds(int index) const {
@@ -1092,8 +1013,8 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
     auto isOverBypass = [&](int index) {
         if (index < 0) return false;
         NUIRect slotRect = getSlotBounds(index);
-        float knobX = slotRect.x + slotRect.width - 22.0f;
-        return (mx >= knobX - 20 && mx <= knobX - 2) && (my >= slotRect.y + 2 && my <= slotRect.y + 26);
+        const NUIRect k = powerKeyRect(slotRect);
+        return NUIRect{k.x - 3.0f, k.y - 3.0f, k.width + 6.0f, k.height + 6.0f}.contains(mx, my);
     };
 
     // RELEASED Event Handling (Must be checked before general Drag handling to allow drops)
