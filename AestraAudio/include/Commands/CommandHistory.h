@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include "PickableUndo.h"
 #include "ICommand.h"
 #include "CommandTransaction.h"
 
@@ -101,6 +102,14 @@ public:
     const std::vector<std::shared_ptr<ICommand>>& getUndoStack() const { return m_undoStack; }
     /** @brief Get the redo stack (most recent first). */
     const std::vector<std::shared_ptr<ICommand>>& getRedoStack() const { return m_redoStack; }
+    /**
+     * @brief Pickable undo (SPEC-026): undo step @p index of the undo stack (0 = oldest) and keep every step
+     * after it. If later steps touched what it touched, nothing changes and they are listed, unless
+     * @p withDependants, which undoes them too (newest first). The undone steps leave the stack inside one new
+     * step ("Undid: ..."), so undoing that brings them back. A failed undo leaves everything as it was.
+     */
+    PickedUndo undoJust(size_t index, bool withDependants = false);
+
     /** @brief Undo to a specific position in the undo stack. */
     void undoTo(int targetIndex);
     /** @brief Redo to a specific position in the redo stack. */

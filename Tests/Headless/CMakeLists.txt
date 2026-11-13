@@ -444,6 +444,21 @@ set_tests_properties(PickableUndoFootprintTest PROPERTIES
     ENVIRONMENT "AESTRA_HEADLESS=1"
 )
 
+# SPEC-026 U2: undo one past step and keep the rest; the picked undo is itself a step. Core-linked.
+if(TARGET AestraAudioCore)
+    add_executable(PickableUndoHistoryTest PickableUndoHistoryTest.cpp)
+    target_link_libraries(PickableUndoHistoryTest PRIVATE AestraAudioCore)
+    target_include_directories(PickableUndoHistoryTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PickableUndoHistoryTest COMMAND PickableUndoHistoryTest)
+    set_tests_properties(PickableUndoHistoryTest PROPERTIES
+        LABELS "headless;undo;regression;contract:audio"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 # V8-W6: placing a clip is ONE undo step through the command history, with the lane
 # (and owning Track) it may need; a failed placement leaves no history. Core-linked.
 if(TARGET AestraAudioCore)
