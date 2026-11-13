@@ -59,6 +59,9 @@ void registerRumbleFactoryPresets() {
         p.category = std::string(bank.category);
         p.description = std::string(bank.description);
         p.tags = {"808", "bass", "sub"};
+        // The state carries the sound's click grain, which is not a parameter, so a factory sound picked from the
+        // shared preset bar is the same sound everywhere.
+        p.state = RumbleInstance::stateOfSound(rumbleSoundOf(bank));
         for (uint32_t i = 0; i < kRumblePresetParameterCount; ++i)
             p.params.push_back({Aestra::Audio::Presets::PresetParam::kNoId, RumbleInstance::parameterName(i),
                                 bank.values[i]});

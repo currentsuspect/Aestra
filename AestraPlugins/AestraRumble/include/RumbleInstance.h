@@ -75,6 +75,8 @@ public:
 
     static constexpr float kDefaultVelocity = 0.5f;
     static const char* parameterKey(uint32_t id);
+    // A sound on its own as a state loadState takes: the fifteen settings and the grain, no Velocity.
+    static std::vector<uint8_t> stateOfSound(const RumbleSound& sound);
     static const char* parameterName(uint32_t id);
 
     // The sound's fifteen settings, then Velocity: how much a softer hit plays quieter. Velocity is how the sound

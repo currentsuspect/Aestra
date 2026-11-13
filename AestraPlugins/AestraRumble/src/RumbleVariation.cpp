@@ -63,7 +63,14 @@ uint32_t settingOf(Quality quality) {
     return RumbleSound::Tail;
 }
 
-std::array<RumbleSound, kRoundSize> makeRound(const Request& request) {
+std::array<RumbleSound, kRoundSize> makeRound(const Request& input) {
+    // A damaged parent (a non-number or out-of-range setting) is repaired first, so no child, held qualities
+    // included, can carry it into the voice: a non-number becomes the middle, anything else is clamped.
+    Request request = input;
+    for (size_t id = 0; id < RumbleSound::Count; ++id) {
+        const double v = request.parent[id];
+        request.parent[id] = std::isfinite(v) ? clamp01(v) : 0.5;
+    }
     std::array<RumbleSound, kRoundSize> round{};
     const double spread = kSpread[std::min<size_t>(2, static_cast<size_t>(request.distance))];
     for (size_t child = 0; child < kRoundSize; ++child) {

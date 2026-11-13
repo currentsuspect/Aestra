@@ -6,6 +6,7 @@
 #include "RumbleVoice.h"
 
 #include <cmath>
+#include <limits>
 #include <cstdint>
 #include <iostream>
 #include <set>
@@ -147,6 +148,21 @@ void namesSayWhatIsHeard() {
 }
 } // namespace
 
+// Review finding on #1365: a damaged parent never makes unplayable children, held qualities included.
+void aDamagedParentStillGivesPlayableSounds() {
+    RumbleVariation::Request request;
+    request.parent = rumbleSoundOf(kRumbleFactoryPresets[0]);
+    request.parent[RumbleSound::Punch] = std::nan("");
+    request.parent[RumbleSound::Hold] = std::numeric_limits<double>::infinity();
+    request.held = RumbleVariation::holdBit(RumbleVariation::Quality::Punch);
+    request.seed = 3;
+    bool finite = true;
+    for (const auto& sound : RumbleVariation::makeRound(request)) {
+        for (size_t id = 0; id < RumbleSound::Count; ++id) finite = finite && std::isfinite(sound[id]) && sound[id] >= 0.0 && sound[id] <= 1.0;
+    }
+    check(finite, "every setting of every child is a number in range");
+}
+
 int main() {
     sameRequestGivesSameSix();
     everySoundIsUsable();
@@ -154,6 +170,7 @@ int main() {
     eachSoundGoesItsOwnWay();
     furtherIsFurther();
     namesSayWhatIsHeard();
+    aDamagedParentStillGivesPlayableSounds();
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";
         return 1;

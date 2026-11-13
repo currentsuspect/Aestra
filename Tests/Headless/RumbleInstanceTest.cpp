@@ -5,6 +5,7 @@
 #include "Plugin/PluginHost.h"
 #include "RumbleInstance.h"
 #include "RumblePresetBank.h"
+#include "Presets/PresetLibrary.h"
 
 #include <algorithm>
 #include <chrono>
@@ -153,7 +154,7 @@ void aNewNoteCutsTheOldOneCleanly() {
     for (float v : out) {
         peak = std::max(peak, std::fabs(v));
     }
-    check(peak < 1.7f, "the outgoing note fades under the new one instead of stacking");
+    check(peak <= 0.99f, "a cut never pushes the output past full scale (" + std::to_string(peak) + ")");
     RumbleInstance solo;
     solo.setSound(rumbleSoundOf(kRumbleFactoryPresets[3]));
     ready(solo, 48000.0, 256);
@@ -278,6 +279,56 @@ void costsLittleToPlay() {
 }
 } // namespace
 
+// Review findings on #1365: the output stays under full scale whatever is played, bad input never reaches the
+// voice, a corrupt saved seed is refused safely, and a factory sound keeps its click grain wherever it is chosen.
+void neverPastFullScale() {
+    RumbleInstance rumble;
+    RumbleSound loud = rumbleSoundOf(kRumbleFactoryPresets[5]); // Hard clip
+    rumble.setSound(loud);
+    rumble.initialize(48000.0, 64);
+    rumble.activate(); // levels not waited for: the first notes use a guess
+    std::vector<Note> notes;
+    for (uint64_t f = 0; f < 48000; f += 300) notes.push_back({f, true, static_cast<uint8_t>(60 + (f / 300) % 13)});
+    float peak = 0.0f;
+    for (float v : play(rumble, notes, 48000, 64)) peak = std::max(peak, std::fabs(v));
+    check(peak <= 0.99f, "fast overlapping notes before the levels are found stay under full scale (" + std::to_string(peak) + ")");
+
+    RumbleInstance single;
+    single.setSound(rumbleSoundOf(kRumbleFactoryPresets[0]));
+    ready(single, 48000.0, 256);
+    const auto reference = RumbleVoice::render(rumbleSoundOf(kRumbleFactoryPresets[0]), 24, 48000.0);
+    const auto out = play(single, {{0, true, 60}}, reference.size(), 256);
+    double worst = 0.0;
+    for (size_t i = 0; i < out.size(); ++i) worst = std::max(worst, std::fabs(out[i] - static_cast<double>(reference[i])));
+    check(worst < 1.0e-6, "a single note is still exactly the approved sound under the ceiling");
+}
+
+void badInputIsRefused() {
+    RumbleInstance rumble;
+    const RumbleSound before = rumble.sound();
+    RumbleSound bad = before;
+    bad[RumbleSound::Punch] = std::nan("");
+    rumble.setSound(bad);
+    check(std::isfinite(rumble.sound()[RumbleSound::Punch]), "a NaN setting keeps the old value");
+
+    for (const char* seed : {"-5", "1e12", "4294967296"}) {
+        const std::string state = std::string("{\"schema\":\"rumble-sound\",\"version\":2,\"params\":{},\"seed\":") + seed + "}";
+        RumbleInstance r;
+        const bool ok = r.loadState(std::vector<uint8_t>(state.begin(), state.end()));
+        check(ok && r.sound().seed == rumbleDefaultSound().seed, std::string("an out-of-range seed (") + seed + ") falls back to the default");
+    }
+}
+
+void factorySoundsKeepTheirGrain() {
+    const auto presets = Aestra::Audio::Presets::factoryPresets("com.Aestrastudios.rumble");
+    check(presets.size() == kRumbleFactoryPresets.size(), "the shared preset bar lists the seven sounds");
+    for (size_t i = 0; i < presets.size() && i < kRumbleFactoryPresets.size(); ++i) {
+        RumbleInstance r;
+        check(r.loadState(presets[i].state), presets[i].name + " carries its state");
+        check(r.sound().seed == kRumbleFactoryPresets[i].seed, presets[i].name + " keeps its own click grain");
+    }
+}
+
 int main() {
     c3PlaysTheSoundAtItsHomePitch();
     playsTheApprovedVoiceExactly();
@@ -289,6 +340,9 @@ int main() {
     softerHitsPlayQuieter();
     inactiveIsSilent();
     costsLittleToPlay();
+    neverPastFullScale();
+    badInputIsRefused();
+    factorySoundsKeepTheirGrain();
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";
         return 1;

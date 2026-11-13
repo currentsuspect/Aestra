@@ -55,6 +55,10 @@ void drawsExactlyLikeTheSketch() {
         const RumbleOutline outline = RumbleOutline::of(soundOf(c), c.rate);
         check(c.bins.size() == RumbleOutline::kBins, "the golden case has every bin");
         for (size_t j = 0; j < RumbleOutline::kBins && j < c.bins.size(); ++j) {
+            if (!std::isfinite(outline.bins[j])) {
+                check(false, "every bin is a number");
+                continue;
+            }
             worst = std::max(worst, std::fabs(static_cast<double>(outline.bins[j]) - c.bins[j]));
         }
     }
@@ -185,6 +189,27 @@ void closesPromptly() {
     const double took = millisSince(start);
     check(took < 500.0, "closing with work queued does not wait for it (" + std::to_string(took) + " ms)");
 }
+
+// Review findings on #1365: a sound with a non-number setting is never cached under another sound's key, and a
+// waiter is told when a duplicate request leaves the worker idle.
+void damagedSoundsAreNotCached() {
+    RumbleOutlineWorker worker(48000.0);
+    RumbleSound bad = nthSound(1);
+    bad[RumbleSound::Slide] = std::nan("");
+    worker.request(bad);
+    check(worker.waitUntilIdle(30000), "idle");
+    check(worker.find(bad) == nullptr && worker.rendersDone() == 0, "a damaged sound is not made or found");
+}
+
+void aDuplicateDoesNotKeepAWaiterWaiting() {
+    RumbleOutlineWorker worker(48000.0);
+    worker.request(nthSound(3));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1)); // let the worker start on it
+    worker.request(nthSound(3));                              // asked again while it is being made
+    const auto start = Clock::now();
+    check(worker.waitUntilIdle(30000), "the worker goes idle");
+    check(millisSince(start) < 5000.0, "and the waiter hears about it (" + std::to_string(millisSince(start)) + " ms)");
+}
 } // namespace
 
 int main() {
@@ -197,6 +222,8 @@ int main() {
     aNewRoundDropsTheOldRequests();
     keepsABoundedNumber();
     closesPromptly();
+    damagedSoundsAreNotCached();
+    aDuplicateDoesNotKeepAWaiterWaiting();
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";
         return 1;

@@ -72,7 +72,18 @@ RumbleOutlineWorker::Key RumbleOutlineWorker::keyOf(const RumbleSound& sound) {
     return key;
 }
 
+namespace {
+// A sound with a non-number setting has no outline: its key would not order strictly against others.
+bool finite(const RumbleSound& sound) {
+    for (double v : sound.v) {
+        if (!std::isfinite(v)) return false;
+    }
+    return true;
+}
+} // namespace
+
 void RumbleOutlineWorker::request(const RumbleSound& sound) {
+    if (!finite(sound)) return;
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         if (m_stop || m_made.count(keyOf(sound)) != 0) {
@@ -92,6 +103,7 @@ void RumbleOutlineWorker::request(const RumbleSound& sound) {
 }
 
 std::shared_ptr<const RumbleOutline> RumbleOutlineWorker::find(const RumbleSound& sound) const {
+    if (!finite(sound)) return nullptr;
     std::lock_guard<std::mutex> lock(m_mutex);
     const auto found = m_made.find(keyOf(sound));
     if (found == m_made.end()) {
@@ -142,6 +154,7 @@ void RumbleOutlineWorker::run() {
         const RumbleSound sound = m_pending.front();
         m_pending.pop_front();
         if (m_made.count(keyOf(sound)) != 0) {
+            if (m_pending.empty()) m_idle.notify_all(); // a duplicate was the last request: tell any waiter
             continue;
         }
         m_busy = true;

@@ -53,6 +53,15 @@ constexpr ParameterInfo kParameterInfo[RumbleInstance::kParameterCount] = {
     {"Velocity", "Velocity", "Vel", "dB", 0},
 };
 
+// Transparent below 0.95, then a soft knee that never passes 0.99.
+float ceiling(float x) {
+    constexpr float kKnee = 0.95f, kRoom = 0.04f;
+    const float a = std::fabs(x);
+    if (a <= kKnee) return x;
+    const float y = kKnee + kRoom * std::tanh((a - kKnee) / kRoom);
+    return x < 0.0f ? -y : y;
+}
+
 std::string printf1(const char* format, double value) {
     char text[48];
     std::snprintf(text, sizeof(text), format, value);
@@ -158,7 +167,9 @@ void RumbleInstance::process(const float* const* inputs, float** outputs, uint32
         if (!m_voice.active() && !m_fading.active()) {
             continue;
         }
-        const float sample = m_voice.next() + m_fading.next();
+        // A single note peaks at the levelled 0.85 and passes untouched; only a cut (new note over the fading one)
+        // or a note played before its level is known can go higher, and the ceiling keeps that under 0.99.
+        const float sample = ceiling(m_voice.next() + m_fading.next());
         for (uint32_t c = 0; c < numOutputChannels; ++c) {
             if (outputs[c]) {
                 outputs[c][i] = sample;
@@ -313,6 +324,7 @@ RumbleSound RumbleInstance::sound() const {
 
 void RumbleInstance::setSound(const RumbleSound& sound) {
     for (size_t id = 0; id < RumbleSound::Count; ++id) {
+        if (!std::isfinite(sound[id])) continue; // keep the current value, as setParameter does
         m_params[id].store(static_cast<float>(std::clamp(sound[id], 0.0, 1.0)), std::memory_order_relaxed);
     }
     m_seed.store(sound.seed, std::memory_order_relaxed);
@@ -401,6 +413,20 @@ const char* RumbleInstance::parameterName(uint32_t id) {
     return id < kParameterCount ? kParameterInfo[id].name : "";
 }
 
+std::vector<uint8_t> RumbleInstance::stateOfSound(const RumbleSound& sound) {
+    Aestra::JSON json = Aestra::JSON::object();
+    json.set("schema", Aestra::JSON("rumble-sound"));
+    json.set("version", Aestra::JSON(2.0));
+    Aestra::JSON params = Aestra::JSON::object();
+    for (uint32_t id = 0; id < RumbleSound::Count; ++id) {
+        params.set(parameterKey(id), Aestra::JSON(sound[id]));
+    }
+    json.set("params", params);
+    json.set("seed", Aestra::JSON(static_cast<double>(sound.seed)));
+    const std::string text = json.toString(2);
+    return std::vector<uint8_t>(text.begin(), text.end());
+}
+
 std::vector<uint8_t> RumbleInstance::saveState() const {
     Aestra::JSON json = Aestra::JSON::object();
     json.set("schema", Aestra::JSON("rumble-sound"));
@@ -430,13 +456,17 @@ bool RumbleInstance::loadState(const std::vector<uint8_t>& state) {
         }
     }
     if (json.has("seed") && json["seed"].isNumber()) {
-        loaded.seed = static_cast<uint32_t>(json["seed"].asNumber());
+        const double seed = json["seed"].asNumber();
+        if (std::isfinite(seed) && seed >= 0.0 && seed <= 4294967295.0) {
+            loaded.seed = static_cast<uint32_t>(seed); // anything else is a damaged file: keep the default grain
+        }
     }
     setSound(loaded);
+    // A project carries Velocity; a sound on its own (a factory or kept preset) does not, and leaves it as it is.
     const char* velocityKey = parameterKey(kVelocity);
-    setParameter(kVelocity, params.has(velocityKey) && params[velocityKey].isNumber()
-                                ? static_cast<float>(params[velocityKey].asNumber())
-                                : kDefaultVelocity);
+    if (params.has(velocityKey) && params[velocityKey].isNumber()) {
+        setParameter(kVelocity, static_cast<float>(params[velocityKey].asNumber()));
+    }
     return true;
 }
 

@@ -4,6 +4,7 @@
 #include "NUIIcon.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
+#include "RumbleInstance.h"
 #include "RumblePresetBank.h"
 #include "../../AestraCore/include/AestraLog.h"
 
@@ -496,8 +497,12 @@ void RumblePluginEditor::applyFactoryPreset(size_t presetIndex) {
     }
     m_activePreset = presetIndex % Aestra::Plugins::kRumbleFactoryPresets.size();
     const auto& preset = Aestra::Plugins::kRumbleFactoryPresets[m_activePreset];
-    for (uint32_t parameterId = 0; parameterId < preset.values.size(); ++parameterId) {
-        m_instance->setParameter(parameterId, preset.values[parameterId]);
+    if (auto* rumble = dynamic_cast<Aestra::Plugins::RumbleInstance*>(m_instance.get())) {
+        rumble->setSound(Aestra::Plugins::rumbleSoundOf(preset)); // the grain too, not only the settings
+    } else {
+        for (uint32_t parameterId = 0; parameterId < preset.values.size(); ++parameterId) {
+            m_instance->setParameter(parameterId, preset.values[parameterId]);
+        }
     }
     syncControlValues();
     setDirty(true);
