@@ -651,6 +651,11 @@ bool RumblePluginEditor::onKeyEvent(const NUIKeyEvent& event) {
     if (routeKeyToAccessory(event)) return true; // the preset bar's browser or Save form takes typing first
     if (!event.pressed) return AestraPanelWindow::onKeyEvent(event);
     followInstrument(); // a key must not move from a sound the track no longer has
+    const bool moves = event.keyCode == NUIKeyCode::Left || event.keyCode == NUIKeyCode::Right ||
+                       event.keyCode == NUIKeyCode::Down || event.keyCode == NUIKeyCode::Up;
+    // A drag (picture handle or knob) owns the picked sound until it ends: moving away mid-drag would hand the
+    // rest of the drag to another sound.
+    if (moves && (m_dragging != Handle::None || knobDragParam() >= 0)) return true;
     switch (event.keyCode) {
     case NUIKeyCode::Left:
         m_session->moveSelection(-1);
