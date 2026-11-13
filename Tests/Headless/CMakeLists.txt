@@ -432,6 +432,18 @@ if(TARGET AestraAudioCore)
     )
 endif()
 
+# SPEC-026 U1: every step says what it touched; which later steps depend on an earlier one. Header-only.
+add_executable(PickableUndoFootprintTest PickableUndoFootprintTest.cpp)
+target_include_directories(PickableUndoFootprintTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME PickableUndoFootprintTest COMMAND PickableUndoFootprintTest)
+set_tests_properties(PickableUndoFootprintTest PROPERTIES
+    LABELS "headless;undo;regression;contract:audio"
+    ENVIRONMENT "AESTRA_HEADLESS=1"
+)
+
 # V8-W6: placing a clip is ONE undo step through the command history, with the lane
 # (and owning Track) it may need; a failed placement leaves no history. Core-linked.
 if(TARGET AestraAudioCore)
