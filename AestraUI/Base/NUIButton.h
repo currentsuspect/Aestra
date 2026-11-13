@@ -190,11 +190,7 @@ private:
     Tone tone_ = Tone::Neutral;
     HoverStrength hoverStrength_ = HoverStrength::Full;
     bool trailingArrow_ = false;
-    bool wasHovered_ = false;
-    float fill_ = 0.0f;        ///< 0..1, how far the hover fill has grown (eased when drawn)
-    float entryX_ = 0.0f;      ///< where the pointer came in (or left): the fill grows from and shrinks to here
-    float ripple_ = -1.0f;     ///< press ripple progress 0..1, < 0 when none
-    float rippleX_ = 0.0f;
+    float fill_ = 0.0f;        ///< 0..1, hover fade
     void renderSpecLook(NUIRenderer& renderer);
 
     // Helpers

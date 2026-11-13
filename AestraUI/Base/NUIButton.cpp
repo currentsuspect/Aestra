@@ -101,8 +101,6 @@ void NUIButton::renderSpecLook(NUIRenderer& renderer) {
     const float e = easeOut(fill_);
     const bool latched = toggleable_ && toggled_;
 
-    if (full && e > 0.0f)
-        r.y -= e; // the lift: 1px up while hovered
     NUIColor text = look_ == Look::Solid ? ton : tt;
 
     if (!full && latched) {
@@ -111,11 +109,6 @@ void NUIButton::renderSpecLook(NUIRenderer& renderer) {
         text = tone_ == Tone::Neutral ? t.textPrimary : tt;
     } else {
         const NUIColor fill = look_ == Look::Solid ? NUIColor::lerp(tc, ton, 0.18f) : tc;
-        if (full && e > 0.0f) {
-            // A soft shadow in the button's own colour, plus a small contact shadow.
-            renderer.drawShadow(r, 0.0f, 6.0f * e, 8.0f, fill.withAlpha(0.55f * e));
-            renderer.drawShadow(r, 0.0f, 1.0f, 1.0f, t.shadow.withAlpha(t.shadow.a * e));
-        }
         switch (look_) {
         case Look::Solid:
             renderer.fillRoundedRect(r, radius, tc);
@@ -131,11 +124,8 @@ void NUIButton::renderSpecLook(NUIRenderer& renderer) {
             break;
         }
         if (full && e > 0.0f) {
-            // The fill grows out from where the pointer came in, as a capsule, until it covers the pill.
-            const float reach = e * (r.width + r.height);
-            const float x0 = std::max(r.x, entryX_ - reach), x1 = std::min(r.right(), entryX_ + reach);
-            if (x1 > x0)
-                renderer.fillRoundedRect({x0, r.y, x1 - x0, r.height}, radius, fill);
+            // Hover fills the pill in its tone: a plain, quick colour change (owner 13 Nov: no glow, no grow).
+            renderer.fillRoundedRect(r, radius, fill.withAlpha(fill.a * e));
             text = NUIColor::lerp(text, ton, e);
         } else if (!full && e > 0.0f && look_ == Look::Quiet) {
             renderer.fillRoundedRect(r, radius, t.hover.withAlpha(t.hover.a * e));
@@ -145,18 +135,10 @@ void NUIButton::renderSpecLook(NUIRenderer& renderer) {
             renderer.fillRoundedRect(r, radius, t.pressed);
     }
 
-    if (ripple_ >= 0.0f) {
-        const float p = easeOut(ripple_);
-        const float reach = p * (r.width + r.height);
-        const float x0 = std::max(r.x, rippleX_ - reach), x1 = std::min(r.right(), rippleX_ + reach);
-        if (x1 > x0)
-            renderer.fillRoundedRect({x0, r.y, x1 - x0, r.height}, radius, text.withAlpha(0.3f * (1.0f - ripple_)));
-    }
-
     NUIRect textRect = r;
     if (trailingArrow_) {
         textRect.width -= 14.0f;
-        const float ax = textRect.right() + 2.0f + 3.0f * (full ? e : 0.0f), ay = r.y + r.height * 0.5f;
+        const float ax = textRect.right() + 2.0f, ay = r.y + r.height * 0.5f;
         renderer.drawLine({ax - 4.0f, ay}, {ax + 4.0f, ay}, 1.5f, text);
         renderer.drawLine({ax + 1.0f, ay - 3.0f}, {ax + 4.0f, ay}, 1.5f, text);
         renderer.drawLine({ax + 1.0f, ay + 3.0f}, {ax + 4.0f, ay}, 1.5f, text);
@@ -264,18 +246,12 @@ void NUIButton::onUpdate(double deltaTime) {
     if (look_ == Look::Legacy)
         return;
     const bool hovered = isEnabled() && isHovered();
-    // Full hover grows over 420ms and shrinks the same way; quiet hover is duration-fast (150ms).
-    const float seconds = hoverStrength_ == HoverStrength::Full ? 0.42f : 0.15f;
+    // Hover is a quick colour change, the same 120ms for every look.
+    const float seconds = 0.12f;
     const float target = hovered ? 1.0f : 0.0f;
     if (fill_ != target) {
         const float step = static_cast<float>(deltaTime) / seconds;
         fill_ = hovered ? std::min(1.0f, fill_ + step) : std::max(0.0f, fill_ - step);
-        setDirty();
-    }
-    if (ripple_ >= 0.0f) {
-        ripple_ += static_cast<float>(deltaTime) / 0.52f;
-        if (ripple_ >= 1.0f)
-            ripple_ = -1.0f;
         setDirty();
     }
 }
@@ -317,18 +293,6 @@ bool NUIButton::onMouseEvent(const NUIMouseEvent& event) {
     // CRITICAL: Call base class to handle hover state and callbacks (onMouseMove, etc.)
     // This allows parents to use onMouseMove for forced repaints when buttons are hovered.
     NUIComponent::onMouseEvent(event);
-    if (look_ != Look::Legacy) {
-        // The hover fill grows from where the pointer came in and shrinks back toward where it left.
-        const bool hoveredNow = isHovered();
-        if (hoveredNow != wasHovered_) {
-            entryX_ = std::clamp(event.position.x, getBounds().x, getBounds().right());
-            wasHovered_ = hoveredNow;
-        }
-        if (event.pressed && event.button == NUIMouseButton::Left && containsPoint(event.position)) {
-            rippleX_ = event.position.x;
-            ripple_ = 0.0f;
-        }
-    }
     
     if (!containsPoint(event.position)) {
         if (pressed_) {
