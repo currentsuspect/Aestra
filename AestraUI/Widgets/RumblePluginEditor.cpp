@@ -1,651 +1,654 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "RumblePluginEditor.h"
 
-#include "NUIIcon.h"
+#include "NUIDepth.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
+#include "RumbleFindSession.h"
 #include "RumbleInstance.h"
+#include "RumbleOutline.h"
 #include "RumblePresetBank.h"
-#include "../../AestraCore/include/AestraLog.h"
 
 #include <algorithm>
-#include <array>
 #include <chrono>
 #include <cmath>
-#include <iterator>
+#include <cstdio>
+#include <vector>
 
 namespace AestraUI {
 
 static_assert(AestraUI::RumblePluginEditor::kPresetSlots == Aestra::Plugins::kRumbleFactoryPresets.size(),
-              "one preset slot per factory sound");
+              "one shelf row per starting sound");
+
+using Aestra::Plugins::RumbleFindSession;
+using Aestra::Plugins::RumbleOutline;
+using Aestra::Plugins::RumbleSound;
+using Aestra::Plugins::RumbleVoice;
+namespace Variation = Aestra::Plugins::RumbleVariation;
 
 namespace {
 constexpr float kPi = 3.14159265358979323846f;
-constexpr float kKnobStart = kPi * 0.75f;
-constexpr float kKnobSweep = kPi * 1.5f;
+constexpr float kPad = 12.0f;
+constexpr float kShelfWidth = 150.0f;
+constexpr float kKnobSize = 46.0f;
+constexpr float kKnobRange = 180.0f;
+// The picture's insets, as the sketch drew it.
+constexpr float kPicX = 14.0f, kPicTop = 22.0f, kPicBottom = 18.0f;
 
-NUIColor impactAccent() {
-    return NUIColor(1.0f, 0.38f, 0.14f, 1.0f);
-}
-NUIColor sweepAccent() {
-    return NUIColor(0.98f, 0.66f, 0.18f, 1.0f);
-}
-NUIColor bodyAccent() {
-    return NUIColor(0.58f, 0.32f, 1.0f, 1.0f);
-}
-NUIColor cleanAccent() {
-    return NUIColor(0.35f, 0.72f, 1.0f, 1.0f);
-}
-NUIColor shellSurface() {
-    return editorNeutral(NUIColor(0.026f, 0.025f, 0.032f, 0.985f));
-}
-NUIColor panelSurface() {
-    return editorNeutral(NUIColor(0.043f, 0.041f, 0.052f, 0.98f));
-}
-NUIColor insetSurface() {
-    return editorNeutral(NUIColor(0.022f, 0.021f, 0.027f, 0.98f));
+// The six controls, in order, and the setting each one is.
+constexpr uint32_t kControlIds[RumblePluginEditor::kControlCount] = {
+    RumbleSound::Punch, RumbleSound::Tail, RumbleSound::Weight, RumbleSound::Tone, RumbleSound::Dirt, RumbleSound::Slide};
+constexpr const char* kControlNames[RumblePluginEditor::kControlCount] = {"PUNCH", "TAIL", "WEIGHT", "TONE", "DIRT", "SLIDE"};
+constexpr const char* kHoldNames[5] = {"Punch", "Tail", "Weight", "Tone", "Dirt"};
+constexpr const char* kDistanceNames[3] = {"Close", "Further", "Far"};
+
+NUIColor token(const char* name) {
+    return NUIThemeManager::getInstance().getColor(name);
 }
 
-std::shared_ptr<NUIIcon> chevronLeftIcon() {
-    static auto icon = std::make_shared<NUIIcon>(R"svg(
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
-             stroke-linecap="round" stroke-linejoin="round">
-            <path d="M15 6l-6 6 6 6"/>
-        </svg>
-    )svg");
-    return icon;
+long long nowMs() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch())
+        .count();
 }
 
-std::shared_ptr<NUIIcon> chevronRightIcon() {
-    static auto icon = std::make_shared<NUIIcon>(R"svg(
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
-             stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 6l6 6-6 6"/>
-        </svg>
-    )svg");
-    return icon;
+void textLeft(NUIRenderer& r, const std::string& text, const NUIRect& rect, float size, const NUIColor& color) {
+    r.drawText(text, {std::round(rect.x), r.calculateOpticalTextY(rect, size)}, size, color);
 }
 
-std::shared_ptr<NUIIcon> chevronDownIcon() {
-    static auto icon = std::make_shared<NUIIcon>(R"svg(
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
-             stroke-linecap="round" stroke-linejoin="round">
-            <path d="M6 9l6 6 6-6"/>
-        </svg>
-    )svg");
-    return icon;
+void label(NUIRenderer& r, const std::string& text, const NUIRect& rect) {
+    textLeft(r, text, rect, 10.0f, token("textMuted"));
 }
 
-std::shared_ptr<NUIIcon> chevronUpIcon() {
-    static auto icon = std::make_shared<NUIIcon>(R"svg(
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
-             stroke-linecap="round" stroke-linejoin="round">
-            <path d="M6 15l6-6 6 6"/>
-        </svg>
-    )svg");
-    return icon;
-}
-
-void drawSvgIcon(NUIRenderer& renderer, const std::shared_ptr<NUIIcon>& icon, const NUIRect& bounds,
-                 const NUIColor& color, float size) {
-    if (!icon) {
-        return;
+// A pill button in the dense-row style: quiet hover, sunk when engaged.
+void pill(NUIRenderer& r, const NUIRect& rect, const std::string& text, bool hovered, bool engaged, bool quiet = false) {
+    const float radius = Depth::Radius::pill(rect.height);
+    if (engaged) {
+        Depth::bed(r, rect, radius);
+    } else if (!quiet || hovered) {
+        r.fillRoundedRect(rect, radius, token(hovered ? "surfaceRaised" : "surfaceTertiary"));
     }
-    icon->setBounds(
-        {std::round(bounds.center().x - size * 0.5f), std::round(bounds.center().y - size * 0.5f), size, size});
-    icon->setColor(color);
-    icon->onRender(renderer);
+    r.drawTextCentered(text, rect, 11.0f, token(engaged || hovered ? "textPrimary" : "textSecondary"));
 }
 
-NUIColor presetAccent(size_t) {
-    return impactAccent();
+void drawLock(NUIRenderer& r, NUIPoint at, const NUIColor& color) {
+    r.fillRoundedRect({at.x - 3.5f, at.y - 0.5f, 7.0f, 5.0f}, 1.0f, color);
+    std::array<NUIPoint, 9> arc{};
+    for (size_t i = 0; i < arc.size(); ++i) {
+        const float a = kPi + kPi * static_cast<float>(i) / static_cast<float>(arc.size() - 1);
+        arc[i] = {at.x + std::cos(a) * 2.2f, at.y - 0.5f + std::sin(a) * 2.6f};
+    }
+    r.drawPolyline(arc.data(), static_cast<int>(arc.size()), 1.3f, color);
 }
 
-void drawArc(NUIRenderer& renderer, NUIPoint center, float radius, float startAngle, float endAngle, float thickness,
-             NUIColor color) {
-    if (endAngle <= startAngle + 0.001f) {
-        return;
+void drawArc(NUIRenderer& r, NUIPoint c, float radius, float from, float to, float thickness, const NUIColor& color) {
+    if (to <= from + 0.001f) return;
+    std::array<NUIPoint, 41> pts{};
+    for (size_t i = 0; i < pts.size(); ++i) {
+        const float a = from + (to - from) * static_cast<float>(i) / static_cast<float>(pts.size() - 1);
+        pts[i] = {c.x + std::cos(a) * radius, c.y + std::sin(a) * radius};
     }
-    std::array<NUIPoint, 49> points{};
-    for (size_t i = 0; i < points.size(); ++i) {
-        const float t = static_cast<float>(i) / static_cast<float>(points.size() - 1);
-        const float angle = startAngle + (endAngle - startAngle) * t;
-        points[i] = {center.x + std::cos(angle) * radius, center.y + std::sin(angle) * radius};
-    }
-    renderer.drawPolyline(points.data(), static_cast<int>(points.size()), thickness, color);
+    r.drawPolyline(pts.data(), static_cast<int>(pts.size()), thickness, color);
 }
 
-NUIColor controlAccent(uint32_t parameterId) {
-    switch (parameterId) {
-    case 9:
-        return impactAccent();
-    case 4:
-        return sweepAccent();
-    case 24:
-        return cleanAccent();
-    default:
-        return bodyAccent();
-    }
+bool near(const NUIPoint& a, const NUIPoint& b, float d) {
+    return std::abs(a.x - b.x) <= d && std::abs(a.y - b.y) <= d;
+}
+
+std::string fmt(const char* f, double v) {
+    char buf[48];
+    std::snprintf(buf, sizeof(buf), f, v);
+    return buf;
 }
 } // namespace
 
 RumblePluginEditor::RumblePluginEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance)
-    : m_instance(std::move(instance)) {
+    : m_instance(std::move(instance)), m_outlines(std::make_unique<Aestra::Plugins::RumbleOutlineWorker>(48000.0)) {
     setId("RumblePluginEditor");
     setPanelTitle("Aestra Rumble");
-    setBadgeText("808 Instrument");
+    setBadgeText("808");
     setSize(kWindowWidth, kWindowHeight);
     setEnforceParentBounds(true);
-    buildControls();
+
+    startFromInstrument();
+    layout();
 }
 
-void RumblePluginEditor::buildControls() {
-    m_controls.clear();
-    if (!m_instance) {
-        return;
+namespace {
+bool sameSound(const RumbleSound& a, const RumbleSound& b) {
+    // The instrument keeps its settings as floats, so compare to well under a knob step.
+    for (size_t id = 0; id < RumbleSound::Count; ++id) {
+        if (!(std::abs(a[id] - b[id]) < 1.0e-4)) return false;
     }
-
-    struct Meta {
-        uint32_t parameterId;
-        const char* title;
-        const char* subtitle;
-        Zone zone;
-    };
-    const Meta meta[] = {
-        // Interim layout over the approved voice's settings (FD-80); the editor is rebuilt in SPEC-025 R5.
-        {Aestra::Plugins::RumbleSound::Punch, "PUNCH", "Pitch drop", Zone::Impact},
-        {Aestra::Plugins::RumbleSound::Click, "CLICK", "Front noise", Zone::Impact},
-        {Aestra::Plugins::RumbleSound::Tail, "TAIL", "How long it rings", Zone::Impact},
-        {Aestra::Plugins::RumbleSound::Weight, "WEIGHT", "Clean sub", Zone::Body},
-        {Aestra::Plugins::RumbleSound::Tone, "TONE", "Dark or open", Zone::Body},
-        {Aestra::Plugins::RumbleSound::Dirt, "DIRT", "Clean or driven", Zone::Body},
-        {Aestra::Plugins::RumbleSound::Count, "VELOCITY", "Softer hits, quieter", Zone::Body}, // RumbleInstance::kVelocity
-        {Aestra::Plugins::RumbleSound::Slide, "SLIDE", "Glide between notes", Zone::Body},
-    };
-
-    const auto parameters = m_instance->getParameters();
-    // The macro layout, preset application, and preset matching all assume the
-    // full Rumble parameter contract (RumbleSound::Count). Silently dropping a missing ID would shift
-    // the index-based zones while presets still write every ID — reject the
-    // incompatible instance outright instead of rendering a lying panel.
-    for (const auto& item : meta) {
-        if (item.parameterId >= parameters.size()) {
-            Aestra::Log::error("[RumbleEditor] Instance exposes " + std::to_string(parameters.size()) +
-                               " parameters; id " + std::to_string(item.parameterId) +
-                               " missing — refusing to build controls");
-            m_controls.clear();
-            return;
-        }
-    }
-    m_controls.reserve(std::size(meta));
-    for (const auto& item : meta) {
-        MacroControl control;
-        control.parameterId = item.parameterId;
-        control.title = item.title;
-        control.subtitle = item.subtitle;
-        control.defaultValue = parameters[item.parameterId].defaultValue;
-        control.normalizedValue = m_instance->getParameter(item.parameterId);
-        control.zone = item.zone;
-        m_controls.push_back(std::move(control));
-    }
-    layoutControls();
+    return a.seed == b.seed;
 }
+} // namespace
 
-void RumblePluginEditor::layoutControls() {
-    const auto bounds = getBounds();
-    const float contentTop = bounds.y + AestraPanelWindow::TITLE_BAR_H + kPadding;
-    const float contentWidth = std::max(0.0f, bounds.width - kPadding * 2.0f);
-    m_headerBounds = NUIRect(bounds.x + kPadding, contentTop, contentWidth, kHeaderHeight);
-
-    const float presetWidth = std::clamp(contentWidth * 0.43f, 310.0f, 370.0f);
-    m_previousPresetBounds = NUIRect(m_headerBounds.right() - presetWidth, m_headerBounds.y + 14.0f, 34.0f, 48.0f);
-    m_nextPresetBounds = NUIRect(m_headerBounds.right() - 34.0f, m_headerBounds.y + 14.0f, 34.0f, 48.0f);
-    m_presetButtonBounds =
-        NUIRect(m_previousPresetBounds.right() + 6.0f, m_headerBounds.y + 14.0f, presetWidth - 80.0f, 48.0f);
-
-    const float mainY = m_headerBounds.bottom() + 12.0f;
-    const float mainHeight = std::max(0.0f, bounds.bottom() - kPadding - mainY);
-    const float gap = 12.0f;
-    const float impactWidth = std::round((contentWidth - gap) * 0.53f);
-    m_impactPanelBounds = NUIRect(bounds.x + kPadding, mainY, impactWidth, mainHeight);
-    m_bodyPanelBounds = NUIRect(m_impactPanelBounds.right() + gap, mainY, contentWidth - impactWidth - gap, mainHeight);
-    m_impactShapeBounds = NUIRect(m_impactPanelBounds.x + 16.0f, m_impactPanelBounds.y + 42.0f,
-                                  m_impactPanelBounds.width - 32.0f, 100.0f);
-
-    const float impactKnobY = m_impactShapeBounds.bottom() + 22.0f;
-    const float impactKnobWidth = (m_impactPanelBounds.width - 44.0f) / 3.0f;
-    for (size_t i = 0; i < std::min<size_t>(3, m_controls.size()); ++i) {
-        auto& control = m_controls[i];
-        control.bounds = NUIRect(m_impactPanelBounds.x + 12.0f + static_cast<float>(i) * (impactKnobWidth + 10.0f),
-                                 impactKnobY, impactKnobWidth, m_impactPanelBounds.bottom() - impactKnobY - 12.0f);
-        const float knobSize = std::min(88.0f, control.bounds.width - 20.0f);
-        control.knobBounds =
-            NUIRect(control.bounds.center().x - knobSize * 0.5f, control.bounds.y + 16.0f, knobSize, knobSize);
-    }
-
-    const float bodyTop = m_bodyPanelBounds.y + 45.0f;
-    const float bodyGap = 8.0f;
-    const float bodyCellWidth = (m_bodyPanelBounds.width - 32.0f - bodyGap * 2.0f) / 3.0f;
-    const float bodyCellHeight = (m_bodyPanelBounds.height - 59.0f - bodyGap) * 0.5f;
-    for (size_t offset = 0; offset < 5 && offset + 3 < m_controls.size(); ++offset) {
-        auto& control = m_controls[offset + 3];
-        const size_t row = offset < 3 ? 0 : 1;
-        const size_t column = offset < 3 ? offset : offset - 3;
-        const float rowX = row == 0 ? m_bodyPanelBounds.x + 12.0f
-                                    : m_bodyPanelBounds.center().x - (bodyCellWidth * 2.0f + bodyGap) * 0.5f;
-        control.bounds =
-            NUIRect(rowX + static_cast<float>(column) * (bodyCellWidth + bodyGap),
-                    bodyTop + static_cast<float>(row) * (bodyCellHeight + bodyGap), bodyCellWidth, bodyCellHeight);
-        const float knobSize = std::min(68.0f, std::min(control.bounds.width - 18.0f, control.bounds.height - 54.0f));
-        control.knobBounds =
-            NUIRect(control.bounds.center().x - knobSize * 0.5f, control.bounds.y + 12.0f, knobSize, knobSize);
-    }
-
-    m_presetMenuBounds = NUIRect(m_impactPanelBounds.x, m_impactPanelBounds.y,
-                                 m_bodyPanelBounds.right() - m_impactPanelBounds.x, m_impactPanelBounds.height);
-    const float menuPad = 18.0f;
-    const float columnGap = 10.0f;
-    const float columnWidth = (m_presetMenuBounds.width - menuPad * 2.0f - columnGap * 3.0f) / 4.0f;
-    const float firstItemY = m_presetMenuBounds.y + 56.0f;
-    for (size_t i = 0; i < m_presetItemBounds.size(); ++i) {
-        const size_t column = i / 4;
-        const size_t row = i % 4;
-        m_presetItemBounds[i] =
-            NUIRect(m_presetMenuBounds.x + menuPad + static_cast<float>(column) * (columnWidth + columnGap),
-                    firstItemY + static_cast<float>(row) * 48.0f, columnWidth, 40.0f);
-    }
-}
-
-void RumblePluginEditor::syncControlValues() {
-    if (!m_instance) {
-        return;
-    }
-    for (size_t i = 0; i < m_controls.size(); ++i) {
-        if (static_cast<int>(i) != m_draggingControl) {
-            m_controls[i].normalizedValue = m_instance->getParameter(m_controls[i].parameterId);
-        }
-    }
-}
-
-void RumblePluginEditor::drawHeader(NUIRenderer& renderer) {
-    auto& theme = NUIThemeManager::getInstance();
-    renderer.fillRoundedRect(m_headerBounds, 14.0f, shellSurface());
-    renderer.strokeRoundedRect(m_headerBounds, 14.0f, 1.0f, bodyAccent().withAlpha(0.34f));
-
-    const NUIPoint markCenter{m_headerBounds.x + 35.0f, m_headerBounds.center().y};
-    renderer.fillCircle(markCenter, 21.0f, impactAccent().withAlpha(0.13f));
-    renderer.strokeCircle(markCenter, 21.0f, 1.4f, impactAccent().withAlpha(0.72f));
-    renderer.drawTextCentered("R", NUIRect(markCenter.x - 18.0f, markCenter.y - 18.0f, 36.0f, 36.0f), 17.0f,
-                              impactAccent());
-    renderer.drawText("RUMBLE", {m_headerBounds.x + 68.0f, m_headerBounds.y + 18.0f}, 17.0f,
-                      theme.getColor("textPrimary"));
-    renderer.drawText("808 BASS INSTRUMENT", {m_headerBounds.x + 69.0f, m_headerBounds.y + 43.0f}, 8.5f,
-                      theme.getColor("textSecondary").withAlpha(0.82f));
-
-    const auto drawArrowButton = [&](const NUIRect& rect, const std::shared_ptr<NUIIcon>& icon, bool hovered) {
-        renderer.fillRoundedRect(rect, 9.0f, hovered ? bodyAccent().withAlpha(0.26f) : insetSurface());
-        renderer.strokeRoundedRect(rect, 9.0f, 1.0f,
-                                   hovered ? bodyAccent().withAlpha(0.62f) : editorInk(0.08f));
-        drawSvgIcon(renderer, icon, rect, hovered ? bodyAccent() : theme.getColor("textPrimary").withAlpha(0.72f),
-                    15.0f);
-    };
-    drawArrowButton(m_previousPresetBounds, chevronLeftIcon(), m_previousPresetHovered);
-    drawArrowButton(m_nextPresetBounds, chevronRightIcon(), m_nextPresetHovered);
-
-    const int match = matchingFactoryPreset();
-    const bool factory = match >= 0;
-    if (factory) {
-        m_activePreset = static_cast<size_t>(match);
-    }
-    const auto& preset = Aestra::Plugins::kRumbleFactoryPresets[m_activePreset];
-    renderer.fillRoundedRect(m_presetButtonBounds, 9.0f,
-                             m_presetButtonHovered || m_presetMenuOpen ? bodyAccent().withAlpha(0.16f)
-                                                                       : insetSurface());
-    renderer.strokeRoundedRect(m_presetButtonBounds, 9.0f, 1.0f,
-                               m_presetButtonHovered || m_presetMenuOpen ? bodyAccent().withAlpha(0.65f)
-                                                                         : editorInk(0.09f));
-    renderer.fillRoundedRect({m_presetButtonBounds.x + 9.0f, m_presetButtonBounds.y + 10.0f, 3.0f, 28.0f}, 1.5f,
-                             (factory ? presetAccent(m_activePreset) : bodyAccent()).withAlpha(0.88f));
-    renderer.drawText(factory ? std::string(preset.category) : "CUSTOM",
-                      {m_presetButtonBounds.x + 19.0f, m_presetButtonBounds.y + 8.0f}, 8.0f,
-                      theme.getColor("textSecondary").withAlpha(0.86f));
-    renderer.drawText(factory ? std::string(preset.name) : "Edited Sound",
-                      {m_presetButtonBounds.x + 19.0f, m_presetButtonBounds.y + 25.0f}, 11.5f,
-                      factory ? presetAccent(m_activePreset) : theme.getColor("textPrimary"));
-    renderer.drawLine({m_presetButtonBounds.right() - 32.0f, m_presetButtonBounds.y + 8.0f},
-                      {m_presetButtonBounds.right() - 32.0f, m_presetButtonBounds.bottom() - 8.0f}, 1.0f,
-                      editorInk(0.07f));
-    const NUIRect chevronBounds(m_presetButtonBounds.right() - 30.0f, m_presetButtonBounds.y, 28.0f,
-                                m_presetButtonBounds.height);
-    drawSvgIcon(renderer, m_presetMenuOpen ? chevronUpIcon() : chevronDownIcon(), chevronBounds,
-                bodyAccent().withAlpha(m_presetButtonHovered || m_presetMenuOpen ? 0.92f : 0.66f), 12.0f);
-}
-
-void RumblePluginEditor::drawImpactPanel(NUIRenderer& renderer) {
-    auto& theme = NUIThemeManager::getInstance();
-    renderer.fillRoundedRect(m_impactPanelBounds, 16.0f, panelSurface());
-    renderer.strokeRoundedRect(m_impactPanelBounds, 16.0f, 1.0f, impactAccent().withAlpha(0.24f));
-    renderer.fillRoundedRect({m_impactPanelBounds.x + 12.0f, m_impactPanelBounds.y + 13.0f, 4.0f, 16.0f}, 2.0f,
-                             impactAccent());
-    renderer.drawText("IMPACT", {m_impactPanelBounds.x + 24.0f, m_impactPanelBounds.y + 14.0f}, 10.0f,
-                      theme.getColor("textPrimary"));
-    renderer.drawText("ATTACK / PITCH / TAIL", {m_impactPanelBounds.right() - 142.0f, m_impactPanelBounds.y + 15.0f},
-                      8.0f, theme.getColor("textSecondary").withAlpha(0.65f));
-    drawImpactShape(renderer);
-    for (size_t i = 0; i < std::min<size_t>(3, m_controls.size()); ++i) {
-        drawKnob(renderer, m_controls[i], static_cast<int>(i), true);
-    }
-}
-
-void RumblePluginEditor::drawBodyPanel(NUIRenderer& renderer) {
-    auto& theme = NUIThemeManager::getInstance();
-    renderer.fillRoundedRect(m_bodyPanelBounds, 16.0f, panelSurface());
-    renderer.strokeRoundedRect(m_bodyPanelBounds, 16.0f, 1.0f, bodyAccent().withAlpha(0.24f));
-    renderer.fillRoundedRect({m_bodyPanelBounds.x + 12.0f, m_bodyPanelBounds.y + 13.0f, 4.0f, 16.0f}, 2.0f,
-                             bodyAccent());
-    renderer.drawText("WEIGHT + COLOR", {m_bodyPanelBounds.x + 24.0f, m_bodyPanelBounds.y + 14.0f}, 10.0f,
-                      theme.getColor("textPrimary"));
-    for (size_t i = 3; i < m_controls.size(); ++i) {
-        drawKnob(renderer, m_controls[i], static_cast<int>(i), false);
-    }
-}
-
-void RumblePluginEditor::drawImpactShape(NUIRenderer& renderer) {
-    auto& theme = NUIThemeManager::getInstance();
-    renderer.fillRoundedRect(m_impactShapeBounds, 11.0f, insetSurface());
-    renderer.strokeRoundedRect(m_impactShapeBounds, 11.0f, 1.0f, impactAccent().withAlpha(0.16f));
-    for (int i = 1; i < 4; ++i) {
-        const float x = m_impactShapeBounds.x + m_impactShapeBounds.width * static_cast<float>(i) / 4.0f;
-        renderer.drawLine({x, m_impactShapeBounds.y + 12.0f}, {x, m_impactShapeBounds.bottom() - 12.0f}, 1.0f,
-                          editorInk(0.035f));
-    }
-    const float punch = m_controls.size() > 0 ? m_controls[0].normalizedValue : 0.0f;
-    const float sweep = punch; // Punch is the pitch drop in the approved voice
-    const float decay = m_controls.size() > 2 ? m_controls[2].normalizedValue : 0.0f;
-    std::array<NUIPoint, 97> points{};
-    float phase = 0.0f;
-    for (size_t i = 0; i < points.size(); ++i) {
-        const float t = static_cast<float>(i) / static_cast<float>(points.size() - 1);
-        const float frequency = 2.0f + 8.0f * sweep * std::exp(-t * 7.0f);
-        phase += frequency * 0.13f;
-        const float envelope = std::exp(-t * (2.0f + 7.0f * (1.0f - decay)));
-        const float attack = 0.34f + punch * 0.62f * std::exp(-t * 13.0f);
-        points[i] = {m_impactShapeBounds.x + 10.0f + t * (m_impactShapeBounds.width - 20.0f),
-                     m_impactShapeBounds.center().y -
-                         std::sin(phase) * envelope * attack * (m_impactShapeBounds.height * 0.40f)};
-    }
-    renderer.drawPolyline(points.data(), static_cast<int>(points.size()), 2.2f, impactAccent().withAlpha(0.92f));
-    renderer.drawText("TRANSIENT SHAPE", {m_impactShapeBounds.x + 11.0f, m_impactShapeBounds.y + 9.0f}, 7.5f,
-                      theme.getColor("textSecondary").withAlpha(0.60f));
-}
-
-void RumblePluginEditor::drawKnob(NUIRenderer& renderer, const MacroControl& control, int controlIndex, bool primary) {
-    auto& theme = NUIThemeManager::getInstance();
-    const bool hovered = m_hoveredControl == controlIndex;
-    const bool dragging = m_draggingControl == controlIndex;
-    const NUIColor accent = controlAccent(control.parameterId);
-    renderer.fillRoundedRect(control.bounds, 11.0f,
-                             hovered || dragging ? editorNeutral(NUIColor(0.068f, 0.064f, 0.080f, 0.98f))
-                                                 : editorNeutral(NUIColor(0.036f, 0.034f, 0.043f, 0.82f)));
-    renderer.strokeRoundedRect(control.bounds, 11.0f, 1.0f,
-                               hovered || dragging ? accent.withAlpha(0.50f) : editorInk(0.045f));
-
-    const NUIPoint center = control.knobBounds.center();
-    const float radius = control.knobBounds.width * 0.5f;
-    const float valueAngle = kKnobStart + control.normalizedValue * kKnobSweep;
-    renderer.fillCircle(center, radius, insetSurface());
-    renderer.strokeCircle(center, radius, 1.0f, editorInk(0.07f));
-    drawArc(renderer, center, radius - 6.0f, kKnobStart, kKnobStart + kKnobSweep, primary ? 4.0f : 3.2f,
-            editorInk(0.09f));
-    drawArc(renderer, center, radius - 6.0f, kKnobStart, valueAngle, primary ? 4.0f : 3.2f, accent.withAlpha(0.94f));
-    const float needleLength = radius - (primary ? 16.0f : 13.0f);
-    const NUIPoint tip{center.x + std::cos(valueAngle) * needleLength, center.y + std::sin(valueAngle) * needleLength};
-    renderer.drawLine(center, tip, 2.0f, accent.withAlpha(0.86f));
-    renderer.fillCircle(center, primary ? 7.0f : 5.5f, editorNeutral(NUIColor(0.075f, 0.071f, 0.088f, 1.0f)));
-    renderer.fillCircle(center, primary ? 2.8f : 2.2f, accent.withAlpha(0.90f));
-
-    const float labelY = control.knobBounds.bottom() + (primary ? 8.0f : 5.0f);
-    renderer.drawTextCentered(control.title, NUIRect(control.bounds.x, labelY, control.bounds.width, 14.0f),
-                              primary ? 10.5f : 9.0f, theme.getColor("textPrimary").withAlpha(0.94f));
-    renderer.drawTextCentered(m_instance ? m_instance->getParameterDisplay(control.parameterId) : "",
-                              NUIRect(control.bounds.x, labelY + 17.0f, control.bounds.width, 13.0f),
-                              primary ? 10.0f : 8.5f, accent.withAlpha(0.96f));
-    if (primary && control.bounds.bottom() - labelY > 47.0f) {
-        renderer.drawTextCentered(control.subtitle,
-                                  NUIRect(control.bounds.x, labelY + 35.0f, control.bounds.width, 12.0f), 8.0f,
-                                  theme.getColor("textSecondary").withAlpha(0.62f));
-    }
-}
-
-void RumblePluginEditor::drawPresetBrowser(NUIRenderer& renderer) {
-    auto& theme = NUIThemeManager::getInstance();
-    renderer.fillRoundedRect(m_presetMenuBounds, 16.0f, editorNeutral(NUIColor(0.018f, 0.017f, 0.023f, 1.0f)));
-    renderer.strokeRoundedRect(m_presetMenuBounds, 16.0f, 1.2f, bodyAccent().withAlpha(0.58f));
-    renderer.drawText("FACTORY SOUNDS", {m_presetMenuBounds.x + 18.0f, m_presetMenuBounds.y + 17.0f}, 11.0f,
-                      theme.getColor("textPrimary"));
-    renderer.drawText(std::to_string(Aestra::Plugins::kRumbleFactoryPresets.size()) + " starting sounds",
-                      {m_presetMenuBounds.x + 132.0f, m_presetMenuBounds.y + 19.0f}, 8.5f,
-                      theme.getColor("textSecondary").withAlpha(0.70f));
-
-    // Interim menu over the sketch's seven sounds, one group (the editor is rebuilt in SPEC-025 R5).
-    renderer.drawText(std::string(Aestra::Plugins::kRumbleFactoryPresets[0].category),
-                      {m_presetItemBounds[0].x + 3.0f, m_presetMenuBounds.y + 41.0f}, 8.0f,
-                      presetAccent(0).withAlpha(0.88f));
+void RumblePluginEditor::startFromInstrument() {
+    // Start from the sound the track already has, named after the starting sound it matches.
+    const RumbleSound start = instrumentSound();
+    std::string name = "Your sound";
+    m_startPreset = kPresetSlots; // none of the starting sounds, unless it matches one
     for (size_t i = 0; i < Aestra::Plugins::kRumbleFactoryPresets.size(); ++i) {
-        const bool active = i == m_activePreset;
-        const bool hovered = static_cast<int>(i) == m_hoveredPreset;
-        const NUIColor accent = presetAccent(i);
-        renderer.fillRoundedRect(m_presetItemBounds[i], 8.0f,
-                                 active    ? accent.withAlpha(0.22f)
-                                 : hovered ? editorNeutral(NUIColor(0.095f, 0.088f, 0.115f, 0.96f))
-                                           : panelSurface());
-        renderer.strokeRoundedRect(m_presetItemBounds[i], 8.0f, 1.0f,
-                                   active || hovered ? accent.withAlpha(0.58f) : editorInk(0.055f));
-        renderer.drawText(std::string(Aestra::Plugins::kRumbleFactoryPresets[i].name),
-                          {m_presetItemBounds[i].x + 10.0f, m_presetItemBounds[i].y + 13.0f}, 9.5f,
-                          active ? accent : theme.getColor("textPrimary").withAlpha(0.88f));
-    }
-
-    const size_t described = m_hoveredPreset >= 0 ? static_cast<size_t>(m_hoveredPreset) : m_activePreset;
-    const auto& preset = Aestra::Plugins::kRumbleFactoryPresets[described];
-    const NUIRect descriptionBounds(m_presetMenuBounds.x + 18.0f, m_presetMenuBounds.bottom() - 54.0f,
-                                    m_presetMenuBounds.width - 36.0f, 36.0f);
-    renderer.fillRoundedRect(descriptionBounds, 8.0f, insetSurface());
-    renderer.drawText(std::string(preset.name), {descriptionBounds.x + 11.0f, descriptionBounds.y + 8.0f}, 9.0f,
-                      presetAccent(described));
-    renderer.drawText(std::string(preset.description), {descriptionBounds.x + 112.0f, descriptionBounds.y + 8.0f}, 8.5f,
-                      theme.getColor("textSecondary").withAlpha(0.82f));
-}
-
-void RumblePluginEditor::drawContent(NUIRenderer& renderer, const NUIRect& contentRect) {
-    (void)contentRect;
-    syncControlValues();
-    const auto bounds = getBounds();
-    renderer.fillRect({bounds.x, bounds.y + AestraPanelWindow::TITLE_BAR_H, bounds.width,
-                       bounds.height - AestraPanelWindow::TITLE_BAR_H},
-                      shellSurface());
-    drawHeader(renderer);
-    drawImpactPanel(renderer);
-    drawBodyPanel(renderer);
-    if (m_presetMenuOpen) {
-        drawPresetBrowser(renderer);
-    }
-}
-
-int RumblePluginEditor::hitTestControl(NUIPoint point) const {
-    for (size_t i = 0; i < m_controls.size(); ++i) {
-        if (m_controls[i].bounds.contains(point)) {
-            return static_cast<int>(i);
+        if (sameSound(Aestra::Plugins::rumbleSoundOf(Aestra::Plugins::kRumbleFactoryPresets[i]), start)) {
+            name = std::string(Aestra::Plugins::kRumbleFactoryPresets[i].name);
+            m_startPreset = i;
+            break;
         }
     }
-    return -1;
+    m_outlines->forgetPending();
+    m_session = std::make_unique<RumbleFindSession>(start, name, static_cast<uint64_t>(nowMs()));
+    m_lastPicture.reset();
+    soundChanged();
 }
 
-void RumblePluginEditor::setControlValue(int controlIndex, float normalizedValue) {
-    if (!m_instance || controlIndex < 0 || controlIndex >= static_cast<int>(m_controls.size())) {
-        return;
-    }
-    auto& control = m_controls[static_cast<size_t>(controlIndex)];
-    control.normalizedValue = std::clamp(normalizedValue, 0.0f, 1.0f);
-    m_instance->setParameter(control.parameterId, control.normalizedValue);
-    setDirty(true);
+void RumblePluginEditor::followInstrument() {
+    if (m_session && !sameSound(instrumentSound(), m_session->current())) startFromInstrument();
 }
 
-void RumblePluginEditor::applyFactoryPreset(size_t presetIndex) {
-    if (!m_instance || Aestra::Plugins::kRumbleFactoryPresets.empty()) {
-        return;
-    }
-    m_activePreset = presetIndex % Aestra::Plugins::kRumbleFactoryPresets.size();
-    const auto& preset = Aestra::Plugins::kRumbleFactoryPresets[m_activePreset];
+RumblePluginEditor::~RumblePluginEditor() = default;
+
+RumbleSound RumblePluginEditor::instrumentSound() const {
     if (auto* rumble = dynamic_cast<Aestra::Plugins::RumbleInstance*>(m_instance.get())) {
-        rumble->setSound(Aestra::Plugins::rumbleSoundOf(preset)); // the grain too, not only the settings
-    } else {
-        for (uint32_t parameterId = 0; parameterId < preset.values.size(); ++parameterId) {
-            m_instance->setParameter(parameterId, preset.values[parameterId]);
-        }
+        return rumble->sound();
     }
-    syncControlValues();
+    RumbleSound sound;
+    for (uint32_t id = 0; id < RumbleSound::Count; ++id) {
+        sound[id] = m_instance ? m_instance->getParameter(id) : 0.5;
+    }
+    return sound;
+}
+
+void RumblePluginEditor::soundChanged() {
+    const RumbleSound& sound = m_session->current();
+    if (auto* rumble = dynamic_cast<Aestra::Plugins::RumbleInstance*>(m_instance.get())) {
+        rumble->setSound(sound);
+    } else if (m_instance) {
+        for (uint32_t id = 0; id < RumbleSound::Count; ++id) m_instance->setParameter(id, static_cast<float>(sound[id]));
+    }
+    // Outlines: the six and the parent, then the picked sound last so it is made first.
+    const auto& step = m_session->step(m_session->currentStep());
+    for (const auto& s : step.six) m_outlines->request(s);
+    m_outlines->request(step.parent);
+    m_outlines->request(sound);
     setDirty(true);
 }
 
-int RumblePluginEditor::matchingFactoryPreset() const {
-    if (!m_instance) {
-        return -1;
-    }
-    for (size_t presetIndex = 0; presetIndex < Aestra::Plugins::kRumbleFactoryPresets.size(); ++presetIndex) {
-        const auto& values = Aestra::Plugins::kRumbleFactoryPresets[presetIndex].values;
-        bool matches = true;
-        for (uint32_t parameterId = 0; parameterId < values.size(); ++parameterId) {
-            if (std::abs(m_instance->getParameter(parameterId) - values[parameterId]) > 1.0e-5f) {
-                matches = false;
-                break;
-            }
-        }
-        if (matches) {
-            return static_cast<int>(presetIndex);
-        }
-    }
-    return -1;
+void RumblePluginEditor::startFrom(size_t presetIndex) {
+    const auto& preset = Aestra::Plugins::kRumbleFactoryPresets[presetIndex % Aestra::Plugins::kRumbleFactoryPresets.size()];
+    m_startPreset = presetIndex;
+    m_outlines->forgetPending();
+    m_session = std::make_unique<RumbleFindSession>(Aestra::Plugins::rumbleSoundOf(preset), std::string(preset.name),
+                                                    static_cast<uint64_t>(nowMs()));
+    m_lastPicture.reset();
+    soundChanged();
 }
 
-bool RumblePluginEditor::onMouseEvent(const NUIMouseEvent& event) {
-    if (!isVisible()) {
-        return false;
-    }
-    if (AestraPanelWindow::onMouseEvent(event)) {
-        return true;
-    }
-    if (!m_instance) {
-        return false;
+// ---------------------------------------------------------------------------------------------------------------
+// Layout
+// ---------------------------------------------------------------------------------------------------------------
+
+void RumblePluginEditor::layout() {
+    const NUIRect b = getBounds();
+    const float top = b.y + headerHeight() + 10.0f;
+    const float x0 = b.x + kPad;
+
+    m_shelf = {x0, top, kShelfWidth, b.bottom() - top - kPad};
+    for (size_t i = 0; i < m_shelfRows.size(); ++i) {
+        m_shelfRows[i] = {x0, top + 22.0f + static_cast<float>(i) * 28.0f, kShelfWidth, 26.0f};
     }
 
-    // Handle an active knob drag before the bounds check: a release outside
-    // the panel must still end the drag, or the knob stays latched to the
-    // pointer when it re-enters.
-    if (m_draggingControl >= 0) {
-        if (event.released) {
-            endKnobCapture();
-            m_draggingControl = -1;
-            setDirty(true);
-            return true;
-        }
-        if (event.button == NUIMouseButton::None || event.type == NUIMouseEventType::Drag) {
-            // Service-owned frame delta (up = increase), accumulated into value.
-            const float cur = m_controls[static_cast<size_t>(m_draggingControl)].normalizedValue;
-            setControlValue(m_draggingControl, cur + knobDragStep(event, kDragRangePixels));
-            return true;
-        }
+    const float mx = x0 + kShelfWidth + 14.0f;
+    const float mw = b.right() - kPad - mx;
+    m_trail = {mx, top, mw, 24.0f};
+
+    const float cy = m_trail.bottom() + 8.0f;
+    const float gap = 6.0f, sep = 9.0f;
+    const float cw = (mw - gap * 6.0f - sep) / 7.0f;
+    float x = mx;
+    for (size_t i = 0; i < m_cards.size(); ++i) {
+        m_cards[i] = {x, cy, cw, 88.0f};
+        x += cw + gap + (i == 0 ? sep : 0.0f);
     }
 
-    const bool contains = getBounds().contains(event.position);
-    if (!contains && !isDraggingWindow()) {
-        return false;
+    const float ay = m_cards[0].bottom() + 10.0f;
+    m_more = {mx, ay, 118.0f, 28.0f};
+    float dx = m_more.right() + 12.0f;
+    for (size_t i = 0; i < m_distance.size(); ++i) m_distance[i] = {dx + 3.0f + static_cast<float>(i) * 62.0f, ay + 3.0f, 62.0f, 22.0f};
+    dx = m_distance.back().right() + 3.0f + 46.0f; // room for the HOLD label
+    const float holdWidths[5] = {60.0f, 50.0f, 66.0f, 54.0f, 50.0f};
+    for (size_t i = 0; i < m_holds.size(); ++i) {
+        m_holds[i] = {dx, ay + 2.0f, holdWidths[i], 24.0f};
+        dx += holdWidths[i] + 4.0f;
     }
+    m_back = {b.right() - kPad - 64.0f, ay, 64.0f, 28.0f};
 
-    if (event.pressed && event.button == NUIMouseButton::Left) {
-        if (m_previousPresetBounds.contains(event.position)) {
-            const size_t count = Aestra::Plugins::kRumbleFactoryPresets.size();
-            applyFactoryPreset((m_activePreset + count - 1) % count);
-            return true;
-        }
-        if (m_nextPresetBounds.contains(event.position)) {
-            applyFactoryPreset((m_activePreset + 1) % Aestra::Plugins::kRumbleFactoryPresets.size());
-            return true;
-        }
-        if (m_presetButtonBounds.contains(event.position)) {
-            m_presetMenuOpen = !m_presetMenuOpen;
-            m_hoveredPreset = -1;
-            setDirty(true);
-            return true;
-        }
-        if (m_presetMenuOpen) {
-            for (size_t i = 0; i < m_presetItemBounds.size(); ++i) {
-                if (m_presetItemBounds[i].contains(event.position)) {
-                    applyFactoryPreset(i);
-                    m_presetMenuOpen = false;
-                    return true;
-                }
-            }
-            if (!m_presetMenuBounds.contains(event.position)) {
-                m_presetMenuOpen = false;
-                setDirty(true);
-            }
-            return true;
-        }
-
-        const int controlIndex = hitTestControl(event.position);
-        if (controlIndex >= 0) {
-            // The platform never populates event.doubleClick — pair up quick
-            // same-spot presses manually so reset-to-default actually fires.
-            const long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                        std::chrono::steady_clock::now().time_since_epoch())
-                                        .count();
-            const bool isDoubleClick =
-                event.doubleClick ||
-                ((nowMs - m_lastClickTimeMs) < 400 &&
-                 std::abs(event.position.x - m_lastClickPos.x) < 5.0f &&
-                 std::abs(event.position.y - m_lastClickPos.y) < 5.0f);
-            m_lastClickTimeMs = isDoubleClick ? 0 : nowMs;
-            m_lastClickPos = event.position;
-            if (isDoubleClick) {
-                setControlValue(controlIndex, m_controls[static_cast<size_t>(controlIndex)].defaultValue);
-                return true;
-            }
-            m_draggingControl = controlIndex;
-            beginKnobCapture(m_controls[static_cast<size_t>(controlIndex)].knobBounds.center(), event.position);
-            return true;
-        }
-    }
-
-    if (!event.pressed && !event.released) {
-        m_presetButtonHovered = m_presetButtonBounds.contains(event.position);
-        m_previousPresetHovered = m_previousPresetBounds.contains(event.position);
-        m_nextPresetHovered = m_nextPresetBounds.contains(event.position);
-        m_hoveredControl = m_presetMenuOpen ? -1 : hitTestControl(event.position);
-        m_hoveredPreset = -1;
-        if (m_presetMenuOpen) {
-            for (size_t i = 0; i < m_presetItemBounds.size(); ++i) {
-                if (m_presetItemBounds[i].contains(event.position)) {
-                    m_hoveredPreset = static_cast<int>(i);
-                    break;
-                }
-            }
-        }
-        setDirty(true);
-    }
-
-    if (event.type == NUIMouseEventType::Scroll && m_hoveredControl >= 0 && !m_presetMenuOpen) {
-        const float direction = event.wheelDelta > 0.0f ? 1.0f : -1.0f;
-        setControlValue(m_hoveredControl,
-                        m_controls[static_cast<size_t>(m_hoveredControl)].normalizedValue + direction * 0.02f);
-        return true;
-    }
-    return contains;
+    m_picture = {mx, ay + 38.0f, mw, 176.0f};
+    const float ky = m_picture.bottom() + 10.0f;
+    const float colW = mw / static_cast<float>(kControlCount);
+    for (size_t i = 0; i < m_controls.size(); ++i) m_controls[i] = {mx + colW * static_cast<float>(i), ky, colW, 92.0f};
+    m_said = {mx, m_controls[0].bottom() + 4.0f, mw, 20.0f};
 }
 
 void RumblePluginEditor::onResize(int width, int height) {
     AestraPanelWindow::onResize(width, height);
-    layoutControls();
+    layout();
+}
+
+float RumblePluginEditor::pictureX(double seconds) const {
+    return m_picture.x + kPicX + (m_picture.width - kPicX * 2.0f) * static_cast<float>(RumbleOutline::xOf(seconds));
+}
+
+float RumblePluginEditor::pictureDropY(double semitones) const {
+    const float bottom = m_picture.bottom() - kPicBottom - 4.0f;
+    const float span = m_picture.height - kPicTop - kPicBottom - 8.0f;
+    return bottom - static_cast<float>(semitones / RumbleVoice::dropSemitones(1.0)) * span;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Drawing
+// ---------------------------------------------------------------------------------------------------------------
+
+void RumblePluginEditor::drawContent(NUIRenderer& renderer, const NUIRect& contentRect) {
+    (void)contentRect;
+    followInstrument();
+    layout();
+    const NUIRect b = getBounds();
+    renderer.fillRect({b.x, b.y + headerHeight(), b.width, b.height - headerHeight()}, token("backgroundSecondary"));
+    drawShelf(renderer);
+    drawTrail(renderer);
+    drawRow(renderer);
+    drawActions(renderer);
+    drawPicture(renderer);
+    drawControls(renderer);
+    drawSaid(renderer);
+}
+
+void RumblePluginEditor::drawShelf(NUIRenderer& r) {
+    label(r, "START FROM", {m_shelf.x + 2.0f, m_shelf.y, m_shelf.width, 16.0f});
+    for (size_t i = 0; i < m_shelfRows.size(); ++i) {
+        const NUIRect& row = m_shelfRows[i];
+        const bool on = i == m_startPreset && m_session->stepCount() == 1 && m_session->selected() == RumbleFindSession::kParent;
+        const bool hovered = row.contains(m_hover);
+        if (on) {
+            r.fillRoundedRect(row, Depth::Radius::medium, token("surfaceTertiary"));
+            r.fillRoundedRect(row, Depth::Radius::medium, token("selected"));
+        } else if (hovered) {
+            r.fillRoundedRect(row, Depth::Radius::medium, token("hover"));
+        }
+        textLeft(r, std::string(Aestra::Plugins::kRumbleFactoryPresets[i].name), {row.x + 10.0f, row.y, row.width - 12.0f, row.height},
+                 12.0f, token(on || hovered ? "textPrimary" : "textSecondary"));
+    }
+    const float y = m_shelfRows.back().bottom() + 18.0f;
+    label(r, "YOUR 808S", {m_shelf.x + 2.0f, y, m_shelf.width, 16.0f});
+    const NUIRect well{m_shelf.x, y + 22.0f, m_shelf.width, 64.0f};
+    Depth::bed(r, well, Depth::Radius::medium);
+    r.drawTextCentered("Keep a sound to find", {well.x, well.y + 16.0f, well.width, 14.0f}, 11.0f, token("textMuted"));
+    r.drawTextCentered("it here in any project.", {well.x, well.y + 32.0f, well.width, 14.0f}, 11.0f, token("textMuted"));
+}
+
+void RumblePluginEditor::drawTrail(NUIRenderer& r) {
+    const size_t steps = m_session->stepCount();
+    const auto textOf = [this](size_t i) {
+        return i == 0 ? "Start: " + m_session->step(0).parentName : m_session->step(i).parentName;
+    };
+    // The steps that fit around the current one; a "..." either side reaches the hidden ones (kOverflow each).
+    // The UI font has no single-angle quotes, so the ends are dots.
+    constexpr float kOverflow = 40.0f;
+    constexpr size_t kMaxSteps = 16;
+    std::vector<float> widths(steps);
+    for (size_t i = 0; i < steps; ++i) widths[i] = r.measureText(textOf(i), 11.0f).width + 20.0f + 14.0f;
+    auto window = Aestra::Plugins::fitTrail(widths, m_trail.width - 120.0f - 2.0f * kOverflow, m_session->currentStep());
+    if (window.end - window.first > kMaxSteps) {
+        window.first = std::max(window.first, std::min(m_session->currentStep(), window.end - kMaxSteps));
+        window.end = std::min(window.end, window.first + kMaxSteps);
+    }
+
+    float x = m_trail.x;
+    m_trailPillCount = 0;
+    const auto pill = [&](const std::string& text, size_t step, bool current) {
+        const float w = r.measureText(text, 11.0f).width + 20.0f;
+        const NUIRect pillRect{x, m_trail.y + 1.0f, w, 22.0f};
+        m_trailPills[m_trailPillCount] = pillRect;
+        m_trailSteps[m_trailPillCount++] = step;
+        const bool hovered = pillRect.contains(m_hover);
+        if (current || hovered) r.fillRoundedRect(pillRect, 11.0f, token(current ? "surfaceRaised" : "surfaceTertiary"));
+        r.drawTextCentered(text, pillRect, 11.0f, token(current || hovered ? "textPrimary" : "textMuted"));
+        x += w + 2.0f;
+    };
+    const auto arrow = [&]() {
+        r.drawText(">", {x + 1.0f, r.calculateOpticalTextY(m_trail, 10.0f)}, 10.0f, token("textMuted"));
+        x += 12.0f;
+    };
+    if (window.first > 0) {
+        pill("...", window.first - 1, false); // one step further back
+        arrow();
+    }
+    for (size_t i = window.first; i < window.end; ++i) {
+        if (i > window.first) arrow();
+        pill(textOf(i), i, i == m_session->currentStep());
+    }
+    if (window.end < steps) {
+        arrow();
+        pill("...", window.end, false); // the next hidden step
+    }
+    const std::string count = std::to_string(steps) + (steps == 1 ? " step, " : " steps, ") +
+                              std::to_string(m_session->soundsMade()) + " sounds";
+    const float cw = r.measureText(count, 11.0f).width;
+    textLeft(r, count, {m_trail.right() - cw, m_trail.y, cw, m_trail.height}, 11.0f, token("textMuted"));
+}
+
+bool RumblePluginEditor::drawOutline(NUIRenderer& r, const NUIRect& rect, const RumbleSound& sound, const NUIColor& color,
+                                     bool picture) {
+    std::shared_ptr<const RumbleOutline> outline = m_outlines->find(sound);
+    if (picture) {
+        if (outline) {
+            m_lastPicture = outline;
+        } else {
+            outline = m_lastPicture; // the shaped sound's outline is on its way; keep the last one meanwhile
+            setDirty(true);          // and keep drawing until it arrives
+        }
+    }
+    if (!outline) return false;
+    std::array<NUIPoint, RumbleOutline::kBins> top{}, bottom{};
+    const float mid = rect.y + rect.height * 0.5f;
+    const float amp = rect.height * 0.5f;
+    for (size_t j = 0; j < RumbleOutline::kBins; ++j) {
+        const float x = rect.x + rect.width * static_cast<float>(RumbleOutline::xOfBin(j));
+        const float a = amp * std::min(1.0f, outline->bins[j] / static_cast<float>(RumbleVoice::kLevelledPeak));
+        top[j] = {x, mid - a};
+        bottom[j] = {x, mid + a};
+    }
+    r.fillWaveform(top.data(), bottom.data(), static_cast<int>(RumbleOutline::kBins), color);
+    return true;
+}
+
+void RumblePluginEditor::drawCard(NUIRenderer& r, const NUIRect& rect, int index) {
+    const bool parent = index == RumbleFindSession::kParent;
+    const bool selected = index == m_session->selected();
+    const bool hovered = rect.contains(m_hover);
+    const auto& step = m_session->step(m_session->currentStep());
+    const RumbleSound& sound = parent ? step.parent : step.six[static_cast<size_t>(index)];
+
+    if (parent) {
+        Depth::bed(r, rect, Depth::Radius::medium);
+        if (selected) r.fillRoundedRect(rect, Depth::Radius::medium, token("selected"));
+        r.drawText("FROM", {rect.right() - 34.0f, rect.y + 6.0f}, 9.0f, token("textMuted"));
+    } else {
+        r.fillRoundedRect(rect, Depth::Radius::medium, token(hovered && !selected ? "surfaceRaised" : "surfaceTertiary"));
+        if (selected) r.fillRoundedRect(rect, Depth::Radius::medium, token("selected"));
+    }
+    const NUIRect art{rect.x + 8.0f, rect.y + 10.0f, rect.width - 16.0f, 46.0f};
+    if (!drawOutline(r, art, sound, token(selected ? "primary" : "textMuted"), false)) {
+        // Still being made: a sunk slot with a sweep, since how long it takes is not known.
+        const NUIRect slot{art.x, art.y + art.height * 0.5f - 3.0f, art.width, 6.0f};
+        Depth::bed(r, slot, 3.0f, token("meterBackground"), Depth::Cut::Slot);
+        const float phase = static_cast<float>(nowMs() % 1200) / 1200.0f;
+        const float w = slot.width * 0.32f;
+        const float sx = slot.x - w + (slot.width + w) * phase;
+        const float l = std::max(slot.x, sx), rr = std::min(slot.right(), sx + w);
+        if (rr > l) r.fillRoundedRect({l, slot.y + 1.0f, rr - l, 4.0f}, 2.0f, token("primary"));
+        setDirty(true);
+    }
+    const std::string name = m_session->nameOf(index);
+    const NUIRect nameRect{rect.x + 8.0f, rect.bottom() - 24.0f, rect.width - 16.0f, 16.0f};
+    textLeft(r, name, nameRect, 11.0f, token(selected || hovered ? "textPrimary" : "textSecondary"));
+    if (m_session->shaped(index)) {
+        const float nx = nameRect.x + r.measureText(name, 11.0f).width + 7.0f;
+        r.fillCircle({nx, nameRect.y + nameRect.height * 0.5f}, 2.5f, token("secondary"));
+    }
+}
+
+void RumblePluginEditor::drawRow(NUIRenderer& r) {
+    drawCard(r, m_cards[0], RumbleFindSession::kParent);
+    const float sx = m_cards[0].right() + 7.5f;
+    r.fillRect({sx, m_cards[0].y + 8.0f, 1.0f, m_cards[0].height - 16.0f}, token("divider"));
+    for (size_t i = 0; i < RumbleFindSession::kSix; ++i) drawCard(r, m_cards[i + 1], static_cast<int>(i));
+}
+
+void RumblePluginEditor::drawActions(NUIRenderer& r) {
+    // More like this: the one accent action.
+    const bool moreHover = m_more.contains(m_hover);
+    r.fillRoundedRect(m_more, Depth::Radius::pill(m_more.height), token(moreHover ? "primaryHover" : "primary"));
+    r.drawTextCentered("More like this", m_more, 11.0f, token("textOnPrimary"));
+
+    // Distance: a segment switch, a lit thumb in a sunk track.
+    const NUIRect track{m_distance[0].x - 3.0f, m_distance[0].y - 3.0f, m_distance.back().right() - m_distance[0].x + 6.0f, 28.0f};
+    Depth::bed(r, track, Depth::Radius::pill(track.height));
+    const size_t chosen = static_cast<size_t>(m_session->distance());
+    Depth::object(r, m_distance[chosen], Depth::Radius::pill(m_distance[chosen].height));
+    for (size_t i = 0; i < m_distance.size(); ++i) {
+        const bool on = i == chosen;
+        r.drawTextCentered(kDistanceNames[i], m_distance[i], 11.0f,
+                           token(on || m_distance[i].contains(m_hover) ? "textPrimary" : "textMuted"));
+    }
+
+    label(r, "HOLD", {m_holds[0].x - 40.0f, m_holds[0].y, 36.0f, m_holds[0].height});
+    for (size_t i = 0; i < m_holds.size(); ++i) {
+        const bool held = m_session->held(static_cast<Variation::Quality>(i));
+        const NUIRect& chip = m_holds[i];
+        if (held) {
+            Depth::bed(r, chip, Depth::Radius::pill(chip.height));
+            drawLock(r, {chip.x + 11.0f, chip.y + chip.height * 0.5f}, token("secondary"));
+            r.drawTextCentered(kHoldNames[i], {chip.x + 8.0f, chip.y, chip.width - 6.0f, chip.height}, 11.0f, token("textPrimary"));
+        } else {
+            pill(r, chip, kHoldNames[i], chip.contains(m_hover), false);
+        }
+    }
+    pill(r, m_back, "Back", m_back.contains(m_hover), false, true);
+}
+
+void RumblePluginEditor::drawPicture(NUIRenderer& r) {
+    Depth::bed(r, m_picture, 6.0f, token("editorWell"), Depth::Cut::Deep);
+    const RumbleSound& sound = m_session->current();
+    const float x0 = m_picture.x + kPicX;
+    const float w = m_picture.width - kPicX * 2.0f;
+    const float yTop = m_picture.y + kPicTop, yBottom = m_picture.bottom() - kPicBottom;
+
+    for (double t : {0.1, 0.5, 1.0, 2.0, 3.0}) {
+        const float x = std::round(pictureX(t)) + 0.5f;
+        r.drawLine({x, yTop - 6.0f}, {x, yBottom + 4.0f}, 1.0f, token("gridMinor"));
+        r.drawText(t < 1.0 ? fmt("%.0f ms", t * 1000.0) : fmt("%.0f s", t), {x + 3.0f, m_picture.bottom() - 13.0f}, 9.0f,
+                   token("textMuted"));
+    }
+    drawOutline(r, {x0, yTop, w, yBottom - yTop}, sound, token("primary"), true);
+
+    // The pitch line over the front.
+    std::array<NUIPoint, 120> pitch{};
+    for (size_t i = 0; i < pitch.size(); ++i) {
+        const double t = 0.8 * static_cast<double>(i) / static_cast<double>(pitch.size() - 1);
+        pitch[i] = {pictureX(t), pictureDropY(RumbleOutline::pitchAbove(sound, t))};
+    }
+    r.drawPolyline(pitch.data(), static_cast<int>(pitch.size()), 1.5f, token("textPrimary"));
+
+    // The two handles: the only objects on the picture.
+    const double length = RumbleVoice::holdSeconds(sound[RumbleSound::Hold]) + RumbleVoice::tailSeconds(sound[RumbleSound::Tail]);
+    const NUIPoint sq{pictureX(length), yTop + (yBottom - yTop) * 0.5f};
+    const NUIPoint dot{x0, pictureDropY(RumbleVoice::dropSemitones(sound[RumbleSound::Punch]))};
+    Depth::object(r, {sq.x - 6.0f, sq.y - 6.0f, 12.0f, 12.0f}, 3.0f, m_dragging == Handle::Length);
+    r.fillRoundedRect({sq.x - 2.0f, sq.y - 2.0f, 4.0f, 4.0f}, 1.0f, token("textPrimary"));
+    Depth::object(r, {dot.x - 6.0f, dot.y - 6.0f, 12.0f, 12.0f}, 6.0f, m_dragging == Handle::Drop);
+    r.fillCircle(dot, 2.0f, token("textPrimary"));
+    r.drawText("pitch falls", {x0 + 12.0f, std::max(yTop, dot.y - 16.0f)}, 9.0f, token("textSecondary"));
+
+    // What Rumble already did, and the numbers.
+    const std::string info = m_session->currentName() + "  ·  " + fmt("%.2f s", length) + "  ·  falls " +
+                             fmt("%.1f st", RumbleVoice::dropSemitones(sound[RumbleSound::Punch])) + " in " +
+                             fmt("%.0f ms", RumbleVoice::dropSeconds(sound) * 1000.0);
+    const float iw = r.measureText(info, 11.0f).width;
+    r.drawText(info, {m_picture.right() - 12.0f - iw, m_picture.y + 7.0f}, 11.0f, token("textSecondary"));
+    r.drawText("Levelled  ·  Sub in mono  ·  Lands on its note", {x0, m_picture.y + 7.0f}, 10.0f, token("textMuted"));
+}
+
+void RumblePluginEditor::drawControls(NUIRenderer& r) {
+    const auto& step = m_session->step(m_session->currentStep());
+    const int sel = m_session->selected();
+    const RumbleSound& arrived = sel == RumbleFindSession::kParent ? step.parentArrived : step.arrived[static_cast<size_t>(sel)];
+    const RumbleSound& sound = m_session->current();
+    constexpr float start = kPi * 0.75f, sweep = kPi * 1.5f;
+    for (size_t i = 0; i < kControlCount; ++i) {
+        const uint32_t id = kControlIds[i];
+        const NUIRect& col = m_controls[i];
+        const float v = static_cast<float>(sound[id]);
+        const bool shaped = std::abs(sound[id] - arrived[id]) > 1.0e-9;
+        const float lw = r.measureText(kControlNames[i], 10.0f).width;
+        const float lx = col.x + (col.width - lw) * 0.5f;
+        r.drawText(kControlNames[i], {lx, col.y}, 10.0f, token("textMuted"));
+        if (shaped) r.fillCircle({lx + lw + 6.0f, col.y + 6.0f}, 2.5f, token("secondary"));
+
+        const NUIPoint c{col.x + col.width * 0.5f, col.y + 16.0f + kKnobSize * 0.5f};
+        const float radius = kKnobSize * 0.5f - 2.0f;
+        drawArc(r, c, radius, start, start + sweep, 3.2f, token("meterBackground"));
+        drawArc(r, c, radius, start, start + sweep * v, 3.2f, token("primary"));
+        const float capR = kKnobSize * 0.29f;
+        Depth::object(r, {c.x - capR, c.y - capR, capR * 2.0f, capR * 2.0f}, capR, knobDragParam() == static_cast<int>(id));
+        const float a = start + sweep * v;
+        r.drawLine({c.x + std::cos(a) * capR * 0.25f, c.y + std::sin(a) * capR * 0.25f},
+                   {c.x + std::cos(a) * capR * 0.85f, c.y + std::sin(a) * capR * 0.85f}, 2.0f, token("textPrimary"));
+        const std::string value = m_instance ? m_instance->getParameterDisplay(id) : std::string();
+        r.drawTextCentered(value, {col.x, c.y + kKnobSize * 0.5f + 4.0f, col.width, 14.0f}, 11.0f, token("textPrimary"));
+    }
+}
+
+void RumblePluginEditor::drawSaid(NUIRenderer& r) {
+    textLeft(r, m_session->said(), m_said, 12.0f, token("textSecondary"));
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Pointer
+// ---------------------------------------------------------------------------------------------------------------
+
+bool RumblePluginEditor::handlePress(const NUIPoint& p) {
+    for (size_t i = 0; i < m_shelfRows.size(); ++i) {
+        if (m_shelfRows[i].contains(p)) {
+            startFrom(i);
+            return true;
+        }
+    }
+    for (size_t k = 0; k < m_trailPillCount; ++k) {
+        if (m_trailPills[k].contains(p)) {
+            m_session->goToStep(m_trailSteps[k]);
+            soundChanged();
+            return true;
+        }
+    }
+    for (size_t i = 0; i < m_cards.size(); ++i) {
+        if (m_cards[i].contains(p)) {
+            m_session->select(static_cast<int>(i) - 1);
+            soundChanged();
+            return true;
+        }
+    }
+    if (m_more.contains(p)) {
+        m_outlines->forgetPending();
+        m_session->more();
+        soundChanged();
+        return true;
+    }
+    for (size_t i = 0; i < m_distance.size(); ++i) {
+        if (m_distance[i].contains(p)) {
+            m_session->setDistance(static_cast<Variation::Distance>(i));
+            setDirty(true);
+            return true;
+        }
+    }
+    for (size_t i = 0; i < m_holds.size(); ++i) {
+        if (m_holds[i].contains(p)) {
+            m_session->toggleHold(static_cast<Variation::Quality>(i));
+            setDirty(true);
+            return true;
+        }
+    }
+    if (m_back.contains(p)) {
+        m_session->back();
+        soundChanged();
+        return true;
+    }
+    if (m_picture.contains(p)) {
+        const RumbleSound& sound = m_session->current();
+        const double length = RumbleVoice::holdSeconds(sound[RumbleSound::Hold]) + RumbleVoice::tailSeconds(sound[RumbleSound::Tail]);
+        const NUIPoint sq{pictureX(length), m_picture.y + kPicTop + (m_picture.height - kPicTop - kPicBottom) * 0.5f};
+        const NUIPoint dot{m_picture.x + kPicX, pictureDropY(RumbleVoice::dropSemitones(sound[RumbleSound::Punch]))};
+        if (near(p, sq, 10.0f)) m_dragging = Handle::Length;
+        else if (near(p, dot, 10.0f)) m_dragging = Handle::Drop;
+        setDirty(true);
+        return true;
+    }
+    return false;
+}
+
+void RumblePluginEditor::dragHandle(const NUIPoint& p) {
+    const RumbleSound& sound = m_session->current();
+    if (m_dragging == Handle::Length) {
+        const float x = (p.x - m_picture.x - kPicX) / (m_picture.width - kPicX * 2.0f);
+        const double seconds = RumbleOutline::secondsAt(x);
+        const double tail = std::max(0.26, seconds - RumbleVoice::holdSeconds(sound[RumbleSound::Hold]));
+        m_session->shape(RumbleSound::Tail, std::log(tail / RumbleVoice::tailSeconds(0.0)) / std::log(RumbleVoice::tailSeconds(1.0) / RumbleVoice::tailSeconds(0.0)));
+    } else if (m_dragging == Handle::Drop) {
+        const float bottom = m_picture.bottom() - kPicBottom - 4.0f;
+        const float span = m_picture.height - kPicTop - kPicBottom - 8.0f;
+        m_session->shape(RumbleSound::Punch, (bottom - p.y) / span);
+    }
+    soundChanged();
+}
+
+bool RumblePluginEditor::onMouseEvent(const NUIMouseEvent& event) {
+    if (!isVisible()) return false;
+    if (AestraPanelWindow::onMouseEvent(event)) return true;
+
+    followInstrument();
+
+    if (m_dragging != Handle::None) {
+        // A release that never arrives (focus loss) leaves no button held: stop the drag.
+        if (event.released || (!event.pressed && !NUIComponent::isPointerButtonHeld())) {
+            m_dragging = Handle::None;
+            setDirty(true);
+        } else {
+            dragHandle(event.position);
+        }
+        return true;
+    }
+
+    const bool contains = getBounds().contains(event.position);
+    if (!contains && knobDragParam() < 0) return false;
+
+    // Double-click on a control puts its setting back to how the sound arrived.
+    if (event.pressed && event.button == NUIMouseButton::Left) {
+        for (size_t i = 0; i < kControlCount; ++i) {
+            if (!m_controls[i].contains(event.position)) continue;
+            const long long now = nowMs();
+            const bool twice = event.doubleClick || (now - m_lastClickMs < 400 && near(event.position, m_lastClickPos, 5.0f));
+            m_lastClickMs = twice ? 0 : now;
+            m_lastClickPos = event.position;
+            if (twice) {
+                m_session->putBack(kControlIds[i]);
+                soundChanged();
+                return true;
+            }
+        }
+    }
+
+    std::array<KnobTarget, kControlCount> knobs{};
+    for (size_t i = 0; i < kControlCount; ++i) {
+        // Centred on the drawn knob (16 px down, kKnobSize across), so the cursor comes back to the knob.
+        const NUIRect& col = m_controls[i];
+        knobs[i] = {{col.x, col.y, col.width, 2.0f * (16.0f + kKnobSize * 0.5f)}, kControlIds[i]};
+    }
+    if (handleKnobDrag(event, knobs.data(), knobs.size(), kKnobRange,
+                       [this](uint32_t id) { return static_cast<float>(m_session->current()[id]); },
+                       [this](uint32_t id, float v) {
+                           m_session->shape(id, v);
+                           soundChanged();
+                       })) {
+        return true;
+    }
+
+    if (event.pressed && event.button == NUIMouseButton::Left && handlePress(event.position)) return true;
+
+    if (!event.pressed && !event.released && !event.cursorCaptured) {
+        m_hover = event.position;
+        setDirty(true);
+    }
+    return contains;
 }
 
 } // namespace AestraUI

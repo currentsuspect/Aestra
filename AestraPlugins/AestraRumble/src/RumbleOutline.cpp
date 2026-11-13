@@ -132,6 +132,12 @@ size_t RumbleOutlineWorker::rendersDone() const {
     return m_renders;
 }
 
+size_t RumbleOutlineWorker::renderOrderOf(const RumbleSound& sound) const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    const auto it = m_made.find(keyOf(sound));
+    return it == m_made.end() ? 0 : it->second.order;
+}
+
 void RumbleOutlineWorker::evictIfFull() {
     while (m_made.size() >= m_capacity) {
         auto oldest = m_made.begin();
@@ -164,7 +170,7 @@ void RumbleOutlineWorker::run() {
         m_busy = false;
         ++m_renders;
         evictIfFull();
-        m_made[keyOf(sound)] = Entry{std::move(outline), ++m_clock};
+        m_made[keyOf(sound)] = Entry{std::move(outline), ++m_clock, m_renders};
         if (m_pending.empty()) {
             m_idle.notify_all();
         }

@@ -149,9 +149,11 @@ void theNewestArrivesFirst() {
         std::this_thread::sleep_for(std::chrono::microseconds(200));
     }
     check(worker.find(nthSound(100)) != nullptr, "the newest outline arrives");
-    // At most the one already being made, and the newest, can be done when the newest arrives.
-    check(worker.rendersDone() <= 2, "before the older ones (" + std::to_string(worker.rendersDone()) + " made)");
     worker.waitUntilIdle(30000);
+    // At most the one already being made comes before the newest. Read from the worker's own count, not from
+    // how many were done when this thread woke: on Windows a sleep is ~15 ms and more get made meanwhile.
+    const size_t order = worker.renderOrderOf(nthSound(100));
+    check(order >= 1 && order <= 2, "before the older ones (made " + std::to_string(order) + " of 31)");
 }
 
 void aNewRoundDropsTheOldRequests() {

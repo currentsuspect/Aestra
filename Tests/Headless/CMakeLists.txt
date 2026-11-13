@@ -118,6 +118,25 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RumbleVoiceTest.cpp")
     )
 endif()
 
+# Rumble Find Session Contract (SPEC-025 R5): the moves of finding a sound, headless.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RumbleFindSessionTest.cpp")
+    add_executable(RumbleFindSessionTest
+        RumbleFindSessionTest.cpp
+        ${CMAKE_SOURCE_DIR}/AestraPlugins/AestraRumble/src/RumbleFindSession.cpp
+        ${CMAKE_SOURCE_DIR}/AestraPlugins/AestraRumble/src/RumbleVariation.cpp
+        ${CMAKE_SOURCE_DIR}/AestraPlugins/AestraRumble/src/RumbleVoice.cpp
+    )
+    target_include_directories(RumbleFindSessionTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraPlugins/AestraRumble/include
+    )
+    target_compile_features(RumbleFindSessionTest PRIVATE cxx_std_17)
+    add_test(NAME RumbleFindSessionTest COMMAND RumbleFindSessionTest)
+    set_tests_properties(RumbleFindSessionTest PROPERTIES
+        LABELS "headless;rumble;plugin;contract:plugins"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 # Rumble Outline Contract (SPEC-025 R3): the sketch's outline, bin for bin, made off the UI thread.
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RumbleOutlineTest.cpp")
     add_executable(RumbleOutlineTest
