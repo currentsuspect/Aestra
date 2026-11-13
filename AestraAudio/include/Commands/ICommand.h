@@ -1,6 +1,8 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include "Commands/Footprint.h"
+
 #include <chrono>
 #include <cstdint>
 #include <string>
@@ -62,6 +64,10 @@ public:
      * @return String identifier like "add_clip", "move_pattern", etc.
      */
     virtual std::string type() const { return {}; }
+
+    /// What this step touched, for pickable undo (SPEC-026). Commands that do not say count as touching
+    /// everything, so they are never undone around. New commands declare it (AGENTS.md §3a).
+    virtual Footprint footprint() const { return Footprint::everything(); }
 
     /// When the command was made (epoch ms): the moment of the user's action, which the Versions steps list shows.
     uint64_t createdAtMs() const { return m_createdAtMs; }
