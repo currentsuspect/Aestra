@@ -228,7 +228,11 @@ void drawSegmented(NUIRenderer& renderer, const NUIRect& rect, const std::string
                    int hovered, bool bypassed, const SegmentGlyph& glyph) {
     if (count <= 0) return;
     const auto c = emberColors();
-    renderer.fillRect(rect, c.body);
+    // Design Spec, Segment switch (locked): a sunk pill track with 3px of padding and no outline; the choice sits on
+    // a lit thumb. Unchosen labels are muted; the chosen one and the one under the pointer are full ink. Hover is
+    // quiet: no fill.
+    Depth::bed(renderer, rect, Depth::Radius::pill(rect.height), Depth::Cut::Shallow);
+    constexpr float kPad = 3.0f;
     const float cellW = rect.width / static_cast<float>(count);
     for (int i = 0; i < count; ++i) {
         const float x0 = std::round(rect.x + cellW * static_cast<float>(i));
@@ -237,13 +241,12 @@ void drawSegmented(NUIRenderer& renderer, const NUIRect& rect, const std::string
         const bool on = i == selected;
         const bool hot = i == hovered;
         if (on) {
-            renderer.fillRect(cell, c.selected);
-            renderer.fillRect(NUIRect(x0, rect.bottom() - 2.0f, cell.width, 2.0f), bypassed ? c.inkOff : c.primary);
-        } else if (hot) {
-            renderer.fillRect(cell, c.raised);
+            const NUIRect thumb(x0 + kPad, rect.y + kPad, cell.width - kPad * 2.0f, rect.height - kPad * 2.0f);
+            Depth::ObjectLook look;
+            look.base = bypassed ? c.control : c.raised;
+            Depth::object(renderer, thumb, Depth::Radius::pill(thumb.height), look);
         }
-        if (i > 0) renderer.fillRect(NUIRect(x0, rect.y + 1.0f, 1.0f, rect.height - 2.0f), c.border);
-        const NUIColor ink = (on || hot) ? c.ink : c.inkSoft;
+        const NUIColor ink = (on || hot) ? c.ink : c.inkMuted;
         if (glyph) {
             glyph(renderer, i, cell.x + 10.0f, rect.y + rect.height * 0.5f, ink);
             // 11 px so "Saw Down" fits beside its mark instead of being cut short.
@@ -253,14 +256,16 @@ void drawSegmented(NUIRenderer& renderer, const NUIRect& rect, const std::string
             renderer.drawTextCentered(labels[i], cell, 12.0f, ink);
         }
     }
-    renderer.strokeRect(rect, 1.0f, c.edge);
 }
 
 void drawToggleButton(NUIRenderer& renderer, const NUIRect& rect, const std::string& label, bool on, bool hovered,
                       bool bypassed) {
     const auto c = emberColors();
-    renderer.fillRect(rect, on ? c.selected : hovered ? c.raised : c.body);
-    renderer.strokeRect(rect, 1.0f, c.edge);
+    // A key (Design Spec, Key toggle): flat at rest, sunk while engaged; never an outline.
+    if (on)
+        Depth::bed(renderer, rect, Depth::Radius::small, Depth::Cut::Deep);
+    else
+        renderer.fillRect(rect, hovered ? c.raised : c.body);
     const NUIRect mark(rect.x + 8.0f, rect.y + rect.height * 0.5f - 3.0f, 6.0f, 6.0f);
     if (on) renderer.fillRect(mark, bypassed ? c.inkOff : c.primary);
     else renderer.strokeRect(mark, 1.0f, c.inkMuted);
@@ -269,8 +274,10 @@ void drawToggleButton(NUIRenderer& renderer, const NUIRect& rect, const std::str
 
 void drawPushButton(NUIRenderer& renderer, const NUIRect& rect, const std::string& label, bool hovered) {
     const auto c = emberColors();
-    renderer.fillRect(rect, hovered ? c.raised : c.body);
-    renderer.strokeRect(rect, 1.0f, c.edge);
+    // A soft pill in a dense row (Design Spec, Button): surfaceTertiary, lightening one step on hover, no edge.
+    auto& tm = NUIThemeManager::getInstance();
+    renderer.fillRoundedRect(rect, Depth::Radius::pill(rect.height),
+                             hovered ? tm.getColor("surfaceRaised") : tm.getColor("surfaceTertiary"));
     renderer.drawTextCentered(label, rect, 12.0f, hovered ? c.ink : c.inkSoft);
 }
 

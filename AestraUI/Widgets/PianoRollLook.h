@@ -12,6 +12,7 @@
 // Colours come from the unit (Arsenal colour); the rest are fixed here because they describe a physical keyboard.
 
 #include "../Common/MusicHelpers.h"
+#include "../Core/NUIThemeSystem.h"
 #include "../Core/NUITypes.h"
 
 #include <algorithm>
@@ -80,17 +81,25 @@ inline std::string scaleDegreeLabel(int pitch, int rootKey, ScaleType scale) {
     return kNames[interval];
 }
 
-/// A row's fill on the board's black bed (FD-63, board A + C): the root's row warm, the scale's rows a step off black,
-/// the rest the bed itself. With no scale set, the naturals take the scale's step, like a keyboard's white keys.
+/// A row's fill on the bed (FD-63, board A + C): the root's row warm, the scale's rows a step off the bed, the rest
+/// the bed itself. With no scale set, the naturals take the scale's step, like a keyboard's white keys. Mixed from
+/// theme tokens (timelineBed, textPrimary, warning), so the board's look follows every theme; on Ember dark these
+/// land on the board's values (#000, #0b0a09, #14100c).
 inline NUIColor rowFill(int pitch, int rootKey, ScaleType scale) {
+    const auto& t = NUIThemeManager::getInstance().getCurrentTheme();
+    const NUIColor bed = t.timelineBed.withAlpha(1.0f);
+    const NUIColor step = NUIColor::lerp(bed, t.textPrimary, 0.04f).withAlpha(1.0f);
     const int pc = ((pitch % 12) + 12) % 12;
-    if (scale == ScaleType::Chromatic) return isAccidental(pitch) ? NUIColor::fromHex(0x000000) : NUIColor::fromHex(0x0b0a09);
-    if (pc == ((rootKey % 12) + 12) % 12) return NUIColor::fromHex(0x14100c);
-    return MusicTheory::isNoteInScale(pitch, rootKey, scale) ? NUIColor::fromHex(0x0b0a09) : NUIColor::fromHex(0x000000);
+    if (scale == ScaleType::Chromatic) return isAccidental(pitch) ? bed : step;
+    if (pc == ((rootKey % 12) + 12) % 12) return NUIColor::lerp(bed, t.warning, 0.08f).withAlpha(1.0f);
+    return MusicTheory::isNoteInScale(pitch, rootKey, scale) ? step : bed;
 }
 
-/// The line under a row on the board: brighter under every C so the octaves can be counted.
-inline NUIColor rowLine(int pitch) { return pitch % 12 == 0 ? NUIColor::fromHex(0x2e2a26) : NUIColor::fromHex(0x141210); }
+/// The line under a row: brighter under every C so the octaves can be counted (from tokens, as rowFill).
+inline NUIColor rowLine(int pitch) {
+    const auto& t = NUIThemeManager::getInstance().getCurrentTheme();
+    return NUIColor::lerp(t.timelineBed.withAlpha(1.0f), t.textPrimary, pitch % 12 == 0 ? 0.17f : 0.07f).withAlpha(1.0f);
+}
 
 /// The line under a row: every C is stronger than the rest, so the octaves can be counted at a glance.
 inline float rowLineAlpha(int pitch) { return pitch % 12 == 0 ? 0.13f : 0.035f; }
