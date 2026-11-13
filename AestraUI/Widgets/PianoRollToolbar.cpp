@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "NUIPianoRollWidgets.h"
+#include "../Graphics/NUIDepth.h"
 #include "../Helpers/PianoRollInteraction.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
@@ -141,6 +142,8 @@ void PianoRollToolbar::setupUI() {
             repaint();
         });
 
+        if (auto keys = keys_.lock())
+            menu->addCheckbox("Name every note", keys->nameEveryNote(), [keys](bool on) { keys->setNameEveryNote(on); });
         menu->addItem("Center on Playhead", [this]() {
             if (onCenterOnPlayhead_) onCenterOnPlayhead_();
         });
@@ -533,7 +536,6 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
     // FD-63, board "A + C": a 40 px header. Left to right: the unit's colour, the pattern / the unit (each opens its
     // list), a Draw | Select | Erase segment, "Snap" and "Key" each with a boxed value. More sits at the right; the
     // panel draws the close box after it. Length, Follow and the rest live under More.
-    const auto bed = themeManager.getColor("backgroundPrimary");
     const auto raised = themeManager.getColor("surfaceRaised");
     const auto secondary = themeManager.getColor("textSecondary");
     const auto muted = themeManager.getColor("textMuted");
@@ -555,7 +557,7 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
 
     float x = b.x + 14.0f;
     // ---- Breadcrumb: [colour] Pattern / Unit ----
-    renderer.fillRect(NUIRect(x, std::round(y + (hRow - 10.0f) * 0.5f), 10.0f, 10.0f), m_unitColor);
+    renderer.fillRoundedRect(NUIRect(x, std::round(y + (hRow - 10.0f) * 0.5f), 10.0f, 10.0f), 5.0f, m_unitColor);
     x += 18.0f;
     {
         const std::string pattern = labelOf(m_appliedPatternChoices, m_appliedPatternSelection, m_patternName);
@@ -574,48 +576,59 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
         x += uw + 30.0f;
     }
 
-    // ---- Tools: a boxed segment, the active one raised ----
+    // Design Spec, Segment switch (locked): a sunk pill track with 3px padding, the choice on a lit thumb (the accent
+    // thumb where the choice changes what Aestra does on its own: Muse). Unchosen labels muted; hover quiet.
+    const auto segTrack = [&](const NUIRect& seg) { Depth::bed(renderer, seg, Depth::Radius::pill(seg.height), Depth::Cut::Shallow); };
+    const auto segThumb = [&](const NUIRect& r, bool acc) {
+        Depth::ObjectLook look;
+        look.base = acc ? themeManager.getColor("primary") : raised;
+        Depth::object(renderer, r, Depth::Radius::pill(r.height), look);
+    };
+
+    // ---- Tools: Draw | Select | Erase on the segment switch ----
     {
         struct Tool { std::shared_ptr<NUIButton> button; GlobalTool tool; const char* name; };
         const Tool tools[] = {{m_pencilBtn, GlobalTool::Pencil, "Draw"},
                               {m_ptrBtn, GlobalTool::Pointer, "Select"},
                               {m_eraserBtn, GlobalTool::Eraser, "Erase"}};
-        const float segH = 30.0f;
+        const float segH = 28.0f;
         const float sy = std::round(y + (hRow - segH) * 0.5f);
-        float segW = 4.0f;
+        float segW = 6.0f;
         float widths[3];
         for (int i = 0; i < 3; ++i) {
-            widths[i] = renderer.measureText(tools[i].name, fs).width + 20.0f;
-            segW += widths[i] + (i > 0 ? 2.0f : 0.0f);
+            widths[i] = renderer.measureText(tools[i].name, fs).width + 24.0f;
+            segW += widths[i];
         }
         const NUIRect seg(x, sy, segW, segH);
-        renderer.fillRect(seg, bed);
-        renderer.strokeRect(seg, 1.0f, border);
-        float tx = x + 2.0f;
+        segTrack(seg);
+        float tx = x + 3.0f;
         for (int i = 0; i < 3; ++i) {
-            const NUIRect r(tx, sy + 2.0f, widths[i], segH - 4.0f);
+            const NUIRect r(tx, sy + 3.0f, widths[i], segH - 6.0f);
             tools[i].button->setBounds(r);
             tools[i].button->setText("");
             const bool active = activeTool_ == tools[i].tool;
-            if (active) renderer.fillRect(r, raised);
-            renderer.drawText(tools[i].name, NUIPoint(r.x + 10.0f, textY(r, fs)), fs,
-                              active || tools[i].button->isHovered() ? text : secondary);
-            tx += widths[i] + 2.0f;
+            if (active) segThumb(r, false);
+            renderer.drawText(tools[i].name, NUIPoint(r.x + 12.0f, textY(r, fs)), fs,
+                              active || tools[i].button->isHovered() ? text : muted);
+            tx += widths[i];
         }
         x += segW + 14.0f;
     }
 
-    // ---- "Snap" and "Key", each a label and a boxed value ----
+    // ---- "Snap" and "Key": a label, then the value in a field dropdown (sunk pill, chevron; Design Spec) ----
     const auto valueBox = [&](const char* label, const std::string& value, const std::shared_ptr<NUIButton>& button,
                               const NUIColor& valueColor) {
         renderer.drawText(label, NUIPoint(x, textY(NUIRect(x, y, 1.0f, hRow), fs)), fs, secondary);
         x += renderer.measureText(label, fs).width + 6.0f;
-        const float w = renderer.measureText(value, fs).width + 16.0f;
-        const NUIRect r(x, std::round(y + (hRow - 24.0f) * 0.5f), w, 24.0f);
+        const float w = renderer.measureText(value, fs).width + 34.0f;
+        const NUIRect r(x, std::round(y + (hRow - 26.0f) * 0.5f), w, 26.0f);
         button->setBounds(r);
-        renderer.fillRect(r, bed);
-        renderer.strokeRect(r, 1.0f, button->isHovered() ? muted : border);
-        renderer.drawText(value, NUIPoint(r.x + 8.0f, textY(r, fs)), fs, valueColor);
+        Depth::bed(renderer, r, Depth::Radius::pill(r.height), Depth::Cut::Shallow);
+        if (button->isHovered()) renderer.fillRoundedRect(r, Depth::Radius::pill(r.height), themeManager.getColor("hover"));
+        renderer.drawText(value, NUIPoint(r.x + 11.0f, textY(r, fs)), fs, valueColor);
+        const float cx = r.right() - 13.0f, cy = r.y + r.height * 0.5f;
+        renderer.drawLine({cx - 3.5f, cy - 1.5f}, {cx, cy + 2.0f}, 1.5f, muted);
+        renderer.drawLine({cx, cy + 2.0f}, {cx + 3.5f, cy - 1.5f}, 1.5f, muted);
         x += w + 14.0f;
     };
     // Smart Snap shows its guess: "Smart · 1/4 Beat" (FD-67: a guess is visible).
@@ -637,32 +650,32 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
 
     // ---- Muse switch, left of More (board A + C): "Muse" in violet, then the modes, the active one filled ----
     {
-        const float segH = 30.0f;
+        const float segH = 28.0f;
         const float sy = std::round(y + (hRow - segH) * 0.5f);
         const char* const names[2] = {"Quiet", "Off"};
         const std::shared_ptr<NUIButton> buttons[2] = {m_museQuietBtn, m_museOffBtn};
         const MuseMode modes[2] = {MuseMode::Quiet, MuseMode::Off};
-        const float labelW = renderer.measureText("Muse", fs).width + 16.0f;
+        const float labelW = renderer.measureText("Muse", fs).width + 10.0f;
         float widths[2];
-        float segW = 4.0f + labelW;
+        float segW = 6.0f;
         for (int i = 0; i < 2; ++i) {
-            widths[i] = renderer.measureText(names[i], fs).width + 16.0f;
-            segW += widths[i] + 2.0f;
+            widths[i] = renderer.measureText(names[i], fs).width + 22.0f;
+            segW += widths[i];
         }
+        // "Muse" names the switch; the switch is the accent kind, so the chosen mode sits on the primary thumb.
         const NUIRect seg(b.right() - 28.0f - 10.0f - segW, sy, segW, segH);
-        renderer.fillRect(seg, bed);
-        renderer.strokeRect(seg, 1.0f, NUIColor::fromHex(0x4c1d95));
-        renderer.drawText("Muse", NUIPoint(seg.x + 10.0f, textY(seg, fs)), fs, NUIColor::fromHex(0xa78bfa));
-        float mx = seg.x + 2.0f + labelW;
+        renderer.drawText("Muse", NUIPoint(seg.x - labelW, textY(seg, fs)), fs, themeManager.getColor("secondary"));
+        segTrack(seg);
+        float mx = seg.x + 3.0f;
         for (int i = 0; i < 2; ++i) {
-            const NUIRect r(mx, sy + 2.0f, widths[i], segH - 4.0f);
+            const NUIRect r(mx, sy + 3.0f, widths[i], segH - 6.0f);
             buttons[i]->setBounds(r);
             buttons[i]->setText("");
             const bool active = m_museMode == modes[i];
-            if (active) renderer.fillRect(r, modes[i] == MuseMode::Off ? raised : NUIColor::fromHex(0x7c3aed));
-            renderer.drawText(names[i], NUIPoint(r.x + 8.0f, textY(r, fs)), fs,
-                              active ? text : (buttons[i]->isHovered() ? text : secondary));
-            mx += widths[i] + 2.0f;
+            if (active) segThumb(r, true);
+            renderer.drawText(names[i], NUIPoint(r.x + 11.0f, textY(r, fs)), fs,
+                              active ? themeManager.getColor("textOnPrimary") : (buttons[i]->isHovered() ? text : muted));
+            mx += widths[i];
         }
     }
 
@@ -672,7 +685,8 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
         const NUIRect r(b.right() - s, std::round(y + (hRow - s) * 0.5f), s, s);
         m_menuBtn->setBounds(r);
         m_menuBtn->setText("");
-        renderer.strokeRect(r, 1.0f, m_menuBtn->isHovered() ? muted : border);
+        // A quiet icon button: no outline, one step lighter under the pointer (Design Spec, Icon button).
+        if (m_menuBtn->isHovered()) renderer.fillRoundedRect(r, 8.0f, themeManager.getColor("surfaceTertiary"));
         if (m_menuIcon) {
             m_menuIcon->setIconSize(14.0f, 14.0f);
             m_menuIcon->setBounds(NUIRect(std::round(r.x + 7.0f), std::round(r.y + 7.0f), 14.0f, 14.0f));

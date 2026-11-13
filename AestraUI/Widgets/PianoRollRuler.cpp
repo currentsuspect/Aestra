@@ -137,6 +137,15 @@ void PianoRollRuler::onRender(NUIRenderer& renderer) {
         const float x = snapVerticalLineX(bounds.x + bar * pixelsPerBar - scrollX_);
         renderer.drawLine(NUIPoint(x, bounds.y), NUIPoint(x, bounds.bottom()), 1.0f, rule);
         renderer.drawText(std::to_string(bar + 1), NUIPoint(x + 8.0f, bounds.y + 6.0f), 12.0f, number);
+        // Every beat named, quieter than the bar, with a short tick, so a step has an address (Design Spec, Arsenal).
+        if (showBeatNumbers_ && barStride == 1 && pixelsPerBeat_ >= 22.0f) {
+            for (int b = 1; b < beatsPerBar; ++b) {
+                const float bx = snapVerticalLineX(x + b * pixelsPerBeat_);
+                renderer.drawLine(NUIPoint(bx, bounds.bottom() - 6.0f), NUIPoint(bx, bounds.bottom()), 1.0f, rule.withAlpha(0.6f));
+                renderer.drawText(std::to_string(bar + 1) + "." + std::to_string(b + 1), NUIPoint(bx + 4.0f, bounds.y + 8.0f),
+                                  9.0f, number.withAlpha(0.7f));
+            }
+        }
     }
 
     // The chords under the numbers: the name, then its numeral. The one under the playhead is lit in the warm accent,

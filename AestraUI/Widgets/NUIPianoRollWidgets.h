@@ -70,6 +70,9 @@ public:
     void setKeyHeight(float height);
     /** @brief Get the rendered key height in pixels. */
     float getKeyHeight() const { return keyHeight_; }
+    /** @brief Design Spec, Piano keys: the "Name every note" switch (hardware rows, every row named) over the default keys. */
+    void setNameEveryNote(bool on) { if (nameEveryNote_ == on) return; nameEveryNote_ = on; repaint(); }
+    bool nameEveryNote() const { return nameEveryNote_; }
 
     /** @brief Set the vertical scroll offset applied to the lane. */
     void setScrollOffsetY(float offset);
@@ -139,6 +142,7 @@ private:
     float keyHeight_;
     float scrollY_;
     int hoveredKey_; // -1 if none
+    bool nameEveryNote_ = false;
     int previewPitch_; // Currently playing preview note (-1 if none)
     std::array<bool, 128> keyHeld_{};    // held by a key click or a pressed note
     std::array<float, 128> pressLevel_{}; // 1 while held, eases to 0 after release
@@ -226,6 +230,8 @@ public:
     void setPixelsPerBeat(float ppb); // REORDERED
     /** @brief Set the current bar signature in beats per bar. */
     void setBeatsPerBar(int bpb) { const auto next = bpb; if (beatsPerBar_ == next) return; beatsPerBar_ = next; repaint(); }
+    /// Name every beat ("1.2", "1.3"...) with a short tick when there is room (Design Spec, Arsenal).
+    void setShowBeatNumbers(bool on) { if (showBeatNumbers_ == on) return; showBeatNumbers_ = on; repaint(); }
     /** @brief Set the playhead beat for ruler rendering. */
     void setPlayheadBeat(double beat) { const auto next = beat; if (playheadBeat_ == next) return; playheadBeat_ = next; repaint(); }
 
@@ -264,6 +270,7 @@ private:
     float scrollX_; // REORDERED
     float pixelsPerBeat_; // REORDERED
     int beatsPerBar_;
+    bool showBeatNumbers_ = false;
     double playheadBeat_ = 0.0;
     bool isScrubbing_ = false;
     bool isDrawingZone_ = false;

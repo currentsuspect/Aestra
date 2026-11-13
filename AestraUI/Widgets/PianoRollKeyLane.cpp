@@ -25,73 +25,78 @@ void PianoRollKeyLane::onRender(NUIRenderer& renderer) {
 
     renderer.setClipRect(b);
 
-    // FD-48: ivory naturals and near-black accidentals, every C named.
-    const auto laneBg = themeManager.getColor("backgroundPrimary");
-    const auto naturalKey = PianoRollLook::ivoryKey();
-    const auto naturalHover = PianoRollLook::ivoryKeyHover();
-    const auto accidentalKey = PianoRollLook::blackKey();
-    const auto accidentalHover = PianoRollLook::blackKeyHover();
-    const auto separator = PianoRollLook::keyEdge();
-    const auto naturalText = PianoRollLook::ivoryKeyLabel();
-    // Pressed (SPEC 3 §5.1): the key takes the accent, sinks a little, and its tip glows
-    // toward the grid row it plays. Blended by the key's press level, so release eases out.
+    // Design Spec, Piano keys (locked 13 Nov 2026): D, "In the bed", by default. The keyboard takes the theme: naturals are
+    // the raised surface, accidentals are bars of the bed with a lit top edge, and the root's keys carry an amber edge.
+    // "Name every note" switches to E, hardware rows: one row per note, naturals a step lighter than sharps, a lit cap
+    // on each C, and every row named.
+    const auto bed = themeManager.getColor("backgroundPrimary");
+    const auto raised = themeManager.getColor("surfaceRaised");
+    const auto tertiary = themeManager.getColor("surfaceTertiary");
+    const auto ink = themeManager.getColor("textPrimary");
+    const auto inkSoft = themeManager.getColor("textSecondary");
+    const auto inkMuted = themeManager.getColor("textMuted");
+    const auto rootEdge = themeManager.getColor("warning");
+    const bool keyed = scaleType_ != ScaleType::Chromatic;
+    // Pressed (SPEC 3 §5.1): the key sinks a little and its tip glows toward the grid row it plays.
     const auto accent = themeManager.getColor("accentPrimary");
-    const auto naturalPressed = accent.withAlpha(0.78f);
-    const auto accidentalPressed = accent.darkened(0.18f).withAlpha(0.96f);
-    
+
     int startPitch = 127 - static_cast<int>((scrollY_) / keyHeight_);
     int endPitch = 127 - static_cast<int>((scrollY_ + b.height) / keyHeight_);
-    
-    // Expand range for safety margin (2 extra keys on each end)
-    startPitch = std::clamp(startPitch + 2, 0, 127);
+    startPitch = std::clamp(startPitch + 2, 0, 127); // a safety margin of two keys at each end
     endPitch = std::clamp(endPitch - 2, 0, 127);
 
-    renderer.fillRect(b, laneBg);
+    renderer.fillRect(b, nameEveryNote_ ? bed : raised); // D: the naturals continue behind the accidentals
 
     for (int p = startPitch; p >= endPitch; --p) {
-        float worldY = (127 - p) * keyHeight_;
-        float y = b.y + worldY - scrollY_;
+        const float y = b.y + (127 - p) * keyHeight_ - scrollY_;
         const bool accidental = isBlackKey(p);
         const bool hovered = p == hoveredKey_;
+        const bool isRoot = keyed && ((p % 12) + 12) % 12 == ((rootKey_ % 12) + 12) % 12;
         const float press = pressLevel_[p];
-        // FD-63, board "A + C": flat keys, one per row. A natural spans the lane, an accidental 44 of its 68 px; a dark
-        // line under each. The degree sits at the key's left, the C's octave name at its right.
         const float accidentalW = std::round(b.width * (44.0f / 68.0f));
         const float sink = 2.0f * press; // a pressed key's free end travels in by up to 2 px
-        NUIRect keyRect(b.x, y, (accidental ? accidentalW : b.width) - sink, keyHeight_);
+        const float fontSize = 10.0f;
+        NUIRect keyRect(b.x, y, (nameEveryNote_ || !accidental ? b.width : accidentalW) - sink, keyHeight_);
 
-        const auto restFill = hovered ? (accidental ? accidentalHover : naturalHover)
-                                      : (accidental ? accidentalKey : naturalKey);
-        const auto fill =
-            press > 0.0f ? NUIColor::lerp(restFill, accidental ? accidentalPressed : naturalPressed, press) : restFill;
-        renderer.fillRect(keyRect, fill);
+        NUIColor rest = nameEveryNote_ ? (accidental ? bed : tertiary) : (accidental ? bed : raised);
+        if (hovered) rest = rest.lightened(0.06f);
+        const NUIColor sunk = accidental ? themeManager.getColor("meterBackground") : tertiary;
+        renderer.fillRect(keyRect, press > 0.0f ? NUIColor::lerp(rest, sunk, press) : rest);
+        if (nameEveryNote_ && p % 12 == 0 && press <= 0.0f) { // the lit cap on each C
+            const NUIRect cap(keyRect.x + 2.0f, keyRect.y + 2.0f, keyRect.width - 4.0f, keyRect.height - 4.0f);
+            renderer.fillRoundedRect(cap, 3.0f, raised);
+            renderer.fillRect(NUIRect(cap.x + 1.0f, cap.y, cap.width - 2.0f, 1.0f), NUIColor::white().withAlpha(0.12f));
+        }
+        if (!nameEveryNote_ && accidental && press <= 0.0f) // the accidental's lit top edge
+            renderer.fillRect(NUIRect(keyRect.x + 1.0f, keyRect.y + 1.0f, keyRect.width - 3.0f, 1.0f), ink.withAlpha(0.10f));
         if (const float play = playLevel_[p]; play > 0.0f) renderer.fillRect(keyRect, accent.withAlpha(0.34f * play));
         if (press > 0.0f)
             renderer.fillRect(NUIRect(keyRect.right() - 2.0f, keyRect.y, 2.0f, keyRect.height), accent.lightened(0.25f).withAlpha(0.95f * press));
-        renderer.drawLine(NUIPoint(b.x, keyRect.bottom() - 0.5f), NUIPoint(b.right(), keyRect.bottom() - 0.5f), 1.0f,
-                          PianoRollLook::blackKey());
+        if (!nameEveryNote_ && isRoot) renderer.fillRect(NUIRect(keyRect.right() - 3.0f, keyRect.y, 3.0f, keyRect.height), rootEdge);
+        // The edge between keys: under every row in E; in D only where two naturals meet (E-F, B-C).
+        if (nameEveryNote_ || (!accidental && p > 0 && !isBlackKey(p - 1)))
+            renderer.drawLine(NUIPoint(b.x, keyRect.bottom() - 0.5f), NUIPoint(b.right(), keyRect.bottom() - 0.5f), 1.0f, bed);
 
-        const float fontSize = 10.0f;
-        if (keyHeight_ >= 12.0f) {
-            if (const std::string degree = PianoRollLook::scaleDegreeLabel(p, rootKey_, scaleType_); !degree.empty()) {
-                const auto textSize = renderer.measureText(degree, fontSize);
-                renderer.drawText(degree, NUIPoint(keyRect.x + 5.0f, keyRect.y + (keyRect.height - textSize.height) * 0.5f),
-                                  fontSize, PianoRollLook::degreeInk(degree == "1", accidental));
-            }
+        if (keyHeight_ < 12.0f) continue;
+        if (const std::string degree = PianoRollLook::scaleDegreeLabel(p, rootKey_, scaleType_); !degree.empty()) {
+            const auto textSize = renderer.measureText(degree, fontSize);
+            renderer.drawText(degree, NUIPoint(keyRect.x + 5.0f, keyRect.y + (keyRect.height - textSize.height) * 0.5f),
+                              fontSize, degree == "1" ? rootEdge : (accidental ? inkSoft : inkMuted));
         }
-        if (keyHeight_ >= 12.0f && p % 12 == 0) {
+        if (p % 12 == 0 || nameEveryNote_) {
             const std::string label = getNoteLabel(p);
+            const bool c = p % 12 == 0;
             const auto textSize = renderer.measureText(label, fontSize);
-            renderer.drawText(label, NUIPoint(keyRect.right() - 5.0f - textSize.width,
+            renderer.drawText(label, NUIPoint(keyRect.right() - 5.0f - textSize.width - (!nameEveryNote_ && isRoot ? 3.0f : 0.0f),
                                               keyRect.y + (keyRect.height - textSize.height) * 0.5f),
-                              fontSize, naturalText);
+                              fontSize, c ? (nameEveryNote_ ? ink : inkSoft) : inkMuted);
         }
     }
 
     renderer.drawLine(NUIPoint(b.right() - 0.5f, b.y),
                       NUIPoint(b.right() - 0.5f, b.bottom()),
                       1.0f,
-                      separator.withAlpha(0.9f));
+                      bed);
 
     renderer.clearClipRect();
 }

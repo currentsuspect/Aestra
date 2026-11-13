@@ -162,7 +162,7 @@ ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
 
     // Create color picker (initially hidden)
     m_ruler = std::make_shared<AestraUI::PianoRollRuler>();
-    m_ruler->setLoopZoneEnabled(false); // the Arsenal's ruler numbers the bars and cues the playhead; loop zones live in the piano roll
+    m_ruler->setLoopZoneEnabled(false); m_ruler->setShowBeatNumbers(true); // bars and every beat numbered; loop zones live in the piano roll
     m_ruler->onPlayheadScrubbed = [this](double beat, bool active) { if (m_onPositionScrubbed) m_onPositionScrubbed(std::min(beat, headerLengthBeats()), active); };
     m_colorPicker = std::make_shared<UnitColorPicker>();
     m_colorPicker->setOnColorSelected([this](uint32_t color) {
