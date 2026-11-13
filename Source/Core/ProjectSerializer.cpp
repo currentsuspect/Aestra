@@ -13,6 +13,7 @@
 #include "CompJson.h"
 #include "MarkerJson.h"
 #include "ProjectPresetsJson.h"
+#include "TrackHeightsJson.h"
 #include <array>
 #include <atomic>
 #include <algorithm>
@@ -1135,6 +1136,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
         }
         ui.set("pianoRollOpen", JSON(uiState->pianoRollOpen));
         ui.set("sequencerOpen", JSON(uiState->sequencerOpen));
+        trackHeightsToJson(ui, uiState->trackHeight, uiState->trackHeights);
 
         ui.set("panels", uiPanelsToJson(uiState->panels)); // ProjectPresetsJson.h
 
@@ -1569,12 +1571,9 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 }
             }
         }
-        if (ui.has("pianoRollOpen") && ui["pianoRollOpen"].isBool()) {
-            uiState.pianoRollOpen = ui["pianoRollOpen"].asBool();
-        }
-        if (ui.has("sequencerOpen") && ui["sequencerOpen"].isBool()) {
-            uiState.sequencerOpen = ui["sequencerOpen"].asBool();
-        }
+        if (ui.has("pianoRollOpen") && ui["pianoRollOpen"].isBool()) uiState.pianoRollOpen = ui["pianoRollOpen"].asBool();
+        if (ui.has("sequencerOpen") && ui["sequencerOpen"].isBool()) uiState.sequencerOpen = ui["sequencerOpen"].asBool();
+        trackHeightsFromJson(ui, uiState.trackHeight, uiState.trackHeights);
 
         if (ui.has("panels") && ui["panels"].isArray()) {
             const JSON& panels = ui["panels"];

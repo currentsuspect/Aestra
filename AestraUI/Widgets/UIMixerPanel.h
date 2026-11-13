@@ -11,6 +11,7 @@
 #include "NUITypes.h"
 #include "Helpers/MixerPluginListPolicy.h"
 #include "InspectorCollapseState.h"
+#include "InlineRename.h"
 #include "UIMixerInspector.h"
 #include "UIMixerMeter.h"
 #include "UIMixerPluginDropdown.h"
@@ -211,6 +212,8 @@ private:
 
     std::shared_ptr<Aestra::MixerViewModel> m_viewModel;
     std::shared_ptr<Aestra::Audio::TrackManager> m_trackManager;
+    InlineRename m_channelRename; ///< the channel-name field while a strip is being renamed
+    void beginChannelRename(uint32_t channelId, const NUIRect& nameplate);
 
     // Callback for fader undo/redo: channelId, newDb
     std::function<void(uint32_t, float)> m_onFaderChanged;

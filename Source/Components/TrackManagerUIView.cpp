@@ -43,8 +43,8 @@ void TrackManagerUI::updateScrollbar() {
     // In v3.1, panels are floating overlays and do not affect the scrollbar's viewport directly.
     const TimelineLayout layout = currentTimelineLayout();
     const float viewportHeight = layout.rows.height;
-    const float totalContentHeight = timelineRowsContentHeight(
-        static_cast<float>(m_trackHeight), static_cast<float>(m_trackSpacing), m_trackUIComponents.size());
+    const float totalContentHeight =
+        timelineRowsContentHeight(rowHeights(), static_cast<float>(m_trackSpacing), m_trackUIComponents.size());
 
     // Set scrollbar range
     m_scrollbar->setRangeLimit(0, totalContentHeight);
@@ -520,6 +520,98 @@ double TrackManagerUI::getMaxTimelineExtent() const {
     double paddedEnd = totalDurationSeconds + (2.0 * m_beatsPerBar * secondsPerBeat);
 
     return std::max(paddedEnd, minExtent);
+}
+
+
+// --- Track heights -------------------------------------------------------------------------------------------------
+
+TimelineRowHeights TrackManagerUI::rowHeights() const {
+    TimelineRowHeights out;
+    out.fallback = static_cast<float>(m_trackHeight);
+    out.heights.reserve(m_trackUIComponents.size());
+    for (const auto& row : m_trackUIComponents) {
+        float h = out.fallback;
+        if (row && !m_rowHeightOverrides.empty()) {
+            const auto it = m_rowHeightOverrides.find(row->getLaneId().toString());
+            if (it != m_rowHeightOverrides.end()) h = it->second;
+        }
+        out.heights.push_back(h);
+    }
+    return out;
+}
+
+void TrackManagerUI::setRowHeight(PlaylistLaneID laneId, float height) {
+    height = std::clamp(std::round(height), kMinTrackHeight, kMaxTrackHeight);
+    const std::string key = laneId.toString();
+    if (std::abs(height - static_cast<float>(m_trackHeight)) < 0.5f) m_rowHeightOverrides.erase(key);
+    else m_rowHeightOverrides[key] = height;
+    layoutTracks();
+    updateScrollbar();
+    invalidateCache();
+}
+
+void TrackManagerUI::zoomTrackHeights(float factor) {
+    const float base = static_cast<float>(m_trackHeight);
+    const float next = std::clamp(std::round(base * factor), kMinTrackHeight, kMaxTrackHeight);
+    if (next == base) return;
+    const float applied = next / base;
+    m_trackHeight = static_cast<int>(next);
+    for (auto& [key, h] : m_rowHeightOverrides) h = std::clamp(std::round(h * applied), kMinTrackHeight, kMaxTrackHeight);
+    layoutTracks();
+    updateScrollbar();
+    invalidateCache();
+}
+
+void TrackManagerUI::restoreTrackHeights(float defaultHeight, const std::unordered_map<std::string, float>& overrides) {
+    m_trackHeight = static_cast<int>(std::clamp(std::round(defaultHeight), kMinTrackHeight, kMaxTrackHeight));
+    m_rowHeightOverrides.clear();
+    for (const auto& [key, h] : overrides)
+        if (std::isfinite(h)) m_rowHeightOverrides[key] = std::clamp(std::round(h), kMinTrackHeight, kMaxTrackHeight);
+    layoutTracks();
+    updateScrollbar();
+    invalidateCache();
+}
+
+int TrackManagerUI::trackResizeEdgeAt(const AestraUI::NUIPoint& p) const {
+    constexpr float kGrab = 4.0f; // px either side of the row's bottom edge
+    const float headerRight =
+        getBounds().x + AestraUI::NUIThemeManager::getInstance().getLayoutDimensions().trackControlsWidth;
+    if (p.x > headerRight || p.x < getBounds().x) return -1;
+    for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
+        const auto& row = m_trackUIComponents[i];
+        if (!row || !row->isVisible()) continue;
+        const auto b = row->getBounds();
+        if (std::abs(p.y - b.bottom()) <= kGrab) return static_cast<int>(i);
+    }
+    return -1;
+}
+
+bool TrackManagerUI::handleTrackResizeMouse(const AestraUI::NUIMouseEvent& event, bool doubleClick) {
+    if (m_resizingRow >= 0) {
+        if (m_resizingRow >= static_cast<int>(m_trackUIComponents.size()) || !m_trackUIComponents[m_resizingRow]) {
+            m_resizingRow = -1;
+            return false;
+        }
+        if (event.released && event.button == AestraUI::NUIMouseButton::Left) {
+            m_resizingRow = -1;
+            return true;
+        }
+        setRowHeight(m_trackUIComponents[m_resizingRow]->getLaneId(),
+                     m_resizeStartH + (event.position.y - m_resizeStartY));
+        return true;
+    }
+    if (!(event.pressed && event.button == AestraUI::NUIMouseButton::Left)) return false;
+    const int row = trackResizeEdgeAt(event.position);
+    if (row < 0) return false;
+    const auto laneId = m_trackUIComponents[row]->getLaneId();
+    if (doubleClick) { // back to the shared height
+        setRowHeight(laneId, static_cast<float>(m_trackHeight));
+        return true;
+    }
+    m_resizingRow = row;
+    m_resizeStartY = event.position.y;
+    m_resizeStartH = m_trackUIComponents[row]->getBounds().height;
+    return true;
 }
 
 } // namespace Audio

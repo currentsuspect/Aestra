@@ -136,6 +136,9 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
 
     m_header = std::make_shared<UIMixerHeader>();
     m_header->setIsMaster(m_channelId == 0);
+    m_header->onRenameRequested = [this]() {
+        if (onRenameRequested && m_header) onRenameRequested(m_channelId, m_header->getBounds());
+    };
     m_header->onColorChanged = [this](int index) {
         if (!m_viewModel) return;
         auto* channel = m_viewModel->getChannelById(m_channelId);

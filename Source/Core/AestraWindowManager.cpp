@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AestraWindowManager.h"
+#include "../AestraUI/Base/NUITextInput.h"
 #include "AestraRootComponent.h"
 #include "AestraContent.h"
 #include "UnifiedHUD.h"
@@ -490,7 +491,11 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
             // not be swallowed by a focused widget). Content only claims the
             // undo/redo/history chords, so clipboard combos still reach
             // focused text inputs.
-            if (event.keyCode == AestraUI::NUIKeyCode::Space || event.released ||
+            // Space types a space while a text field has focus (renaming a track or a strip, a search box);
+            // anywhere else it is play/stop.
+            const bool typingInField =
+                dynamic_cast<AestraUI::NUITextInput*>(AestraUI::NUIComponent::getFocusedComponent()) != nullptr;
+            if ((event.keyCode == AestraUI::NUIKeyCode::Space && !typingInField) || event.released ||
                 (event.modifiers & AestraUI::NUIModifiers::Ctrl)) {
                 if (m_content->onKeyEvent(event))
                     return;

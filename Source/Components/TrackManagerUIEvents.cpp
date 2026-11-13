@@ -54,6 +54,29 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (m_marquee.active()) {
         return handleSelectionBoxMouse(event, localPos);
     }
+    // An open track rename takes its own clicks; a press elsewhere commits it and goes on as usual.
+    if (m_trackRename.onMouseEvent(event)) {
+        repaint();
+        return true;
+    }
+    // One double-click detector for the header: the platform's flag is not always set.
+    const bool headerDoubleClick = event.pressed && event.button == AestraUI::NUIMouseButton::Left &&
+                                   event.position.x <= getBounds().x + AestraUI::NUIThemeManager::getInstance().getLayoutDimensions().trackControlsWidth &&
+                                   m_headerDoubleClick.press(event.position, event.doubleClick);
+    // Drag a header's bottom edge to resize that track (double-click the edge: back to the shared height).
+    if (handleTrackResizeMouse(event, headerDoubleClick)) {
+        repaint();
+        return true;
+    }
+    // Double-click a track's name in its header: rename it in place.
+    if (headerDoubleClick) {
+        for (auto& row : m_trackUIComponents) {
+            if (row && row->isVisible() && row->getNameBounds().contains(event.position)) {
+                beginTrackRename(row.get());
+                return true;
+            }
+        }
+    }
     if (handleFoldedRowMouse(event))
         return true; // V82-T2: "show" / "hide" on the folded empty tracks
 
@@ -221,8 +244,8 @@ bool TrackManagerUI::handleTrackSeamSelect(const AestraUI::NUIMouseEvent& event,
         return false; // ruler / minimap band
     }
 
-    const int idx = timelineRowSlotAt(layout, static_cast<float>(m_trackHeight), static_cast<float>(m_trackSpacing),
-                                      m_scrollOffset, localPos.y);
+    const int idx = timelineRowSlotAt(layout, rowHeights(), static_cast<float>(m_trackSpacing), m_scrollOffset,
+                                      localPos.y);
     if (idx < 0 || idx >= static_cast<int>(m_trackUIComponents.size())) {
         return false;
     }
@@ -571,6 +594,11 @@ bool TrackManagerUI::handleTimelineWheel(const AestraUI::NUIMouseEvent& event, c
         const bool shiftHeld = (event.modifiers & AestraUI::NUIModifiers::Shift);
         const bool ctrlHeld = (event.modifiers & AestraUI::NUIModifiers::Ctrl);
 
+        // Alt+wheel over the tracks: vertical zoom (every track taller or shorter together).
+        if (isInTrackArea && !isInRuler && (event.modifiers & AestraUI::NUIModifiers::Alt)) {
+            zoomTrackHeights(event.wheelDelta > 0 ? 1.12f : 1.0f / 1.12f);
+            return true;
+        }
         if (isInRuler || ctrlHeld) {
             // ZOOM: ruler wheel or Ctrl+wheel.
             m_lastMouseZoomX = localPos.x;
@@ -643,8 +671,7 @@ bool TrackManagerUI::handleTimelineWheel(const AestraUI::NUIMouseEvent& event, c
             // Clamp scroll offset
             const TimelineLayout layout = currentTimelineLayout();
             const float viewportHeight = layout.rows.height;
-            const float maxScroll = timelineMaxVerticalScroll(layout, static_cast<float>(m_trackHeight),
-                                                              static_cast<float>(m_trackSpacing),
+            const float maxScroll = timelineMaxVerticalScroll(layout, rowHeights(), static_cast<float>(m_trackSpacing),
                                                               m_trackUIComponents.size());
             m_targetScrollOffset = std::max(0.0f, std::min(m_targetScrollOffset, maxScroll));
 
@@ -969,7 +996,7 @@ bool TrackManagerUI::handleSplitToolClick(const AestraUI::NUIMouseEvent& event, 
 
         if (gridBounds.contains(event.position)) {
             // Find which track was clicked
-            int trackIndex = timelineRowSlotAt(currentTimelineLayout(), static_cast<float>(m_trackHeight),
+            int trackIndex = timelineRowSlotAt(currentTimelineLayout(), rowHeights(),
                                                static_cast<float>(m_trackSpacing), m_scrollOffset, localPos.y);
 
             if (trackIndex >= 0 && trackIndex < static_cast<int>(m_trackUIComponents.size())) {

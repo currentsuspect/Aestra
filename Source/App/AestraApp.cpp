@@ -2438,7 +2438,7 @@ ProjectSerializer::UIState AestraApp::captureUIState() const {
         state.pianoRollOpen = m_content->isPianoRollOpen();
         state.sequencerOpen = m_content->isSequencerOpen();
     }
-
+    captureTimelineView(state); // ProjectLifecycle.cpp
     return state;
 }
 
@@ -2446,7 +2446,6 @@ void AestraApp::applyUIState(const ProjectSerializer::UIState& state) {
     if (!m_windowManager) {
         return;
     }
-
     if (auto settingsDialog = m_windowManager->getSettingsDialog()) {
         if (!state.settingsDialogActivePage.empty()) {
             settingsDialog->setActivePage(state.settingsDialogActivePage);
@@ -2465,6 +2464,7 @@ void AestraApp::applyUIState(const ProjectSerializer::UIState& state) {
         ViewFocus focus = ViewFocus::Timeline;
         WorkspaceFocusModel::parseWorkspaceFocus(state.viewFocus, focus);
         m_content->restoreWorkspaceState(focus, state.pianoRollOpen, state.sequencerOpen);
+        applyTimelineView(state); // ProjectLifecycle.cpp
     }
 }
 
