@@ -156,98 +156,29 @@ FileBrowser::FileBrowser()
     m_searchIcon->setIconSize(15.0f, 15.0f);
     m_searchIcon->setColor(themeManager.getColor("textSecondary").withAlpha(0.72f));
 
-    // Initialize icons with improved visibility for Liminal Dark v2.0
-    // Use inline SVG content for reliable icon loading
-    // Folder icon (Mac-style smooth)
-    folderIcon_ = std::make_shared<NUIIcon>();
-    // Single solid folder. The old version drew a second, opacity-0.8 path that
-    // the solid one covered completely — invisible work on every rasterization.
-    const char* folderSvg = R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M2.5 6.3A1.8 1.8 0 0 1 4.3 4.5H9.2L11.2 6.5H19.7A1.8 1.8 0 0 1 21.5 8.3V17.7A1.8 1.8 0 0 1 19.7 19.5H4.3A1.8 1.8 0 0 1 2.5 17.7Z M4.5 9.3H19.5V10.8H4.5Z"/></svg>)";
-    folderIcon_->loadSVG(folderSvg);
-    folderIcon_->setIconSize(20, 20);
-    folderIcon_->setColor(themeManager.getColor("textSecondary"));
-
-    // File Icon (Generic) -> unknownFileIcon_
-    unknownFileIcon_ = std::make_shared<NUIIcon>();
-    const char* fileSvg = R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M6 2.5H14.2L19.5 7.8V20.1A1.4 1.4 0 0 1 18.1 21.5H6A1.4 1.4 0 0 1 4.6 20.1V3.9A1.4 1.4 0 0 1 6 2.5Z M13.6 3.9V8.4H18.1Z"/></svg>)";
-    unknownFileIcon_->loadSVG(fileSvg);
-    unknownFileIcon_->setIconSize(20, 20);
-    // Increased visibility for dark theme
-    unknownFileIcon_->setColor(themeManager.getColor("textSecondary").withAlpha(0.9f));
-
-    // Generic Audio Icon -> audioFileIcon_ (Standard Music Note)
-    audioFileIcon_ = std::make_shared<NUIIcon>();
-    const char* audioSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="8.4" cy="16.8" r="3.9"/><path d="M10.4 3.2h2.1v13.6h-2.1z"/><path d="M12.5 3.2c3.5 1.2 5.5 3.1 5.7 6.1-1.2-2.3-3.1-3.4-5.7-3.7z"/></svg>)";
-    audioFileIcon_->loadSVG(audioSvg);
-    audioFileIcon_->setIconSize(20, 20);
-    audioFileIcon_->setColor(themeManager.getColor("textSecondary"));
-
-    // WAV Icon (Waveform visual)
-    wavFileIcon_ = std::make_shared<NUIIcon>();
-    // WAV — a sample's peak envelope, mirrored about the centre line. The old
-    // bars all grew from a shared baseline, which reads as a bar chart or a
-    // level meter rather than audio.
-    const char* wavSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><rect x="2.1" y="9.4" width="1.9" height="5.2" rx="0.95"/><rect x="5.2" y="6.6" width="1.9" height="10.8" rx="0.95"/><rect x="8.3" y="8.6" width="1.9" height="6.8" rx="0.95"/><rect x="11.4" y="4.4" width="1.9" height="15.2" rx="0.95"/><rect x="14.5" y="7.4" width="1.9" height="9.2" rx="0.95"/><rect x="17.6" y="5.8" width="1.9" height="12.4" rx="0.95"/><rect x="20.7" y="9.8" width="1.9" height="4.4" rx="0.95"/></svg>)";
-    wavFileIcon_->loadSVG(wavSvg);
-    wavFileIcon_->setIconSize(20, 20);
-    wavFileIcon_->setColor(themeManager.getColor("textSecondary"));
-
-    // MP3 Icon (Music Note Circle)
-    mp3FileIcon_ = std::make_shared<NUIIcon>();
-    // MP3 — a record: outer disc, groove gap, centre label. A finished track
-    // rather than raw material, which is what an mp3 in a browser usually is.
-    const char* mp3Svg = R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 3.2a6.8 6.8 0 1 1 0 13.6 6.8 6.8 0 0 1 0-13.6z"/><circle cx="12" cy="12" r="2.4" fill="currentColor"/></svg>)";
-    mp3FileIcon_->loadSVG(mp3Svg);
-    mp3FileIcon_->setIconSize(20, 20);
-    mp3FileIcon_->setColor(themeManager.getColor("textSecondary"));
-
-    // FLAC Icon (lossless compression)
-    flacFileIcon_ = std::make_shared<NUIIcon>();
-    // FLAC — a waveform squeezed between two plates: lossless *compression*.
-    // The previous glyph was a bare sine, which at 20px was one more wavy line
-    // next to WAV's wavy lines; the difference has to be in the silhouette, not
-    // in the curvature (spec 2 §7). Two heavy horizontal rules read instantly
-    // as "packed", and nothing else in the browser has that outline.
-    const char* flacSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><rect x="2.4" y="3.4" width="19.2" height="2.6" rx="1.3"/><rect x="2.4" y="18" width="19.2" height="2.6" rx="1.3"/><rect x="4.6" y="10.6" width="2.2" height="2.8" rx="1.1"/><rect x="8.2" y="8.6" width="2.2" height="6.8" rx="1.1"/><rect x="11.8" y="9.8" width="2.2" height="4.4" rx="1.1"/><rect x="15.4" y="7.8" width="2.2" height="8.4" rx="1.1"/><rect x="19" y="10.2" width="2.2" height="3.6" rx="1.1"/></svg>)";
-    flacFileIcon_->loadSVG(flacSvg);
-    flacFileIcon_->setIconSize(20, 20);
-    flacFileIcon_->setColor(themeManager.getColor("textSecondary"));
-
-    // OGG Icon (container / stream)
-    oggFileIcon_ = std::make_shared<NUIIcon>();
-    // OGG — a container: a solid capsule with a play triangle cut out of it
-    // (evenodd, so the background shows through). Deliberately not another
-    // waveform; the browser already has two, and a third would not be told
-    // apart at 20px. The cut-out is one shape, so the holes cannot cancel.
-    const char* oggSvg = R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M4.6 4H19.4A2.6 2.6 0 0 1 22 6.6V17.4A2.6 2.6 0 0 1 19.4 20H4.6A2.6 2.6 0 0 1 2 17.4V6.6A2.6 2.6 0 0 1 4.6 4Z M4.6 6.2V17.8H19.4V6.2Z"/><g fill="currentColor"><rect x="6.6" y="10.4" width="1.9" height="3.2" rx=".95"/><rect x="9.6" y="8.4" width="1.9" height="7.2" rx=".95"/><rect x="12.6" y="9.6" width="1.9" height="4.8" rx=".95"/><rect x="15.6" y="10.8" width="1.9" height="2.4" rx=".95"/></g></svg>)";
-    oggFileIcon_->loadSVG(oggSvg);
-    oggFileIcon_->setIconSize(20, 20);
-    oggFileIcon_->setColor(themeManager.getColor("textSecondary"));
-
-    // MIDI Icon — piano-roll note blocks. MIDI files previously fell through to
-    // the generic document glyph because getIconForFileType had no MidiFile
-    // case, so a first-class producer file type looked like a text file.
-    // Deliberately not a waveform: MIDI carries no audio.
-    midiFileIcon_ = std::make_shared<NUIIcon>();
-    const char* midiSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><rect x="2.8" y="5.2" width="8.2" height="3" rx="1.5"/><rect x="12.2" y="9.4" width="9" height="3" rx="1.5"/><rect x="5.4" y="13.6" width="7.4" height="3" rx="1.5"/><rect x="13.6" y="17.8" width="7.6" height="3" rx="1.5"/></svg>)";
-    midiFileIcon_->loadSVG(midiSvg);
-    midiFileIcon_->setIconSize(20, 20);
-    midiFileIcon_->setColor(themeManager.getColor("textSecondary"));
-
-    // Project Icon
-    projectFileIcon_ = std::make_shared<NUIIcon>();
-    // Project — an arrangement: a card with track lanes cut out of it. The old
-    // glyph was an abstract diamond that could have meant anything.
-    const char* projectSvg = R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M5 2.5H19A2.5 2.5 0 0 1 21.5 5V19A2.5 2.5 0 0 1 19 21.5H5A2.5 2.5 0 0 1 2.5 19V5A2.5 2.5 0 0 1 5 2.5Z M12 6.14L13.64 10.83L18.6 10.94L14.35 13.52Q11.55 16.7 7.62 18.27L9.35 13.94L5.4 10.94L10.36 10.83Z M14.96 14.37L16.08 18.7L11.05 17.71Q13.22 16.35 14.96 14.37Z"/></svg>)";
-    projectFileIcon_->loadSVG(projectSvg);
-    projectFileIcon_->setIconSize(20, 20);
-    projectFileIcon_->setColor(themeManager.getColor("accentPrimary"));
-
-    // Music File Icon (Default for other audio)
-    musicFileIcon_ = std::make_shared<NUIIcon>();
-    musicFileIcon_->loadSVG(audioSvg);
-    musicFileIcon_->setIconSize(20, 20);
-    musicFileIcon_->setColor(themeManager.getColor("textSecondary"));
+    // Design Spec, browser rows (locked): 14px line glyphs on a 14-unit grid, square joins, one stroke weight;
+    // the row colours them (renderFileList). Every audio format shares the one audio glyph.
+    const auto lineIcon = [](const char* paths) {
+        auto icon = std::make_shared<NUIIcon>();
+        icon->loadSVG(std::string(R"(<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.15" )"
+                                  R"(stroke-linejoin="miter">)") + paths + "</svg>");
+        icon->setIconSize(14, 14);
+        return icon;
+    };
+    folderIcon_ = lineIcon(R"(<path d="M1.5 3h4L7 4.5h5.5v7h-11z"/>)");
+    folderOpenIcon_ = lineIcon(R"(<path d="M1.5 11.5V3h4L7 4.5h4.5V6"/><path d="M1.5 11.5L3.3 6h9.2l-1.8 5.5z"/>)");
+    const char* audioPaths = R"(<path d="M3 1.5h5.5L11 4v8.5H3z"/><path d="M8.5 1.5V4H11"/>)"
+                             R"(<path d="M4.4 8.6c.6-2 1.2-2 1.7 0s1.1 2 1.7 0 1.1-2 1.7 0"/>)";
+    audioFileIcon_ = lineIcon(audioPaths);
+    wavFileIcon_ = lineIcon(audioPaths);
+    mp3FileIcon_ = lineIcon(audioPaths);
+    flacFileIcon_ = lineIcon(audioPaths);
+    oggFileIcon_ = lineIcon(audioPaths);
+    musicFileIcon_ = lineIcon(audioPaths);
+    unknownFileIcon_ = lineIcon(R"(<path d="M3 1.5h5.5L11 4v8.5H3z"/><path d="M8.5 1.5V4H11"/>)");
+    // MIDI: note bars on the page (no waveform: MIDI carries no audio). Project: an arrangement of lanes.
+    midiFileIcon_ = lineIcon(R"(<path d="M3 1.5h5.5L11 4v8.5H3z"/><path d="M4.5 7h2.5M6 9h3M4.5 11h2"/>)");
+    projectFileIcon_ = lineIcon(R"(<path d="M1.5 2.5h11v9h-11z"/><path d="M3.5 5h4M5.5 7h5M3.5 9h3"/>)");
 
     // Chevron Right (Collapsed)
     chevronIcon_ = std::make_shared<NUIIcon>();
@@ -2367,10 +2298,10 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
     renderer.setClipRect(listClip);
 
     const NUIColor evenRow = themeManager.getColor("backgroundPrimary"); // flat rows: no zebra
-    const NUIColor selectedRow = themeManager.getColor("surfaceRaised"); // selection is a fill, never an edge
-    const NUIColor secondarySelectedRow = themeManager.getColor("surfaceTertiary");
-    const NUIColor text = themeManager.getColor("textPrimary").withAlpha(0.82f);
-    const NUIColor folderText = themeManager.getColor("textPrimary").withAlpha(0.92f);
+    const NUIColor selectedRow = themeManager.getColor("selected"); // selection is the wash, never an edge
+    const NUIColor secondarySelectedRow = selectedRow.withAlpha(selectedRow.a * 0.6f);
+    const NUIColor text = themeManager.getColor("textSecondary"); // files secondary, folders primary
+    const NUIColor folderText = themeManager.getColor("textPrimary");
     const NUIColor muted = themeManager.getColor("textSecondary").withAlpha(0.56f);
     const auto& themeProps = themeManager.getCurrentTheme();
     const float labelFont = themeProps.fontSizeS;
@@ -2411,21 +2342,21 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
             // Crisp vector chevrons
             const float cx = contentX + 5.0f;
             const float cy = itemRect.y + itemRect.height * 0.5f;
-            const float s = 4.0f;
-            const NUIColor chevronColor = muted.withAlpha(0.72f);
+            const float s = 3.0f; // the spec's 10px disclosure chevron
+            const NUIColor chevronColor = themeProps.textMuted;
             if (item->isExpanded) {
-                renderer.drawLine({cx - s, cy - s * 0.5f}, {cx, cy + s * 0.5f}, 1.6f, chevronColor);
-                renderer.drawLine({cx, cy + s * 0.5f}, {cx + s, cy - s * 0.5f}, 1.6f, chevronColor);
+                renderer.drawLine({cx - s, cy - s * 0.5f}, {cx, cy + s * 0.5f}, 1.3f, chevronColor);
+                renderer.drawLine({cx, cy + s * 0.5f}, {cx + s, cy - s * 0.5f}, 1.3f, chevronColor);
             } else {
-                renderer.drawLine({cx - s * 0.5f, cy - s}, {cx + s * 0.5f, cy}, 1.6f, chevronColor);
-                renderer.drawLine({cx + s * 0.5f, cy}, {cx - s * 0.5f, cy + s}, 1.6f, chevronColor);
+                renderer.drawLine({cx - s * 0.5f, cy - s}, {cx + s * 0.5f, cy}, 1.3f, chevronColor);
+                renderer.drawLine({cx + s * 0.5f, cy}, {cx - s * 0.5f, cy + s}, 1.3f, chevronColor);
             }
             contentX += 16.0f;
         } else {
             contentX += 10.0f;
         }
 
-        auto icon = getIconForFileType(item->type);
+        auto icon = item->isDirectory && item->isExpanded ? folderOpenIcon_ : getIconForFileType(item->type);
         if (icon) {
             // Centred in the row, like the chevron and the name beside it. A fixed "+5" only
             // centred a 24 px row; at the current row height the icon sat 3 px above its label,
@@ -2434,8 +2365,8 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
             NUIRect iconRect(contentX, std::round(itemRect.y + (itemRect.height - ROW_ICON_SIZE) * 0.5f), ROW_ICON_SIZE,
                              ROW_ICON_SIZE);
             // renderAt: the shared per-file-type icon was re-tinted per row, invalidating it per frame.
-            icon->renderAt(renderer, iconRect, item->isDirectory ? NUIColor::fromHex(0xffc9a46a)
-                                                                : themeManager.getColor("secondary"));
+            icon->renderAt(renderer, iconRect, selected ? themeProps.textPrimary
+                                               : (item->isDirectory && item->isExpanded ? themeProps.textSecondary : themeProps.textMuted));
         }
         contentX += 20.0f;
 
@@ -2460,10 +2391,10 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
             renderer.drawText(lengthText, {itemRect.right() - 12.0f - w, std::round(renderer.calculateTextY(itemRect, factFont))},
                               factFont, muted.withAlpha(0.75f));
         }
-        if (!keyText.empty()) {
-            renderer.drawText(keyText, {itemRect.right() - 12.0f - lengthColW - keyColW + 6.0f,
-                                        std::round(renderer.calculateTextY(itemRect, factFont))},
-                              factFont, muted.withAlpha(1.0f));
+        if (!keyText.empty()) { // the key on a small chip
+            const NUIRect chip{itemRect.right() - 12.0f - lengthColW - keyColW, itemRect.y + itemRect.height * 0.5f - 8.0f, keyColW - 2.0f, 16.0f};
+            renderer.fillRoundedRect(chip, 3.0f, themeProps.surfaceTertiary);
+            renderer.drawTextCentered(keyText, chip, factFont, themeProps.textSecondary);
         }
         const float maxTextWidth = std::max(0.0f, itemRect.right() - contentX - 12.0f - factsW);
         std::string displayName = item->name;
