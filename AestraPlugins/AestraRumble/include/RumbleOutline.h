@@ -66,6 +66,8 @@ public:
     // For tests and a busy indicator.
     bool waitUntilIdle(int timeoutMs) const;
     size_t rendersDone() const;
+    // Which render made this sound's outline (1 for the first), or 0 if it is not made.
+    size_t renderOrderOf(const RumbleSound& sound) const;
 
 private:
     struct Key {
@@ -78,6 +80,7 @@ private:
     struct Entry {
         std::shared_ptr<const RumbleOutline> outline;
         uint64_t lastUsed = 0;
+        size_t order = 0; // m_renders when it was made
     };
     static Key keyOf(const RumbleSound& sound);
     void run();
