@@ -75,6 +75,15 @@ UIMixerPanel::UIMixerPanel(std::shared_ptr<Aestra::MixerViewModel> viewModel,
         vm->width = width;
         if (vm->channel) vm->channel->setWidth(width);
     };
+    // Input monitoring from the inspector, the same steps as the track header's Input Monitoring menu.
+    m_inspector->onMonitorEdited = [this](uint32_t channelId, bool monitored) {
+        if (!m_trackManager) return;
+        auto* mixerChannel = m_trackManager->getChannelById(channelId);
+        if (!mixerChannel) return;
+        mixerChannel->setMonitoringEnabled(monitored);
+        m_trackManager->publishInputMonitoringSnapshot();
+        m_trackManager->markModified();
+    };
     addChild(m_inspector);
 
     m_navigator = std::make_shared<UIMixerNavigator>();
