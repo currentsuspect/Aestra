@@ -239,6 +239,7 @@ void ExportDialog::layoutSettingsBoard() {
     chip(m_formatDropdown, 78.0f);
     chip(m_depthDropdown, 112.0f);
     chip(m_rateDropdown, 96.0f);
+    chip(m_loudnessDropdown, 92.0f);
     cx += 34.0f; // room for the "Tail" word painted before the field
     chip(m_tailField, 56.0f);
     y += kChipH + 12.0f;
@@ -315,6 +316,7 @@ bool ExportDialog::handleBoardClick(const AestraUI::NUIMouseEvent& event) {
             if (m_stems && m_format != Aestra::Audio::ExportFormat::Wav)
                 setFormat(Aestra::Audio::ExportFormat::Wav, -1);
             m_formatDropdown->setEnabled(!m_stems);
+            m_loudnessDropdown->setEnabled(!m_stems); // stems stay as mixed
             refreshOutputPath();
             setDirty(true);
             return true;

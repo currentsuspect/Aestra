@@ -99,6 +99,8 @@ void ExportDialog::buildControls() {
             m_bitDepthOptions.push_back("MP3 320 kbps");
     }
     m_depthDropdown = makeDropdown(m_bitDepthOptions, [this](int i) { m_selectedBitDepth = i; });
+    m_loudnessDropdown = makeDropdown(m_loudnessOptions, [this](int i) { m_selectedLoudness = i; });
+    m_loudnessDropdown->setTooltip("Loudness: raise or lower the whole mix to a target, true peak kept under -1 dBTP");
 
     m_tailLabel = makeLabel("Tail (seconds)");
     m_tailField = std::make_shared<AestraUI::NUITextInput>();
@@ -229,6 +231,7 @@ void ExportDialog::show(const std::string& projectPath, Aestra::Audio::AudioEngi
 
     m_scopeDropdown->setSelectedIndex(m_selectedScope);
     m_rateDropdown->setSelectedIndex(m_selectedSampleRate);
+    m_loudnessDropdown->setSelectedIndex(m_selectedLoudness);
     syncFormatChips();
     setOutputFromPath(defaultOutput);
     m_tailField->setText(m_tailInput);
@@ -265,7 +268,7 @@ void ExportDialog::applyPanelState() {
     m_stemsCheckbox->setVisible(false);
     for (const auto& c : {m_outputInput, m_tailField})
         c->setVisible(settings);
-    for (const auto& c : {m_rateDropdown, m_depthDropdown, m_formatDropdown})
+    for (const auto& c : {m_rateDropdown, m_depthDropdown, m_formatDropdown, m_loudnessDropdown})
         c->setVisible(settings);
     m_browseButton->setVisible(settings);
     m_exportButton->setVisible(settings);
@@ -300,7 +303,7 @@ void ExportDialog::applyPanelState() {
                                        : shortenPath(m_exportResultPath, 50));
             char stats[128];
             std::snprintf(stats, sizeof(stats), "Duration: %.1fs  |  Peak: %.1f dB", m_exportDuration, m_exportPeakDb);
-            m_detailLabel2->setText(stats);
+            m_detailLabel2->setText(stats + m_exportLoudnessNote);
         } else {
             m_detailLabel->setText(m_exportError);
         }
@@ -412,6 +415,7 @@ void ExportDialog::applyExportResult(const ExportJobResult& result) {
         m_exportFileCount = result.fileCount;
         m_exportDuration = result.durationSeconds;
         m_exportPeakDb = result.peakDb;
+        m_exportLoudnessNote = result.loudnessNote;
         m_exportError.clear();
     } else {
         m_exportResultPath.clear();
@@ -505,7 +509,7 @@ void ExportDialog::onRender(AestraUI::NUIRenderer& renderer) {
     if (m_panelState == PanelState::Settings)
         paintSettingsBoardOverlay(renderer);
     // An open dropdown's list paints over the controls below it.
-    for (const auto& dropdown : {m_formatDropdown, m_rateDropdown, m_depthDropdown}) {
+    for (const auto& dropdown : {m_formatDropdown, m_rateDropdown, m_depthDropdown, m_loudnessDropdown}) {
         if (dropdown->isVisible() && dropdown->isOpen())
             dropdown->renderDropdownList(renderer);
     }
@@ -641,7 +645,8 @@ void ExportDialog::startExport() {
     try {
         m_exportFuture = std::async(std::launch::async,
             &ExportDialog::exportThreadFn, this,
-            m_outputPath, m_selectedBitDepth, m_selectedSampleRate, m_selectedScope, m_tailSeconds, m_stems);
+            m_outputPath, m_selectedBitDepth, m_selectedSampleRate, m_selectedScope, m_tailSeconds, m_stems,
+            m_selectedLoudness);
     } catch (const std::exception& e) {
         if (m_resumeAudioStreamAfterExport) {
             if (auto* deviceManager = Aestra::ServiceLocator::get<Aestra::Audio::AudioDeviceManager>()) {
@@ -655,7 +660,7 @@ void ExportDialog::startExport() {
     }
 }
 
-ExportDialog::ExportJobResult ExportDialog::exportThreadFn(std::string outputPath, int selectedBitDepth, int selectedSampleRate, int selectedScope, double tailSeconds, bool stems) {
+ExportDialog::ExportJobResult ExportDialog::exportThreadFn(std::string outputPath, int selectedBitDepth, int selectedSampleRate, int selectedScope, double tailSeconds, bool stems, int selectedLoudness) {
     Aestra::Audio::AudioExporter::Config config;
     config.outputPath = std::move(outputPath);
     config.sampleRate = kSampleRates[std::clamp(selectedSampleRate, 0, 3)];
@@ -724,6 +729,12 @@ ExportDialog::ExportJobResult ExportDialog::exportThreadFn(std::string outputPat
         };
     }
 
+    // Loudness target for a mix (stems stay as mixed: one target per stem would change the balance between them).
+    static constexpr double kLoudnessTargets[] = {-14.0, -9.0, -23.0};
+    if (!stems && selectedLoudness > 0 && selectedLoudness <= 3) {
+        config.targetLoudness = true;
+        config.loudnessTargetLufs = kLoudnessTargets[selectedLoudness - 1];
+    }
     Aestra::Audio::AudioExporter exporter(*m_engine, *m_trackManager);
     exporter.setProgressCallback([this](float pct) {
         m_progress.store(pct, std::memory_order_relaxed);
@@ -751,5 +762,11 @@ ExportDialog::ExportJobResult ExportDialog::exportThreadFn(std::string outputPat
     job.durationSeconds = result.durationSeconds;
     job.peakDb = result.peakDb;
     job.errorMessage = result.errorMessage;
+    if (result.loudnessApplied) {
+        char note[96];
+        std::snprintf(note, sizeof(note), "  |  Loudness %.1f > %.1f LUFS%s", result.measuredLufs, result.finalLufs,
+                      result.loudnessLimitedByPeak ? " (held at -1 dBTP)" : "");
+        job.loudnessNote = note;
+    }
     return job;
 }

@@ -5,6 +5,7 @@
 #include "AudioGraphBuilder.h"
 #include "AestraFile.h"
 #include "AestraLog.h"
+#include "Analysis/AudioAnalysis.h"
 
 #include <fstream>
 #include <algorithm>
@@ -82,7 +83,79 @@ AudioExporter::Result AudioExporter::bounceToWav(AudioEngine& engine, TrackManag
     return exporter.render(config);
 }
 
+double AudioExporter::loudnessGainDb(double measuredLufs, double truePeakDbtp, double targetLufs, double ceilingDbtp,
+                                     bool& limited) {
+    limited = false;
+    if (!std::isfinite(measuredLufs) || measuredLufs <= AudioAnalysis::kSilenceDb + 1.0) return 0.0; // nothing to measure
+    double gain = targetLufs - measuredLufs;
+    if (std::isfinite(truePeakDbtp) && truePeakDbtp > AudioAnalysis::kSilenceDb + 1.0 && truePeakDbtp + gain > ceilingDbtp) {
+        gain = ceilingDbtp - truePeakDbtp;
+        limited = true;
+    }
+    return gain;
+}
+
 AudioExporter::Result AudioExporter::render(const Config& config) {
+    if (config.targetLoudness) {
+        // Loudness target: render the range to memory, measure it, apply one gain, then deliver it as the
+        // plain render would have (file or block sink). The render itself is the same render.
+        Config inner = config;
+        inner.targetLoudness = false;
+        RenderedAudio audio;
+        Result result = renderToBuffer(inner, audio);
+        result.outputPath = config.outputPath;
+        if (!result.success) return result;
+        const auto analysis = analyzeAudio(audio.interleaved, audio.numChannels, audio.sampleRate);
+        bool limited = false;
+        const double gainDb = loudnessGainDb(analysis.integratedLufs, analysis.truePeakDbtp, config.loudnessTargetLufs,
+                                             config.truePeakCeilingdBTP, limited);
+        const float gain = static_cast<float>(std::pow(10.0, gainDb / 20.0));
+        if (gain != 1.0f)
+            for (float& s : audio.interleaved) s *= gain;
+        result.loudnessApplied = true;
+        result.measuredLufs = analysis.integratedLufs;
+        result.loudnessGainDb = gainDb;
+        result.loudnessLimitedByPeak = limited;
+        result.finalLufs = analysis.integratedLufs > AudioAnalysis::kSilenceDb + 1.0 ? analysis.integratedLufs + gainDb
+                                                                                  : analysis.integratedLufs;
+        result.peakDb += gainDb;
+        result.maxTruePeakdBTP = static_cast<float>(analysis.truePeakDbtp + gainDb);
+        Log::info("[Export] Loudness: measured " + std::to_string(analysis.integratedLufs) + " LUFS, gain " +
+                  std::to_string(gainDb) + " dB" + (limited ? " (held by the true-peak ceiling)" : ""));
+
+        const uint32_t channels = std::max(1u, audio.numChannels);
+        bool ok = true;
+        if (config.blockSink) {
+            for (uint64_t f = 0; ok && f < audio.frames; f += RENDER_BLOCK_FRAMES) {
+                const auto n = static_cast<uint32_t>(std::min<uint64_t>(RENDER_BLOCK_FRAMES, audio.frames - f));
+                ok = config.blockSink(audio.interleaved.data() + f * channels, n, channels);
+            }
+        } else {
+            std::ofstream file(config.outputPath, std::ios::binary);
+            ok = file && writeWavHeader(file, config, audio.frames);
+            for (uint64_t f = 0; ok && f < audio.frames; f += RENDER_BLOCK_FRAMES) {
+                const size_t n = static_cast<size_t>(std::min<uint64_t>(RENDER_BLOCK_FRAMES, audio.frames - f));
+                const float* block = audio.interleaved.data() + f * channels;
+                switch (config.bitDepth) {
+                    case BitDepth::PCM_16: ok = writeSamples<int16_t>(file, block, n, channels); break;
+                    case BitDepth::PCM_24: ok = writeSamples<int32_t>(file, block, n, channels); break;
+                    case BitDepth::Float_32: ok = writeSamples<float>(file, block, n, channels); break;
+                }
+            }
+            if (ok) {
+                file.flush();
+                ok = file && Aestra::fsyncPath(config.outputPath);
+            }
+            file.close();
+            if (!ok) std::remove(config.outputPath.c_str());
+        }
+        if (!ok) {
+            result.success = false;
+            result.errorMessage = config.blockSink ? "Render stopped by the block sink" : "Failed to write audio data";
+        }
+        return result;
+    }
+
     // The render below drives processBlock by hand: a live device callback stands down for it.
     ManualRenderLease lease(m_engine);
     Result result;
