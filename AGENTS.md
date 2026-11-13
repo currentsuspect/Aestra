@@ -92,6 +92,22 @@ git rev-parse --short HEAD
 
 ---
 
+## 3a. Compounding Rules (FD-81)
+
+Every slice must make the next one easier. These bind every slice (founder decision FD-81, 2026-11-13).
+
+1. **Behaviour lives in a tested model; the screen only draws it.** Anything that can be wrong (moves, layout choices, what a key does) goes in a headless model with tests. Examples: `RumbleFindSession`, `fitTrail`.
+2. **Solve an interaction once, in the kit.** The second time something is hand-built in an editor (drag sessions, lost-release handling, keys during a drag, double-click detection, overflow rows), move it into `AestraPanelWindow` / EditorKit with a test. Never write a third copy.
+3. **One source of truth.** Editors show the instrument's state and never keep a copy that can go stale.
+4. **One way to do each thing.** Each capability (audition, render, preset load) has one named path. A second path needs a decision record.
+5. **CI never surprises.** Run every guard CI runs locally before pushing. New tests carry their `contract:*` labels from the start. Timing tests read the system's own record (e.g. `RumbleOutlineWorker::renderOrderOf`), never what a sleeping thread happens to see.
+6. **Recipes live in the repo.** A way to launch, drive or screenshot the app that works goes into `tools/`, not into a session's scratch files.
+7. **Small slices, merged the same day.** At most two PRs stacked; the bottom one merges before a third opens.
+8. **Measure it.** Each slice records CI rounds, review findings and wall time in its slice table. When a slice costs more than the last similar one, name the missing reusable piece; building it is the next slice.
+9. **Pay now when the next run is guaranteed faster.** When work shows a chance to make the next run faster, accept a slower first run and build the reusable piece, provided the next runs certainly gain: the next slice, or a known repeat, has to use it. "Might help someday" does not qualify. Roughly a fifth of each slice goes to one such piece; name it in the PR's Risk or Producer note.
+
+---
+
 ## 4. Required Final Report Format
 
 Every completed agent session must report:
