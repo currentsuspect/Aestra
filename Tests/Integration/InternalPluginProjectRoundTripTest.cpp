@@ -73,10 +73,10 @@ int main() {
     require(loadedUnit->plugin != nullptr, "Loaded plugin instance missing");
     require(!loadedUnit->pluginState.empty(), "Loaded plugin state missing");
 
-    require(nearlyEqual(loadedUnit->plugin->getParameter(0), 0.62f), "Loaded decay parameter mismatch");
-    require(nearlyEqual(loadedUnit->plugin->getParameter(1), 0.27f), "Loaded drive parameter mismatch");
-    require(nearlyEqual(loadedUnit->plugin->getParameter(2), 0.41f), "Loaded tone parameter mismatch");
-    require(nearlyEqual(loadedUnit->plugin->getParameter(3), 0.53f), "Loaded output gain parameter mismatch");
+    require(nearlyEqual(loadedUnit->plugin->getParameter(0), 0.62f), "Loaded punch parameter mismatch");
+    require(nearlyEqual(loadedUnit->plugin->getParameter(1), 0.27f), "Loaded tail parameter mismatch");
+    require(nearlyEqual(loadedUnit->plugin->getParameter(2), 0.41f), "Loaded weight parameter mismatch");
+    require(nearlyEqual(loadedUnit->plugin->getParameter(3), 0.53f), "Loaded tone parameter mismatch");
 
     std::cout << "[PASS] InternalPluginProjectRoundTripTest\n";
     return 0;

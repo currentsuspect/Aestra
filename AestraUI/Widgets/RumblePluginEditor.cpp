@@ -4,6 +4,7 @@
 #include "NUIIcon.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
+#include "RumbleInstance.h"
 #include "RumblePresetBank.h"
 #include "../../AestraCore/include/AestraLog.h"
 
@@ -14,6 +15,9 @@
 #include <iterator>
 
 namespace AestraUI {
+
+static_assert(AestraUI::RumblePluginEditor::kPresetSlots == Aestra::Plugins::kRumbleFactoryPresets.size(),
+              "one preset slot per factory sound");
 
 namespace {
 constexpr float kPi = 3.14159265358979323846f;
@@ -93,17 +97,8 @@ void drawSvgIcon(NUIRenderer& renderer, const std::shared_ptr<NUIIcon>& icon, co
     icon->onRender(renderer);
 }
 
-NUIColor presetAccent(size_t presetIndex) {
-    if (presetIndex < 4) {
-        return impactAccent();
-    }
-    if (presetIndex < 8) {
-        return cleanAccent();
-    }
-    if (presetIndex < 12) {
-        return bodyAccent();
-    }
-    return NUIColor(0.30f, 0.82f, 0.68f, 1.0f);
+NUIColor presetAccent(size_t) {
+    return impactAccent();
 }
 
 void drawArc(NUIRenderer& renderer, NUIPoint center, float radius, float startAngle, float endAngle, float thickness,
@@ -157,19 +152,20 @@ void RumblePluginEditor::buildControls() {
         Zone zone;
     };
     const Meta meta[] = {
-        {9, "PUNCH", "Chest hit", Zone::Impact},
-        {4, "SWEEP", "Pitch strike", Zone::Impact},
-        {0, "DECAY", "Tail length", Zone::Impact},
-        {1, "DRIVE", "Weight + grit", Zone::Body},
-        {23, "HARMONICS", "Speaker translation", Zone::Body},
-        {24, "CLEAN SUB", "Fundamental hold", Zone::Body},
-        {2, "TONE", "Top-end focus", Zone::Body},
-        {3, "OUTPUT", "Final level", Zone::Body},
+        // Interim layout over the approved voice's settings (FD-80); the editor is rebuilt in SPEC-025 R5.
+        {Aestra::Plugins::RumbleSound::Punch, "PUNCH", "Pitch drop", Zone::Impact},
+        {Aestra::Plugins::RumbleSound::Click, "CLICK", "Front noise", Zone::Impact},
+        {Aestra::Plugins::RumbleSound::Tail, "TAIL", "How long it rings", Zone::Impact},
+        {Aestra::Plugins::RumbleSound::Weight, "WEIGHT", "Clean sub", Zone::Body},
+        {Aestra::Plugins::RumbleSound::Tone, "TONE", "Dark or open", Zone::Body},
+        {Aestra::Plugins::RumbleSound::Dirt, "DIRT", "Clean or driven", Zone::Body},
+        {Aestra::Plugins::RumbleSound::Count, "VELOCITY", "Softer hits, quieter", Zone::Body}, // RumbleInstance::kVelocity
+        {Aestra::Plugins::RumbleSound::Slide, "SLIDE", "Glide between notes", Zone::Body},
     };
 
     const auto parameters = m_instance->getParameters();
     // The macro layout, preset application, and preset matching all assume the
-    // full 25-parameter contract. Silently dropping a missing ID would shift
+    // full Rumble parameter contract (RumbleSound::Count). Silently dropping a missing ID would shift
     // the index-based zones while presets still write every ID — reject the
     // incompatible instance outright instead of rendering a lying panel.
     for (const auto& item : meta) {
@@ -364,7 +360,7 @@ void RumblePluginEditor::drawImpactShape(NUIRenderer& renderer) {
                           editorInk(0.035f));
     }
     const float punch = m_controls.size() > 0 ? m_controls[0].normalizedValue : 0.0f;
-    const float sweep = m_controls.size() > 1 ? m_controls[1].normalizedValue : 0.0f;
+    const float sweep = punch; // Punch is the pitch drop in the approved voice
     const float decay = m_controls.size() > 2 ? m_controls[2].normalizedValue : 0.0f;
     std::array<NUIPoint, 97> points{};
     float phase = 0.0f;
@@ -427,17 +423,14 @@ void RumblePluginEditor::drawPresetBrowser(NUIRenderer& renderer) {
     renderer.strokeRoundedRect(m_presetMenuBounds, 16.0f, 1.2f, bodyAccent().withAlpha(0.58f));
     renderer.drawText("FACTORY SOUNDS", {m_presetMenuBounds.x + 18.0f, m_presetMenuBounds.y + 17.0f}, 11.0f,
                       theme.getColor("textPrimary"));
-    renderer.drawText("16 starting points / 4 characters",
+    renderer.drawText(std::to_string(Aestra::Plugins::kRumbleFactoryPresets.size()) + " starting sounds",
                       {m_presetMenuBounds.x + 132.0f, m_presetMenuBounds.y + 19.0f}, 8.5f,
                       theme.getColor("textSecondary").withAlpha(0.70f));
 
-    for (size_t column = 0; column < 4; ++column) {
-        const size_t firstIndex = column * 4;
-        const auto& firstPreset = Aestra::Plugins::kRumbleFactoryPresets[firstIndex];
-        renderer.drawText(std::string(firstPreset.category),
-                          {m_presetItemBounds[column * 4].x + 3.0f, m_presetMenuBounds.y + 41.0f}, 8.0f,
-                          presetAccent(firstIndex).withAlpha(0.88f));
-    }
+    // Interim menu over the sketch's seven sounds, one group (the editor is rebuilt in SPEC-025 R5).
+    renderer.drawText(std::string(Aestra::Plugins::kRumbleFactoryPresets[0].category),
+                      {m_presetItemBounds[0].x + 3.0f, m_presetMenuBounds.y + 41.0f}, 8.0f,
+                      presetAccent(0).withAlpha(0.88f));
     for (size_t i = 0; i < Aestra::Plugins::kRumbleFactoryPresets.size(); ++i) {
         const bool active = i == m_activePreset;
         const bool hovered = static_cast<int>(i) == m_hoveredPreset;
@@ -504,8 +497,12 @@ void RumblePluginEditor::applyFactoryPreset(size_t presetIndex) {
     }
     m_activePreset = presetIndex % Aestra::Plugins::kRumbleFactoryPresets.size();
     const auto& preset = Aestra::Plugins::kRumbleFactoryPresets[m_activePreset];
-    for (uint32_t parameterId = 0; parameterId < preset.values.size(); ++parameterId) {
-        m_instance->setParameter(parameterId, preset.values[parameterId]);
+    if (auto* rumble = dynamic_cast<Aestra::Plugins::RumbleInstance*>(m_instance.get())) {
+        rumble->setSound(Aestra::Plugins::rumbleSoundOf(preset)); // the grain too, not only the settings
+    } else {
+        for (uint32_t parameterId = 0; parameterId < preset.values.size(); ++parameterId) {
+            m_instance->setParameter(parameterId, preset.values[parameterId]);
+        }
     }
     syncControlValues();
     setDirty(true);

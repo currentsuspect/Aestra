@@ -1,153 +1,138 @@
+// © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "RumbleInstance.h"
 
 #include "AestraJSON.h"
-#include "EntitlementStore.h"
-#include "Plugin/BuiltInPlugins.h"
 #include "RumblePluginRegistration.h"
+#include "RumblePresetBank.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
-#include <sstream>
 #include <string>
-
-namespace {
-constexpr double kPi = 3.14159265358979323846;
-constexpr double kPunchDecaySeconds = 0.060;
-constexpr float kAmpAttackDefaultNormalized = 0.04081632653f; // 3 ms on a 1..50 ms mapping
-constexpr float kC1Frequency = 32.70319566f;
-
-constexpr uint32_t kRumbleStateMagic = 0x524D424Cu; // 'RMBL'
-constexpr uint32_t kRumbleStateVersionV1 = 1;
-constexpr uint32_t kRumbleStateVersionV2 = 2;
-
-struct RumbleStateBlobV1 {
-    uint32_t magic;
-    uint32_t version;
-    float decay;
-    float drive;
-    float tone;
-    float outputGain;
-};
-
-struct RumbleStateBlobV2 {
-    uint32_t magic;
-    uint32_t version;
-    float decay;
-    float drive;
-    float tone;
-    float outputGain;
-    float pitchAmount;
-    float pitchDecay;
-    float ampAttack;
-    float resonance;
-    float transientAmount;
-};
-} // namespace
 
 namespace Aestra {
 namespace Plugins {
 
+namespace {
+// Slide reaches into a ringing note only when it is on; the sketch treated anything this small as off.
+constexpr double kSlideOff = 0.02;
+// Level used before any note's level is known: a typical raw peak, so a first note is near the right loudness.
+constexpr double kFallbackPeak = 1.2;
+// The 808's own range, keys C3 to C6 (Aestra's naming, C3 = MIDI 60), is levelled as soon as the sound
+// changes, nearest C4 first. Any other key is levelled when it is first played (until then it borrows the
+// nearest levelled key). Levels are kept per key, not per pitch.
+constexpr int kLevelRangeLow = 60;
+constexpr int kLevelRangeHigh = 96;
+constexpr int kLevelCentre = 72;
+
+struct ParameterInfo {
+    const char* key;
+    const char* name;
+    const char* shortName;
+    const char* unit;
+    uint32_t steps;
+};
+constexpr ParameterInfo kParameterInfo[RumbleInstance::kParameterCount] = {
+    {"Punch", "Punch", "Punch", "st", 0},
+    {"Tail", "Tail", "Tail", "s", 0},
+    {"Weight", "Weight", "Weight", "%", 0},
+    {"Tone", "Tone", "Tone", "Hz", 0},
+    {"Dirt", "Dirt", "Dirt", "%", 0},
+    {"Slide", "Slide", "Slide", "ms", 0},
+    {"DropTime", "Drop time", "Drop", "ms", 0},
+    {"Hold", "Hold", "Hold", "ms", 0},
+    {"Curve", "Curve", "Curve", "%", 0},
+    {"Second", "2nd harmonic", "2nd", "%", 0},
+    {"Third", "3rd harmonic", "3rd", "%", 0},
+    {"ClipType", "Clip type", "Clip", "", 2},
+    {"Click", "Click", "Click", "%", 0},
+    {"ClickLength", "Click length", "Clk len", "ms", 0},
+    {"ClickTone", "Click tone", "Clk tone", "%", 0},
+    {"Velocity", "Velocity", "Vel", "dB", 0},
+};
+
+// Transparent below 0.95, then a soft knee that never passes 0.99.
+float ceiling(float x) {
+    constexpr float kKnee = 0.95f, kRoom = 0.04f;
+    const float a = std::fabs(x);
+    if (a <= kKnee) return x;
+    const float y = kKnee + kRoom * std::tanh((a - kKnee) / kRoom);
+    return x < 0.0f ? -y : y;
+}
+
+std::string printf1(const char* format, double value) {
+    char text[48];
+    std::snprintf(text, sizeof(text), format, value);
+    return text;
+}
+} // namespace
+
 RumbleInstance::RumbleInstance() {
-    initializeDefaultParameters();
-
-    m_licensed = Aestra::License::EntitlementStore().canAccess(Aestra::License::ProductFeature::Rumble);
+    const RumbleSound defaults = rumbleDefaultSound();
+    for (size_t id = 0; id < RumbleSound::Count; ++id) {
+        m_params[id].store(static_cast<float>(defaults[id]), std::memory_order_relaxed);
+    }
+    m_seed.store(defaults.seed, std::memory_order_relaxed);
+    m_params[kVelocity].store(kDefaultVelocity, std::memory_order_relaxed);
+    for (size_t note = 0; note < 128; ++note) {
+        m_peak[note].store(0.0f, std::memory_order_relaxed);
+        m_peakVersion[note].store(0, std::memory_order_relaxed);
+        m_wanted[note].store(false, std::memory_order_relaxed);
+    }
+    m_worker = std::thread(&RumbleInstance::levelWorker, this);
 }
 
-#if defined(AESTRA_ENABLE_TEST_LICENSES) && AESTRA_ENABLE_TEST_LICENSES
-RumbleInstance::RumbleInstance(TestLicense testLicense) {
-    initializeDefaultParameters();
-    m_licensed = testLicense == TestLicense::GrantRumble;
-}
-#endif
-
-void RumbleInstance::initializeDefaultParameters() {
-    m_params[kParamAmpDecay].store(0.45f, std::memory_order_relaxed);
-    m_params[kParamDrive].store(0.10f, std::memory_order_relaxed);
-    m_params[kParamTone].store(0.30f, std::memory_order_relaxed);
-    m_params[kParamOutputGain].store(0.50f, std::memory_order_relaxed);
-    m_params[kParamPitchAmount].store(0.35f, std::memory_order_relaxed);
-    m_params[kParamPitchDecay].store(0.25f, std::memory_order_relaxed);
-    m_params[kParamPitchCurve].store(0.42f, std::memory_order_relaxed);
-    m_params[kParamAmpAttack].store(kAmpAttackDefaultNormalized, std::memory_order_relaxed);
-    m_params[kParamResonance].store(0.55f, std::memory_order_relaxed);
-    m_params[kParamTransientAmount].store(0.48f, std::memory_order_relaxed);
-    m_params[kParamClickLevel].store(0.25f, std::memory_order_relaxed);
-    m_params[kParamClickDecay].store(0.20f, std::memory_order_relaxed);
-    m_params[kParamClickTone].store(0.35f, std::memory_order_relaxed);
-    m_params[kParamGlideTime].store(0.15f, std::memory_order_relaxed);
-    m_params[kParamGlideCurve].store(0.50f, std::memory_order_relaxed);
-    m_params[kParamGlideMode].store(0.0f, std::memory_order_relaxed);
-    m_params[kParamRetriggerMode].store(0.0f, std::memory_order_relaxed);
-    m_params[kParamFilterEnvAmount].store(0.50f, std::memory_order_relaxed);
-    m_params[kParamFilterKeytrack].store(0.0f, std::memory_order_relaxed);
-    m_params[kParamSatMode].store(0.0f, std::memory_order_relaxed);
-    m_params[kParamVelocityToAmp].store(0.75f, std::memory_order_relaxed);
-    m_params[kParamTune].store(0.50f, std::memory_order_relaxed);
-    m_params[kParamFine].store(0.50f, std::memory_order_relaxed);
-    m_params[kParamHarmonics].store(0.22f, std::memory_order_relaxed);
-    m_params[kParamSubClean].store(0.70f, std::memory_order_relaxed);
+RumbleInstance::~RumbleInstance() {
+    {
+        std::lock_guard<std::mutex> lock(m_workerMutex);
+        m_workerStop = true;
+    }
+    m_workerWake.notify_all();
+    if (m_worker.joinable()) {
+        m_worker.join();
+    }
 }
 
 bool RumbleInstance::initialize(double sampleRate, uint32_t maxBlockSize) {
-    m_sampleRate = sampleRate > 1.0 ? sampleRate : 44100.0;
-    m_maxBlockSize = maxBlockSize > 0 ? maxBlockSize : 512;
-    m_processedSamples = 0;
-    m_triggerIndex = 0;
-
-    for (uint32_t i = 0; i < kParamCount; ++i) {
-        m_smoothedParams[i] = getParameter(i);
-        m_parameterTargets[i] = m_smoothedParams[i];
+    (void)maxBlockSize;
+    const double rate = sampleRate > 1.0 ? sampleRate : 48000.0;
+    const bool rateChanged = rate != m_sampleRate;
+    m_sampleRate = rate;
+    m_voice.prepare(rate);
+    m_fading.prepare(rate);
+    m_held.fill(false);
+    m_heldCount = 0;
+    m_workerRate.store(rate, std::memory_order_release);
+    if (rateChanged) {
+        soundChanged(); // a note's level depends on the sample rate
     }
-
-    m_parameterSmoothingCoeff = 1.0f - std::exp(-1.0f / static_cast<float>(m_sampleRate * 0.005));
-    m_oversampleAntiAliasAlpha =
-        1.0f - std::exp(-2.0f * static_cast<float>(kPi) * static_cast<float>(m_sampleRate * 0.5f) /
-                        static_cast<float>(m_sampleRate * 2.0f));
-    m_dcBlockerR = 1.0f - static_cast<float>((2.0 * kPi * 5.0) / m_sampleRate);
-    m_dcBlockerR = std::clamp(m_dcBlockerR, 0.0f, 0.9999f);
-    m_smoothedSatMode = getParameter(kParamSatMode) >= 0.5f ? 1.0f : 0.0f;
-    m_parameterSmoothingActive = false;
-
-    m_voice = {};
-    m_voice.baseFrequency = midiNoteToFrequency(m_voice.note);
-    m_voice.tunedFrequency = m_voice.baseFrequency;
-    m_voice.currentEffectivePitch_hz = static_cast<float>(m_voice.baseFrequency);
-    m_voice.glideSourcePitch_hz = static_cast<float>(m_voice.baseFrequency);
-    m_voice.glideTargetPitch_hz = static_cast<float>(m_voice.baseFrequency);
-    m_heldNotes.fill(false);
-    m_heldVelocities.fill(0);
-    m_heldNoteCount = 0;
-    resetVoiceProcessingState();
     return true;
 }
 
 void RumbleInstance::shutdown() {
     m_active.store(false, std::memory_order_release);
-    m_voice = {};
-    m_heldNotes.fill(false);
-    m_heldVelocities.fill(0);
-    m_heldNoteCount = 0;
-    resetVoiceProcessingState();
+    m_voice.prepare(m_sampleRate);
+    m_fading.prepare(m_sampleRate);
+    m_held.fill(false);
+    m_heldCount = 0;
 }
 
 void RumbleInstance::activate() {
+    m_voice.prepare(m_sampleRate);
+    m_fading.prepare(m_sampleRate);
+    m_held.fill(false);
+    m_heldCount = 0;
     m_active.store(true, std::memory_order_release);
-    resetVoiceProcessingState();
-    m_processedSamples = 0;
-    m_triggerIndex = 0;
-    m_heldNotes.fill(false);
-    m_heldVelocities.fill(0);
-    m_heldNoteCount = 0;
 }
 
 void RumbleInstance::deactivate() {
     m_active.store(false, std::memory_order_release);
-    m_voice.active = false;
-    m_voice.noteIsHeld = false;
-    m_heldNotes.fill(false);
-    m_heldVelocities.fill(0);
-    m_heldNoteCount = 0;
+    m_voice.prepare(m_sampleRate);
+    m_fading.prepare(m_sampleRate);
+    m_held.fill(false);
+    m_heldCount = 0;
 }
 
 void RumbleInstance::process(const float* const* inputs, float** outputs, uint32_t numInputChannels,
@@ -156,430 +141,331 @@ void RumbleInstance::process(const float* const* inputs, float** outputs, uint32
     (void)inputs;
     (void)numInputChannels;
     (void)midiOutput;
-
     if (!outputs || numOutputChannels == 0) {
         return;
     }
-
     for (uint32_t c = 0; c < numOutputChannels; ++c) {
         if (outputs[c]) {
             std::memset(outputs[c], 0, sizeof(float) * numFrames);
         }
     }
-
-    if (!m_licensed) {
-        return;
-    }
-
     if (!isActive()) {
         return;
     }
 
-    size_t eventIdx = 0;
+    size_t eventIndex = 0;
     const size_t eventCount = midiInput ? midiInput->getEventCount() : 0;
-    refreshParameterTargets();
-    DspParameters dsp = mapDspParameters();
-
     for (uint32_t i = 0; i < numFrames; ++i) {
-        while (midiInput && eventIdx < eventCount) {
-            const auto& event = midiInput->getEvent(eventIdx);
-            if (event.sampleOffset == i) {
-                handleMidiEvent(event);
-                ++eventIdx;
-            } else if (event.sampleOffset < i) {
-                ++eventIdx;
-            } else {
+        while (eventIndex < eventCount) {
+            const auto& event = midiInput->getEvent(eventIndex);
+            if (event.sampleOffset > i) {
                 break;
             }
+            handleMidiEvent(event); // an event past its offset still plays, now rather than never
+            ++eventIndex;
         }
-
-        if (m_parameterSmoothingActive) {
-            m_parameterSmoothingActive = updateSmoothedParameters();
-            dsp = mapDspParameters();
-        }
-
-        if (!m_voice.active) {
-            ++m_processedSamples;
+        if (!m_voice.active() && !m_fading.active()) {
             continue;
         }
-
-        m_voice.decayCoeff = dsp.decayCoeff;
-        m_voice.clickCoeff = dsp.clickCoeff;
-
-        if (m_voice.attackActive) {
-            m_voice.amplitudeEnvelope = std::min(1.0, m_voice.amplitudeEnvelope + m_voice.attackIncrement);
-            if (m_voice.attackSamplesRemaining > 0) {
-                --m_voice.attackSamplesRemaining;
+        // A single note peaks at the levelled 0.85 and passes untouched; only a cut (new note over the fading one)
+        // or a note played before its level is known can go higher, and the ceiling keeps that under 0.99.
+        const float sample = ceiling(m_voice.next() + m_fading.next());
+        for (uint32_t c = 0; c < numOutputChannels; ++c) {
+            if (outputs[c]) {
+                outputs[c][i] = sample;
             }
-            if (m_voice.attackSamplesRemaining == 0 || m_voice.amplitudeEnvelope >= 1.0) {
-                m_voice.amplitudeEnvelope = 1.0;
-                m_voice.attackActive = false;
-            }
-        } else {
-            m_voice.amplitudeEnvelope *= m_voice.decayCoeff;
         }
-
-        if (m_voice.pitchDecayProgress < 1.0) {
-            m_voice.pitchDecayProgress = std::min(1.0, m_voice.pitchDecayProgress + m_voice.pitchDecayIncrement);
-        }
-        double pitchEnvelope = 0.0;
-        if (dsp.pitchAmountSemitones > 1.0e-7f) {
-            pitchEnvelope = 1.0 - std::pow(std::clamp(m_voice.pitchDecayProgress, 0.0, 1.0),
-                                           static_cast<double>(dsp.pitchCurveExponent));
-        }
-        m_voice.attackPitchEnvelope *= m_voice.attackPitchCoeff;
-
-        m_voice.transientEnvelope *= m_voice.transientCoeff;
-        m_voice.clickEnvelope *= m_voice.clickCoeff;
-
-        const double punchPitchSemitones = 6.0 * static_cast<double>(dsp.transientAmount) * m_voice.transientEnvelope;
-        const double effectiveSemitones = static_cast<double>(dsp.pitchAmountSemitones) *
-                                              (0.72 * pitchEnvelope + 0.28 * m_voice.attackPitchEnvelope) +
-                                          punchPitchSemitones;
-        // Unconditional: punch pitch (transient term) must sound even when the
-        // main Pitch Amount is zero, and zero semitones is already a neutral ratio.
-        const float pitchedBase =
-            m_voice.glideTargetPitch_hz * static_cast<float>(std::pow(2.0, effectiveSemitones / 12.0));
-
-        if (m_voice.isGliding) {
-            const float glideStep = 1.0f / std::max(1.0f, dsp.glideTimeSeconds * static_cast<float>(m_sampleRate));
-            m_voice.glideProgress = std::clamp(m_voice.glideProgress + glideStep, 0.0f, 1.0f);
-            const float shaped = std::pow(m_voice.glideProgress, m_voice.glideCurveExponent);
-            m_voice.currentEffectivePitch_hz =
-                m_voice.glideSourcePitch_hz + shaped * (pitchedBase - m_voice.glideSourcePitch_hz);
-            if (m_voice.glideProgress >= 1.0f) {
-                m_voice.isGliding = false;
-            }
-        } else {
-            m_voice.currentEffectivePitch_hz = pitchedBase;
-        }
-
-        const float oscillatorFrequency =
-            std::clamp(m_voice.currentEffectivePitch_hz, 1.0e-6f, static_cast<float>(m_sampleRate * 0.45));
-        m_voice.phaseIncrement = (2.0 * kPi * oscillatorFrequency) / m_sampleRate;
-        m_voice.phase += m_voice.phaseIncrement;
-        if (m_voice.phase >= 2.0 * kPi) {
-            m_voice.phase -= 2.0 * kPi;
-        }
-
-        const float unitImag = static_cast<float>(std::sin(m_voice.phase));
-        const float unitReal = static_cast<float>(std::cos(m_voice.phase));
-        const float magnitude = static_cast<float>(m_voice.resonatorMagnitude);
-        const float fundamental = magnitude * unitImag;
-        const float secondHarmonic = magnitude * (2.0f * unitReal * unitImag);
-        const float thirdHarmonic = magnitude * (3.0f * unitImag - 4.0f * unitImag * unitImag * unitImag);
-
-        const float rawClickNoise = nextClickNoiseSample(m_voice.clickNoiseState);
-        m_voice.clickFilterState += dsp.clickFilterAlpha * (rawClickNoise - m_voice.clickFilterState);
-        const float clickSlowAlpha = std::clamp(dsp.clickFilterAlpha * 0.18f, 0.0f, 1.0f);
-        m_voice.clickSlowFilterState += clickSlowAlpha * (rawClickNoise - m_voice.clickSlowFilterState);
-        const float clickBand = m_voice.clickFilterState - m_voice.clickSlowFilterState;
-        const float clickSample = clickBand * static_cast<float>(m_voice.clickEnvelope) * dsp.clickLevel;
-
-        const float harmonicLayer = dsp.harmonics * (0.30f * secondHarmonic + 0.14f * thirdHarmonic);
-        const float sustainedBody = (fundamental + harmonicLayer) * static_cast<float>(m_voice.amplitudeEnvelope);
-        const float punchEnvelope = static_cast<float>(m_voice.transientEnvelope) * dsp.transientAmount;
-        const float punchBody = punchEnvelope * (2.30f * fundamental + 1.50f * secondHarmonic);
-        float sample = (sustainedBody + punchBody) * m_voice.ampPeak * 0.58f;
-
-        const float driveInput = sample * (1.0f + dsp.driveAmount * 3.0f);
-        const float softDriven = processOversampledTanh(driveInput, 1.0f, m_driveStageSoft);
-        const float hardMidpoint = 0.5f * (m_driveStageHard.previousInput + driveInput);
-        const float hardMidClipped = std::clamp(hardMidpoint, -0.8f, 0.8f);
-        m_driveStageHard.antiAliasState +=
-            m_oversampleAntiAliasAlpha * (hardMidClipped - m_driveStageHard.antiAliasState);
-        const float hardClipped = std::clamp(driveInput, -0.8f, 0.8f);
-        m_driveStageHard.antiAliasState += m_oversampleAntiAliasAlpha * (hardClipped - m_driveStageHard.antiAliasState);
-        m_driveStageHard.previousInput = driveInput;
-        const float saturated = softDriven + dsp.satMode * (m_driveStageHard.antiAliasState - softDriven);
-        const float parallelSaturated = saturated + dsp.subClean * 0.85f * (sample - saturated);
-        const float driveCompensation = 1.0f / (1.0f + 0.55f * dsp.driveMix);
-        const float driven = (sample + dsp.driveMix * (parallelSaturated - sample)) * driveCompensation;
-
-        const float semitoneOffset =
-            12.0f * std::log2(std::max(static_cast<float>(m_voice.tunedFrequency), 1.0e-6f) / kC1Frequency);
-        const float keytrackOffset = dsp.filterKeytrack * semitoneOffset * (dsp.toneHz / 12.0f);
-        const float envOffset = dsp.filterEnvAmount * static_cast<float>(m_voice.amplitudeEnvelope) * 3920.0f;
-        const float cutoffHz = dsp.toneHz + envOffset + keytrackOffset;
-        sample = processFilter(driven, cutoffHz, dsp.resonanceQ);
-        sample += clickSample;
-        sample *= dsp.outputGain;
-        sample = processDcBlocker(sample);
-        sample = processSafetyKnee(sample);
-
-        if (!std::isfinite(sample)) {
-            resetVoiceProcessingState();
-            m_voice.active = false;
-            sample = 0.0f;
-        }
-
-        if (!m_voice.attackActive && m_voice.amplitudeEnvelope < 1.0e-5 && m_voice.clickEnvelope < 1.0e-5 &&
-            m_voice.transientEnvelope < 1.0e-5) {
-            m_voice.active = false;
-            m_voice.amplitudeEnvelope = 0.0;
-            m_voice.clickEnvelope = 0.0;
-            ++m_processedSamples;
-            continue;
-        }
-
-        if (outputs[0]) {
-            outputs[0][i] = sample;
-        }
-        if (numOutputChannels > 1 && outputs[1]) {
-            outputs[1][i] = sample;
-        }
-        ++m_processedSamples;
     }
+    while (eventIndex < eventCount) {
+        handleMidiEvent(midiInput->getEvent(eventIndex++));
+    }
+}
+
+void RumbleInstance::handleMidiEvent(const Aestra::Audio::MidiBuffer::Event& event) {
+    if (event.size < 2) {
+        return;
+    }
+    const uint8_t status = event.data[0] & 0xF0;
+    const uint8_t note = event.data[1] & 0x7F;
+    const uint8_t velocity = event.size >= 3 ? event.data[2] : 0;
+
+    if (status == 0x90 && velocity > 0) {
+        const bool overlapping = m_heldCount > 0;
+        if (!m_held[note]) {
+            m_held[note] = true;
+            ++m_heldCount;
+        }
+        const RumbleSound now = sound();
+        if (overlapping && now[RumbleSound::Slide] > kSlideOff && m_voice.active()) {
+            m_voice.slideTo(pitchOfKey(note));
+            return;
+        }
+        if (m_voice.active()) {
+            m_fading = m_voice;
+            m_fading.stop();
+        }
+        m_voice.start(now, pitchOfKey(note), levelFor(note), velocityGain(getParameter(kVelocity), velocity));
+    } else if (status == 0x80 || (status == 0x90 && velocity == 0)) {
+        // A one-shot rings for its own length; letting go of the key only ends the overlap that makes a slide.
+        if (m_held[note]) {
+            m_held[note] = false;
+            --m_heldCount;
+        }
+    } else if (status == 0xB0 && (note == 120 || note == 123)) {
+        m_voice.stop();
+        m_fading.stop();
+        m_held.fill(false);
+        m_heldCount = 0;
+    }
+}
+
+double RumbleInstance::levelFor(int note) {
+    const uint32_t version = m_soundVersion.load(std::memory_order_acquire);
+    if (m_peakVersion[note].load(std::memory_order_acquire) == version) {
+        return m_peak[note].load(std::memory_order_relaxed);
+    }
+    m_wanted[note].store(true, std::memory_order_relaxed);
+    for (int distance = 1; distance < 128; ++distance) {
+        for (int other : {note - distance, note + distance}) {
+            if (other >= 0 && other < 128 && m_peakVersion[other].load(std::memory_order_acquire) == version) {
+                return m_peak[other].load(std::memory_order_relaxed);
+            }
+        }
+    }
+    const float stale = m_peak[note].load(std::memory_order_relaxed);
+    return stale > 0.0f ? stale : kFallbackPeak;
+}
+
+void RumbleInstance::soundChanged() {
+    m_soundVersion.fetch_add(1, std::memory_order_acq_rel);
+    m_workerWake.notify_one();
+}
+
+// The next note to level for this version: one the audio thread asked for, else the next unlevelled note of
+// the 808's range, nearest its centre first. -1 when there is nothing to do.
+int RumbleInstance::nextNoteToLevel(uint32_t version) {
+    for (int note = 0; note < 128; ++note) {
+        if (m_wanted[note].load(std::memory_order_relaxed)) {
+            if (m_peakVersion[note].load(std::memory_order_acquire) != version) {
+                return note;
+            }
+            m_wanted[note].store(false, std::memory_order_relaxed);
+        }
+    }
+    for (int distance = 0; distance <= kLevelRangeHigh - kLevelRangeLow; ++distance) {
+        for (int note : {kLevelCentre - distance, kLevelCentre + distance}) {
+            if (note >= kLevelRangeLow && note <= kLevelRangeHigh &&
+                m_peakVersion[note].load(std::memory_order_acquire) != version) {
+                return note;
+            }
+        }
+    }
+    return -1;
+}
+
+void RumbleInstance::levelWorker() {
+    for (;;) {
+        uint32_t version = 0;
+        int note = -1;
+        {
+            std::unique_lock<std::mutex> lock(m_workerMutex);
+            for (;;) {
+                if (m_workerStop) {
+                    return;
+                }
+                version = m_soundVersion.load(std::memory_order_acquire);
+                note = nextNoteToLevel(version);
+                if (note >= 0) {
+                    break;
+                }
+                m_levelsDone.notify_all();
+                // Woken by a change; the short timeout also picks up keys played outside the range, since the
+                // audio thread only raises a flag and never wakes anyone.
+                m_workerWake.wait_for(lock, std::chrono::milliseconds(20));
+            }
+        }
+        const RumbleSound snapshot = sound();
+        const double rate = m_workerRate.load(std::memory_order_acquire);
+        if (m_soundVersion.load(std::memory_order_acquire) != version) {
+            continue; // changed while being read
+        }
+        const double peak = RumbleVoice::rawPeak(snapshot, pitchOfKey(note), rate);
+        if (m_soundVersion.load(std::memory_order_acquire) == version) {
+            m_peak[note].store(static_cast<float>(peak), std::memory_order_relaxed);
+            m_peakVersion[note].store(version, std::memory_order_release);
+            m_wanted[note].store(false, std::memory_order_relaxed);
+        }
+    }
+}
+
+bool RumbleInstance::levelsReady() const {
+    const uint32_t version = m_soundVersion.load(std::memory_order_acquire);
+    for (int note = kLevelRangeLow; note <= kLevelRangeHigh; ++note) {
+        if (m_peakVersion[note].load(std::memory_order_acquire) != version) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool RumbleInstance::waitForLevels(int timeoutMs) const {
+    std::unique_lock<std::mutex> lock(m_workerMutex);
+    return m_levelsDone.wait_for(lock, std::chrono::milliseconds(timeoutMs), [this] { return levelsReady(); });
+}
+
+RumbleSound RumbleInstance::sound() const {
+    RumbleSound result;
+    for (size_t id = 0; id < RumbleSound::Count; ++id) {
+        result[id] = m_params[id].load(std::memory_order_relaxed);
+    }
+    result.seed = m_seed.load(std::memory_order_relaxed);
+    return result;
+}
+
+void RumbleInstance::setSound(const RumbleSound& sound) {
+    for (size_t id = 0; id < RumbleSound::Count; ++id) {
+        if (!std::isfinite(sound[id])) continue; // keep the current value, as setParameter does
+        m_params[id].store(static_cast<float>(std::clamp(sound[id], 0.0, 1.0)), std::memory_order_relaxed);
+    }
+    m_seed.store(sound.seed, std::memory_order_relaxed);
+    soundChanged();
 }
 
 std::vector<Aestra::Audio::PluginParameter> RumbleInstance::getParameters() const {
-    using Aestra::Audio::PluginParameter;
-    return {
-        PluginParameter{kParamAmpDecay, "AmpDecay", "AmpDec", "s", 0.45f, 0.0f, 1.0f, true, false, false, 0},
-        PluginParameter{kParamDrive, "Drive", "Drive", "%", 0.10f, 0.0f, 1.0f, true, false, false, 0},
-        PluginParameter{kParamTone, "Tone", "Tone", "Hz", 0.30f, 0.0f, 1.0f, true, false, false, 0},
-        PluginParameter{kParamOutputGain, "OutputGain", "Gain", "dB", 0.50f, 0.0f, 1.0f, true, false, false, 0},
-        PluginParameter{kParamPitchAmount, "PitchAmount", "Pitch", "st", 0.35f, 0.0f, 1.0f, true, false, false, 0},
-        PluginParameter{kParamPitchDecay, "PitchDecay", "P Dec", "s", 0.25f, 0.0f, 1.0f, true, false, false, 0},
-        PluginParameter{kParamPitchCurve, "PitchCurve", "P Curv", "", 0.42f, 0.0f, 1.0f, true, false, false, 0},
-        PluginParameter{kParamAmpAttack, "AmpAttack", "Attack", "ms", kAmpAttackDefaultNormalized, 0.0f, 1.0f, true,
-                        false, false, 0},
-        PluginParameter{kParamResonance, "Resonance", "Reso", "Q", 0.55f, 0.0f, 1.0f, true, false, false, 0},
-        PluginParameter{kParamTransientAmount, "TransientAmount", "Trans", "%", 0.48f, 0.0f, 1.0f, true, false, false,
-                        0},
-        PluginParameter{kParamClickLevel, "ClickLevel", "Click", "%", 0.25f, 0.0f, 1.0f, true, false, false, 0},
-        PluginParameter{kParamClickDecay, "ClickDecay", "ClkDec", "s", 0.20f, 0.0f, 1.0f, true, false, false, 0},
-        PluginParameter{kParamClickTone, "ClickTone", "ClkTon", "Hz", 0.35f, 0.0f, 1.0f, true, false, false, 0},
-        PluginParameter{kParamGlideTime, "GlideTime", "Glide", "s", 0.15f, 0.0f, 1.0f, true, false, false, 0},
-        PluginParameter{kParamGlideCurve, "GlideCurve", "GlCurv", "", 0.50f, 0.0f, 1.0f, true, false, false, 0},
-        PluginParameter{kParamGlideMode, "GlideMode", "GlMode", "", 0.0f, 0.0f, 1.0f, true, false, false, 1},
-        PluginParameter{kParamRetriggerMode, "RetriggerMode", "RtMode", "", 0.0f, 0.0f, 1.0f, true, false, false, 1},
-        PluginParameter{kParamFilterEnvAmount, "FilterEnvAmount", "F Env", "", 0.50f, 0.0f, 1.0f, true, false, false,
-                        0},
-        PluginParameter{kParamFilterKeytrack, "FilterKeytrack", "F Key", "%", 0.0f, 0.0f, 1.0f, true, false, false, 0},
-        PluginParameter{kParamSatMode, "SatMode", "SatMd", "", 0.0f, 0.0f, 1.0f, true, false, false, 1},
-        PluginParameter{kParamVelocityToAmp, "VelocityToAmp", "VelAmp", "%", 0.75f, 0.0f, 1.0f, true, false, false, 0},
-        PluginParameter{kParamTune, "Tune", "Tune", "st", 0.50f, 0.0f, 1.0f, true, false, false, 0},
-        PluginParameter{kParamFine, "Fine", "Fine", "ct", 0.50f, 0.0f, 1.0f, true, false, false, 0},
-        PluginParameter{kParamHarmonics, "Harmonics", "Harm", "%", 0.22f, 0.0f, 1.0f, true, false, false, 0},
-        PluginParameter{kParamSubClean, "SubClean", "Sub", "%", 0.70f, 0.0f, 1.0f, true, false, false, 0},
-    };
+    const RumbleSound defaults = rumbleDefaultSound();
+    std::vector<Aestra::Audio::PluginParameter> parameters;
+    parameters.reserve(kParameterCount);
+    for (uint32_t id = 0; id < kParameterCount; ++id) {
+        const auto& info = kParameterInfo[id];
+        const float fallback = id == kVelocity ? kDefaultVelocity : static_cast<float>(defaults[id]);
+        parameters.push_back(Aestra::Audio::PluginParameter{id, info.name, info.shortName, info.unit, fallback, 0.0f,
+                                                            1.0f, true, false, false, info.steps});
+    }
+    return parameters;
 }
 
 uint32_t RumbleInstance::getParameterCount() const {
-    return kParamCount;
+    return kParameterCount;
 }
 
 float RumbleInstance::getParameter(uint32_t id) const {
-    if (id >= kParamCount) {
-        return 0.0f;
-    }
-    return m_params[id].load(std::memory_order_relaxed);
+    return id < kParameterCount ? m_params[id].load(std::memory_order_relaxed) : 0.0f;
+}
+
+double RumbleInstance::velocityGain(double amount, int velocity) {
+    const double hit = std::clamp(velocity, 1, 127) / 127.0;
+    return std::pow(10.0, -std::clamp(amount, 0.0, 1.0) * 30.0 * (1.0 - hit) / 20.0);
 }
 
 void RumbleInstance::setParameter(uint32_t id, float value) {
-    if (id >= kParamCount) {
+    if (id >= kParameterCount || !std::isfinite(value)) {
         return;
     }
-
-    float clamped = clamp01(value);
-    if (id == kParamGlideMode || id == kParamRetriggerMode || id == kParamSatMode) {
-        clamped = clamped >= 0.5f ? 1.0f : 0.0f;
+    const float clamped = std::clamp(value, 0.0f, 1.0f);
+    if (id == kVelocity) {
+        m_params[id].store(clamped, std::memory_order_relaxed); // how it is played: levels do not change
+        return;
     }
-    m_params[id].store(clamped, std::memory_order_relaxed);
+    if (m_params[id].exchange(clamped, std::memory_order_relaxed) != clamped) {
+        soundChanged();
+    }
 }
 
 std::string RumbleInstance::getParameterDisplay(uint32_t id) const {
-    std::ostringstream out;
-    out.setf(std::ios::fixed);
-    out.precision(2);
-
-    switch (id) {
-    case kParamAmpDecay:
-        out << mapAmpDecaySeconds(getParameter(kParamAmpDecay)) << " s";
-        break;
-    case kParamDrive:
-        out << (mapDriveAmount(getParameter(kParamDrive)) * 100.0f) << "%";
-        break;
-    case kParamTone:
-        out << mapToneHz(getParameter(kParamTone)) << " Hz";
-        break;
-    case kParamOutputGain:
-        out << ((getParameter(kParamOutputGain) * 24.0f) - 12.0f) << " dB";
-        break;
-    case kParamPitchAmount:
-        out << mapPitchAmountSemitones(getParameter(kParamPitchAmount)) << " st";
-        break;
-    case kParamPitchDecay:
-        out << mapPitchDecaySeconds(getParameter(kParamPitchDecay)) << " s";
-        break;
-    case kParamPitchCurve:
-        out << mapPitchCurveExponent(getParameter(kParamPitchCurve)) << "x";
-        break;
-    case kParamAmpAttack:
-        out << (mapAmpAttackSeconds(getParameter(kParamAmpAttack)) * 1000.0f) << " ms";
-        break;
-    case kParamResonance:
-        out << mapResonanceQ(getParameter(kParamResonance)) << " Q";
-        break;
-    case kParamTransientAmount:
-        out << (mapTransientAmount(getParameter(kParamTransientAmount)) * 100.0f) << "%";
-        break;
-    case kParamClickLevel:
-        out << (mapClickLevel(getParameter(kParamClickLevel)) * 100.0f) << "%";
-        break;
-    case kParamClickDecay:
-        out << (mapClickDecaySeconds(getParameter(kParamClickDecay)) * 1000.0f) << " ms";
-        break;
-    case kParamClickTone:
-        out << mapClickToneHz(getParameter(kParamClickTone)) << " Hz";
-        break;
-    case kParamGlideTime:
-        out << mapGlideTimeSeconds(getParameter(kParamGlideTime)) << " s";
-        break;
-    case kParamGlideCurve:
-        out << mapGlideCurveExponent(getParameter(kParamGlideCurve)) << "x";
-        break;
-    case kParamGlideMode:
-        return getParameter(kParamGlideMode) >= 0.5f ? "Legato" : "Always";
-    case kParamRetriggerMode:
-        return getParameter(kParamRetriggerMode) >= 0.5f ? "Legato" : "Retrigger";
-    case kParamFilterEnvAmount:
-        out << mapFilterEnvAmount(getParameter(kParamFilterEnvAmount));
-        break;
-    case kParamFilterKeytrack:
-        out << (mapFilterKeytrack(getParameter(kParamFilterKeytrack)) * 100.0f) << "%";
-        break;
-    case kParamSatMode:
-        return getParameter(kParamSatMode) >= 0.5f ? "Hard" : "Soft";
-    case kParamVelocityToAmp:
-        out << (mapVelocityToAmp(getParameter(kParamVelocityToAmp)) * 100.0f) << "%";
-        break;
-    case kParamTune:
-        out << mapTuneSemitones(getParameter(kParamTune)) << " st";
-        break;
-    case kParamFine:
-        out << mapFineCents(getParameter(kParamFine)) << " ct";
-        break;
-    case kParamHarmonics:
-        out << (getParameter(kParamHarmonics) * 100.0f) << "%";
-        break;
-    case kParamSubClean:
-        out << (getParameter(kParamSubClean) * 100.0f) << "%";
-        break;
-    default:
-        return "0";
+    if (id >= kParameterCount) {
+        return {};
     }
-    return out.str();
+    if (id == kVelocity) {
+        const double range = getParameter(kVelocity) * 30.0;
+        return range < 0.5 ? std::string("Off") : printf1("%.0f dB range", range);
+    }
+    const RumbleSound now = sound();
+    const double v = now[id];
+    switch (id) {
+    case RumbleSound::Punch:
+        return printf1("%.0f st drop", RumbleVoice::dropSemitones(v));
+    case RumbleSound::Tail:
+        return printf1("%.2f s", RumbleVoice::tailSeconds(v));
+    case RumbleSound::Tone: {
+        const double hz = RumbleVoice::toneHz(v);
+        return hz < 1000.0 ? printf1("%.0f Hz", hz) : printf1("%.1f kHz", hz / 1000.0);
+    }
+    case RumbleSound::Slide:
+        return v <= kSlideOff ? std::string("Off") : printf1("%.0f ms", v * 300.0);
+    case RumbleSound::DropTime:
+        return printf1("%.0f ms", RumbleVoice::dropSeconds(now) * 1000.0);
+    case RumbleSound::Hold:
+        return printf1("%.0f ms", RumbleVoice::holdSeconds(v) * 1000.0);
+    case RumbleSound::ClipType:
+        return v < 0.34 ? "Soft" : v < 0.67 ? "Hard" : "Fold";
+    case RumbleSound::ClickLength:
+        return printf1("%.0f ms", 2.0 + v * 20.0);
+    default:
+        return printf1("%.0f %%", v * 100.0);
+    }
+}
+
+const char* RumbleInstance::parameterKey(uint32_t id) {
+    return id < kParameterCount ? kParameterInfo[id].key : "";
+}
+
+const char* RumbleInstance::parameterName(uint32_t id) {
+    return id < kParameterCount ? kParameterInfo[id].name : "";
+}
+
+std::vector<uint8_t> RumbleInstance::stateOfSound(const RumbleSound& sound) {
+    Aestra::JSON json = Aestra::JSON::object();
+    json.set("schema", Aestra::JSON("rumble-sound"));
+    json.set("version", Aestra::JSON(2.0));
+    Aestra::JSON params = Aestra::JSON::object();
+    for (uint32_t id = 0; id < RumbleSound::Count; ++id) {
+        params.set(parameterKey(id), Aestra::JSON(sound[id]));
+    }
+    json.set("params", params);
+    json.set("seed", Aestra::JSON(static_cast<double>(sound.seed)));
+    const std::string text = json.toString(2);
+    return std::vector<uint8_t>(text.begin(), text.end());
 }
 
 std::vector<uint8_t> RumbleInstance::saveState() const {
     Aestra::JSON json = Aestra::JSON::object();
-    json.set("schema", Aestra::JSON("rumble-preset"));
-    json.set("version", Aestra::JSON(1.0));
-    json.set("name", Aestra::JSON("Untitled"));
-    json.set("author", Aestra::JSON(""));
-    Aestra::JSON tags = Aestra::JSON::array();
-    json.set("tags", tags);
-
+    json.set("schema", Aestra::JSON("rumble-sound"));
+    json.set("version", Aestra::JSON(2.0));
     Aestra::JSON params = Aestra::JSON::object();
-    for (uint32_t i = 0; i < kParamCount; ++i) {
-        params.set(getParameterKey(i), Aestra::JSON(static_cast<double>(getParameter(i))));
+    for (uint32_t id = 0; id < kParameterCount; ++id) {
+        params.set(parameterKey(id), Aestra::JSON(static_cast<double>(getParameter(id))));
     }
     json.set("params", params);
-
-    const std::string state = json.toString(2);
-    return std::vector<uint8_t>(state.begin(), state.end());
+    json.set("seed", Aestra::JSON(static_cast<double>(m_seed.load(std::memory_order_relaxed))));
+    const std::string text = json.toString(2);
+    return std::vector<uint8_t>(text.begin(), text.end());
 }
 
 bool RumbleInstance::loadState(const std::vector<uint8_t>& state) {
-    if (state.size() >= sizeof(uint32_t) * 2) {
-        uint32_t magic = 0;
-        uint32_t version = 0;
-        std::memcpy(&magic, state.data(), sizeof(uint32_t));
-        std::memcpy(&version, state.data() + sizeof(uint32_t), sizeof(uint32_t));
-
-        if (magic == kRumbleStateMagic) {
-            if (version == kRumbleStateVersionV2 && state.size() == sizeof(RumbleStateBlobV2)) {
-                RumbleStateBlobV2 blob{};
-                std::memcpy(&blob, state.data(), sizeof(blob));
-
-                setParameter(kParamAmpDecay, blob.decay);
-                setParameter(kParamDrive, blob.drive);
-                setParameter(kParamTone, blob.tone);
-                setParameter(kParamOutputGain, blob.outputGain);
-                setParameter(kParamPitchAmount, blob.pitchAmount);
-                setParameter(kParamPitchDecay, blob.pitchDecay);
-                setParameter(kParamPitchCurve, 0.42f);
-                setParameter(kParamAmpAttack, blob.ampAttack);
-                setParameter(kParamResonance, blob.resonance);
-                setParameter(kParamTransientAmount, blob.transientAmount);
-                setParameter(kParamClickLevel, 0.25f);
-                setParameter(kParamClickDecay, 0.20f);
-                setParameter(kParamClickTone, 0.35f);
-                setParameter(kParamGlideTime, 0.15f);
-                setParameter(kParamGlideCurve, 0.50f);
-                setParameter(kParamGlideMode, 0.0f);
-                setParameter(kParamRetriggerMode, 0.0f);
-                setParameter(kParamFilterEnvAmount, 0.50f);
-                setParameter(kParamFilterKeytrack, 0.0f);
-                setParameter(kParamSatMode, 0.0f);
-                setParameter(kParamVelocityToAmp, 0.75f);
-                setParameter(kParamTune, 0.50f);
-                setParameter(kParamFine, 0.50f);
-                setParameter(kParamHarmonics, 0.22f);
-                setParameter(kParamSubClean, 0.70f);
-                return true;
-            }
-
-            if (version == kRumbleStateVersionV1 && state.size() == sizeof(RumbleStateBlobV1)) {
-                RumbleStateBlobV1 blob{};
-                std::memcpy(&blob, state.data(), sizeof(blob));
-
-                setParameter(kParamAmpDecay, blob.decay);
-                setParameter(kParamDrive, blob.drive);
-                setParameter(kParamTone, blob.tone);
-                setParameter(kParamOutputGain, blob.outputGain);
-                setParameter(kParamPitchAmount, 0.35f);
-                setParameter(kParamPitchDecay, 0.25f);
-                setParameter(kParamPitchCurve, 0.42f);
-                setParameter(kParamAmpAttack, kAmpAttackDefaultNormalized);
-                setParameter(kParamResonance, 0.55f);
-                setParameter(kParamTransientAmount, 0.30f);
-                setParameter(kParamClickLevel, 0.25f);
-                setParameter(kParamClickDecay, 0.20f);
-                setParameter(kParamClickTone, 0.35f);
-                setParameter(kParamGlideTime, 0.15f);
-                setParameter(kParamGlideCurve, 0.50f);
-                setParameter(kParamGlideMode, 0.0f);
-                setParameter(kParamRetriggerMode, 0.0f);
-                setParameter(kParamFilterEnvAmount, 0.50f);
-                setParameter(kParamFilterKeytrack, 0.0f);
-                setParameter(kParamSatMode, 0.0f);
-                setParameter(kParamVelocityToAmp, 0.75f);
-                setParameter(kParamTune, 0.50f);
-                setParameter(kParamFine, 0.50f);
-                setParameter(kParamHarmonics, 0.22f);
-                setParameter(kParamSubClean, 0.70f);
-                return true;
-            }
-            return false;
-        }
-    }
-
-    const std::string jsonString(state.begin(), state.end());
-    Aestra::JSON json = Aestra::JSON::parse(jsonString);
+    const std::string text(state.begin(), state.end());
+    Aestra::JSON json = Aestra::JSON::parse(text);
     if (!json.isObject() || !json.has("schema") || !json["schema"].isString() ||
-        json["schema"].asString() != "rumble-preset" || !json.has("params") || !json["params"].isObject()) {
-        return false;
+        json["schema"].asString() != "rumble-sound" || !json.has("params") || !json["params"].isObject()) {
+        return false; // includes the old engine's states: nobody used it (founder, 2026-11-12)
     }
-
+    RumbleSound loaded = rumbleDefaultSound();
     auto& params = json["params"];
-    for (uint32_t i = 0; i < kParamCount; ++i) {
-        const char* key = getParameterKey(i);
-        if (params.has(key) && params[key].isNumber()) {
-            setParameter(i, static_cast<float>(params[key].asNumber()));
+    for (uint32_t id = 0; id < RumbleSound::Count; ++id) {
+        if (params.has(parameterKey(id)) && params[parameterKey(id)].isNumber()) {
+            loaded[id] = params[parameterKey(id)].asNumber();
         }
+    }
+    if (json.has("seed") && json["seed"].isNumber()) {
+        const double seed = json["seed"].asNumber();
+        if (std::isfinite(seed) && seed >= 0.0 && seed <= 4294967295.0) {
+            loaded.seed = static_cast<uint32_t>(seed); // anything else is a damaged file: keep the default grain
+        }
+    }
+    setSound(loaded);
+    // A project carries Velocity; a sound on its own (a factory or kept preset) does not, and leaves it as it is.
+    const char* velocityKey = parameterKey(kVelocity);
+    if (params.has(velocityKey) && params[velocityKey].isNumber()) {
+        setParameter(kVelocity, static_cast<float>(params[velocityKey].asNumber()));
     }
     return true;
 }
@@ -589,505 +475,7 @@ const Aestra::Audio::PluginInfo& RumbleInstance::getInfo() const {
 }
 
 uint32_t RumbleInstance::getTailSamples() const {
-    const float attackSeconds = mapAmpAttackSeconds(getParameter(kParamAmpAttack));
-    const float ampDecaySeconds = mapAmpDecaySeconds(getParameter(kParamAmpDecay));
-    const float clickDecaySeconds = mapClickDecaySeconds(getParameter(kParamClickDecay));
-    return static_cast<uint32_t>(
-        std::ceil((attackSeconds + std::max(ampDecaySeconds, clickDecaySeconds)) * m_sampleRate));
-}
-
-void RumbleInstance::handleMidiEvent(const Aestra::Audio::MidiBuffer::Event& event) {
-    if (event.size < 3) {
-        return;
-    }
-
-    const uint8_t status = event.data[0] & 0xF0;
-    const uint8_t note = event.data[1];
-    const uint8_t velocity = event.data[2];
-
-    if (status == 0x90 && velocity > 0) {
-        const bool hadHeldNote = m_voice.noteIsHeld;
-        m_heldNotes[note] = true;
-        m_heldVelocities[note] = velocity;
-        rememberHeldNote(note);
-
-        m_voice.glideSourcePitch_hz = m_voice.currentEffectivePitch_hz > 0.0f
-                                          ? m_voice.currentEffectivePitch_hz
-                                          : static_cast<float>(tunedNoteFrequency(note));
-        m_voice.glideTargetPitch_hz = tunedNoteFrequency(note);
-        m_voice.baseFrequency = midiNoteToFrequency(note);
-        m_voice.tunedFrequency = m_voice.glideTargetPitch_hz;
-
-        const bool glideAlways = getParameter(kParamGlideMode) < 0.5f;
-        const bool glideActive = glideAlways || (hadHeldNote && getParameter(kParamGlideMode) >= 0.5f);
-        if (glideActive) {
-            m_voice.isGliding = true;
-            m_voice.glideProgress = 0.0f;
-        } else {
-            m_voice.isGliding = false;
-            m_voice.glideProgress = 1.0f;
-            m_voice.glideSourcePitch_hz = m_voice.glideTargetPitch_hz;
-        }
-
-        m_voice.glideCurveExponent = mapGlideCurveExponent(m_smoothedParams[kParamGlideCurve]);
-        const bool resetEnvelopes = getParameter(kParamRetriggerMode) < 0.5f;
-        beginNote(note, velocity, resetEnvelopes);
-        m_voice.noteIsHeld = true;
-    } else if (status == 0x80 || (status == 0x90 && velocity == 0)) {
-        handleNoteOff(note);
-    }
-}
-
-void RumbleInstance::beginNote(uint8_t note, uint8_t velocity, bool resetEnvelopes) {
-    const bool wasActive = m_voice.active;
-    m_voice.active = true;
-    m_voice.note = note;
-    m_voice.velocity = velocity / 127.0f;
-    m_voice.baseFrequency = midiNoteToFrequency(note);
-    m_voice.tunedFrequency = m_voice.glideTargetPitch_hz;
-    if (!wasActive) {
-        m_voice.phase = 0.0;
-        m_voice.resonatorMagnitude = 1.0;
-    } else if (resetEnvelopes) {
-        const double real =
-            m_voice.resonatorMagnitude * std::cos(m_voice.phase) + 0.65 * static_cast<double>(velocity) / 127.0;
-        const double imag = m_voice.resonatorMagnitude * std::sin(m_voice.phase);
-        m_voice.resonatorMagnitude = std::min(1.8, std::sqrt(real * real + imag * imag));
-        m_voice.phase = std::atan2(imag, real);
-        if (m_voice.phase < 0.0) {
-            m_voice.phase += 2.0 * kPi;
-        }
-    }
-    m_voice.phaseIncrement = (2.0 * kPi * m_voice.currentEffectivePitch_hz) / m_sampleRate;
-    if (resetEnvelopes || !wasActive) {
-        m_voice.amplitudeEnvelope = 0.0;
-        m_voice.pitchDecayProgress = 0.0;
-        m_voice.attackPitchEnvelope = 1.0;
-    }
-    m_voice.transientEnvelope = 1.0;
-    m_voice.clickEnvelope = 1.0;
-
-    if (resetEnvelopes || !wasActive) {
-        const float attackSeconds = mapAmpAttackSeconds(m_smoothedParams[kParamAmpAttack]);
-        const uint32_t attackSamples =
-            std::max<uint32_t>(1, static_cast<uint32_t>(std::ceil(attackSeconds * m_sampleRate)));
-        m_voice.attackSamplesRemaining = attackSamples;
-        m_voice.attackIncrement = 1.0 / static_cast<double>(attackSamples);
-        m_voice.attackActive = true;
-    }
-
-    m_voice.decayCoeff = std::exp(
-        std::log(1.0e-4) / (std::max(0.01f, mapAmpDecaySeconds(m_smoothedParams[kParamAmpDecay])) * m_sampleRate));
-    if (resetEnvelopes || !wasActive) {
-        m_voice.pitchDecayIncrement = 1.0 / std::max(1.0f, mapPitchDecaySeconds(m_smoothedParams[kParamPitchDecay]) *
-                                                               static_cast<float>(m_sampleRate));
-    }
-    m_voice.transientCoeff = std::exp(std::log(1.0e-4) / (kPunchDecaySeconds * m_sampleRate));
-    m_voice.attackPitchCoeff = std::exp(std::log(1.0e-4) / (0.010 * m_sampleRate));
-    m_voice.clickCoeff = std::exp(
-        std::log(1.0e-4) / (std::max(0.001f, mapClickDecaySeconds(m_smoothedParams[kParamClickDecay])) * m_sampleRate));
-    const float velocityToAmp = mapVelocityToAmp(getParameter(kParamVelocityToAmp));
-    m_voice.ampPeak = 1.0f - velocityToAmp + velocityToAmp * m_voice.velocity;
-
-    m_voice.clickNoiseState = seedClickNoise(note, m_processedSamples, m_triggerIndex++);
-    m_voice.currentEffectivePitch_hz = wasActive ? m_voice.currentEffectivePitch_hz : m_voice.glideTargetPitch_hz;
-    m_voice.noteIsHeld = std::any_of(m_heldNotes.begin(), m_heldNotes.end(), [](bool held) { return held; });
-}
-
-void RumbleInstance::handleNoteOff(uint8_t note) {
-    m_heldNotes[note] = false;
-    m_heldVelocities[note] = 0;
-    forgetHeldNote(note);
-    m_voice.noteIsHeld = std::any_of(m_heldNotes.begin(), m_heldNotes.end(), [](bool held) { return held; });
-
-    if (getParameter(kParamGlideMode) >= 0.5f && note == m_voice.note && m_voice.noteIsHeld) {
-        const uint8_t heldNote = getMostRecentHeldNote();
-        const uint8_t heldVelocity = std::max<uint8_t>(1, m_heldVelocities[heldNote]);
-        const bool hadHeldNote = m_voice.noteIsHeld;
-        m_voice.glideSourcePitch_hz = m_voice.currentEffectivePitch_hz;
-        m_voice.glideTargetPitch_hz = tunedNoteFrequency(heldNote);
-        m_voice.baseFrequency = midiNoteToFrequency(heldNote);
-        m_voice.tunedFrequency = m_voice.glideTargetPitch_hz;
-        const bool glideAlways = getParameter(kParamGlideMode) < 0.5f;
-        const bool glideActive = glideAlways || (hadHeldNote && getParameter(kParamGlideMode) >= 0.5f);
-        if (glideActive) {
-            m_voice.isGliding = true;
-            m_voice.glideProgress = 0.0f;
-        } else {
-            m_voice.isGliding = false;
-            m_voice.glideProgress = 1.0f;
-            m_voice.glideSourcePitch_hz = m_voice.glideTargetPitch_hz;
-        }
-        m_voice.glideCurveExponent = mapGlideCurveExponent(m_smoothedParams[kParamGlideCurve]);
-        const bool resetEnvelopes = getParameter(kParamRetriggerMode) < 0.5f;
-        beginNote(heldNote, heldVelocity, resetEnvelopes);
-    }
-}
-
-void RumbleInstance::rememberHeldNote(uint8_t note) {
-    forgetHeldNote(note);
-    if (m_heldNoteCount < m_heldNoteOrder.size()) {
-        m_heldNoteOrder[m_heldNoteCount++] = note;
-    }
-}
-
-void RumbleInstance::forgetHeldNote(uint8_t note) {
-    for (uint8_t i = 0; i < m_heldNoteCount; ++i) {
-        if (m_heldNoteOrder[i] != note) {
-            continue;
-        }
-        for (uint8_t j = i + 1; j < m_heldNoteCount; ++j) {
-            m_heldNoteOrder[j - 1] = m_heldNoteOrder[j];
-        }
-        --m_heldNoteCount;
-        return;
-    }
-}
-
-void RumbleInstance::resetVoiceProcessingState() {
-    m_voice.filterIc1Eq = 0.0f;
-    m_voice.filterIc2Eq = 0.0f;
-    m_voice.filterCachedCutoffHz = -1.0f;
-    m_voice.filterCachedQ = -1.0f;
-    m_voice.filterCachedG = 0.0f;
-    m_voice.filterCachedDamping = 1.0f;
-    m_voice.clickFilterState = 0.0f;
-    m_voice.clickSlowFilterState = 0.0f;
-    m_voice.dcInputPrev = 0.0f;
-    m_voice.dcOutputPrev = 0.0f;
-    m_driveStageSoft = {};
-    m_driveStageHard = {};
-}
-
-bool RumbleInstance::isSmoothedParameter(uint32_t id) {
-    switch (id) {
-    case kParamAmpDecay:
-    case kParamDrive:
-    case kParamTone:
-    case kParamOutputGain:
-    case kParamPitchAmount:
-    case kParamPitchDecay:
-    case kParamPitchCurve:
-    case kParamAmpAttack:
-    case kParamResonance:
-    case kParamTransientAmount:
-    case kParamClickDecay:
-    case kParamClickTone:
-    case kParamGlideTime:
-    case kParamGlideCurve:
-    case kParamFilterEnvAmount:
-    case kParamFilterKeytrack:
-    case kParamHarmonics:
-    case kParamSubClean:
-        return true;
-    default:
-        return false;
-    }
-}
-
-void RumbleInstance::refreshParameterTargets() {
-    bool smoothingNeeded = false;
-    for (uint32_t i = 0; i < kParamCount; ++i) {
-        const float target = m_params[i].load(std::memory_order_relaxed);
-        m_parameterTargets[i] = target;
-        if (isSmoothedParameter(i)) {
-            smoothingNeeded = smoothingNeeded || std::abs(target - m_smoothedParams[i]) > 1.0e-5f;
-        } else {
-            m_smoothedParams[i] = target;
-        }
-    }
-
-    const float satTarget = m_parameterTargets[kParamSatMode] >= 0.5f ? 1.0f : 0.0f;
-    smoothingNeeded = smoothingNeeded || std::abs(satTarget - m_smoothedSatMode) > 1.0e-5f;
-    m_parameterSmoothingActive = smoothingNeeded;
-}
-
-bool RumbleInstance::updateSmoothedParameters() {
-    bool smoothingNeeded = false;
-    for (uint32_t i = 0; i < kParamCount; ++i) {
-        if (!isSmoothedParameter(i)) {
-            continue;
-        }
-        const float target = m_parameterTargets[i];
-        const float next = m_smoothedParams[i] + (target - m_smoothedParams[i]) * m_parameterSmoothingCoeff;
-        if (std::abs(target - next) <= 1.0e-5f) {
-            m_smoothedParams[i] = target;
-        } else {
-            m_smoothedParams[i] = next;
-            smoothingNeeded = true;
-        }
-    }
-
-    const float satTarget = m_parameterTargets[kParamSatMode] >= 0.5f ? 1.0f : 0.0f;
-    const float nextSatMode = m_smoothedSatMode + (satTarget - m_smoothedSatMode) * m_parameterSmoothingCoeff;
-    if (std::abs(satTarget - nextSatMode) <= 1.0e-5f) {
-        m_smoothedSatMode = satTarget;
-    } else {
-        m_smoothedSatMode = nextSatMode;
-        smoothingNeeded = true;
-    }
-    return smoothingNeeded;
-}
-
-RumbleInstance::DspParameters RumbleInstance::mapDspParameters() const {
-    DspParameters dsp;
-    dsp.driveAmount = mapDriveAmount(m_smoothedParams[kParamDrive]);
-    dsp.driveMix = m_smoothedParams[kParamDrive];
-    dsp.toneHz = mapToneHz(m_smoothedParams[kParamTone]);
-    dsp.outputGain = mapOutputGainLinear(m_smoothedParams[kParamOutputGain]);
-    dsp.pitchAmountSemitones = mapPitchAmountSemitones(m_smoothedParams[kParamPitchAmount]);
-    dsp.pitchCurveExponent = mapPitchCurveExponent(m_smoothedParams[kParamPitchCurve]);
-    dsp.resonanceQ = mapResonanceQ(m_smoothedParams[kParamResonance]);
-    dsp.transientAmount = mapTransientAmount(m_smoothedParams[kParamTransientAmount]);
-    dsp.clickLevel = mapClickLevel(m_smoothedParams[kParamClickLevel]);
-    dsp.clickToneHz = mapClickToneHz(m_smoothedParams[kParamClickTone]);
-    dsp.clickFilterAlpha =
-        1.0f - std::exp(-2.0f * static_cast<float>(kPi) * dsp.clickToneHz / static_cast<float>(m_sampleRate));
-    dsp.glideTimeSeconds = mapGlideTimeSeconds(m_smoothedParams[kParamGlideTime]);
-    dsp.filterEnvAmount = mapFilterEnvAmount(m_smoothedParams[kParamFilterEnvAmount]);
-    dsp.filterKeytrack = mapFilterKeytrack(m_smoothedParams[kParamFilterKeytrack]);
-    dsp.harmonics = m_smoothedParams[kParamHarmonics];
-    dsp.subClean = m_smoothedParams[kParamSubClean];
-    dsp.decayCoeff = std::exp(std::log(1.0e-4) /
-                              (std::max(0.01f, mapAmpDecaySeconds(m_smoothedParams[kParamAmpDecay])) * m_sampleRate));
-    dsp.clickCoeff = std::exp(
-        std::log(1.0e-4) / (std::max(0.001f, mapClickDecaySeconds(m_smoothedParams[kParamClickDecay])) * m_sampleRate));
-    dsp.satMode = m_smoothedSatMode;
-    return dsp;
-}
-
-const char* RumbleInstance::getParameterKey(uint32_t id) {
-    switch (id) {
-    case kParamAmpDecay:
-        return "AmpDecay";
-    case kParamDrive:
-        return "Drive";
-    case kParamTone:
-        return "Tone";
-    case kParamOutputGain:
-        return "OutputGain";
-    case kParamPitchAmount:
-        return "PitchAmount";
-    case kParamPitchDecay:
-        return "PitchDecay";
-    case kParamPitchCurve:
-        return "PitchCurve";
-    case kParamAmpAttack:
-        return "AmpAttack";
-    case kParamResonance:
-        return "Resonance";
-    case kParamTransientAmount:
-        return "TransientAmount";
-    case kParamClickLevel:
-        return "ClickLevel";
-    case kParamClickDecay:
-        return "ClickDecay";
-    case kParamClickTone:
-        return "ClickTone";
-    case kParamGlideTime:
-        return "GlideTime";
-    case kParamGlideCurve:
-        return "GlideCurve";
-    case kParamGlideMode:
-        return "GlideMode";
-    case kParamRetriggerMode:
-        return "RetriggerMode";
-    case kParamFilterEnvAmount:
-        return "FilterEnvAmount";
-    case kParamFilterKeytrack:
-        return "FilterKeytrack";
-    case kParamSatMode:
-        return "SatMode";
-    case kParamVelocityToAmp:
-        return "VelocityToAmp";
-    case kParamTune:
-        return "Tune";
-    case kParamFine:
-        return "Fine";
-    case kParamHarmonics:
-        return "Harmonics";
-    case kParamSubClean:
-        return "SubClean";
-    default:
-        return "";
-    }
-}
-
-float RumbleInstance::midiNoteToFrequency(uint8_t note) {
-    return 440.0f * std::pow(2.0f, (static_cast<int>(note) - 69) / 12.0f);
-}
-
-float RumbleInstance::clamp01(float value) {
-    return std::max(0.0f, std::min(1.0f, value));
-}
-
-uint32_t RumbleInstance::seedClickNoise(uint8_t note, uint64_t samplePosition, uint32_t triggerIndex) {
-    uint64_t seed = (static_cast<uint64_t>(note) << 56) ^ samplePosition;
-    seed ^= static_cast<uint64_t>(triggerIndex) * 0x9e3779b97f4a7c15ULL;
-    seed ^= seed >> 30;
-    seed *= 0xbf58476d1ce4e5b9ULL;
-    seed ^= seed >> 27;
-    seed *= 0x94d049bb133111ebULL;
-    seed ^= seed >> 31;
-    uint32_t state = static_cast<uint32_t>((seed >> 32) ^ (seed & 0xffffffffULL));
-    if (state == 0) {
-        state = 0x12345678U;
-    }
-    return state;
-}
-
-float RumbleInstance::nextClickNoiseSample(uint32_t& state) {
-    state ^= state << 13;
-    state ^= state >> 17;
-    state ^= state << 5;
-    const float normalized = static_cast<float>(state & 0x00ffffffU) / static_cast<float>(0x00800000U);
-    return normalized - 1.0f;
-}
-
-float RumbleInstance::mapAmpDecaySeconds(float normalized) const {
-    return 0.12f + normalized * 2.88f;
-}
-
-float RumbleInstance::mapDriveAmount(float normalized) const {
-    return normalized * 2.5f;
-}
-
-float RumbleInstance::mapToneHz(float normalized) const {
-    return 70.0f * std::pow(18000.0f / 70.0f, normalized);
-}
-
-float RumbleInstance::mapOutputGainLinear(float normalized) const {
-    const float db = (normalized * 24.0f) - 12.0f;
-    return std::pow(10.0f, db / 20.0f);
-}
-
-float RumbleInstance::mapPitchAmountSemitones(float normalized) const {
-    return normalized * normalized * 48.0f;
-}
-
-float RumbleInstance::mapPitchDecaySeconds(float normalized) const {
-    return 0.01f + normalized * 1.99f;
-}
-
-float RumbleInstance::mapPitchCurveExponent(float normalized) const {
-    return 0.2f + normalized * 3.8f;
-}
-
-float RumbleInstance::mapAmpAttackSeconds(float normalized) const {
-    return 0.001f + normalized * 0.049f;
-}
-
-float RumbleInstance::mapResonanceQ(float normalized) const {
-    return 0.5f + normalized * 7.5f;
-}
-
-float RumbleInstance::mapTransientAmount(float normalized) const {
-    return normalized;
-}
-
-float RumbleInstance::mapClickLevel(float normalized) const {
-    return normalized;
-}
-
-float RumbleInstance::mapClickDecaySeconds(float normalized) const {
-    return 0.001f + normalized * 0.029f;
-}
-
-float RumbleInstance::mapClickToneHz(float normalized) const {
-    return 700.0f * std::pow(12000.0f / 700.0f, normalized);
-}
-
-float RumbleInstance::mapGlideTimeSeconds(float normalized) const {
-    return 0.01f + normalized * 0.99f;
-}
-
-float RumbleInstance::mapGlideCurveExponent(float normalized) const {
-    return 0.2f + normalized * 3.8f;
-}
-
-float RumbleInstance::mapFilterEnvAmount(float normalized) const {
-    return (normalized * 2.0f) - 1.0f;
-}
-
-float RumbleInstance::mapFilterKeytrack(float normalized) const {
-    return normalized;
-}
-
-float RumbleInstance::mapVelocityToAmp(float normalized) const {
-    return normalized;
-}
-
-float RumbleInstance::mapTuneSemitones(float normalized) const {
-    return (normalized * 48.0f) - 24.0f;
-}
-
-float RumbleInstance::mapFineCents(float normalized) const {
-    return (normalized * 200.0f) - 100.0f;
-}
-
-float RumbleInstance::tunedNoteFrequency(uint8_t note) const {
-    const double base = midiNoteToFrequency(note);
-    const double tuneSemitones = static_cast<double>(mapTuneSemitones(getParameter(kParamTune)));
-    const double fineSemitones = static_cast<double>(mapFineCents(getParameter(kParamFine))) / 100.0;
-    return static_cast<float>(base * std::pow(2.0, (tuneSemitones + fineSemitones) / 12.0));
-}
-
-uint8_t RumbleInstance::getMostRecentHeldNote() const {
-    return m_heldNoteCount == 0 ? m_voice.note : m_heldNoteOrder[m_heldNoteCount - 1];
-}
-
-float RumbleInstance::processFilter(float input, float cutoffHz, float resonanceQ) {
-    const float clampedCutoff = std::clamp(cutoffHz, 20.0f, static_cast<float>(m_sampleRate * 0.45f));
-    const float q = std::max(0.5f, resonanceQ);
-    if (clampedCutoff != m_voice.filterCachedCutoffHz || q != m_voice.filterCachedQ) {
-        m_voice.filterCachedCutoffHz = clampedCutoff;
-        m_voice.filterCachedQ = q;
-        m_voice.filterCachedG = std::tan(static_cast<float>(kPi) * clampedCutoff / static_cast<float>(m_sampleRate));
-        m_voice.filterCachedDamping = 1.0f / (2.0f * q);
-    }
-    const float g = m_voice.filterCachedG;
-    const float damping = m_voice.filterCachedDamping;
-    const float denominator = 1.0f + 2.0f * damping * g + g * g;
-    const float hp = (input - (2.0f * damping + g) * m_voice.filterIc1Eq - m_voice.filterIc2Eq) / denominator;
-    const float bp = g * hp + m_voice.filterIc1Eq;
-    const float lp = g * bp + m_voice.filterIc2Eq;
-
-    m_voice.filterIc1Eq = g * hp + bp;
-    m_voice.filterIc2Eq = g * bp + lp;
-    return lp;
-}
-
-float RumbleInstance::processDcBlocker(float input) {
-    const float output = input - m_voice.dcInputPrev + m_dcBlockerR * m_voice.dcOutputPrev;
-    m_voice.dcInputPrev = input;
-    m_voice.dcOutputPrev = output;
-    return output;
-}
-
-float RumbleInstance::processOversampledTanh(float input, float drive, OversampledTanhStage& stage) {
-    const float midpoint = 0.5f * (stage.previousInput + input);
-
-    const float nonlinearMid = std::tanh(midpoint * drive);
-    stage.antiAliasState += m_oversampleAntiAliasAlpha * (nonlinearMid - stage.antiAliasState);
-
-    const float nonlinearCurrent = std::tanh(input * drive);
-    stage.antiAliasState += m_oversampleAntiAliasAlpha * (nonlinearCurrent - stage.antiAliasState);
-
-    stage.previousInput = input;
-    return stage.antiAliasState;
-}
-
-float RumbleInstance::processSafetyKnee(float input) {
-    constexpr float threshold = 0.88f;
-    constexpr float ceiling = 0.98f;
-    const float magnitude = std::abs(input);
-    if (magnitude <= threshold) {
-        return input;
-    }
-    const float over = magnitude - threshold;
-    const float range = ceiling - threshold;
-    const float shaped = threshold + range * (over / (over + range));
-    return std::copysign(shaped, input);
+    return RumbleVoice::lengthSamples(sound(), m_sampleRate);
 }
 
 } // namespace Plugins

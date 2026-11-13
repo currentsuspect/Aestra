@@ -327,7 +327,7 @@ endif()
 # Rumble state and migration are deterministic pure-logic coverage. Keep this in
 # the normal test tier so stable parameter IDs cannot drift behind a runtime gate.
 # --- Premium plugin commands -------------------------------------------------
-# Guarded on AestraPremiumPlugins; absent from public builds.
+# Aestra's own plugins always build (FD-57, FD-80), so these always run.
 # Append new targets for this group at the END of this sub-section.
 
 # TARGET AestraRumble is required as well as AestraPremiumPlugins: the Linux
@@ -339,7 +339,7 @@ if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND TARGET AestraRumbl
    AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/RumbleStateTest.cpp")
     add_executable(RumbleStateTest Commands/RumbleStateTest.cpp)
     if(UNIX AND NOT APPLE)
-        target_link_libraries(RumbleStateTest PRIVATE -Wl,--start-group AestraRumble AestraAudioCore -Wl,--end-group)
+        target_link_libraries(RumbleStateTest PRIVATE -Wl,--start-group -Wl,--whole-archive AestraRumble -Wl,--no-whole-archive AestraAudioCore -Wl,--end-group)
     else()
         target_link_libraries(RumbleStateTest PRIVATE AestraPremiumPlugins AestraAudioCore)
     endif()
@@ -348,7 +348,7 @@ if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND TARGET AestraRumbl
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME RumbleStateTest COMMAND RumbleStateTest)
-    set_tests_properties(RumbleStateTest PROPERTIES LABELS "plugins;rumble;state")
+    set_tests_properties(RumbleStateTest PROPERTIES LABELS "plugins;rumble;state;contract:durability")
 endif()
 
 # TARGET AestraRumble is required as well as AestraPremiumPlugins: the Linux
@@ -357,20 +357,20 @@ endif()
 # build with Rumble absent emits -lAestraRumble and fails to link. AestraPlugins
 # guards its own use the same way (if(TARGET AestraRumble)).
 if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND TARGET AestraRumble
-   AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/RumbleUnauthorizedOutputSafetyTest.cpp")
-    add_executable(RumbleUnauthorizedOutputSafetyTest Commands/RumbleUnauthorizedOutputSafetyTest.cpp)
+   AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/RumbleSilentOutputTest.cpp")
+    add_executable(RumbleSilentOutputTest Commands/RumbleSilentOutputTest.cpp)
     if(UNIX AND NOT APPLE)
-        target_link_libraries(RumbleUnauthorizedOutputSafetyTest PRIVATE -Wl,--start-group AestraRumble AestraAudioCore -Wl,--end-group)
+        target_link_libraries(RumbleSilentOutputTest PRIVATE -Wl,--start-group -Wl,--whole-archive AestraRumble -Wl,--no-whole-archive AestraAudioCore -Wl,--end-group)
     else()
-        target_link_libraries(RumbleUnauthorizedOutputSafetyTest PRIVATE AestraPremiumPlugins AestraAudioCore)
+        target_link_libraries(RumbleSilentOutputTest PRIVATE AestraPremiumPlugins AestraAudioCore)
     endif()
-    target_include_directories(RumbleUnauthorizedOutputSafetyTest PRIVATE
+    target_include_directories(RumbleSilentOutputTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
         ${CMAKE_SOURCE_DIR}/AestraPlugins/AestraRumble/include
     )
-    add_test(NAME RumbleUnauthorizedOutputSafetyTest COMMAND RumbleUnauthorizedOutputSafetyTest)
-    set_tests_properties(RumbleUnauthorizedOutputSafetyTest PROPERTIES LABELS "plugins;rumble;license;safety")
+    add_test(NAME RumbleSilentOutputTest COMMAND RumbleSilentOutputTest)
+    set_tests_properties(RumbleSilentOutputTest PROPERTIES LABELS "plugins;rumble;safety;contract:audio")
 endif()
 
 if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/ClipRenderServiceTest.cpp")

@@ -4,8 +4,14 @@ project(AestraRumble LANGUAGES CXX)
 
 add_library(AestraRumble STATIC
     src/RumbleInstance.cpp
+    src/RumbleOutline.cpp
     src/RumblePluginRegistration.cpp
+    src/RumbleVariation.cpp
+    src/RumbleVoice.cpp
     include/RumbleInstance.h
+    include/RumbleOutline.h
+    include/RumbleVariation.h
+    include/RumbleVoice.h
     include/RumblePresetBank.h
     include/RumblePluginRegistration.h
 )
@@ -15,16 +21,12 @@ target_include_directories(AestraRumble
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+# Rumble is free (FD-57): no licence check, so no AestraLicense, which lab and sanitizer builds leave out.
+find_package(Threads REQUIRED)
 target_link_libraries(AestraRumble
     PUBLIC
         AestraPluginAPI
-        AestraLicense
+        Threads::Threads
 )
 
 target_compile_features(AestraRumble PUBLIC cxx_std_17)
-
-if(AESTRA_ENABLE_TEST_LICENSES)
-    # Test-only constructor used by deterministic DSP coverage. This symbol is
-    # absent from production builds, where authorization remains mandatory.
-    target_compile_definitions(AestraRumble PUBLIC AESTRA_ENABLE_TEST_LICENSES=1)
-endif()

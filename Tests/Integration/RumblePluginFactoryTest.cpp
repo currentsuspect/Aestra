@@ -50,7 +50,7 @@ int main() {
     std::cout << "✅ PASS\n";
 
     std::cout << "TEST: plugin initializes and exposes parameters... ";
-    if (!instance->initialize(48000.0, 512) || instance->getParameterCount() != 25 ||
+    if (!instance->initialize(48000.0, 512) || instance->getParameterCount() != 16 ||
         instance->getParameters().empty() || instance->getTailSamples() == 0) {
         std::cerr << "FAIL: plugin failed initialization/parameter checks\n";
         return 1;

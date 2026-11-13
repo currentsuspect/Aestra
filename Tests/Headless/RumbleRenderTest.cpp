@@ -62,10 +62,10 @@ struct RenderStats {
 
 struct Preset {
     std::string name;
-    float decay;
-    float drive;
+    float punch;
+    float tail;
+    float weight;
     float tone;
-    float outputGain;
     uint8_t note;
 };
 
@@ -104,20 +104,17 @@ bool renderPreset(const Preset& preset, const std::string& outputPath, RenderSta
     const uint32_t totalFrames = static_cast<uint32_t>(durationSeconds * sampleRate);
     const uint32_t totalBlocks = (totalFrames + blockSize - 1) / blockSize;
 
-#if defined(AESTRA_ENABLE_TEST_LICENSES) && AESTRA_ENABLE_TEST_LICENSES
-    RumbleInstance rumble(RumbleInstance::TestLicense::GrantRumble);
-#else
     RumbleInstance rumble;
-#endif
     if (!rumble.initialize(sampleRate, blockSize)) {
         std::cerr << "Failed to initialize Rumble for preset " << preset.name << "\n";
         return false;
     }
     rumble.activate();
-    rumble.setParameter(0, preset.decay);
-    rumble.setParameter(1, preset.drive);
-    rumble.setParameter(2, preset.tone);
-    rumble.setParameter(3, preset.outputGain);
+    rumble.setParameter(0, preset.punch);
+    rumble.setParameter(1, preset.tail);
+    rumble.setParameter(2, preset.weight);
+    rumble.setParameter(3, preset.tone);
+    rumble.waitForLevels(20000);
 
     std::vector<float> left(blockSize, 0.0f);
     std::vector<float> right(blockSize, 0.0f);
@@ -197,9 +194,9 @@ int main(int argc, char* argv[]) {
     const std::string outputBase = (argc >= 2) ? argv[1] : "rumble_test";
 
     const std::vector<Preset> presets = {
-        {"clean", 0.48f, 0.04f, 0.22f, 0.58f, 36},
-        {"balanced", 0.58f, 0.10f, 0.30f, 0.56f, 36},
-        {"driven", 0.64f, 0.22f, 0.42f, 0.52f, 34},
+        {"clean", 0.48f, 0.04f, 0.22f, 0.58f, 72},
+        {"balanced", 0.58f, 0.10f, 0.30f, 0.56f, 72},
+        {"driven", 0.64f, 0.22f, 0.42f, 0.52f, 70},
     };
 
     std::vector<RenderStats> stats;

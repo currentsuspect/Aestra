@@ -16,6 +16,8 @@ namespace AestraUI {
 
 class RumblePluginEditor : public AestraPanelWindow {
 public:
+    // One slot per factory sound (kRumbleFactoryPresets; checked by a static_assert in the .cpp).
+    static constexpr size_t kPresetSlots = 7;
     explicit RumblePluginEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance);
     ~RumblePluginEditor() override = default;
 
@@ -62,7 +64,7 @@ private:
     NUIRect m_bodyPanelBounds;
     NUIRect m_impactShapeBounds;
     NUIRect m_presetMenuBounds;
-    std::array<NUIRect, 16> m_presetItemBounds{};
+    std::array<NUIRect, kPresetSlots> m_presetItemBounds{};
 
     int m_hoveredControl = -1;
     int m_draggingControl = -1;
