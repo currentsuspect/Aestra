@@ -11,6 +11,7 @@
 #include <condition_variable>
 #include <cstdint>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <thread>
 #include <utility>
@@ -77,6 +78,8 @@ public:
     static const char* parameterKey(uint32_t id);
     // A sound on its own as a state loadState takes: the fifteen settings and the grain, no Velocity.
     static std::vector<uint8_t> stateOfSound(const RumbleSound& sound);
+    // The sound in a state, or nothing when it is not a Rumble sound.
+    static std::optional<RumbleSound> soundOfState(const std::vector<uint8_t>& state);
     static const char* parameterName(uint32_t id);
 
     // The sound's fifteen settings, then Velocity: how much a softer hit plays quieter. Velocity is how the sound

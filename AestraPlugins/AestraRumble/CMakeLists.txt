@@ -5,12 +5,14 @@ project(AestraRumble LANGUAGES CXX)
 add_library(AestraRumble STATIC
     src/RumbleFindSession.cpp
     src/RumbleInstance.cpp
+    src/RumbleKept.cpp
     src/RumbleOutline.cpp
     src/RumblePluginRegistration.cpp
     src/RumbleVariation.cpp
     src/RumbleVoice.cpp
     include/RumbleFindSession.h
     include/RumbleInstance.h
+    include/RumbleKept.h
     include/RumbleOutline.h
     include/RumbleVariation.h
     include/RumbleVoice.h
