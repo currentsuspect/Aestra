@@ -748,9 +748,9 @@ void AestraContent::setupTransportBar() {
         }
     });
     m_transportBar->setOnMetronomeToggle([this](bool enabled) {
-        if (m_trackManager)
-            m_trackManager->enableMetronome(enabled);
+        if (m_trackManager) m_trackManager->enableMetronome(enabled);
     });
+    m_transportBar->setOnLoopRecordToggle([this](bool on) { if (m_trackManager) m_trackManager->setLoopRecordEnabled(on); });
     m_transportBar->setOnCountInToggle([this](bool enabled) {
         m_countInEnabled = enabled;
         if (!enabled) {

@@ -1,6 +1,7 @@
 #include <cmath>
 #include <unordered_set>
 #include "TrackManager.h"
+#include "LoopRecordPasses.h"
 #include <unordered_map>
 #include <algorithm>
 
@@ -72,131 +73,162 @@ void TrackManager::commitRecordingTake(uint64_t trackId, const RecordingCapture&
     const double recordLatencyBeats = (std::max(0.0, latencyInMs) + std::max(0.0, latencyOutMs)) / 1000.0 *
                                       bpm / 60.0;
     startBeat = std::max(0.0, startBeat - recordLatencyBeats);
-    const double durationBeats = framesToBeats(static_cast<double>(conditionedSamples.size()));
-    if (durationBeats <= 0.0) {
-        return;
-    }
-    const double durationSeconds =
-        static_cast<double>(conditionedSamples.size()) / std::max(1.0, m_inputSampleRate);
-    const float playbackGain = computeRecordedTakeGain(conditionedSamples);
+    // Writes one take (a whole recording, or one pass of a loop recording) and places it. False = its file was not
+    // written, so the capture's partial file must stay as the only copy.
+    const auto commitTake = [&](std::vector<float> samples, double placeBeat, const std::string& takePath) -> bool {
+        const double durationBeats = framesToBeats(static_cast<double>(samples.size()));
+        if (durationBeats <= 0.0) {
+            return false;
+        }
+        const double durationSeconds =
+            static_cast<double>(samples.size()) / std::max(1.0, m_inputSampleRate);
+        const float playbackGain = computeRecordedTakeGain(samples);
 
-    auto buffer = std::make_shared<AudioBufferData>();
-    buffer->sampleRate = static_cast<uint32_t>(std::max(1.0, m_inputSampleRate));
-    buffer->numChannels = 2;
-    buffer->numFrames = conditionedSamples.size();
-    buffer->interleavedData.resize(conditionedSamples.size() * 2);
-    for (size_t i = 0; i < conditionedSamples.size(); ++i) {
-        const float sample = conditionedSamples[i];
-        buffer->interleavedData[i * 2] = sample;
-        buffer->interleavedData[i * 2 + 1] = sample;
-    }
+        auto buffer = std::make_shared<AudioBufferData>();
+        buffer->sampleRate = static_cast<uint32_t>(std::max(1.0, m_inputSampleRate));
+        buffer->numChannels = 2;
+        buffer->numFrames = samples.size();
+        buffer->interleavedData.resize(samples.size() * 2);
+        for (size_t i = 0; i < samples.size(); ++i) {
+            const float sample = samples[i];
+            buffer->interleavedData[i * 2] = sample;
+            buffer->interleavedData[i * 2 + 1] = sample;
+        }
+
+        if (!writeRecordedTakeWav(takePath, *buffer)) {
+            // The partial file stays: it is now the only copy of this take.
+            Log::error("[TrackManager] Failed to write recorded take: " + takePath);
+            return false;
+        }
+
+        const std::string takeName = std::filesystem::path(takePath).stem().string();
+        ClipSourceID sourceId = m_sourceManager.createRecordedSource(takePath, takeName, buffer);
+        if (!sourceId.isValid()) {
+            Log::error("[TrackManager] Failed to register recorded source for: " + takePath);
+            return true; // the take file is written; the partial is no longer needed
+        }
+
+        AudioSlicePayload payload;
+        payload.audioSourceId = sourceId;
+        payload.durationSeconds = durationSeconds;
+        // Populate the sample-domain fields the serializer persists
+        // (startSamples/lengthSamples). The old {0.0, numFrames} form set
+        // startOffset/duration instead, so the slice saved as start:0 length:0.
+        AudioSlice fullSlice;
+        fullSlice.startSamples = 0.0;
+        fullSlice.lengthSamples = static_cast<double>(buffer->numFrames);
+        payload.slices.push_back(fullSlice);
+
+        PatternID patternId = m_patternManager.createAudioPattern(takeName, durationBeats, payload);
+        if (!patternId.isValid()) {
+            Log::error("[TrackManager] Failed to create audio pattern for recorded take.");
+            return true; // the take file is written; the partial is no longer needed
+        }
+        m_patternManager.setPatternMixerChannel(patternId, channelId);
+
+        ClipInstance clip;
+        clip.id = ClipInstanceID::generate();
+        clip.name = takeName;
+        clip.startBeat = placeBeat;
+        clip.durationBeats = durationBeats;
+        clip.durationSeconds = durationSeconds;
+        clip.patternId = patternId;
+        clip.sourceId = patternId.value;
+        clip.edits.gainLinear = playbackGain;
+
+        if (recordTakeInPlace(m_playlistModel, m_commandHistory, *track, clip)) { // the armed lane, if the span is free
+            requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged); m_modified.store(true, std::memory_order_relaxed);
+            Log::info("[TrackManager] Recorded take committed in the track's own lane: " + takePath);
+            if (m_onTakeCommitted) m_onTakeCommitted(track->activeLaneId);
+            return true;
+        }
+        // Recording destination and Playlist placement are separate: a take lane, the PatternSource keeps the armed insert.
+        auto createLane = std::make_shared<CreateLaneCommand>(m_playlistModel, takeName);
+        createLane->execute();
+        const PlaylistLaneID laneId = createLane->getLaneId();
+        if (!laneId.isValid()) {
+            m_patternManager.removePattern(patternId);
+            Log::error("[TrackManager] Failed to create a Playlist lane for recorded take.");
+            return true; // the take file is written; the partial is no longer needed
+        }
+
+        auto addClip = std::make_shared<AddClipCommand>(m_playlistModel, laneId, clip);
+        addClip->execute();
+        if (!m_playlistModel.getClip(clip.id)) {
+            createLane->undo();
+            m_patternManager.removePattern(patternId);
+            Log::error("[TrackManager] Failed to place recorded take on its Playlist lane.");
+            return true; // the take file is written; the partial is no longer needed
+        }
+
+        // The take lane is owned by the recording Track (FD-14), joined in the same undoable step as its creation.
+        auto attachLane = std::make_shared<AttachLaneToTrackCommand>(*this, trackId, laneId);
+        attachLane->execute();
+        auto* ownedLane = m_playlistModel.getLane(laneId);
+        if (!ownedLane || ownedLane->trackId != trackId) {
+            attachLane->undo();
+            addClip->undo();
+            createLane->undo();
+            m_patternManager.removePattern(patternId);
+            Log::error("[TrackManager] Failed to attach recorded take lane to track " + std::to_string(trackId));
+            return true; // the take file is written; the partial is no longer needed
+        }
+
+        auto transaction = std::make_shared<CommandTransaction>("Record Take");
+        transaction->add(createLane);
+        transaction->add(addClip);
+        transaction->add(attachLane);
+        transaction->markExecuted();
+        if (!m_commandHistory.pushExecuted(transaction)) {
+            attachLane->undo();
+            addClip->undo();
+            createLane->undo();
+            m_patternManager.removePattern(patternId);
+            Log::error("[TrackManager] Failed to add recorded take to command history.");
+            return true; // the take file is written; the partial is no longer needed
+        }
+        requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged); m_modified.store(true, std::memory_order_relaxed);
+        Log::info("[TrackManager] Recorded take committed: " + takePath + " to mixer insert " + std::to_string(channelId) + " at beat " +
+                  std::to_string(placeBeat) + " with raw peak " + std::to_string(rawPeak) + ", conditioned peak " +
+                  std::to_string(conditionedPeak) + ", clip gain " + std::to_string(playbackGain));
+
+        if (m_onTakeCommitted) m_onTakeCommitted(laneId);
+        return true;
+    };
 
     std::string takePath = buildRecordingTakePath(channelId);
     if (capture.stream && !capture.stream->partialPath().empty()) {
         const std::string& partial = capture.stream->partialPath();
         takePath = partial.substr(0, partial.size() - std::strlen(RecordingTakeStream::kPartialExtension));
     }
-    if (!writeRecordedTakeWav(takePath, *buffer)) {
-        // The partial file stays: it is now the only copy of this take.
-        Log::error("[TrackManager] Failed to write recorded take: " + takePath);
-        return;
+    // Loop record: capture ran on across the timeline loop's wraps; each pass becomes its own take (newest lane on top).
+    const bool loopRecord = m_loopRecordEnabled.load(std::memory_order_relaxed) &&
+                            m_timelineLoopEnabled.load(std::memory_order_relaxed) &&
+                            !m_patternOverrideActive.load(std::memory_order_relaxed);
+    const double framesPerBeat = std::max(1.0, m_inputSampleRate > 0.0 ? m_inputSampleRate : m_outputSampleRate) * 60.0 / bpm;
+    const double performedStartBeat = forcePlacementStartBeat ? fallbackStartBeat
+                                                              : (captureStartBeat > 0.0 ? captureStartBeat : fallbackStartBeat);
+    const std::vector<LoopRecordPass> passes =
+        loopRecord ? loopRecordPasses(conditionedSamples.size(), startBeat, performedStartBeat, recordLatencyBeats,
+                                      m_timelineLoopStart.load(std::memory_order_relaxed),
+                                      m_timelineLoopEnd.load(std::memory_order_relaxed), framesPerBeat,
+                                      static_cast<size_t>(framesPerBeat * 0.25))
+                   : std::vector<LoopRecordPass>{{0, conditionedSamples.size(), startBeat}};
+    bool allWritten = true;
+    for (size_t i = 0; i < passes.size(); ++i) {
+        const auto& pass = passes[i];
+        std::string path = takePath;
+        if (passes.size() > 1) {
+            const std::filesystem::path base(takePath);
+            path = (base.parent_path() / (base.stem().string() + " pass " + std::to_string(i + 1) + base.extension().string())).string();
+        }
+        const auto first = conditionedSamples.begin() + static_cast<std::ptrdiff_t>(pass.offsetFrames);
+        allWritten = commitTake(std::vector<float>(first, first + static_cast<std::ptrdiff_t>(pass.lengthFrames)),
+                                pass.startBeat, path) && allWritten;
     }
-    if (capture.stream) {
+    if (allWritten && capture.stream) {
         capture.stream->discardPartialFile();
     }
-
-    const std::string takeName = std::filesystem::path(takePath).stem().string();
-    ClipSourceID sourceId = m_sourceManager.createRecordedSource(takePath, takeName, buffer);
-    if (!sourceId.isValid()) {
-        Log::error("[TrackManager] Failed to register recorded source for: " + takePath);
-        return;
-    }
-
-    AudioSlicePayload payload;
-    payload.audioSourceId = sourceId;
-    payload.durationSeconds = durationSeconds;
-    // Populate the sample-domain fields the serializer persists
-    // (startSamples/lengthSamples). The old {0.0, numFrames} form set
-    // startOffset/duration instead, so the slice saved as start:0 length:0.
-    AudioSlice fullSlice;
-    fullSlice.startSamples = 0.0;
-    fullSlice.lengthSamples = static_cast<double>(buffer->numFrames);
-    payload.slices.push_back(fullSlice);
-
-    PatternID patternId = m_patternManager.createAudioPattern(takeName, durationBeats, payload);
-    if (!patternId.isValid()) {
-        Log::error("[TrackManager] Failed to create audio pattern for recorded take.");
-        return;
-    }
-    m_patternManager.setPatternMixerChannel(patternId, channelId);
-
-    ClipInstance clip;
-    clip.id = ClipInstanceID::generate();
-    clip.name = takeName;
-    clip.startBeat = startBeat;
-    clip.durationBeats = durationBeats;
-    clip.durationSeconds = durationSeconds;
-    clip.patternId = patternId;
-    clip.sourceId = patternId.value;
-    clip.edits.gainLinear = playbackGain;
-
-    if (recordTakeInPlace(m_playlistModel, m_commandHistory, *track, clip)) { // the armed lane, if the span is free
-        requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged); m_modified.store(true, std::memory_order_relaxed);
-        Log::info("[TrackManager] Recorded take committed in the track's own lane: " + takePath);
-        if (m_onTakeCommitted) m_onTakeCommitted(track->activeLaneId);
-        return;
-    }
-    // Recording destination and Playlist placement are separate: a take lane, the PatternSource keeps the armed insert.
-    auto createLane = std::make_shared<CreateLaneCommand>(m_playlistModel, takeName);
-    createLane->execute();
-    const PlaylistLaneID laneId = createLane->getLaneId();
-    if (!laneId.isValid()) {
-        m_patternManager.removePattern(patternId);
-        Log::error("[TrackManager] Failed to create a Playlist lane for recorded take.");
-        return;
-    }
-
-    auto addClip = std::make_shared<AddClipCommand>(m_playlistModel, laneId, clip);
-    addClip->execute();
-    if (!m_playlistModel.getClip(clip.id)) {
-        createLane->undo();
-        m_patternManager.removePattern(patternId);
-        Log::error("[TrackManager] Failed to place recorded take on its Playlist lane.");
-        return;
-    }
-
-    // The take lane is owned by the recording Track (FD-14), joined in the same undoable step as its creation.
-    auto attachLane = std::make_shared<AttachLaneToTrackCommand>(*this, trackId, laneId);
-    attachLane->execute();
-    auto* ownedLane = m_playlistModel.getLane(laneId);
-    if (!ownedLane || ownedLane->trackId != trackId) {
-        attachLane->undo();
-        addClip->undo();
-        createLane->undo();
-        m_patternManager.removePattern(patternId);
-        Log::error("[TrackManager] Failed to attach recorded take lane to track " + std::to_string(trackId));
-        return;
-    }
-
-    auto transaction = std::make_shared<CommandTransaction>("Record Take");
-    transaction->add(createLane);
-    transaction->add(addClip);
-    transaction->add(attachLane);
-    transaction->markExecuted();
-    if (!m_commandHistory.pushExecuted(transaction)) {
-        attachLane->undo();
-        addClip->undo();
-        createLane->undo();
-        m_patternManager.removePattern(patternId);
-        Log::error("[TrackManager] Failed to add recorded take to command history.");
-        return;
-    }
-    requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged); m_modified.store(true, std::memory_order_relaxed);
-    Log::info("[TrackManager] Recorded take committed: " + takePath + " to mixer insert " + std::to_string(channelId) + " at beat " +
-              std::to_string(startBeat) + " with raw peak " + std::to_string(rawPeak) + ", conditioned peak " +
-              std::to_string(conditionedPeak) + ", clip gain " + std::to_string(playbackGain));
-
-    if (m_onTakeCommitted) m_onTakeCommitted(laneId);
 }
 
 void TrackManager::drainRecordingCaptures() {
