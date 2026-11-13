@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIContextMenu.h"
+#include "../Graphics/NUIDepth.h"
 #include "NUIScrollbar.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
@@ -21,6 +22,11 @@ constexpr float kMenuMaxWidth = 380.0f;
 /** @brief Clear space between a label and its shortcut. */
 constexpr float kMenuShortcutGap = 28.0f;
 constexpr float kMenuArrowSize = 12.0f;
+// Design Spec, Menu (locked): a floating card, 10 to 12px round, rows inset by its 4 to 6px padding and rounded 6px.
+constexpr float kCardRadius = 10.0f;
+constexpr float kCardPad = 5.0f;
+constexpr float kRowRadius = 6.0f;
+constexpr float kSubmenuGap = 4.0f;
 } // namespace
 
 
@@ -101,7 +107,10 @@ NUIContextMenu::NUIContextMenu()
     
     // Apply Aestra theme colors - using the new layered system
     auto& themeManager = NUIThemeManager::getInstance();
-    backgroundColor_ = themeManager.getColor("elevatedPanel");
+    // The same values onThemeChanged applies (Design Spec, Menu), so a menu is right before any theme change.
+    backgroundColor_ = themeManager.getColor("surfaceTertiary");
+    borderRadius_ = kCardRadius;
+    itemHeight_ = themeManager.getCurrentTheme().layout.standardMenuRowHeight;
     borderColor_ = themeManager.getColor("borderStrong");
     textColor_ = themeManager.getColor("textPrimary");                // #E5E5E8 - Main text
     // The row hover is an overlay on the menu's elevated surface: a polarity-correct tint
@@ -109,7 +118,7 @@ NUIContextMenu::NUIContextMenu()
     // on this surface it was DARKER than the menu (RGB 23 vs 25), so hover was invisible.
     hoverColor_ = themeManager.getColor("hover");
     separatorColor_ = themeManager.getColor("borderSubtle");          // #2c2c2f - Subtle dividers
-    shortcutColor_ = themeManager.getColor("textSecondary");          // #A6A6AA - Muted shortcuts
+    shortcutColor_ = themeManager.getColor("textMuted");
 }
 
 void NUIContextMenu::onRender(NUIRenderer& renderer)
@@ -172,8 +181,8 @@ void NUIContextMenu::onThemeChanged(const NUIThemeProperties& theme)
         textColor_ = theme.textPrimary;
         hoverColor_ = theme.hover; // overlay tint, see the constructor
         separatorColor_ = theme.borderSubtle;
-        shortcutColor_ = theme.textSecondary;
-        borderRadius_ = std::min(theme.radiusM, 4.0f); // one step rounder than the 2 px clips and pads, not the old 7
+        shortcutColor_ = theme.textMuted;
+        borderRadius_ = kCardRadius;
         itemHeight_ = theme.layout.standardMenuRowHeight;
         iconSize_ = 14.0f;                              // the mock's icon slot
         updateSize();
@@ -655,7 +664,7 @@ bool NUIContextMenu::ownsMenuFocus() const
 
 float NUIContextMenu::calculateContentHeight() const
 {
-    float height = 0.0f;
+    float height = kCardPad * 2.0f;
     for (const auto& item : items_) {
         if (!item || !item->isVisible()) continue;
         height += item->getType() == NUIContextMenuItem::Type::Separator ? 8.0f : itemHeight_;
@@ -701,11 +710,8 @@ void NUIContextMenu::drawBackground(NUIRenderer& renderer)
 {
     NUIRect bounds = getBounds();
     
-    // Draw background
-    renderer.fillRoundedRect(bounds, borderRadius_, backgroundColor_);
-    
-    // Draw border
-    renderer.strokeRoundedRect(bounds, borderRadius_, borderWidth_, borderColor_);
+    // A floating card: no edge, it floats on its shadow.
+    Depth::floatingCard(renderer, bounds, borderRadius_, backgroundColor_);
 }
 
 void NUIContextMenu::drawItem(NUIRenderer& renderer, std::shared_ptr<NUIContextMenuItem> item, int index)
@@ -716,10 +722,13 @@ void NUIContextMenu::drawItem(NUIRenderer& renderer, std::shared_ptr<NUIContextM
     
     auto& themeManager = NUIThemeManager::getInstance();
     const auto& props = themeManager.getCurrentTheme();
+    // Hover is quiet; the row whose submenu is open lays `selected`.
     if (index == pressedItemIndex_ && item->isEnabled()) {
-        renderer.fillRect(itemRect, themeManager.getColor("controlPressed")); // flat: a fill, never a pill
+        renderer.fillRoundedRect(itemRect, kRowRadius, themeManager.getColor("pressed"));
+    } else if (index == submenuItemIndex_ && activeSubmenu_ && activeSubmenu_->isVisible()) {
+        renderer.fillRoundedRect(itemRect, kRowRadius, themeManager.getColor("selected"));
     } else if (index == hoveredItemIndex_ && item->isEnabled()) {
-        renderer.fillRect(itemRect, hoverColor_);
+        renderer.fillRoundedRect(itemRect, kRowRadius, hoverColor_);
     }
     
     // Draw item content
@@ -773,7 +782,7 @@ void NUIContextMenu::drawItem(NUIRenderer& renderer, std::shared_ptr<NUIContextM
         float shortcutX = itemRect.right() - itemPadding_ -
                           renderer.measureText(item->getShortcut(), shortcutFontSize).width;
         float shortcutY = std::round(renderer.calculateTextY(itemRect, shortcutFontSize));
-        renderer.drawText(item->getShortcut(), NUIPoint(shortcutX, shortcutY), shortcutFontSize, themeManager.getColor("textSecondary"));
+        renderer.drawText(item->getShortcut(), NUIPoint(shortcutX, shortcutY), shortcutFontSize, shortcutColor_);
     }
     
     // Draw submenu arrow using NUIIcon
@@ -805,7 +814,7 @@ void NUIContextMenu::drawSubmenuArrow(NUIRenderer& renderer, int index)
     // Use chevron right icon for submenu arrow
     auto chevronIcon = NUIIcon::createChevronRightIcon();
     chevronIcon->setIconSize(arrowSize, arrowSize);
-    chevronIcon->setColor(textColor_);
+    chevronIcon->setColor(shortcutColor_);
     chevronIcon->setPosition(arrowX, arrowY);
     chevronIcon->onRender(renderer);
 }
@@ -820,7 +829,7 @@ NUIRect NUIContextMenu::getItemRect(int index) const
     if (index < 0 || index >= getItemCount()) return NUIRect();
     
     NUIRect bounds = getBounds();
-    float y = bounds.y - scrollOffset_;
+    float y = bounds.y + kCardPad - scrollOffset_;
     
     // Calculate Y position accounting for separator heights
     for (int i = 0; i < index; ++i)
@@ -842,19 +851,20 @@ NUIRect NUIContextMenu::getItemRect(int index) const
     auto currentItem = getItem(index);
     float height = (currentItem && currentItem->getType() == NUIContextMenuItem::Type::Separator) ? 8.0f : itemHeight_;
     
-    return NUIRect(bounds.x, y, bounds.width, height);
+    return NUIRect(bounds.x + kCardPad, y, bounds.width - kCardPad * 2.0f, height);
 }
 
 float NUIContextMenu::calculateMenuHeight() const
 {
+    // The cap is for rows: the card's own padding never pushes a menu into scrolling.
     const float contentHeight = calculateContentHeight();
-    if (!scrollable_ || contentHeight <= maxHeight_) return contentHeight;
+    if (!scrollable_ || contentHeight <= maxHeight_ + kCardPad * 2.0f) return contentHeight;
 
     // Clamp to whole rows. A raw min() left the last visible item sliced in half
     // at the menu's bottom edge, which reads as clipping rather than as "there is
     // more below".
-    const float rows = std::floor(maxHeight_ / std::max(1.0f, itemHeight_));
-    return std::max(itemHeight_, rows * itemHeight_);
+    const float rows = std::floor((maxHeight_ - kCardPad * 2.0f) / std::max(1.0f, itemHeight_));
+    return std::max(itemHeight_, rows * itemHeight_) + kCardPad * 2.0f;
 }
 
 int NUIContextMenu::getItemAtPosition(const NUIPoint& position) const
@@ -864,7 +874,7 @@ int NUIContextMenu::getItemAtPosition(const NUIPoint& position) const
     NUIRect localRect(0, 0, localBounds.width, localBounds.height);
     if (!localRect.contains(position)) return -1;
     
-    float relativeY = position.y + scrollOffset_;
+    float relativeY = position.y + scrollOffset_ - kCardPad;
     float currentY = 0.0f;
     
     for (int i = 0; i < getItemCount(); ++i)
@@ -961,7 +971,7 @@ void NUIContextMenu::updateSize()
         if (!item || !item->isVisible()) continue;
         widest = std::max(widest, estimateItemWidth(item) + decorationWidthFor(item));
     }
-    setSize(std::clamp(widest + itemPadding_ * 2.0f + 8.0f, kMenuMinWidth, kMenuMaxWidth),
+    setSize(std::clamp(widest + itemPadding_ * 2.0f + 8.0f + kCardPad * 2.0f, kMenuMinWidth, kMenuMaxWidth),
             calculateMenuHeight());
     clampScrollOffset();
     needsMeasure_ = true;
@@ -1007,7 +1017,7 @@ void NUIContextMenu::measureAndFit(NUIRenderer& renderer)
         widest = std::max(widest, row + decorationWidthFor(item));
     }
 
-    const float width = std::clamp(widest + itemPadding_ * 2.0f + 8.0f, kMenuMinWidth, kMenuMaxWidth);
+    const float width = std::clamp(widest + itemPadding_ * 2.0f + 8.0f + kCardPad * 2.0f, kMenuMinWidth, kMenuMaxWidth);
     fitInsideParent(NUISize(width, calculateMenuHeight()));
 }
 
@@ -1035,7 +1045,7 @@ void NUIContextMenu::fitInsideParent(const NUISize& size)
         height = std::min(height, availableHeight);
 
         // A submenu that does not fit on the right opens on the left of its parent menu, by its real width.
-        if (flipsLeft_ && posX + width > parentBounds.right()) posX = flipLeftOf_ - width - 2.0f;
+        if (flipsLeft_ && posX + width > parentBounds.right()) posX = flipLeftOf_ - width - kSubmenuGap;
         if (posX + width > parentBounds.right()) posX = parentBounds.right() - width - 10.0f;
         if (posY + height > parentBounds.bottom()) posY = parentBounds.bottom() - height - 10.0f;
         posX = std::max(posX, parentBounds.x + 10.0f);
@@ -1062,9 +1072,9 @@ void NUIContextMenu::showSubmenu(int itemIndex)
     NUIRect itemRect = getItemRect(itemIndex);
     NUIRect myBounds = getBounds();
     
-    // Calculate position: right edge of menu + gap, same Y as the item
-    float targetX = myBounds.x + myBounds.width + 2.0f;
-    float targetY = itemRect.y;
+    // Design Spec, Menu: 4px off its parent, its first row level with the row that opened it.
+    float targetX = myBounds.x + myBounds.width + kSubmenuGap;
+    float targetY = itemRect.y - kCardPad;
 
     activeSubmenu_->exactPlacement_ = true;
     if (auto* viewportOwner = getParent()) {
@@ -1087,7 +1097,7 @@ void NUIContextMenu::showSubmenu(int itemIndex)
             submenuBounds = activeSubmenu_->getBounds();
         }
         if (targetX + submenuBounds.width > viewport.right()) {
-            targetX = myBounds.x - submenuBounds.width - 2.0f;
+            targetX = myBounds.x - submenuBounds.width - kSubmenuGap;
         }
         if (targetY + submenuBounds.height > viewport.bottom()) {
             targetY = viewport.bottom() - submenuBounds.height - 10.0f;

@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIDropdown.h"
+#include "../Graphics/NUIDepth.h"
 #include "../Graphics/NUIRenderer.h"
 #include "../../AestraCore/include/AestraProfiler.h"
 #include "NUIThemeSystem.h"
@@ -12,6 +13,10 @@ namespace AestraUI {
 // Keep one shared dropdown open at a time.
 static NUIDropdown* s_openDropdown = nullptr;
 constexpr float kDropdownGap = 6.0f;
+// Design Spec, Menu (locked): the list is the one popup card, 10px round, rows inset by 5px and rounded 6px.
+constexpr float kCardRadius = 10.0f;
+constexpr float kCardPad = 5.0f;
+constexpr float kRowRadius = 6.0f;
 
 NUIDropdown::NUIDropdown()
     : NUIComponent()
@@ -224,16 +229,15 @@ void NUIDropdown::onRender(NUIRenderer& renderer) {
     auto& themeManager = NUIThemeManager::getInstance();
     const auto& props = themeManager.getCurrentTheme();
     auto bounds = getBounds();
-    const float cornerRadius = props.radiusM;
+    // Closed, a dropdown is a Field (Design Spec): a sunk pill well with no outline. It sinks deeper while its
+    // list is open, as the preset picker does with its fold; hover lightens it one step.
+    const float cornerRadius = bounds.height * 0.5f;
     const bool hovered = isEnabled() && isHovered();
-    const NUIColor bg = hovered ? backgroundColor_.withAlpha(0.98f) : backgroundColor_.withAlpha(0.94f);
-    const NUIColor mainBorder = !isEnabled() ? borderColor_.withAlpha(0.42f)
-                                : isFocused() ? themeManager.getColor("focusRing")
-                                : hovered     ? themeManager.getColor("borderStrong")
-                                              : borderColor_;
-
-    renderer.fillRoundedRect(bounds, cornerRadius, bg);
-    renderer.strokeRoundedRect(bounds, cornerRadius, isFocused() && isEnabled() ? 1.5f : 1.0f, mainBorder);
+    Depth::bed(renderer, bounds, cornerRadius, isOpen_ ? Depth::Cut::Deep : Depth::Cut::Shallow);
+    if (hovered && !isOpen_)
+        renderer.fillRoundedRect(bounds, cornerRadius, themeManager.getColor("hover"));
+    if (isFocused() && isEnabled() && !isOpen_)
+        Depth::focusRing(renderer, bounds, cornerRadius);
 
     std::string displayText = getSelectedText();
     const float padding = props.spacingS;
@@ -276,8 +280,6 @@ void NUIDropdown::onRender(NUIRenderer& renderer) {
         arrowSpace - 4.0f,
         bounds.height - 4.0f
     };
-    renderer.fillRoundedRect(arrowWell, props.radiusS,
-                             hovered ? themeManager.getColor("controlHover") : NUIColor::transparent());
 
     // Draw chevron arrow
     float arrowSize = 6.0f;
@@ -499,26 +501,18 @@ void NUIDropdown::renderDropdownListInternal(NUIRenderer& renderer) {
         itemWidthCacheValid_ = true;
     }
 
-    renderer.drawShadow(dropdownBounds, 0.0f, 8.0f, 18.0f, NUIColor(0,0,0,0.18f));
-    renderer.fillRoundedRect(dropdownBounds, props.radiusL, backgroundColor_.withAlpha(0.985f));
-    renderer.strokeRoundedRect(dropdownBounds, props.radiusL, 1.0f, borderColor_);
+    Depth::floatingCard(renderer, dropdownBounds, kCardRadius, props.surfaceTertiary);
 
     for (int row = 0; row < displayedRows; ++row) {
         const int itemIndex = getItemIndexForVisibleRow(scrollOffset_ + row);
         if (itemIndex < 0)
             break;
-        NUIRect itemBounds(dropdownBounds.x, dropdownBounds.y + row * itemHeight_, dropdownBounds.width, itemHeight_);
+        // Rows never run edge to edge, and no lines run between them.
+        NUIRect itemBounds(dropdownBounds.x + kCardPad, dropdownBounds.y + kCardPad + row * itemHeight_,
+                           dropdownBounds.width - kCardPad * 2.0f, itemHeight_);
         bool isSelected = (itemIndex == selectedIndex_);
         bool isHovered = (itemIndex == hoveredIndex_);
         renderItem(renderer, itemIndex, itemBounds, isSelected, isHovered);
-        
-        if (row < displayedRows - 1) {
-            float dividerY = itemBounds.y + itemBounds.height;
-            float dividerPadding = props.spacingS;
-            renderer.drawLine(NUIPoint(itemBounds.x + dividerPadding, dividerY), 
-                            NUIPoint(itemBounds.x + itemBounds.width - dividerPadding, dividerY), 
-                            props.layout.dividerWidth, props.divider);
-        }
     }
 
     renderer.popTransform();
@@ -542,15 +536,11 @@ void NUIDropdown::renderDropdownList(NUIRenderer& renderer) {
 void NUIDropdown::renderItem(NUIRenderer& renderer, int index, const NUIRect& bounds, bool isSelected, bool isHovered) {
     const auto& item = items_[index];
     const auto& props = NUIThemeManager::getInstance().getCurrentTheme();
-    if (isSelected) {
-        renderer.fillRoundedRect({bounds.x + 4.0f, bounds.y + 2.0f, bounds.width - 8.0f, bounds.height - 4.0f},
-                                 props.radiusS,
-                                 selectedColor_);
-    } else if (isHovered) {
-        renderer.fillRoundedRect({bounds.x + 4.0f, bounds.y + 2.0f, bounds.width - 8.0f, bounds.height - 4.0f},
-                                 props.radiusS,
-                                 hoverColor_);
-    }
+    // The current choice lays `selected`; hover is quiet.
+    if (isSelected)
+        renderer.fillRoundedRect(bounds, kRowRadius, selectedColor_);
+    else if (isHovered)
+        renderer.fillRoundedRect(bounds, kRowRadius, hoverColor_);
 
     NUIColor curText = item.enabled ? textColor_ : props.textDisabled;
     float padding = props.spacingS;
@@ -594,8 +584,9 @@ int NUIDropdown::getItemUnderMouse(const NUIPoint& mousePos) const {
     const NUIRect dropdownBounds = getDropdownBounds();
     if (!dropdownBounds.contains(mousePos))
         return -1;
-    float localY = mousePos.y - dropdownBounds.y;
-    const int row = static_cast<int>(localY / itemHeight_);
+    // The card's padding belongs to the nearest row, so the inset never makes a dead strip.
+    const float localY = mousePos.y - dropdownBounds.y - kCardPad;
+    const int row = std::clamp(static_cast<int>(std::floor(localY / itemHeight_)), 0, getDisplayedRowCount() - 1);
     return getItemIndexForVisibleRow(scrollOffset_ + row);
 }
 
@@ -652,7 +643,7 @@ int NUIDropdown::getNextSelectableIndex(int currentIndex, int direction) const {
 
 NUIRect NUIDropdown::getDropdownBounds() const {
     const NUIRect bounds = getBounds();
-    const float listHeight = itemHeight_ * getDisplayedRowCount();
+    const float listHeight = itemHeight_ * getDisplayedRowCount() + kCardPad * 2.0f;
     float y = bounds.bottom() + kDropdownGap;
 
     const NUIComponent* root = this;
