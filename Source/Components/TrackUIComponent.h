@@ -431,6 +431,8 @@ private:
         float clipRight = 0.0f;
         float fadeInPx = 0.0f;
         float fadeOutPx = 0.0f;
+        bool inEqualPower = false;  // Smooth crossfade ramp (FD-94)
+        bool outEqualPower = false;
     };
     WaveformFade m_waveformFade{};
 
