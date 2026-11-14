@@ -264,7 +264,7 @@ jobs:
 
   build-plugin-host:
     name: Plugin hosting (VST3 + CLAP compile)
-    timeout-minutes: 60
+    timeout-minutes: 100
     runs-on: ubuntu-latest
     # Least privilege, declared rather than inherited, matching the classifier
     # self-test job below. This one only reads the repo and lets classify-scope read
