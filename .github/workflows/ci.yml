@@ -419,7 +419,8 @@ jobs:
 
   build-windows:
     name: Windows (MSVC)
-    timeout-minutes: 100
+    # 150: a cold, read-only-cache build measured 1096/1124 targets at 100 min on 2026-11-14 (FD-93). Warm is ~18 min.
+    timeout-minutes: 150
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -577,7 +578,7 @@ jobs:
     # almost the same tree as Windows (MSVC) (1,139 vs 1,116 objects) for 67-87 runner-minutes per PR. It is not
     # a required context, so skipping it on PRs blocks nothing; a break shows on the develop run of the merge.
     if: github.event_name != 'pull_request'
-    timeout-minutes: 100
+    timeout-minutes: 150
     runs-on: windows-latest
     permissions:
       contents: read
