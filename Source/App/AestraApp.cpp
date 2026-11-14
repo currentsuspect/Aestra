@@ -529,6 +529,7 @@ void AestraApp::initializeContent() {
     }
 
     wireTakesPanel();
+    wireTimelineConfirmations(); // ProjectLifecycle.cpp
 
     // Performance HUD is created eagerly: it must exist independently of the
     // lazily built settings dialogs, or F12 / View → Performance Stats are
@@ -815,32 +816,6 @@ void AestraApp::buildSettingsAndDialogs() {
 
     m_windowManager->setSettingsDialog(settingsDialog);
     m_windowManager->setConfirmationDialog(std::make_shared<ConfirmationDialog>());
-
-    // Route destructive UI confirmations (e.g. Delete Lane on a lane with
-    // clips) through the app-owned dialog, mirroring requestClose's parenting.
-    if (auto tmUI = m_content ? m_content->getTrackManagerUI() : nullptr) {
-        tmUI->setOnConfirmDialogRequest([this](const std::string& title, const std::string& message,
-                                               const std::string& confirmLabel,
-                                               std::function<void(bool)> onResult) {
-            auto dialog = m_windowManager ? m_windowManager->getConfirmationDialog() : nullptr;
-            if (!dialog || !onResult) {
-                if (onResult) {
-                    // Fail closed: a destructive action must not run without
-                    // its confirmation surface.
-                    onResult(false);
-                }
-                return;
-            }
-            if (auto* root = m_windowManager->getRootComponent()) {
-                dialog->setBounds(root->getBounds());
-                root->removeChild(dialog);
-                root->addChild(dialog);
-            }
-            dialog->showConfirm(title, message, confirmLabel, [onResult](DialogResponse response) {
-                onResult(response == DialogResponse::Confirm);
-            });
-        });
-    }
 
     auto exportDialog = std::make_shared<ExportDialog>();
     m_windowManager->setExportDialog(exportDialog);

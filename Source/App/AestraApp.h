@@ -159,6 +159,10 @@ private:
     void addOpenRecentMenu(AestraUI::NUIContextMenu& menu);
     /// The timeline's view in the project's UI state: track heights (ProjectLifecycle.cpp).
     void captureTimelineView(ProjectSerializer::UIState& state) const;
+    /// Destructive timeline actions (Delete Lane, Delete Track on rows with clips) ask through the app's dialog.
+    /// Wired at startup; the dialog itself is built on first use (it lived in the lazy builder, so until Settings or
+    /// Export had been opened such deletes ran unasked).
+    void wireTimelineConfirmations();
     void applyTimelineView(const ProjectSerializer::UIState& state);
     void requestClose();
     /// Save, or Save As when the document has no path yet. Save As shows a

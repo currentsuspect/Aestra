@@ -185,6 +185,30 @@ void AestraApp::addOpenRecentMenu(AestraUI::NUIContextMenu& menu) {
     menu.addSubmenu("Open Recent", recent);
 }
 
+// --- Timeline confirmations --------------------------------------------------
+
+void AestraApp::wireTimelineConfirmations() {
+    auto tmUI = m_content ? m_content->getTrackManagerUI() : nullptr;
+    if (!tmUI) return;
+    tmUI->setOnConfirmDialogRequest([this](const std::string& title, const std::string& message,
+                                           const std::string& confirmLabel, std::function<void(bool)> onResult) {
+        if (!onResult) return;
+        if (m_windowManager) ensureSettingsAndDialogs(); // the confirmation dialog is built with the others
+        auto dialog = m_windowManager ? m_windowManager->getConfirmationDialog() : nullptr;
+        if (!dialog) {
+            onResult(false); // fail closed: a destructive action must not run without its confirmation surface
+            return;
+        }
+        if (auto* root = m_windowManager->getRootComponent()) { // over everything, as requestClose's dialog is
+            dialog->setBounds(root->getBounds());
+            root->removeChild(dialog);
+            root->addChild(dialog);
+        }
+        dialog->showConfirm(title, message, confirmLabel,
+                            [onResult](Aestra::DialogResponse response) { onResult(response == Aestra::DialogResponse::Confirm); });
+    });
+}
+
 // --- Timeline view in the project --------------------------------------------
 
 void AestraApp::captureTimelineView(ProjectSerializer::UIState& state) const {
