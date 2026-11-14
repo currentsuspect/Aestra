@@ -80,6 +80,41 @@ private:
     bool m_executed{false};
 };
 
+class MoveMarkerCommand : public ICommand {
+public:
+    MoveMarkerCommand(TrackManager& tracks, uint64_t markerId, double newBeat)
+        : m_tracks(tracks), m_markerId(markerId), m_newBeat(newBeat) {}
+
+    void execute() override {
+        if (m_executed) return;
+        const Marker* marker = m_tracks.markers().find(m_markerId);
+        if (marker == nullptr) return;
+        m_oldBeat = marker->beat;
+        m_executed = m_tracks.markers().moveTo(m_markerId, m_newBeat);
+    }
+
+    void undo() override {
+        if (!m_executed) return;
+        m_tracks.markers().moveTo(m_markerId, m_oldBeat);
+        m_executed = false;
+    }
+
+    void redo() override {
+        if (m_executed) return;
+        m_executed = m_tracks.markers().moveTo(m_markerId, m_newBeat);
+    }
+
+    std::string getName() const override { return "Move Marker"; }
+    bool isUndoable() const override { return m_executed; }
+
+private:
+    TrackManager& m_tracks;
+    uint64_t m_markerId;
+    double m_newBeat;
+    double m_oldBeat{0.0};
+    bool m_executed{false};
+};
+
 class RenameMarkerCommand : public ICommand {
 public:
     RenameMarkerCommand(TrackManager& tracks, uint64_t markerId, std::string newName)
