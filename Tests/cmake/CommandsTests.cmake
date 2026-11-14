@@ -574,3 +574,13 @@ target_include_directories(RemoveTrackCommandTest PRIVATE
 )
 add_test(NAME RemoveTrackCommandTest COMMAND RemoveTrackCommandTest)
 set_tests_properties(RemoveTrackCommandTest PROPERTIES TIMEOUT 120 LABELS "commands;timeline;mixer;contract:application")
+
+# DuplicateTrackCommandTest — duplicate a track: own channel (settings + chain), lanes and clips, audio routed to the copy.
+add_executable(DuplicateTrackCommandTest Commands/DuplicateTrackCommandTest.cpp)
+target_link_libraries(DuplicateTrackCommandTest PRIVATE AestraAudioCore)
+target_include_directories(DuplicateTrackCommandTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME DuplicateTrackCommandTest COMMAND DuplicateTrackCommandTest)
+set_tests_properties(DuplicateTrackCommandTest PROPERTIES TIMEOUT 120 LABELS "commands;timeline;mixer;contract:application")

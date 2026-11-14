@@ -15,6 +15,7 @@
 #include "Commands/MoveTrackCommand.h"
 #include "Commands/RenameCommand.h"
 #include "Commands/RemoveTrackCommand.h"
+#include "Commands/DuplicateTrackCommand.h"
 #include "Commands/DuplicateClipCommand.h"
 #include "Commands/MoveClipCommand.h"
 #include "Commands/RemoveClipCommand.h"
@@ -911,6 +912,15 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
         menu->addSeparator();
 
         menu->addItem("Rename Track", [this, selectedTrack]() { beginTrackRename(selectedTrack); });
+        if (lane->trackId != 0)
+            menu->addItem("Duplicate Track", [this, laneId]() {
+                auto cmd = std::make_shared<DuplicateTrackCommand>(*m_trackManager, laneId);
+                m_trackManager->getCommandHistory().pushAndExecute(cmd);
+                refreshTracks();
+                invalidateCache();
+                scheduleTimelineMinimapRebuild();
+                if (cmd->newHeadLane().isValid()) revealLane(cmd->newHeadLane());
+            });
         // Reorder: the row swaps with its neighbour and the track's lanes travel with it (one undo step).
         std::vector<PlaylistLaneID> shown; // rows the timeline shows: a move steps over folded empty tracks
         for (const auto& row : m_trackUIComponents)
