@@ -14,6 +14,7 @@
 #include "Commands/DeleteLaneCommand.h"
 #include "Commands/MoveTrackCommand.h"
 #include "Commands/RenameCommand.h"
+#include "Commands/RemoveTrackCommand.h"
 #include "Commands/DuplicateClipCommand.h"
 #include "Commands/MoveClipCommand.h"
 #include "Commands/RemoveClipCommand.h"
@@ -862,6 +863,7 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
     m_activeContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
     auto menu = m_activeContextMenu;
     std::shared_ptr<AestraUI::NUIContextMenuItem> deleteLaneItem; // listed last, behind a divider (P1)
+    std::shared_ptr<AestraUI::NUIContextMenuItem> deleteTrackItem;
     uint32_t routingChannel = 0; // the track's mixer channel, for "Show in Routing Graph"
 
     TrackUIComponent* selectedTrack = target ? target : getSelectedTrackUI();
@@ -938,6 +940,9 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
         deleteLaneItem->setDestructive(true);
         deleteLaneItem->setEnabled(deletable);
         deleteLaneItem->setOnClick([this, laneId]() { deleteLane(laneId); });
+        deleteTrackItem = std::make_shared<AestraUI::NUIContextMenuItem>("Delete Track");
+        deleteTrackItem->setDestructive(true);
+        deleteTrackItem->setOnClick([this, laneId]() { deleteTrack(laneId); });
     }
 
     menu->addItem("Send Track to Audition", [onSendToAudition]() {
@@ -957,6 +962,7 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
     if (deleteLaneItem) {
         menu->addSeparator();
         menu->addItem(deleteLaneItem);
+        if (deleteTrackItem) menu->addItem(deleteTrackItem);
     }
 
     attachAndShowContextMenu(this, menu, position);
@@ -986,6 +992,28 @@ void TrackManagerUI::beginTrackRename(TrackUIComponent* row) {
         refreshTracks();
         invalidateCache();
     }, [this]() { repaint(); });
+}
+
+void TrackManagerUI::deleteTrack(PlaylistLaneID rowLane) {
+    if (!m_trackManager) return;
+    const auto executeDelete = [this, rowLane]() {
+        m_trackManager->getCommandHistory().pushAndExecute(std::make_shared<RemoveTrackCommand>(*m_trackManager, rowLane));
+        refreshTracks();
+        invalidateCache();
+        scheduleTimelineMinimapRebuild();
+    };
+    // A track that still holds clips is asked about first, as a lane is; an empty one just goes.
+    const size_t clips = RemoveTrackCommand::clipCount(*m_trackManager, rowLane);
+    if (clips > 0 && m_onConfirmDialogRequest) {
+        m_onConfirmDialogRequest("Delete Track",
+                                 "This track holds " + std::to_string(clips) + (clips == 1 ? " clip" : " clips") +
+                                     ". Deleting it removes them, its lanes and its mixer channel. This can be undone.",
+                                 "Delete Track", [executeDelete](bool confirmed) {
+                                     if (confirmed) executeDelete();
+                                 });
+        return;
+    }
+    executeDelete();
 }
 
 void TrackManagerUI::deleteLane(PlaylistLaneID laneId) {

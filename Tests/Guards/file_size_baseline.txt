@@ -11,7 +11,7 @@
 1585 AestraUI/Widgets/AestraVerbEditor.cpp
 1927 AestraUI/Widgets/PianoRollNoteLayer.cpp
 1861 AestraUI/Widgets/UnitRow.cpp
-2493 Source/App/AestraApp.cpp
+2468 Source/App/AestraApp.cpp
 3837 Source/Components/FileBrowser.cpp
 3157 Source/Components/TrackUIComponent.cpp
 4738 Source/Core/AestraContent.cpp

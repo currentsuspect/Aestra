@@ -564,3 +564,13 @@ target_include_directories(RenameCommandTest PRIVATE
 )
 add_test(NAME RenameCommandTest COMMAND RenameCommandTest)
 set_tests_properties(RenameCommandTest PROPERTIES TIMEOUT 120 LABELS "commands;timeline;mixer;contract:application")
+
+# RemoveTrackCommandTest — delete a track: lanes, track and its own channel in one undo step; a shared channel stays.
+add_executable(RemoveTrackCommandTest Commands/RemoveTrackCommandTest.cpp)
+target_link_libraries(RemoveTrackCommandTest PRIVATE AestraAudioCore)
+target_include_directories(RemoveTrackCommandTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME RemoveTrackCommandTest COMMAND RemoveTrackCommandTest)
+set_tests_properties(RemoveTrackCommandTest PROPERTIES TIMEOUT 120 LABELS "commands;timeline;mixer;contract:application")

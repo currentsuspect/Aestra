@@ -254,6 +254,8 @@ public:
     void openTrackContextMenu(const ::AestraUI::NUIPoint& position, std::function<void()> onSendToAudition,
                               TrackUIComponent* target = nullptr);
     void deleteLane(PlaylistLaneID laneId);
+    /// Delete the row's whole track (lanes, track, its own channel), asking first when it holds clips; one undo step.
+    void deleteTrack(PlaylistLaneID rowLane);
     /// Rename the track on @p row in place (header double-click, or "Rename Track" in its menu); one undo step.
     void beginTrackRename(TrackUIComponent* row);
     bool isRenamingTrack() const { return m_trackRename.active(); }
