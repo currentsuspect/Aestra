@@ -907,6 +907,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
         mjs.set("width", JSON(static_cast<double>(channel->getWidth())));
         mjs.set("trim", JSON(static_cast<double>(channel->getTrimDb())));
         mjs.set("trackColorIndex", JSON(static_cast<double>(channel->getTrackColorIndex())));
+        if (channel->frozenTrack().active()) mjs.set("frozen", JSON(channel->frozenTrack().toText()));
 
         JSON routingJson = JSON::object();
         const uint32_t mainOutputId = channel->getMainOutputId();
@@ -1926,6 +1927,8 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                     static_cast<float>(finiteNumberOr(channels[i], "trim", 0.0, -24.0, 24.0)));
                 channel->setTrackColorIndex(
                     static_cast<int>(finiteNumberOr(channels[i], "trackColorIndex", -1.0, -1.0, 1024.0)));
+                if (channels[i].has("frozen") && channels[i]["frozen"].isString())
+                    channel->frozenTrack() = FrozenTrackState::fromText(channels[i]["frozen"].asString());
 
                 if (channels[i].has("routing") && channels[i]["routing"].isObject()) {
                     const JSON& routing = channels[i]["routing"];

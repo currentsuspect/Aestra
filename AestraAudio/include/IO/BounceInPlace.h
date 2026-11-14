@@ -40,7 +40,18 @@ struct BounceInPlaceResult {
  * Blocking: call from a control/worker thread, never the audio callback.
  */
 BounceInPlaceResult bounceClipsInPlace(AudioEngine& engine, TrackManager& trackManager,
-                                       const std::vector<ClipInstanceID>& clipIds);
+                                       const std::vector<ClipInstanceID>& clipIds, bool freeze = false);
+
+/**
+ * @brief Freeze a track (V83-E11): render everything the track plays into one clip, keep the source clips muted in
+ * the project, bypass the inserts. Saved with the project, so thawTrack works after a reopen. The render runs a
+ * short tail past the last clip so a reverb or delay is not cut off. One track only, never Master; refuses, changing
+ * nothing, if the track is already frozen or has nothing to render.
+ */
+BounceInPlaceResult freezeTrack(AudioEngine& engine, TrackManager& trackManager, const PlaylistLaneID& lane);
+
+/** @brief Thaw a frozen mixer channel. False, changing nothing, when it is not frozen. */
+bool thawTrack(TrackManager& trackManager, uint32_t mixerChannelId);
 
 } // namespace Audio
 } // namespace Aestra
