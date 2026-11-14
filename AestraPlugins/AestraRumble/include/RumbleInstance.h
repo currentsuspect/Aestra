@@ -65,6 +65,10 @@ public:
     void setSound(const RumbleSound& sound);
 
     // True once the 808 range (C1 to C4) is levelled for the current sound. For tests and a busy indicator.
+    // Plays @p key once from the next block, as if it were struck at full velocity: the editor auditions a picked
+    // sound with it (SPEC-025 R6). Safe from any thread; the audio thread only reads an atomic.
+    void audition(int key) { m_auditionKey.store(key < 0 ? 0 : key > 127 ? 127 : key, std::memory_order_release); }
+
     bool levelsReady() const;
     // Waits until levelsReady() or the timeout. Never from the audio thread.
     bool waitForLevels(int timeoutMs) const;
@@ -98,6 +102,7 @@ private:
     int nextNoteToLevel(uint32_t version);
 
     std::atomic<bool> m_active{false};
+    std::atomic<int> m_auditionKey{-1}; // a key to play once at the next block, or -1
     double m_sampleRate = 48000.0;
 
     std::array<std::atomic<float>, kParameterCount> m_params;
