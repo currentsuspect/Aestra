@@ -67,7 +67,11 @@ std::string labelThatFits(const std::string& name, float chipWidth) {
     if (fits <= 2) {
         return {};
     }
-    return name.substr(0, fits - 2) + "..";
+    size_t cut = fits - 2;
+    while (cut > 0 && (static_cast<unsigned char>(name[cut]) & 0xC0) == 0x80) {
+        --cut; // an ellipsis never follows half of a multi-byte character
+    }
+    return name.substr(0, cut) + "..";
 }
 
 } // namespace

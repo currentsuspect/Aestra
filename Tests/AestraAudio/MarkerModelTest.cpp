@@ -9,6 +9,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <string>
 
 using namespace Aestra::Audio;
 
@@ -118,6 +119,49 @@ void testClearResetsIdentity() {
     check(model.add(4.0, "A") == 1, "ClearRestartsIdMinting");
 }
 
+// A name is bounded in BYTES, but a cut must land on a character boundary: half
+// of a multi-byte character is invalid UTF-8 and renders as a broken glyph.
+bool validUtf8(const std::string& s) {
+    size_t i = 0;
+    while (i < s.size()) {
+        const unsigned char c = static_cast<unsigned char>(s[i]);
+        size_t n = c < 0x80 ? 1 : (c >> 5) == 0x6 ? 2 : (c >> 4) == 0xE ? 3 : (c >> 3) == 0x1E ? 4 : 0;
+        if (n == 0 || i + n > s.size()) return false;
+        for (size_t k = 1; k < n; ++k)
+            if ((static_cast<unsigned char>(s[i + k]) & 0xC0) != 0x80) return false;
+        i += n;
+    }
+    return true;
+}
+
+void testLongUnicodeNameIsCutOnACharacterBoundary() {
+    MarkerModel model;
+    std::string name;
+    for (size_t i = 0; i < 100; ++i) name += "\xC3\xA9"; // 100 x e-acute = 200 bytes
+    const uint64_t id = model.add(0.0, name);
+    const std::string& stored = model.find(id)->name;
+    check(stored.size() <= MarkerModel::kMaxNameBytes, "UnicodeNameIsBounded");
+    check(validUtf8(stored), "UnicodeNameStaysValidUtf8");
+    check(!stored.empty(), "UnicodeNameIsNotEmptied");
+
+    // 3-byte characters: 128 is not a multiple of 3, so the cut must back up.
+    std::string three;
+    for (size_t i = 0; i < 60; ++i) three += "\xE2\x82\xAC"; // euro sign
+    model.rename(id, three);
+    check(validUtf8(model.find(id)->name) && model.find(id)->name.size() <= MarkerModel::kMaxNameBytes,
+          "ThreeByteNameStaysValidUtf8");
+}
+
+void testWhitespaceOnlyNameIsRefused() {
+    MarkerModel model;
+    const uint64_t id = model.add(0.0, "Hook");
+    check(!model.rename(id, "   \t "), "WhitespaceOnlyRenameIsRefused");
+    check(model.find(id)->name == "Hook", "WhitespaceOnlyRenameKeepsTheOldName");
+    const uint64_t blank = model.add(4.0, "   ");
+    check(!model.find(blank)->name.empty() && model.find(blank)->name.find_first_not_of(' ') != std::string::npos,
+          "WhitespaceOnlyAddGetsADefaultName");
+}
+
 } // namespace
 
 int main() {
@@ -131,6 +175,8 @@ int main() {
     testCapacityIsBounded();
     testDefaultNamesAreUsable();
     testClearResetsIdentity();
+    testLongUnicodeNameIsCutOnACharacterBoundary();
+    testWhitespaceOnlyNameIsRefused();
 
     if (g_failures) {
         std::printf("%d MarkerModel test(s) FAILED\n", g_failures);
