@@ -161,10 +161,9 @@ bool TakesPanel::getBouncePlayCenter(NUIPoint& out) const {
 
 /// Steps made since the open version was saved: the undo side of the history beyond what the version recorded.
 void TakesPanel::updateUnsaved() {
-    int done = 0, recorded = 0;
-    for (const auto& step : m_steps) if (!step.undone) ++done;
-    for (const auto& row : m_takeRows) if (row.take.active) recorded = static_cast<int>(row.take.steps.size());
-    m_unsaved = std::max(0, done - recorded);
+    // The app owns this number (VersionEdits): it is the only side that knows which steps the open version
+    // recorded and where the undo cursor stands. Counting here would be a second, disagreeing answer.
+    m_unsaved = m_unsavedProvider ? std::max(0, m_unsavedProvider()) : 0;
 }
 
 TakesPanel::Layout TakesPanel::computeLayout() const {
