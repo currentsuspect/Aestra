@@ -55,7 +55,8 @@ jobs:
     name: Linux (GCC)
     # Job timeouts (2026-10-31): GitHub's default is 6 hours, so a job hung on a dead compile cache
     # held its PR for hours. Each limit is about twice that lane's uncached time (Windows ~47 min).
-    timeout-minutes: 60
+    # Linux (GCC) and plugin hosting get 100: the first PR after a cache version bump builds cold and read-only (FD-93).
+    timeout-minutes: 100
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
