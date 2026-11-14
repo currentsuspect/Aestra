@@ -217,6 +217,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     
     # Models
     src/Models/TrackManager.cpp
+    src/Models/FrozenTrackState.cpp
     src/Models/RecordingTakeStream.cpp
     src/Models/ClipPrefilterService.cpp
     src/Models/PlaylistModel.cpp
@@ -264,6 +265,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/RenderAudioClipCommand.cpp
     src/Commands/DeleteSilenceCommand.cpp
     src/Commands/BounceInPlaceCommand.cpp
+    src/Commands/ThawTrackCommand.cpp
     src/Commands/ImportAudioClipCommand.cpp
     src/Commands/AddClipCommand.cpp
     src/Commands/AttachLaneToTrackCommand.cpp

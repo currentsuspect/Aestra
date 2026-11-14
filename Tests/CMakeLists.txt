@@ -2072,6 +2072,23 @@ set_tests_properties(GraphRenderBufferTest PROPERTIES LABELS "audio;quality;expo
 
 # V8-W5: Bounce in Place -- the track-output tap, the bounce command, refusals,
 # and that the project sounds the same before and after.
+# V83-E11: freeze a track, thaw it, including after a save and reopen.
+add_executable(FreezeTrackTest
+    AestraAudio/FreezeTrackTest.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+)
+target_link_libraries(FreezeTrackTest PRIVATE AestraAudio)
+target_include_directories(FreezeTrackTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+    ${CMAKE_SOURCE_DIR}/Tests
+)
+add_test(NAME FreezeTrackTest COMMAND FreezeTrackTest)
+set_tests_properties(FreezeTrackTest PROPERTIES LABELS "audio;clips;export;undo;contract:audio" TIMEOUT 180)
+
 add_executable(BounceInPlaceTest AestraAudio/BounceInPlaceTest.cpp)
 target_link_libraries(BounceInPlaceTest PRIVATE AestraAudio)
 target_include_directories(BounceInPlaceTest PRIVATE
