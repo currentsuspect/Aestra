@@ -1080,6 +1080,10 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                 ejs.set("pitchSemitones", JSON(static_cast<double>(persistedPitch)));
                 ejs.set("fadeIn", JSON(clip.edits.fadeInBeats));
                 ejs.set("fadeOut", JSON(clip.edits.fadeOutBeats));
+                if (clip.edits.crossfadeFrom.isValid()) { // FD-94: absent = no crossfade, so old builds and files agree
+                    ejs.set("crossfadeFrom", JSON(clip.edits.crossfadeFrom.toString()));
+                    ejs.set("crossfadeShape", JSON(static_cast<double>(clip.edits.crossfadeShape)));
+                }
                 ejs.set("sourceStart", JSON(static_cast<double>(clip.edits.sourceStart)));
                 cjs.set("edits", ejs);
 
@@ -2509,6 +2513,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                         finiteNumberOr(ej, "pitchSemitones", 0.0, -24.0, 24.0));
                                     clip.edits.fadeInBeats = finiteNumberOr(ej, "fadeIn", 0.0, 0.0, 1000000.0);
                                     clip.edits.fadeOutBeats = finiteNumberOr(ej, "fadeOut", 0.0, 0.0, 1000000.0);
+                                    if (ej.has("crossfadeFrom") && ej["crossfadeFrom"].isString()) {
+                                        clip.edits.crossfadeFrom = ClipInstanceID::fromString(ej["crossfadeFrom"].asString());
+                                        clip.edits.crossfadeShape = finiteNumberOr(ej, "crossfadeShape", 1.0, 0.0, 1.0) < 0.5
+                                                                        ? FadeShape::Linear : FadeShape::EqualPower;
+                                    }
                                     clip.edits.sourceStart = finiteNumberOr(ej, "sourceStart", 0.0, 0.0, 1.0e15);
                                 }
                                 if (isAudioClip) {
