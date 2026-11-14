@@ -348,6 +348,24 @@ void testDroppingOnAnotherMarkersBeatCancelsTheMove() {
           "both markers survive the cancelled drop");
 }
 
+// Near collision: markers a few pixels apart. The first chip is squeezed by the
+// second, but it must never vanish: an invisible, unclickable marker is lost.
+void testNearCollisionKeepsEveryMarkerVisibleAndClickable() {
+    Fixture f;
+    f.ui->setHorizontalZoom(3.0f); // one beat = 3 px, so neighbours sit 3 px apart
+    f.setPlayheadBeat(8.0);
+    const uint64_t first = f.ui->addMarkerAtPlayhead();
+    f.setPlayheadBeat(9.0);
+    const uint64_t second = f.ui->addMarkerAtPlayhead();
+
+    const AestraUI::NUIRect a = f.ui->markerChipRect(first);
+    const AestraUI::NUIRect b = f.ui->markerChipRect(second);
+    check(a.width > 0.0f, "a squeezed chip keeps a visible stub");
+    check(b.width > 0.0f, "the neighbouring chip is visible too");
+    check(f.ui->markerAtX(a.x) == first, "the squeezed marker is still hit at its own beat");
+    check(f.ui->markerAtX(b.x + 1.0f) == second, "the neighbour is hit at its own beat");
+}
+
 int main() {
     std::cout << "MarkerRulerTest: song markers on the ruler\n";
     testMAddsAMarkerAtThePlayhead();
@@ -363,6 +381,7 @@ int main() {
     testAltArrowsWalkTheMarkers();
     testAddingOnAnOccupiedBeatSelectsTheExistingMarker();
     testDroppingOnAnotherMarkersBeatCancelsTheMove();
+    testNearCollisionKeepsEveryMarkerVisibleAndClickable();
 
     if (g_failures == 0) {
         std::cout << "All marker ruler checks passed.\n";

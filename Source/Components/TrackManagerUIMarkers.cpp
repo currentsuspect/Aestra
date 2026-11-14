@@ -37,6 +37,7 @@ constexpr float kChipPadX = 6.0f;
 constexpr float kCharWidth = 6.0f;    // a 10 px label's advance, for a width both paint and hit-test compute
 constexpr float kChipGap = 4.0f;      // a chip never covers the next marker's chip
 constexpr float kLabelFontSize = 10.0f;
+constexpr float kMinChipWidth = 3.0f; // a squeezed chip stays a visible, clickable stub
 constexpr float kHitSlopX = 2.0f;     // a 10 px chip stays clickable
 constexpr float kRenameMinWidth = 120.0f;
 constexpr float kRenameMinHeight = 20.0f;
@@ -97,6 +98,10 @@ std::string labelThatFits(const std::string& name, float chipWidth) {
         const float nextX = geo.gridStartX + beatToGridOffset(std::next(it)->beat);
         width = std::min(width, nextX - kChipGap - x);
     }
+    // Near collision: when the neighbour is only a few pixels away the squeeze
+    // would take the chip to nothing, and a marker that cannot be seen or
+    // clicked is lost. Keep a stub; the neighbour's chip is drawn over its end.
+    width = std::max(width, kMinChipWidth);
     width = std::min(width, geo.gridEndX - x);
     width = std::max(0.0f, width);
 
@@ -121,13 +126,16 @@ uint64_t TrackManagerUI::markerAtX(float localX) const {
     if (localX < geo.gridStartX || localX > geo.gridEndX) {
         return 0;
     }
-    for (const auto& marker : m_trackManager->markers().markers()) {
-        const ::AestraUI::NUIRect chip = markerChipRectFor(marker);
+    // Last chip first: chips are painted in order, so where a stub and its
+    // neighbour touch, the one on top is the one the pointer is over.
+    const auto& all = m_trackManager->markers().markers();
+    for (auto it = all.rbegin(); it != all.rend(); ++it) {
+        const ::AestraUI::NUIRect chip = markerChipRectFor(*it);
         if (chip.width <= 0.0f) {
             continue;
         }
         if (localX >= chip.x - kHitSlopX && localX <= chip.right() + kHitSlopX) {
-            return marker.id;
+            return it->id;
         }
     }
     return 0;
