@@ -373,6 +373,7 @@ public:
     // M adds one at the playhead.
     /// Add a marker at the playhead and select it. Returns the new id, 0 when the model refused.
     uint64_t addMarkerAtPlayhead();
+    uint64_t markerIdAtBeat(double beat, uint64_t ignoreId) const; // 0 when no other marker sits there
     /// Put the playhead on a marker and select it. False when the id is unknown.
     bool seekToMarker(uint64_t id);
     /// Select a marker (0 clears). The selected marker is what Delete and the rename box act on.

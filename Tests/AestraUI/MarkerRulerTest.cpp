@@ -317,6 +317,37 @@ void testAltArrowsWalkTheMarkers() {
 
 } // namespace
 
+// One marker per beat. Adding where a marker already sits selects it; it must
+// not stack a second chip under the first (unclickable, squeezed to nothing).
+void testAddingOnAnOccupiedBeatSelectsTheExistingMarker() {
+    Fixture f;
+    f.setPlayheadBeat(8.0);
+    const uint64_t first = f.ui->addMarkerAtPlayhead();
+    f.ui->selectMarker(0);
+    const size_t historyBefore = f.trackManager->getCommandHistory().getHistoryMemoryUsage();
+
+    const uint64_t again = f.ui->addMarkerAtPlayhead();
+    check(again == first, "adding on an occupied beat returns the marker already there");
+    check(f.trackManager->markers().count() == 1, "no second marker is stacked on the same beat");
+    check(f.ui->selectedMarkerId() == first, "the existing marker is selected");
+    check(f.trackManager->getCommandHistory().getHistoryMemoryUsage() == historyBefore,
+          "selecting the existing marker is not an undo step");
+}
+
+// Dropping a dragged chip onto another marker's beat cancels the move.
+void testDroppingOnAnotherMarkersBeatCancelsTheMove() {
+    Fixture f;
+    f.setPlayheadBeat(4.0);
+    const uint64_t a = f.ui->addMarkerAtPlayhead();
+    f.setPlayheadBeat(12.0);
+    const uint64_t b = f.ui->addMarkerAtPlayhead();
+    f.dragChip(b, f.xForBeat(4.0));
+    const Marker* moved = f.trackManager->markers().find(b);
+    check(moved && std::abs(moved->beat - 12.0) < 1e-9, "a drop onto another marker's beat leaves the marker where it was");
+    check(f.trackManager->markers().count() == 2 && f.trackManager->markers().find(a) != nullptr,
+          "both markers survive the cancelled drop");
+}
+
 int main() {
     std::cout << "MarkerRulerTest: song markers on the ruler\n";
     testMAddsAMarkerAtThePlayhead();
@@ -330,6 +361,8 @@ int main() {
     testEmptyRulerStillScrubs();
     testChipsNeverCoverEachOther();
     testAltArrowsWalkTheMarkers();
+    testAddingOnAnOccupiedBeatSelectsTheExistingMarker();
+    testDroppingOnAnotherMarkersBeatCancelsTheMove();
 
     if (g_failures == 0) {
         std::cout << "All marker ruler checks passed.\n";

@@ -255,7 +255,9 @@ bool TrackManagerUI::handleMarkerDrag(const ::AestraUI::NUIMouseEvent& event,
         m_draggingMarkerId = 0;
         m_markerDragMoved = false;
 
-        if (moved && m_trackManager && m_trackManager->markers().find(id) != nullptr) {
+        // Dropping onto another marker's beat would stack the two; the move is cancelled.
+        if (moved && m_trackManager && m_trackManager->markers().find(id) != nullptr &&
+            markerIdAtBeat(beat, id) == 0) {
             auto command = std::make_shared<MoveMarkerCommand>(*m_trackManager, id, beat);
             m_trackManager->getCommandHistory().pushAndExecute(command);
             seekToMarker(id); // the section moved; the playhead follows it, not the old bar
@@ -301,12 +303,32 @@ void TrackManagerUI::openMarkerContextMenu(uint64_t id) {
 // Model-side actions
 // ---------------------------------------------------------------------------
 
+uint64_t TrackManagerUI::markerIdAtBeat(double beat, uint64_t ignoreId) const {
+    if (!m_trackManager) {
+        return 0;
+    }
+    for (const auto& marker : m_trackManager->markers().markers()) {
+        if (marker.id != ignoreId && std::abs(marker.beat - beat) <= MarkerModel::kBeatEpsilon) {
+            return marker.id;
+        }
+    }
+    return 0;
+}
+
 uint64_t TrackManagerUI::addMarkerAtPlayhead() {
     if (!m_trackManager) {
         return 0;
     }
     const double bpm = std::max(1.0, m_trackManager->getPlaylistModel().getBPM());
     const double beat = std::max(0.0, m_trackManager->getPosition() * bpm / 60.0);
+
+    // One marker per beat: adding where one already sits selects it instead of
+    // stacking a second chip under the first (which the ruler would squeeze to
+    // nothing and the user could never click).
+    if (const uint64_t existing = markerIdAtBeat(beat, 0); existing != 0) {
+        selectMarker(existing);
+        return existing;
+    }
     auto command = std::make_shared<AddMarkerCommand>(*m_trackManager, beat);
     m_trackManager->getCommandHistory().pushAndExecute(command);
     const uint64_t id = command->markerId();
