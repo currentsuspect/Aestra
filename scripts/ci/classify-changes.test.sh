@@ -42,6 +42,7 @@ expect() {
 # --- changes that provably cannot affect a C++ build ------------------------
 expect skip-cxx "docs only"                      "docs/technical/roadmap.md"
 expect skip-cxx "top-level prose"                "README.md" "LICENSING.md" "NOTICE"
+expect skip-cxx "agent instructions (#1380)"     "AGENTS.md"
 expect skip-cxx "docs image tree"                "docs/images/aestra_daw_interface.png"
 expect skip-cxx "extracted internal docs tree"   "AestraDocs/architecture/AUDIT_RT_Safety_2026Q2.md"
 expect skip-cxx "worker only"                    "workers/license-signing/package.json"

@@ -494,9 +494,13 @@ Workflows in `.github/workflows/`:
 | `release-changelog-reminder.yml`   | Changelog reminder at release                   |
 | `private-release.yml`              | Manual/private release flow                     |
 
-Required to merge into `develop`: `Linux (GCC)`, `Windows (MSVC)`, `macOS (Clang)`, `Linux (UI/App compile)`,
+Required to merge into `develop`: `Linux (GCC)`, `Windows (MSVC)`, `Linux (UI/App compile)`,
 `Plugin hosting (VST3 + CLAP compile)`, `ThreadSanitizer (TSan)`, `Test contract coverage`, `license-signing` and
 `Decision citation`, plus one approving review. Approvals are dismissed when the diff changes.
+
+Not on pull requests (2026-11-14): `macOS (Clang)` runs in `nightly.yml` (macOS is deferred to 2027, FD-10), and
+`Plugin hosting (Windows)` runs on pushes to `develop` and `main` only. Pull requests read the compile cache and never
+write it; only pushes and the nightly do (`.github/actions/setup-sccache`).
 
 `ci.yml` runs on every pull request, including documentation-only ones. Do not fix that with `paths-ignore`: the
 required checks above would then never report and the pull request would block forever. Skipping has to happen

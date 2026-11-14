@@ -85,6 +85,9 @@ is_cxx_irrelevant() {
         AestraDocs/*) return 0 ;;
         README.md|LICENSE|LICENSING.md|NOTICE|CHANGELOG.md|CONTRIBUTING.md) return 0 ;;
         CODE_OF_CONDUCT.md|SECURITY.md|SUPPORT.md|RELEASES.md|BUILD.md|philosophy.md) return 0 ;;
+        # Agent instructions: prose read by agents, never by a compiler. #1380 (AGENTS.md only) ran the full
+        # 83-minute matrix because this list did not name it.
+        AGENTS.md) return 0 ;;
         mkdocs.yml|Doxyfile) return 0 ;;
         # The Cloudflare worker: TypeScript, its own toolchain, its own CI lane.
         workers/*) return 0 ;;

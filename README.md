@@ -159,7 +159,7 @@ A full local configure registers 250 tests, including the security suite under
 | --- | --- |
 | Linux (GCC) | engine + tests |
 | Linux (UI/App compile) | the desktop application |
-| Windows (MSVC), macOS (Clang) | engine + tests only — these lanes configure with `AESTRA_CI=ON`, which forces `AESTRA_ENABLE_UI=OFF` |
+| Windows (MSVC), macOS (Clang, nightly) | engine + tests only — these lanes configure with `AESTRA_CI=ON`, which forces `AESTRA_ENABLE_UI=OFF` |
 | ASan/UBSan, TSan, LSan | engine + tests under sanitizers (advisory) |
 
 So the desktop app is compiled in CI on Linux only. Windows and macOS verify the engine,

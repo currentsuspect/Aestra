@@ -55,7 +55,8 @@ jobs:
     name: Linux (GCC)
     # Job timeouts (2026-10-31): GitHub's default is 6 hours, so a job hung on a dead compile cache
     # held its PR for hours. Each limit is about twice that lane's uncached time (Windows ~47 min).
-    timeout-minutes: 60
+    # Linux (GCC) and plugin hosting get 100: the first PR after a cache version bump builds cold and read-only (FD-93).
+    timeout-minutes: 100
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -264,7 +265,7 @@ jobs:
 
   build-plugin-host:
     name: Plugin hosting (VST3 + CLAP compile)
-    timeout-minutes: 60
+    timeout-minutes: 100
     runs-on: ubuntu-latest
     # Least privilege, declared rather than inherited, matching the classifier
     # self-test job below. This one only reads the repo and lets classify-scope read
@@ -418,7 +419,8 @@ jobs:
 
   build-windows:
     name: Windows (MSVC)
-    timeout-minutes: 100
+    # 150: a cold, read-only-cache build measured 1096/1124 targets at 100 min on 2026-11-14 (FD-93). Warm is ~18 min.
+    timeout-minutes: 150
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -572,7 +574,11 @@ jobs:
 
   build-plugin-host-windows:
     name: Plugin hosting (Windows)
-    timeout-minutes: 100
+    # Pushes to develop and main (and manual runs) only, never pull requests (owner, 2026-11-14). It compiles
+    # almost the same tree as Windows (MSVC) (1,139 vs 1,116 objects) for 67-87 runner-minutes per PR. It is not
+    # a required context, so skipping it on PRs blocks nothing; a break shows on the develop run of the merge.
+    if: github.event_name != 'pull_request'
+    timeout-minutes: 150
     runs-on: windows-latest
     permissions:
       contents: read
@@ -711,95 +717,6 @@ jobs:
         run: >-
           ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R
           "SecOutOfProcessPluginHost|SecPluginScanIsolation|SecPluginCacheBounds|SecPluginTrustedPath|PluginScannerSigpipeTest"
-
-  build-macos:
-    name: macOS (Clang)
-    timeout-minutes: 75
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-        with:
-          submodules: false
-
-      # --- Lane selection (#620) ---------------------------------------------
-      # This job's NAME is a required status check on develop, so it must always run
-      # and always report a conclusion. A skipped workflow reports nothing at all, and
-      # a required context that never reports hangs every PR on "Expected — Waiting
-      # for status" forever. The job therefore runs unconditionally and decides
-      # internally whether the expensive steps below are worth doing.
-      #
-      # The classifier may only skip when certain: unknown paths, oversized change
-      # sets and anything targeting main fall back to running everything.
-      # See scripts/ci/classify-changes.sh and scripts/ci/lane-runs.sh.
-      - name: Classify change scope
-        id: scope
-        uses: ./.github/actions/classify-scope
-        with:
-          lane: macos-clang
-          github-token: ${{ github.token }}
-      - name: Setup sccache
-        if: steps.scope.outputs.run == 'true'
-        uses: ./.github/actions/setup-sccache
-      - name: Install Dependencies
-        if: steps.scope.outputs.run == 'true'
-        run: |
-          brew update
-          brew install cmake pkg-config libsodium googletest
-
-      - name: Configure
-        if: steps.scope.outputs.run == 'true'
-        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON -DCMAKE_PREFIX_PATH="/opt/homebrew;/usr/local" -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
-
-      - name: Build
-        if: steps.scope.outputs.run == 'true'
-        run: cmake --build build --config ${{env.BUILD_TYPE}}
-
-      - name: Test
-        if: steps.scope.outputs.run == 'true'
-        working-directory: build
-        run: ctest --test-dir . --output-on-failure --output-junit ctest-results-macos.xml
-
-      - name: Security contract tests
-        if: steps.scope.outputs.run == 'true'
-        # Was a hand-written list of three names, repeated identically in the
-        # Linux, Windows and macOS lanes. Three copies of a literal drift
-        # independently, and the list could only ever name what someone
-        # remembered to add — it had not grown since it was written, while the
-        # security suite reached 29 cases.
-        #
-        # --no-tests=error is load-bearing: without it, a typo in the label or a
-        # renamed contract selects nothing and ctest exits 0. A security step
-        # that silently runs zero tests is worse than no step, because it
-        # reports success.
-        run: ctest --test-dir build -L '^contract:security$' --no-tests=error --output-on-failure
-
-      - name: Upload test report
-        if: always() && steps.scope.outputs.run == 'true'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: ctest-results-macos
-          path: build/ctest-results-macos.xml
-          if-no-files-found: ignore
-
-      - name: Discord Notification
-        if: always() && env.DISCORD_WEBHOOK != '' && steps.scope.outputs.run == 'true'
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-        run: |
-          STATUS="${{ job.status }}"
-          COLOR=3066993; [ "$STATUS" != "success" ] && COLOR=15158332
-          cat > discord_payload.json <<EOF
-          {
-            "username": "Aestra CI",
-            "embeds": [{
-              "title": "CI — macOS: $STATUS",
-              "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
-              "color": $COLOR,
-              "footer": {"text": "sha ${{ github.sha }}"}
-            }]
-          }
-          EOF
-          curl -s -o /dev/null -w "%{http_code}" -H "Content-Type: application/json" --data @discord_payload.json "$DISCORD_WEBHOOK"
 
   classifier-selftest:
     name: CI classifier self-test
@@ -1039,8 +956,10 @@ jobs:
       - name: Install clang-format
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-format-14
-          sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-14 100
+          # ubuntu-latest is 24.04, which has no clang-format-14: the install failed and turned every
+          # run red in 10 seconds (all 28 CI runs of 2026-11-13). 18 is the version 24.04 ships.
+          sudo apt-get install -y clang-format-18
+          sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-18 100
 
       - name: Check Formatting
         run: |
@@ -1072,7 +991,7 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-tidy-14 clang-format-14 libsodium-dev libsecret-1-dev
+          sudo apt-get install -y clang-tidy-18 clang-format-18 libsodium-dev libsecret-1-dev
 
       - name: Configure
         if: steps.scope.outputs.run == 'true'
@@ -1081,7 +1000,7 @@ jobs:
       - name: Run clang-tidy
         if: steps.scope.outputs.run == 'true'
         run: |
-          clang-tidy-14 --config-file=.clang-tidy \
+          clang-tidy-18 --config-file=.clang-tidy \
             AestraCore/src/*.cpp \
             -- -IAestraCore/include -std=c++17 2>&1 | head -100 || true
         continue-on-error: true
