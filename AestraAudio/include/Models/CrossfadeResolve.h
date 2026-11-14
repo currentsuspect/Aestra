@@ -24,6 +24,8 @@ struct ResolvedFades {
     double fadeOutBeats = 0.0;
     FadeShape fadeInShape = FadeShape::Linear;
     FadeShape fadeOutShape = FadeShape::Linear;
+    bool fadeInIsCrossfade = false;  ///< the fade-in is the crossfade's, not the clip's own (it has no grip of its own)
+    bool fadeOutIsCrossfade = false; ///< same for the fade-out
 };
 
 /** @brief The overlap of two clips in beats, 0 when they only touch or do not meet. */
@@ -48,6 +50,7 @@ inline ResolvedFades resolveClipFades(const std::vector<ClipInstance>& laneClips
                 if (overlap > 0.0) {
                     out.fadeInBeats = overlap;
                     out.fadeInShape = clip.edits.crossfadeShape;
+                    out.fadeInIsCrossfade = true;
                 }
                 break;
             }
@@ -60,6 +63,7 @@ inline ResolvedFades resolveClipFades(const std::vector<ClipInstance>& laneClips
             if (overlap > 0.0) {
                 out.fadeOutBeats = overlap;
                 out.fadeOutShape = other.edits.crossfadeShape;
+                out.fadeOutIsCrossfade = true;
             }
             break;
         }

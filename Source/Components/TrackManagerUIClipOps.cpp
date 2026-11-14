@@ -19,6 +19,7 @@
 #include "Commands/DuplicateClipCommand.h"
 #include "Commands/MacroCommand.h"
 #include "Commands/MoveClipCommand.h"
+#include "Commands/CrossfadeAuto.h"
 #include "Commands/RemoveClipCommand.h"
 #include "Commands/SetClipEditsCommand.h"
 #include "Commands/SplitClipCommand.h"
@@ -376,6 +377,12 @@ void TrackManagerUI::finishInstantClipDrag() {
         }
         moved = !macro->empty();
         if (moved) {
+            // Landing a clip on another crossfades them, in the same undo step as the move (FD-94).
+            std::vector<ClipInstanceID> landed;
+            for (const auto& e : m_groupDrag)
+                landed.push_back(e.id);
+            for (auto& cmd : autoCrossfadeCommands(playlist, m_trackManager->getPatternManager(), landed))
+                macro->addCommand(cmd);
             m_trackManager->getCommandHistory().pushAndExecute(macro);
         }
         m_groupDrag.clear();
@@ -391,7 +398,17 @@ void TrackManagerUI::finishInstantClipDrag() {
         if (moved) {
             auto cmd = std::make_shared<MoveClipCommand>(playlist, m_draggedClipId, m_clipOriginalStartTime,
                                                          m_clipOriginalLaneId, finalStartBeat, finalLaneId);
-            m_trackManager->getCommandHistory().pushAndExecute(cmd);
+            // Landing a clip on another crossfades them, in the same undo step as the move (FD-94).
+            const auto crossfades = autoCrossfadeCommands(playlist, m_trackManager->getPatternManager(), {m_draggedClipId});
+            if (crossfades.empty()) {
+                m_trackManager->getCommandHistory().pushAndExecute(cmd);
+            } else {
+                auto macro = std::make_shared<Aestra::Audio::MacroCommand>("Move Clip");
+                macro->addCommand(cmd);
+                for (const auto& c : crossfades)
+                    macro->addCommand(c);
+                m_trackManager->getCommandHistory().pushAndExecute(macro);
+            }
         }
     }
 

@@ -15,6 +15,8 @@
 #include "../../Source/Core/ProjectSerializer.h"
 #include "../Support/TestTempDirectory.h"
 #include "Commands/CommandHistory.h"
+#include "Commands/MacroCommand.h"
+#include "Commands/CrossfadeAuto.h"
 #include "Commands/CrossfadeCommands.h"
 #include "IO/AudioExporter.h"
 #include "Models/CrossfadeResolve.h"
@@ -259,6 +261,50 @@ int main() {
         check(ProjectSerializer::load(without, plain).ok, "reopened the file with none");
         const ClipInstance* laterPlain = plain->getPlaylistModel().getClip(s.b);
         check(laterPlain && !laterPlain->edits.crossfadeFrom.isValid(), "it has none: old projects play as they did");
+    }
+
+    std::cout << "[6] landing a clip on another crossfades them: the auto rule\n";
+    {
+        Session s;
+        auto& pm = s.tm->getPlaylistModel();
+        // The session starts with B overlapping A and nothing linked, like a project saved before crossfades.
+        check(!pm.getClip(s.b)->edits.crossfadeFrom.isValid(), "an old overlap is not linked on its own");
+        auto cmds = autoCrossfadeCommands(pm, s.tm->getPatternManager(), {s.b});
+        check(cmds.size() == 1, "moving B (it overlaps A) gives one crossfade");
+        // One undo step together with the move.
+        auto macro = std::make_shared<MacroCommand>("Move Clip");
+        for (auto& c : cmds)
+            macro->addCommand(c);
+        s.tm->getCommandHistory().pushAndExecute(macro);
+        check(pm.getClip(s.b)->edits.crossfadeFrom == s.a, "the later clip now crossfades from the earlier one");
+        s.tm->getCommandHistory().undo();
+        check(!pm.getClip(s.b)->edits.crossfadeFrom.isValid() && !s.tm->getCommandHistory().canUndo(),
+              "one undo took the whole thing back");
+        s.tm->getCommandHistory().redo();
+
+        check(autoCrossfadeCommands(pm, s.tm->getPatternManager(), {s.b}).empty() &&
+                  autoCrossfadeCommands(pm, s.tm->getPatternManager(), {s.a}).empty(),
+              "already crossfaded: nothing more is added, from either clip");
+
+        // Moving B so it no longer overlaps: nothing to do.
+        for (auto& c : pm.getLane(s.lane)->clips)
+            if (c.id == s.b)
+                c.startBeat = 6.0;
+        check(autoCrossfadeCommands(pm, s.tm->getPatternManager(), {s.b}).empty(), "no overlap: nothing");
+
+        // A third clip landing on A's other side: A already feeds B, so it is left alone.
+        for (auto& c : pm.getLane(s.lane)->clips)
+            if (c.id == s.b)
+                c.startBeat = 3.0;
+        const ClipInstanceID third = pm.addClipFromPattern(s.lane, pm.getClip(s.a)->patternId, 0.5, 1.0); // overlaps A only
+        check(third.isValid() && autoCrossfadeCommands(pm, s.tm->getPatternManager(), {third}).empty(),
+              "a clip that would be a second crossfade on a clip already in one is left plain");
+        pm.removeClip(third);
+
+        // Only clips the gesture touched are considered: an untouched old overlap stays plain.
+        Session old;
+        check(autoCrossfadeCommands(old.tm->getPlaylistModel(), old.tm->getPatternManager(), {}).empty(),
+              "nothing touched: old overlaps are never crossfaded behind your back");
     }
 
     std::cout << (g_failures ? "FAILED\n" : "All crossfade tests passed.\n");
