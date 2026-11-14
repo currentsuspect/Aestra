@@ -1117,6 +1117,15 @@ bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
             return true;
         }
 
+        // Esc mid-drag cancels the marker's move: the chip goes back and nothing is committed.
+        if (event.keyCode == AestraUI::NUIKeyCode::Escape && m_isDraggingMarker) {
+            m_isDraggingMarker = false;
+            m_draggingMarkerId = 0;
+            m_markerDragMoved = false;
+            invalidateCache();
+            return true;
+        }
+
         // Esc is the selection exit, and that includes the ruler zone (SPEC 3 §1.2).
         if (event.keyCode == AestraUI::NUIKeyCode::Escape &&
             (m_selectedClipId.isValid() || !m_selectedTracks.empty() || !m_clipSelection.empty() ||

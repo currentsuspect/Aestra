@@ -366,6 +366,60 @@ void testNearCollisionKeepsEveryMarkerVisibleAndClickable() {
     check(f.ui->markerAtX(b.x + 1.0f) == second, "the neighbour is hit at its own beat");
 }
 
+// A drag follows the snap setting the rest of the timeline uses.
+void testDragSnapsToTheGridAndFreeWhenSnapIsOff() {
+    Fixture f;
+    f.setPlayheadBeat(0.0);
+    const uint64_t id = f.ui->addMarkerAtPlayhead();
+
+    f.ui->setSnapSetting(AestraUI::SnapGrid::Bar);
+    f.dragChip(id, f.xForBeat(5.2));
+    const Marker* snapped = f.trackManager->markers().find(id);
+    check(snapped && std::abs(snapped->beat - 4.0) < 1e-6, "snap on: a drop at beat 5.2 lands on the bar line (4)");
+
+    f.ui->setSnapSetting(AestraUI::SnapGrid::None);
+    f.dragChip(id, f.xForBeat(9.25));
+    const Marker* free = f.trackManager->markers().find(id);
+    check(free && std::abs(free->beat - 9.25) < 1e-3, "snap off: the marker lands exactly where it was dropped");
+}
+
+// The grid is scrolled: pixels are not beats. The drop must land on the beat under the pointer.
+void testDragWhileScrolledLandsOnTheBeatUnderThePointer() {
+    Fixture f;
+    f.ui->setSnapSetting(AestraUI::SnapGrid::Bar);
+    f.ui->setHorizontalScroll(600.0f);
+    f.setPlayheadBeat(12.0);
+    const uint64_t id = f.ui->addMarkerAtPlayhead();
+    f.dragChip(id, f.xForBeat(20.0));
+    const Marker* moved = f.trackManager->markers().find(id);
+    check(moved && std::abs(moved->beat - 20.0) < 1e-6, "scrolled and zoomed grid: the drop lands on beat 20");
+}
+
+// Dragging past the left edge of the grid clamps at the start; a marker never goes negative.
+void testDragLeftOfTheGridClampsAtTheStart() {
+    Fixture f;
+    f.setPlayheadBeat(8.0);
+    const uint64_t id = f.ui->addMarkerAtPlayhead();
+    f.dragChip(id, -200.0f);
+    const Marker* moved = f.trackManager->markers().find(id);
+    check(moved && moved->beat >= 0.0 && moved->beat < 1e-6, "a drop left of the grid lands at beat 0, never negative");
+}
+
+// Esc mid-drag cancels the move: the marker stays and no undo step is made.
+void testEscMidDragCancelsTheMove() {
+    Fixture f;
+    f.setPlayheadBeat(4.0);
+    const uint64_t id = f.ui->addMarkerAtPlayhead();
+    const AestraUI::NUIRect chip = f.ui->markerChipRect(id);
+    const float y = f.windowY(kTimelineRulerTop + 10.0f);
+    f.ui->onMouseEvent(mouse(AestraUI::NUIMouseEventType::Down, AestraUI::NUIMouseButton::Left, f.windowX(chip.x + 2.0f), y));
+    f.ui->onMouseEvent(mouse(AestraUI::NUIMouseEventType::Move, AestraUI::NUIMouseButton::Left, f.windowX(f.xForBeat(12.0)), y));
+    f.ui->onKeyEvent(key(AestraUI::NUIKeyCode::Escape));
+    f.ui->onMouseEvent(mouse(AestraUI::NUIMouseEventType::Up, AestraUI::NUIMouseButton::Left, f.windowX(f.xForBeat(12.0)), y));
+    const Marker* marker = f.trackManager->markers().find(id);
+    check(marker && std::abs(marker->beat - 4.0) < 1e-6, "Esc during a drag leaves the marker where it was");
+}
+
 int main() {
     std::cout << "MarkerRulerTest: song markers on the ruler\n";
     testMAddsAMarkerAtThePlayhead();
@@ -382,6 +436,10 @@ int main() {
     testAddingOnAnOccupiedBeatSelectsTheExistingMarker();
     testDroppingOnAnotherMarkersBeatCancelsTheMove();
     testNearCollisionKeepsEveryMarkerVisibleAndClickable();
+    testDragSnapsToTheGridAndFreeWhenSnapIsOff();
+    testDragWhileScrolledLandsOnTheBeatUnderThePointer();
+    testDragLeftOfTheGridClampsAtTheStart();
+    testEscMidDragCancelsTheMove();
 
     if (g_failures == 0) {
         std::cout << "All marker ruler checks passed.\n";
