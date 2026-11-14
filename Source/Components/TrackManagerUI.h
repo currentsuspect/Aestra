@@ -40,6 +40,7 @@
 
 namespace AestraUI {
 class NUIPlatformBridge;
+class NUITextInput;
 }
 
 namespace Aestra {
@@ -365,6 +366,27 @@ public:
     double getLoopStartBeat() const { return m_loopStartBeat; }
     double getLoopEndBeat() const { return m_loopEndBeat; }
 
+    // === Song markers (v0.8.3 essentials: markers and song sections) ===
+    // The model, its undo steps and the project-file section landed in slice 1
+    // (#1337). This is the ruler: a marker is a chip on the ruler with its name on
+    // it, a click jumps the playhead to it, a drag moves it (one undo step), and
+    // M adds one at the playhead.
+    /// Add a marker at the playhead and select it. Returns the new id, 0 when the model refused.
+    uint64_t addMarkerAtPlayhead();
+    /// Put the playhead on a marker and select it. False when the id is unknown.
+    bool seekToMarker(uint64_t id);
+    /// Select a marker (0 clears). The selected marker is what Delete and the rename box act on.
+    void selectMarker(uint64_t id);
+    uint64_t selectedMarkerId() const { return m_selectedMarkerId; }
+    /// The marker's chip in component-local coordinates; empty when the marker is not drawn.
+    ::AestraUI::NUIRect markerChipRect(uint64_t id) const;
+    /// The marker whose chip covers `localX` in the ruler row, or 0. Pure hit-test.
+    uint64_t markerAtX(float localX) const;
+    /// The inline rename box over the chip. Commit is one undoable step.
+    void beginMarkerRename(uint64_t id);
+    void finishMarkerRename(bool commit);
+    bool isRenamingMarker() const { return static_cast<bool>(m_markerRenameInput); }
+
     bool onMouseEvent(const ::AestraUI::NUIMouseEvent& event) override;
     bool onKeyEvent(const ::AestraUI::NUIKeyEvent& event) override;
 
@@ -653,6 +675,16 @@ private:
     bool m_hoveringLoopEnd = false;
     double m_loopDragStartBeat = 0.0; // Original beat position when drag started
 
+    // === SONG MARKERS (ruler chips; TrackManagerUIMarkers.cpp) ===
+    uint64_t m_selectedMarkerId = 0;
+    bool m_isDraggingMarker = false;
+    uint64_t m_draggingMarkerId = 0;
+    bool m_markerDragMoved = false;
+    double m_markerDragPreviewBeat = 0.0; // where the dragged chip is drawn and dropped
+    std::shared_ptr<::AestraUI::NUITextInput> m_markerRenameInput; // inline box over the chip
+    std::shared_ptr<::AestraUI::NUITextInput> m_retiredMarkerInput; // outlives a commit: focus may still be read
+    uint64_t m_markerRenameId = 0;
+
     // === SELECTION BOX (left- or right-drag with the Multi-Select tool) ===
     // Widget-independent drag state machine (TimelineMarquee.h, #847): it owns
     // the sequencing rules (ownership until matching-button release, pure
@@ -884,6 +916,19 @@ private:
     /// ruler always scrubs, so a menu there could never open. Adds the item when a ruler selection exists.
     void addSendSelectionToAudition(::AestraUI::NUIContextMenu& menu);
     bool handleLoopMarkerDrag(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
+    // === Song markers: the ruler's chip layer (TrackManagerUIMarkers.cpp) ===
+    void renderSongMarkers(::AestraUI::NUIRenderer& renderer, const ::AestraUI::NUIRect& rulerBounds);
+    void renderMarkerRenameBox(::AestraUI::NUIRenderer& renderer);
+    ::AestraUI::NUIRect markerChipRectFor(const Marker& marker) const;
+    /// The chip in window coordinates, which is what a renderer and a popup
+    /// anchor need. markerChipRect() stays component-local for hit-testing.
+    ::AestraUI::NUIRect markerChipWindowRect(const Marker& marker) const;
+    bool handleMarkerPress(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos,
+                           bool isInRuler);
+    bool handleMarkerDrag(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
+    void openMarkerContextMenu(uint64_t id);
+    void deleteMarker(uint64_t id);
+    void jumpToAdjacentMarker(int direction);
     bool handlePlayheadDrag(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
     bool handleSplitToolClick(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
     // Rows are contiguous (m_trackSpacing == 0), but the seam handler stays:
