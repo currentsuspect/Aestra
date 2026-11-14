@@ -1702,11 +1702,7 @@ bool PianoRollNoteLayer::onKeyEvent(const NUIKeyEvent& event) {
             for (auto n : s_noteClipboard) {
                 n.startBeat += offset;
                 n.selected = true;
-                n.isDeleted = false;
-                // Pasted notes belong to the unit being edited, not the unit they were copied from:
-                // that unit may be a different one, or deleted since (the notes would then play
-                // nothing and be dropped on close). Same rule as a note drawn by hand.
-                n.unitId = defaultUnitId_;
+                n.isDeleted = false; n.unitId = defaultUnitId_; // the unit being edited, not the copied-from one
                 notes_.push_back(n);
             }
             commitNotes();
