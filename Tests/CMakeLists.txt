@@ -2072,6 +2072,23 @@ set_tests_properties(GraphRenderBufferTest PROPERTIES LABELS "audio;quality;expo
 
 # V8-W5: Bounce in Place -- the track-output tap, the bounce command, refusals,
 # and that the project sounds the same before and after.
+# V83-E10 (FD-94): overlapping audio clips crossfade; link, shape, undo, save and reopen.
+add_executable(CrossfadeTest
+    AestraAudio/CrossfadeTest.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+)
+target_link_libraries(CrossfadeTest PRIVATE AestraAudio)
+target_include_directories(CrossfadeTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+    ${CMAKE_SOURCE_DIR}/Tests
+)
+add_test(NAME CrossfadeTest COMMAND CrossfadeTest)
+set_tests_properties(CrossfadeTest PROPERTIES LABELS "audio;clips;export;undo;contract:audio" TIMEOUT 180)
+
 # V83-E11: freeze a track, thaw it, including after a save and reopen.
 add_executable(FreezeTrackTest
     AestraAudio/FreezeTrackTest.cpp

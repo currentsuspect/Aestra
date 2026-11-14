@@ -56,6 +56,10 @@ struct PlaylistLaneID : public AestraUUID {
     bool isValid() const { return low != 0 || high != 0; }
 };
 
+/** The shape of a fade ramp. EqualPower keeps loudness steady across a crossfade between different recordings;
+ *  Linear (equal gain) suits two cuts of the same recording. */
+enum class FadeShape : uint8_t { Linear = 0, EqualPower = 1 };
+
 /**
  * @brief Clip edits (user modifications to clip content)
  */
@@ -76,6 +80,13 @@ struct ClipEdits {
      *  up plays faster/shorter like any varispeed (#746). */
     float pitchSemitones = 0.0f;
     double sourceStart = 0.0;
+
+    /** Crossfade (V83-E10, FD-94). When valid, this clip crossfades from the EARLIER clip with that id on the same
+     *  lane across their overlap: this clip's fade-in and that clip's fade-out both become the overlap, in
+     *  crossfadeShape. Stored on the later clip; the length is never stored, so it follows the overlap as clips
+     *  move. Invalid = no crossfade, and old projects (which have none) play exactly as they did. */
+    ClipInstanceID crossfadeFrom;
+    FadeShape crossfadeShape = FadeShape::EqualPower;
 
     /** Musical varispeed control used by the Audio Clip Editor. Pitch and
      *  duration move together because playbackRate is the render authority;
@@ -127,7 +138,8 @@ struct ClipEdits {
         return fadeInBeats == other.fadeInBeats && fadeOutBeats == other.fadeOutBeats &&
                gainLinear == other.gainLinear && pan == other.pan && muted == other.muted &&
                playbackRate == other.playbackRate && pitchSemitones == other.pitchSemitones &&
-               sourceStart == other.sourceStart;
+               sourceStart == other.sourceStart && crossfadeFrom == other.crossfadeFrom &&
+               crossfadeShape == other.crossfadeShape;
     }
     bool operator!=(const ClipEdits& other) const { return !(*this == other); }
 };
