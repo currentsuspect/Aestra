@@ -89,6 +89,9 @@ public:
         if (marker == nullptr) {
             return false;
         }
+        if (marker->name == bounded) {
+            return false; // nothing changed: not an edit, so not an undo step
+        }
         marker->name = bounded;
         return true;
     }
