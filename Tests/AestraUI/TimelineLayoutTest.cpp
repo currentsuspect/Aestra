@@ -107,15 +107,15 @@ void testRowsMatchLayoutTracks() {
 }
 
 void testRowVisibilityAgainstTheViewport() {
-    // 720 tall: the row viewport runs from y=82 (toolbar 30 + minimap 24 + ruler 28) to 720. Scrolled 400 px,
-    // row i starts at 82 - 400 + 38i. Row 9 (24..62) is entirely under the time band; row 10 (62..100)
-    // straddles the band's edge; row 27 (708..746) starts just inside the bottom; row 28 (746) starts below it.
+    // 720 tall: the row viewport runs from y=98 (toolbar 30 + minimap 24 + marker lane and ruler 44) to 720. Scrolled 400 px,
+    // row i starts at 98 - 400 + 38i. Row 9 (40..78) is entirely under the time band; row 10 (78..116)
+    // straddles the band's edge; row 26 (686..724) starts just inside the bottom; row 27 (724) starts below it.
     const auto layout = resolveTimelineLayout(1280.0f, 720.0f, kControls);
     const auto rows = arrangeTimelineRows(layout, kRowHeight, 0.0f, 30, 400.0f);
     check(!rows[9].visible, "row 9 has scrolled entirely under the time band");
     check(rows[10].visible, "row 10 straddles the band's edge and counts as visible");
-    check(rows[27].visible, "row 27 starts inside the bottom edge");
-    check(!rows[28].visible, "row 28 starts below the row viewport");
+    check(rows[26].visible, "row 26 starts inside the bottom edge");
+    check(!rows[27].visible, "row 27 starts below the row viewport");
 }
 
 void testSlotsMatchTheHandWrittenHitTests() {
@@ -134,8 +134,8 @@ void testSlotsMatchTheHandWrittenHitTests() {
         }
     }
     check(timelineRowSlotAt(layout, kRowHeight, 0.0f, 0.0f, 10.0f) == -1, "the time band is above every row");
-    check(timelineRowSlotAt(layout, kRowHeight, 0.0f, 0.0f, 82.0f) == 0, "the first pixel under the band is row 0");
-    check(timelineRowSlotAt(layout, kRowHeight, 0.0f, 0.0f, 82.0f + 38.0f * 50.0f) == 50,
+    check(timelineRowSlotAt(layout, kRowHeight, 0.0f, 0.0f, 98.0f) == 0, "the first pixel under the band is row 0");
+    check(timelineRowSlotAt(layout, kRowHeight, 0.0f, 0.0f, 98.0f + 38.0f * 50.0f) == 50,
           "below the last row the slot keeps counting (drops can target new rows)");
 }
 
@@ -146,8 +146,8 @@ void testScrollRange() {
     check(nearly(timelineRowsContentHeight(kRowHeight, 6.0f, 3), 38.0f * 3.0f + 6.0f * 2.0f),
           "no spacing after the last row");
     check(nearly(timelineRowsContentHeight(kRowHeight, 6.0f, 0), 0.0f), "no rows, no content");
-    check(nearly(timelineMaxVerticalScroll(layout, kRowHeight, 0.0f, 30), 30.0f * 38.0f - 638.0f),
-          "max scroll is the content beyond the 638 px row viewport");
+    check(nearly(timelineMaxVerticalScroll(layout, kRowHeight, 0.0f, 30), 30.0f * 38.0f - 622.0f),
+          "max scroll is the content beyond the 622 px row viewport");
     check(nearly(timelineMaxVerticalScroll(layout, kRowHeight, 0.0f, 5), 0.0f), "content that fits does not scroll");
 }
 
