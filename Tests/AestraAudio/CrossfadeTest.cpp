@@ -39,7 +39,7 @@ void check(bool cond, const std::string& what) {
     if (!cond)
         ++g_failures;
 }
-bool near(double a, double b, double tol) { return std::fabs(a - b) <= tol; }
+bool closeTo(double a, double b, double tol) { return std::fabs(a - b) <= tol; }
 
 std::vector<float> sine(double hz, float amp, uint32_t frames, uint32_t sr) {
     std::vector<float> s(static_cast<size_t>(frames) * 2);
@@ -132,16 +132,16 @@ int main() {
         lane[1].edits.crossfadeShape = FadeShape::EqualPower;
         auto later = resolveClipFades(lane, lane[1]);
         auto earlier = resolveClipFades(lane, lane[0]);
-        check(near(later.fadeInBeats, 1.0, 1e-9) && later.fadeInShape == FadeShape::EqualPower,
+        check(closeTo(later.fadeInBeats, 1.0, 1e-9) && later.fadeInShape == FadeShape::EqualPower,
               "the later clip fades in across the overlap, in the chosen shape");
-        check(near(earlier.fadeOutBeats, 1.0, 1e-9) && earlier.fadeOutShape == FadeShape::EqualPower,
+        check(closeTo(earlier.fadeOutBeats, 1.0, 1e-9) && earlier.fadeOutShape == FadeShape::EqualPower,
               "the earlier clip fades out across the same overlap");
-        check(near(earlier.fadeInBeats, 0.0, 1e-9) && near(later.fadeOutBeats, 0.0, 1e-9),
+        check(closeTo(earlier.fadeInBeats, 0.0, 1e-9) && closeTo(later.fadeOutBeats, 0.0, 1e-9),
               "the far ends keep their own fades");
 
         lane[1].startBeat = 2.5; // overlap grows to 1.5
-        check(near(resolveClipFades(lane, lane[1]).fadeInBeats, 1.5, 1e-9) &&
-                  near(resolveClipFades(lane, lane[0]).fadeOutBeats, 1.5, 1e-9),
+        check(closeTo(resolveClipFades(lane, lane[1]).fadeInBeats, 1.5, 1e-9) &&
+                  closeTo(resolveClipFades(lane, lane[0]).fadeOutBeats, 1.5, 1e-9),
               "move a clip and the crossfade follows the new overlap");
 
         lane[1].startBeat = 4.0; // only touching
@@ -156,7 +156,7 @@ int main() {
 
         lane[0].startBeat = 0.0; lane[1].startBeat = 3.0;
         lane[1].edits.fadeInBeats = 0.25f; // an own fade is replaced by the crossfade, never added to it
-        check(near(resolveClipFades(lane, lane[1]).fadeInBeats, 1.0, 1e-9), "the crossfade replaces an own fade-in");
+        check(closeTo(resolveClipFades(lane, lane[1]).fadeInBeats, 1.0, 1e-9), "the crossfade replaces an own fade-in");
     }
 
     std::cout << "[2] what you hear: Straight dips, Smooth holds, an unlinked overlap sums\n";
@@ -164,13 +164,13 @@ int main() {
         Session s;
         const auto plain = s.render();
         const double single = s.rms(plain, 0.5, 1.5); // A alone
-        check(near(single, 0.4 / std::sqrt(2.0), 0.01), "reference: one clip is its own level");
+        check(closeTo(single, 0.4 / std::sqrt(2.0), 0.01), "reference: one clip is its own level");
         const double summed = s.rms(plain, 3.25, 3.75) / single;
-        check(near(summed, std::sqrt(2.0), 0.08), "unlinked overlap sums, +3 dB (ratio " + std::to_string(summed) + ")");
+        check(closeTo(summed, std::sqrt(2.0), 0.08), "unlinked overlap sums, +3 dB (ratio " + std::to_string(summed) + ")");
 
         check(s.link(FadeShape::Linear), "link Straight");
         const double straight = s.rms(s.render(), 3.25, 3.75) / single;
-        check(near(straight, 0.736, 0.06), "Straight dips about 3 dB in the middle (ratio " + std::to_string(straight) + ")");
+        check(closeTo(straight, 0.736, 0.06), "Straight dips about 3 dB in the middle (ratio " + std::to_string(straight) + ")");
 
         std::string why;
         auto reshape = makeCrossfadeShapeCommand(s.tm->getPlaylistModel(), s.b, FadeShape::EqualPower, &why);
@@ -178,7 +178,7 @@ int main() {
         if (reshape)
             s.tm->getCommandHistory().pushAndExecute(reshape);
         const double smooth = s.rms(s.render(), 3.25, 3.75) / single;
-        check(near(smooth, 1.0, 0.06), "Smooth holds the level (ratio " + std::to_string(smooth) + ")");
+        check(closeTo(smooth, 1.0, 0.06), "Smooth holds the level (ratio " + std::to_string(smooth) + ")");
 
         const auto whole = s.render();
         check(s.rms(whole, 0.5, 2.5) / single > 0.95 && s.rms(whole, 4.5, 6.5) / single > 0.95,
