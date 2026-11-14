@@ -3921,6 +3921,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIMarkers.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
@@ -3983,6 +3984,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIMarkers.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
@@ -4045,6 +4047,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIMarkers.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
@@ -4109,6 +4112,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIMarkers.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
@@ -4172,6 +4176,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIMarkers.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
@@ -4235,6 +4240,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIMarkers.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
@@ -4300,6 +4306,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIMarkers.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
@@ -4364,6 +4371,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIMarkers.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
@@ -4426,6 +4434,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIMarkers.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
@@ -4469,6 +4478,60 @@ if(AESTRA_ENABLE_UI)
     add_test(NAME TimelineGridSelectionTest COMMAND TimelineGridSelectionTest)
     set_tests_properties(TimelineGridSelectionTest PROPERTIES
         LABELS "ui;timeline;selection;regression;contract:application")
+endif()
+
+# Song markers on the ruler (v0.8.3 essentials, slice 2): the chip layer, its
+# hit-tests, the drag as one undo step, the inline rename and the keyboard.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(MarkerRulerTest AestraUI_Core AestraUI_Platform AestraUI_OpenGL)
+    add_executable(MarkerRulerTest
+        AestraUI/MarkerRulerTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentHeader.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentMute.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentComp.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationRow.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineClipPaint.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIMarkers.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIMarkers.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIFold.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapRenderer.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineSummaryCache.cpp
+    )
+    target_link_libraries(MarkerRulerTest PRIVATE
+        AestraUI_Core AestraUI_Platform AestraUI_OpenGL AestraAudio AestraCore)
+    target_include_directories(MarkerRulerTest PRIVATE
+        ${CMAKE_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/Source/Settings
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Graphics
+        ${CMAKE_SOURCE_DIR}/AestraUI/Helpers
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME MarkerRulerTest COMMAND MarkerRulerTest)
+    set_tests_properties(MarkerRulerTest PROPERTIES
+        LABELS "ui;timeline;markers;regression;contract:application")
 endif()
 
 # Ownership contract tests (contract:ownership). Registration and the
@@ -4555,6 +4618,7 @@ if(AESTRA_ENABLE_UI)
         ClipEdgeZonesTest
         TimelineFollowPreferenceTest
         TimelineGridSelectionTest
+        MarkerRulerTest
         ModalDialogInteractionTest
         PianoRollInteractionTest
         PianoRollDuplicateTest

@@ -7,6 +7,7 @@
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include "../AestraUI/Core/NUIDragDrop.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
+#include "../AestraUI/Base/NUITextInput.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
 #include "../AestraUI/Platform/NUIPlatformBridge.h"
 #include "AudioFileValidator.h"
@@ -95,10 +96,27 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     }
 
     // Claim keyboard focus on click so keyboard routing moves off the file browser.
-    if (event.pressed &&
+    // A press inside the marker rename box is the box's: stealing focus here
+    // would blur it mid-edit (focus loss commits), so the click that places the
+    // caret would also end the rename.
+    const bool pressInMarkerRenameBox =
+        m_markerRenameInput && m_markerRenameInput->getBounds().contains(event.position);
+    if (event.pressed && !pressInMarkerRenameBox &&
         (event.button == AestraUI::NUIMouseButton::Left || event.button == AestraUI::NUIMouseButton::Right) &&
         bounds.contains(event.position)) {
         setFocused(true);
+    }
+
+    // A press anywhere but the inline box commits it, the way every other
+    // rename box in the app behaves. It runs before the press is interpreted, so
+    // the click that ends a rename is one gesture, not two.
+    if (m_markerRenameInput && event.pressed && !pressInMarkerRenameBox) {
+        finishMarkerRename(true);
+    }
+    // The box sits over the ruler, which would otherwise treat a click on it as a
+    // scrub or a marker press and never let the caret be placed.
+    if (pressInMarkerRenameBox && m_markerRenameInput->onMouseEvent(event)) {
+        return true;
     }
 
     // Update toolbar bounds before checking hover (critical!)
@@ -195,7 +213,15 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (handleTimelineWheel(event, localPos, isInRuler, isInTrackArea)) {
         return true;
     }
+    // A marker chip is a target of its own: it wins over ruler scrub, ruler
+    // selection and the loop handles, all of which sit in the same row.
+    if (handleMarkerPress(event, localPos, isInRuler)) {
+        return true;
+    }
     if (handleRulerPress(event, localPos, isInRuler)) {
+        return true;
+    }
+    if (handleMarkerDrag(event, localPos)) {
         return true;
     }
     if (handleRulerSelectionDrag(event, localPos)) {
@@ -578,6 +604,7 @@ bool TrackManagerUI::beginGridMarquee(const AestraUI::NUIMouseEvent& event) {
         clearClipSelection();
         selectClip(ClipInstanceID{});
         clearRulerSelection();
+        selectMarker(0); // clicking the grid is the marker selection's exit, like the clip selection's
     }
     const auto leftButton = static_cast<Aestra::Components::MarqueeButton>(AestraUI::NUIMouseButton::Left);
     if (!m_marquee.begin(true, leftButton, event.position.x, event.position.y, true)) {
@@ -750,6 +777,7 @@ bool TrackManagerUI::handleRulerPress(const AestraUI::NUIMouseEvent& event, cons
             // Start dragging playhead (existing behavior)
             // Don't start if we're already doing a ruler selection!
             m_isDraggingPlayhead = true;
+            selectMarker(0); // a scrub is not a marker gesture; nothing stays selected
             if (m_trackManager) {
                 m_trackManager->setUserScrubbing(true);
 
@@ -1026,6 +1054,36 @@ bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
             return true;
         }
 
+        // M: a marker at the playhead. The marker model, its undo steps and the
+        // project-file section shipped in slice 1 (#1337); until now nothing
+        // could make one.
+        if (event.keyCode == AestraUI::NUIKeyCode::M &&
+            !(event.modifiers & (AestraUI::NUIModifiers::Ctrl | AestraUI::NUIModifiers::Alt))) {
+            addMarkerAtPlayhead();
+            return true;
+        }
+
+        // Alt+Left/Right: previous / next marker, which is how a section is
+        // navigated while the transport keeps its place. Wraps at both ends.
+        if (event.modifiers & AestraUI::NUIModifiers::Alt) {
+            if (event.keyCode == AestraUI::NUIKeyCode::Left) {
+                jumpToAdjacentMarker(-1);
+                return true;
+            }
+            if (event.keyCode == AestraUI::NUIKeyCode::Right) {
+                jumpToAdjacentMarker(1);
+                return true;
+            }
+        }
+
+        // Delete on a selected marker: only when no clip owns the key, so the
+        // clip delete stays the one that fires on a normal selection.
+        if ((event.keyCode == AestraUI::NUIKeyCode::Delete || event.keyCode == AestraUI::NUIKeyCode::Backspace) &&
+            m_selectedMarkerId != 0 && !m_selectedClipId.isValid() && m_clipSelection.empty()) {
+            deleteMarker(m_selectedMarkerId);
+            return true;
+        }
+
         // Tool shortcuts
         if (event.keyCode == AestraUI::NUIKeyCode::Num1) {
             setCurrentTool(PlaylistTool::Select);
@@ -1062,11 +1120,12 @@ bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
         // Esc is the selection exit, and that includes the ruler zone (SPEC 3 §1.2).
         if (event.keyCode == AestraUI::NUIKeyCode::Escape &&
             (m_selectedClipId.isValid() || !m_selectedTracks.empty() || !m_clipSelection.empty() ||
-             m_hasRulerSelection)) {
+             m_hasRulerSelection || m_selectedMarkerId != 0)) {
             clearClipSelection();
             selectClip(ClipInstanceID{});
             clearSelection();
             clearRulerSelection();
+            selectMarker(0);
             return true;
         }
 

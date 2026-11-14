@@ -62,7 +62,10 @@ public:
             marker.id = m_nextId++;
         }
 
-        marker.name = name.empty() ? nextDefaultName() : boundedName(name);
+        marker.name = boundedName(name);
+        if (marker.name.empty()) {
+            marker.name = nextDefaultName();
+        }
         const uint64_t id = marker.id;
         insertSorted(std::move(marker));
         return id;
@@ -78,14 +81,18 @@ public:
     }
 
     bool rename(uint64_t id, const std::string& name) {
-        if (name.empty()) {
+        const std::string bounded = boundedName(name);
+        if (bounded.empty()) {
             return false; // an unnamed marker is a bug, not a state: callers keep the old name
         }
         Marker* marker = mutableFind(id);
         if (marker == nullptr) {
             return false;
         }
-        marker->name = boundedName(name);
+        if (marker->name == bounded) {
+            return false; // nothing changed: not an edit, so not an undo step
+        }
+        marker->name = bounded;
         return true;
     }
 
@@ -161,11 +168,21 @@ private:
         return it == m_markers.end() ? nullptr : &*it;
     }
 
+    /** @brief Trimmed, at most kMaxNameBytes, cut on a whole UTF-8 character. Empty when only whitespace. */
     static std::string boundedName(const std::string& name) {
-        if (name.size() <= kMaxNameBytes) {
-            return name;
+        const auto first = name.find_first_not_of(" \t\r\n");
+        if (first == std::string::npos) {
+            return {};
         }
-        return name.substr(0, kMaxNameBytes);
+        std::string out = name.substr(first, name.find_last_not_of(" \t\r\n") - first + 1);
+        if (out.size() > kMaxNameBytes) {
+            size_t cut = kMaxNameBytes;
+            while (cut > 0 && (static_cast<unsigned char>(out[cut]) & 0xC0) == 0x80) {
+                --cut; // never leave half of a multi-byte character
+            }
+            out.resize(cut);
+        }
+        return out;
     }
 
     std::string nextDefaultName() { return "Marker " + std::to_string(m_nextDefaultName++); }
