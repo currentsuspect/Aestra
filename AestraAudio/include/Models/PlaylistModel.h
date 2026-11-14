@@ -3,6 +3,7 @@
 
 #include "../AestraUUID.h"
 #include "ClipInstance.h"
+#include "CrossfadeResolve.h"
 #include "PatternManager.h"
 #include "PlaylistRuntimeSnapshot.h"
 #include "SourceManager.h"
@@ -639,15 +640,12 @@ public:
                         ? std::clamp(clip.edits.pitchSemitones, ClipEdits::kMinPitchSemitones,
                                      ClipEdits::kMaxPitchSemitones)
                         : 0.0f;
-                const double fadeInBeats =
-                    std::isfinite(clip.edits.fadeInBeats) ? std::max(0.0, static_cast<double>(clip.edits.fadeInBeats))
-                                                         : 0.0;
-                const double fadeOutBeats =
-                    std::isfinite(clip.edits.fadeOutBeats)
-                        ? std::max(0.0, static_cast<double>(clip.edits.fadeOutBeats))
-                        : 0.0;
-                clipInfo.fadeInSamples = static_cast<uint64_t>(fadeInBeats * samplesPerBeat);
-                clipInfo.fadeOutSamples = static_cast<uint64_t>(fadeOutBeats * samplesPerBeat);
+                // Own fades, with any crossfade the clip takes part in laid over them (FD-94).
+                const ResolvedFades fades = resolveClipFades(lane.clips, clip);
+                clipInfo.fadeInSamples = static_cast<uint64_t>(fades.fadeInBeats * samplesPerBeat);
+                clipInfo.fadeOutSamples = static_cast<uint64_t>(fades.fadeOutBeats * samplesPerBeat);
+                clipInfo.fadeInShape = static_cast<uint8_t>(fades.fadeInShape);
+                clipInfo.fadeOutShape = static_cast<uint8_t>(fades.fadeOutShape);
                 clipInfo.isAudioClip = true;
 
                 if (!laneAudible || clip.edits.muted) {

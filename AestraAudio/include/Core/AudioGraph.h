@@ -37,6 +37,8 @@ struct ClipRenderState {
     float pitchSemitones{0.0f};
     uint64_t fadeInSamples{0};
     uint64_t fadeOutSamples{0};
+    uint8_t fadeInShape{0};  // FadeShape: 0 linear, 1 equal power (crossfades, FD-94)
+    uint8_t fadeOutShape{0};
 };
 
 /**
