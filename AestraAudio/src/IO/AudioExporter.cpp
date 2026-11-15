@@ -317,12 +317,17 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
         bool savedMetronomeEnabled;
         bool savedAuditionEnabled;
         bool wasPlaying;
+        bool clearPatternSchedule = false; // the render scheduled the timeline (Config::scheduleTimelinePatterns)
         ~EngineStateGuard() {
             self.m_engine.trackOutputTap().disarm();
             self.m_engine.setOfflineRenderActive(false);
             // A note still releasing at the range end must not ring into whatever plays next.
             self.m_engine.resetCachedSamplerVoicesRt();
             self.m_engine.setTransportPlaying(false);
+            if (clearPatternSchedule) {
+                // Take the timeline out again so the next Play starts clean (#1397).
+                self.m_trackManager.getPatternPlaybackEngine().clearScheduledInstances();
+            }
             self.m_engine.setSampleRate(savedSampleRate);
             self.m_trackManager.setOutputSampleRate(static_cast<double>(savedSampleRate));
             self.m_engine.setGraph(AudioGraphBuilder::buildFromTrackManager(self.m_trackManager));
@@ -367,6 +372,14 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     m_engine.setGlobalSamplePos(startSample);
     // Sampler voices ringing from live playback or an earlier render would be mixed into this one.
     m_engine.resetCachedSamplerVoicesRt();
+    // Pattern clips reach their instruments through the pattern scheduler, which only Play fills (#1397): put the
+    // timeline in for the range this render covers. Not while playing: the live schedule is the one playback
+    // resumes with when the guard restores the transport.
+    if (config.scheduleTimelinePatterns && !wasPlaying) {
+        m_trackManager.getPatternPlaybackEngine().clearScheduledInstances();
+        m_trackManager.scheduleTimelineForOfflineRender(startBeat * 60.0 / bpm);
+        engineStateGuard.clearPatternSchedule = true;
+    }
     m_engine.setTransportPlaying(true);
 
     // Offline render: track/send gains render snapped to target from frame 0

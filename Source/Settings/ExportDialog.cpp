@@ -666,6 +666,7 @@ ExportDialog::ExportJobResult ExportDialog::exportThreadFn(std::string outputPat
     config.sampleRate = kSampleRates[std::clamp(selectedSampleRate, 0, 3)];
     config.numChannels = 2;
     config.tailSeconds = tailSeconds;
+    config.scheduleTimelinePatterns = true; // an export of a project that has not played must still hold its pattern clips (#1397)
 
     const auto format = stems ? Aestra::Audio::ExportFormat::Wav : formatOf(selectedBitDepth); // stems stay WAV
     switch (selectedBitDepth) {
