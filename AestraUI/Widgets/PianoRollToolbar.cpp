@@ -560,20 +560,24 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
     renderer.fillRoundedRect(NUIRect(x, std::round(y + (hRow - 10.0f) * 0.5f), 10.0f, 10.0f), 5.0f, m_unitColor);
     x += 18.0f;
     {
-        const std::string pattern = labelOf(m_appliedPatternChoices, m_appliedPatternSelection, m_patternName);
-        const float w = renderer.measureText(pattern, 13.0f).width;
-        const NUIRect r(x, y + 8.0f, w, hRow - 16.0f);
-        m_patternCrumbBtn->setBounds(r);
-        renderer.drawText(pattern, NUIPoint(x, textY(r, 13.0f)), 13.0f, text.withAlpha(m_patternCrumbBtn->isHovered() ? 1.0f : 0.96f));
-        x += w + 8.0f;
-        renderer.drawText("/", NUIPoint(x, textY(r, fs)), fs, muted);
-        x += renderer.measureText("/", fs).width + 8.0f;
-        const std::string unit = labelOf(m_appliedUnitChoices, m_appliedUnitSelection, "");
-        const float uw = std::min(renderer.measureText(unit, fs).width, 180.0f);
-        const NUIRect ur(x, y + 8.0f, uw, hRow - 16.0f);
-        m_unitCrumbBtn->setBounds(ur);
-        renderer.drawText(unit, NUIPoint(x, textY(ur, fs)), fs, m_unitCrumbBtn->isHovered() ? text : secondary);
-        x += uw + 30.0f;
+        // Each name is a chip with a chevron, so it reads as the dropdown it is (both open their list).
+        const auto crumbChip = [&](const std::string& label, float labelSize, float maxTextW, const std::shared_ptr<NUIButton>& button,
+                                   const NUIColor& ink) {
+            const float tw = std::min(renderer.measureText(label, labelSize).width, maxTextW);
+            const float w = tw + 34.0f;
+            const NUIRect r(x, std::round(y + (hRow - 26.0f) * 0.5f), w, 26.0f);
+            button->setBounds(r);
+            Depth::bed(renderer, r, Depth::Radius::pill(r.height), Depth::Cut::Shallow);
+            if (button->isHovered()) renderer.fillRoundedRect(r, Depth::Radius::pill(r.height), themeManager.getColor("hover"));
+            renderer.drawText(label, NUIPoint(r.x + 11.0f, textY(r, labelSize)), labelSize, ink);
+            const float cx = r.right() - 13.0f, cy = r.y + r.height * 0.5f;
+            renderer.drawLine({cx - 3.5f, cy - 1.5f}, {cx, cy + 2.0f}, 1.5f, muted);
+            renderer.drawLine({cx, cy + 2.0f}, {cx + 3.5f, cy - 1.5f}, 1.5f, muted);
+            x += w + 8.0f;
+        };
+        crumbChip(labelOf(m_appliedPatternChoices, m_appliedPatternSelection, m_patternName), 13.0f, 220.0f, m_patternCrumbBtn, text);
+        crumbChip(labelOf(m_appliedUnitChoices, m_appliedUnitSelection, ""), fs, 180.0f, m_unitCrumbBtn, secondary);
+        x += 22.0f;
     }
 
     // Design Spec, Segment switch (locked): a sunk pill track with 3px padding, the choice on a lit thumb (the accent

@@ -2946,6 +2946,7 @@ if(AESTRA_ENABLE_UI)
     target_link_libraries(PianoRollStrokeInteractionTest PRIVATE AestraUI_Core AestraUI_Platform)
     target_include_directories(PianoRollStrokeInteractionTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Platform
         ${CMAKE_SOURCE_DIR}/AestraUI/Common
         ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
     )
