@@ -5,7 +5,6 @@
  */
 
 // Include panel headers FIRST to define complete types before AestraContent.h forward declarations
-#include "Commands/SetProjectKeyCommand.h"
 #include "../Components/TransportModuleStyle.h"
 #include "AestraContent.h"
 #include "UnitSignalColor.h"
@@ -704,18 +703,7 @@ void AestraContent::setupTransportBar() {
     // Create transport bar (Moved to Workspace Layer and Early Init for correct Z-Order behind Sidebars)
     m_transportBar = std::make_shared<Aestra::TransportBar>();
     m_transportBar->setOnToggleView([this](Audio::ViewType view) { toggleView(view); });
-    m_transportBar->setOnTypingChange([this](bool enabled, int octave) {
-        m_musicalTyping.setEnabled(enabled);
-        m_musicalTyping.setDisplayOctave(octave);
-        m_transportBar->setMusicalTypingStatus(m_musicalTyping.isEnabled(), m_musicalTyping.displayOctave());
-    });
-    // Song key pill (FD-98): one undoable command per change. Undo/redo/Muse changes reach the pill through onUpdate.
-    m_transportBar->setOnKeyChange([this](const Audio::ProjectHarmony& next, const std::string& name) {
-        if (!m_trackManager) return;
-        m_trackManager->getCommandHistory().pushAndExecute(
-            std::make_shared<Audio::SetProjectKeyCommand>(*m_trackManager, next, name));
-    });
-
+    wireKeyModule(); // the KEY module: song key (undoable) and the typing keyboard root
     // Wire Transport to AudioEngine (timeline playback)
     m_transportBar->setOnPlay([this]() { handleTransportPlayRequest(); });
     m_transportBar->setOnPause([this]() {
@@ -1702,7 +1690,6 @@ void AestraContent::onUpdate(double dt) {
         // The tempo also changes without the field (Muse set_bpm): keep the field showing the song's tempo.
         const double bpm = m_trackManager->getPlaylistModel().getBPM();
         if (m_transportBar && std::abs(m_transportBar->getTempo() - bpm) > 0.005) m_transportBar->showTempo(static_cast<float>(bpm));
-        if (m_transportBar) m_transportBar->showKey(m_trackManager->getUnitManager().harmony()); // same for the song key
     }
 
     // PluginManager may start an initial asynchronous scan when no valid cache

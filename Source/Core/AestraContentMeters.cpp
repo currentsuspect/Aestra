@@ -25,6 +25,7 @@ void AestraContent::updateDspLoadReadout(double dt) {
 // low rate: a rescan enumerates the system's MIDI ports, which is cheap but not free.
 void AestraContent::updateFrameServices(double dt) {
     updateDspLoadReadout(dt);
+    showKeyModule(); // undo, redo and Muse change the song key behind the bar
     constexpr double kMidiPortPollSeconds = 2.0;
     m_midiPortPollSeconds += dt;
     if (m_midiPortPollSeconds >= kMidiPortPollSeconds) {
