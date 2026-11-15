@@ -185,7 +185,18 @@ private:
         return out;
     }
 
-    std::string nextDefaultName() { return "Marker " + std::to_string(m_nextDefaultName++); }
+    /// "Marker N", skipping any N already in use: the counter restarts at 1 on a load, and a second "Marker 1" in a
+    /// project that already has one would be two chips the user cannot tell apart.
+    std::string nextDefaultName() {
+        for (;;) {
+            const std::string candidate = "Marker " + std::to_string(m_nextDefaultName++);
+            const bool taken = std::any_of(m_markers.begin(), m_markers.end(),
+                                           [&candidate](const Marker& m) { return m.name == candidate; });
+            if (!taken) {
+                return candidate;
+            }
+        }
+    }
 
     void insertSorted(Marker marker) {
         const auto at = std::upper_bound(m_markers.begin(), m_markers.end(), marker,
