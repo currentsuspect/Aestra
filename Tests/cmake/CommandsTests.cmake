@@ -584,3 +584,15 @@ target_include_directories(DuplicateTrackCommandTest PRIVATE
 )
 add_test(NAME DuplicateTrackCommandTest COMMAND DuplicateTrackCommandTest)
 set_tests_properties(DuplicateTrackCommandTest PROPERTIES TIMEOUT 120 LABELS "commands;timeline;mixer;contract:application")
+
+# MuseDiscoveryTest — what an agent can learn from the surface itself (#1409):
+# host verbs (project.save) in get_schema, the connecting note, and refusals
+# that name the flags/args that would have worked.
+add_executable(MuseDiscoveryTest Commands/MuseDiscoveryTest.cpp)
+target_link_libraries(MuseDiscoveryTest PRIVATE AestraAudioCore)
+target_include_directories(MuseDiscoveryTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MuseDiscoveryTest COMMAND MuseDiscoveryTest)
+set_tests_properties(MuseDiscoveryTest PROPERTIES TIMEOUT 120 LABELS "commands;muse;contract:application")

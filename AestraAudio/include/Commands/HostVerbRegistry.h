@@ -120,6 +120,12 @@ struct HostVerbSpec {
     /** True when the verb changes persistent state a user would expect to undo or save. */
     bool mutates = false;
     std::string description;
+    /**
+     * Machine-readable error codes the handler can return beyond the registry's own
+     * argument refusals — e.g. project.save's "no_canonical_path". Published in the
+     * manifest so an agent can handle a documented refusal instead of discovering it.
+     */
+    std::vector<std::string> failureCodes;
 };
 
 using HostVerbHandler = std::function<HostVerbResult(const JSON& args)>;
