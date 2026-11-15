@@ -1005,11 +1005,8 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
     const bool incEnabled = bars < kArsenalMaxPatternBars;
 
     const auto& themeProps = theme.getCurrentTheme();
-    const float cardRadius = themeProps.radiusM;
 
     const NUIRect leftCard(bounds.x + 4.0f, bounds.y + 1.0f, std::max(272.0f, controlWidth - 10.0f), bounds.height - 2.0f);
-    renderer.fillRoundedRect(leftCard, cardRadius, theme.getColor("backgroundSecondary").withAlpha(0.92f));
-    renderer.strokeRoundedRect(leftCard, cardRadius, 1.0f, theme.getColor("borderSubtle").withAlpha(0.45f));
 
     const float compactHitArea = themeProps.layout.minimumHitArea;
     m_barsDecrementRect = NUIRect(leftCard.x + 10.0f, leftCard.y + 4.0f, compactHitArea, leftCard.height - 8.0f);
@@ -1028,7 +1025,8 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
         m_stepsIncrementRect = NUIRect(m_stepsValueRect.right() + 4.0f, leftCard.y + 4.0f, compactHitArea,
                                        leftCard.height - 8.0f);
         Aestra::drawArsenalStepper(renderer, m_stepsDecrementRect, m_stepsValueRect, m_stepsIncrementRect,
-                                   std::to_string(m_stepCount) + " steps", m_stepCount > kArsenalMinPatternSteps,
+                                   (m_stepCount % bars == 0 ? std::to_string(m_stepCount / bars) + " per bar" : std::to_string(m_stepCount) + " steps"),
+                                   m_stepCount > kArsenalMinPatternSteps,
                                    m_stepCount < kArsenalMaxPatternSteps);
     } else {
         // Clear the step hit rects: the mouse handler gates on width > 0, so

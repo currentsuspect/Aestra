@@ -63,8 +63,8 @@ inline void drawArsenalFitToggle(AestraUI::NUIRenderer& renderer, const AestraUI
                       theme.getColor("borderSubtle").withAlpha(0.6f));
 }
 
-/// A length control as plain text (FD-27: the header reads like a sentence, not a row of boxes): the value in
-/// the middle and a quiet minus and plus either side, dimmed when that way is at its limit.
+/// A length control as the locked board draws it: one sunk pill (fully rounded, no outline) with the value in the
+/// middle and a quiet minus and plus either side, dimmed when that way is at its limit.
 inline void drawArsenalStepper(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& dec, const AestraUI::NUIRect& value,
                                const AestraUI::NUIRect& inc, const std::string& text, bool decEnabled, bool incEnabled) {
     using namespace AestraUI;
@@ -72,6 +72,8 @@ inline void drawArsenalStepper(AestraUI::NUIRenderer& renderer, const AestraUI::
     const auto& tp = theme.getCurrentTheme();
     const NUIColor glyph = theme.getColor("textSecondary").withAlpha(0.85f);
     const NUIColor off = theme.getColor("textDisabled");
+    const float pillH = std::min(24.0f, dec.height), pillY = dec.y + (dec.height - pillH) * 0.5f;
+    renderer.fillRoundedRect(NUIRect(dec.x, pillY, inc.right() - dec.x, pillH), pillH * 0.5f, theme.getColor("backgroundPrimary"));
     renderer.drawTextCentered("\xE2\x88\x92", dec, tp.fontSizeS, decEnabled ? glyph : off);
     renderer.drawTextCentered(text, value, tp.fontSizeXS, theme.getColor("textPrimary").withAlpha(0.92f));
     renderer.drawTextCentered("+", inc, tp.fontSizeS, incEnabled ? glyph : off);

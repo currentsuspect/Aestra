@@ -214,13 +214,14 @@ public:
         renderer.fillRoundedRect(add, tp.radiusXS, theme.getColor("backgroundPrimary"));
         renderer.strokeRoundedRect(add, tp.radiusXS, 1.0f, theme.getColor("borderSubtle").withAlpha(0.7f));
         renderer.drawTextCentered("+", add, tp.fontSizeM, theme.getColor("textSecondary").withAlpha(0.9f));
+        // Swing as the board draws it: a small caps label and a sunk well holding the amount; dragging the zone sets it.
         const auto sw = swingRect();
-        const float ty = sw.y + (sw.height - tp.fontSizeXS) * 0.5f - 2.0f;
-        renderer.drawText("Swing", {sw.x, ty}, tp.fontSizeXS + 1.0f, theme.getColor("textSecondary").withAlpha(0.9f));
-        const std::string pct = std::to_string(swingPercent(m_swing)) + "%";
-        renderer.drawText(pct, {sw.x + renderer.measureText("Swing ", tp.fontSizeXS + 1.0f).width, ty}, tp.fontSizeXS + 1.0f, theme.getColor("textPrimary"));
-        renderer.fillRect({sw.x, sw.bottom() - 10.0f, sw.width, 1.0f}, theme.getColor("borderSubtle").withAlpha(0.7f));
-        renderer.fillRect({sw.x, sw.bottom() - 10.0f, sw.width * m_swing, 1.0f}, theme.getColor("textSecondary"));
+        const float fs = tp.fontSizeXS + 1.0f, wellH = 26.0f;
+        const float swingLabelW = renderer.measureText("SWING", tp.fontSizeMicro).width + 10.0f;
+        const AestraUI::NUIRect well{sw.x + swingLabelW, sw.y + (sw.height - wellH) * 0.5f, std::max(0.0f, sw.width - swingLabelW), wellH};
+        renderer.drawText("SWING", {sw.x, well.y + (wellH - tp.fontSizeMicro) * 0.5f - 1.0f}, tp.fontSizeMicro, theme.getColor("textMuted"));
+        renderer.fillRoundedRect(well, wellH * 0.5f, theme.getColor("backgroundPrimary"));
+        renderer.drawTextCentered(std::to_string(swingPercent(m_swing)) + " %", well, fs, theme.getColor("textPrimary"));
         const auto pl = placeRect(); // the one primary action of the header (the mock's purple button)
         renderer.fillRoundedRect(pl, tp.radiusXS, theme.getColor("accentPrimary"));
         const AestraUI::NUIColor white(1.0f, 1.0f, 1.0f, 1.0f);
