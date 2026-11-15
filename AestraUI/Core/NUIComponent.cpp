@@ -221,6 +221,7 @@ void NUIComponent::onMouseLeave() {
 void NUIComponent::setBounds(float x, float y, float width, float height) {
     if (bounds_.x != x || bounds_.y != y || 
         bounds_.width != width || bounds_.height != height) {
+        frameDirtyRegion().add(expandRect(bounds_, invalidationMargin_)); // where it was: the new bounds follow via setDirty()
         bounds_ = NUIRect(x, y, width, height);
         setDirty();
         onResize(static_cast<int>(width), static_cast<int>(height));
@@ -558,8 +559,29 @@ thread_local int t_dirtyDepth = 0; // > 0 while propagating to parents (perf pro
 thread_local double t_renderInnerMs = 0.0; // children's render time inside the current child
 } // namespace
 
+namespace {
+// The region repaint(rect) wants recorded for the setDirty() it wraps (instead of the widget's whole bounds).
+thread_local const NUIRect* t_explicitRegion = nullptr;
+} // namespace
+
+NUIDirtyRegion& NUIComponent::frameDirtyRegion() {
+    thread_local NUIDirtyRegion region;
+    return region;
+}
+
+void NUIComponent::repaint(const NUIRect& localRegion) {
+    const NUIRect window(bounds_.x + localRegion.x, bounds_.y + localRegion.y, localRegion.width, localRegion.height);
+    t_explicitRegion = &window;
+    setDirty(true);
+    t_explicitRegion = nullptr;
+}
+
 void NUIComponent::setDirty(bool dirty) {
     dirty_ = dirty;
+    if (dirty && t_dirtyDepth == 0) {
+        // Only where the invalidation starts: the parents it propagates to are not what changed.
+        frameDirtyRegion().add(t_explicitRegion ? *t_explicitRegion : expandRect(bounds_, invalidationMargin_));
+    }
     if (dirty && t_dirtyDepth == 0 && PerfProbe::enabled()) {
         PerfProbe::recordDirtyOrigin(*this, parent_);
     }
