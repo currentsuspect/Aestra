@@ -299,6 +299,10 @@ void AestraApp::registerMuseProjectVerbs(Aestra::Audio::MuseService& service) {
         copy.required = false;
         copy.description = "Save a Copy: write 'path' and keep the open project where it is.";
         spec.args.push_back(copy);
+        // The refusals a caller can act on: each one has an answer (pass a path,
+        // or a different one), so they belong in the manifest rather than in a
+        // message the agent only sees after a failed attempt.
+        spec.failureCodes = {"no_canonical_path", "save_as_required", "copy_needs_path", "save_failed"};
 
         registerOrLog(std::move(spec), [this](const JSON& args) -> HostVerbResult {
             const bool wantsPath = args.has("path") && args["path"].isString() &&
@@ -379,6 +383,8 @@ void AestraApp::registerMuseProjectVerbs(Aestra::Audio::MuseService& service) {
         path.required = true;
         path.description = "Path to an Aestra project file (.aes).";
         spec.args.push_back(path);
+
+        spec.failureCodes = {"no_such_file", "load_failed"};
 
         registerOrLog(std::move(spec), [this, &service](const JSON& args) -> HostVerbResult {
             const std::string path = args["path"].asString();
