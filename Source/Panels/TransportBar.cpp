@@ -62,11 +62,10 @@ constexpr float PANEL_BTN_H = 24.0f;
 constexpr float PANEL_GAP = 4.0f;
 constexpr float PANEL_ICON = 15.0f;
 
-constexpr float KEYS_MODULE_W = 72.0f;
-constexpr float KEYS_VALUE_SIZE = 13.0f;
 
 // Song key module (FD-98): [-] key name (+n) [+]
-constexpr float KEY_MODULE_W = 156.0f;
+constexpr float KEY_MODULE_W = 214.0f; // song key + the typing keyboard's root, one module
+constexpr float KEY_TYPING_W = 40.0f;
 constexpr float KEY_STEP_W = 22.0f;
 constexpr float KEY_VALUE_SIZE = 13.0f;
 
@@ -108,30 +107,27 @@ inline float panelsModuleWidth() {
 struct TransportLayoutTier {
     bool showRecord = true;
     bool showPanels = true;
-    bool showKeys = true;
-    bool showKey = true; ///< the song key; goes after the typing keys and the panel switches
+    bool showKey = true; ///< the key module (song key + typing keyboard root); goes after the panel switches
 };
 
 inline float tierWidth(const TransportLayoutTier& t) {
     return transportModuleWidth() + TransportInfoContainer::kPreferredWidth
          + (t.showRecord ? recordModuleWidth() : 0.0f)
          + (t.showPanels ? panelsModuleWidth() : 0.0f)
-         + (t.showKeys ? KEYS_MODULE_W : 0.0f)
          + (t.showKey ? KEY_MODULE_W : 0.0f);
 }
 
 inline TransportLayoutTier transportTierFor(float availWidth) {
     const TransportLayoutTier ladder[] = {
-        {true, true, true, true},
-        {true, true, false, true},
-        {true, false, false, true},
-        {true, false, false, false},
-        {false, false, false, false},
+        {true, true, true},
+        {true, false, true},
+        {true, false, false},
+        {false, false, false},
     };
     for (const auto& tier : ladder) {
         if (availWidth >= tierWidth(tier)) return tier;
     }
-    return ladder[4];
+    return ladder[3];
 }
 
 } // namespace
@@ -796,7 +792,7 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
 // ... (Previous code)
 
 float TransportBar::requiredWidth(bool record, bool panels, bool keys) {
-    return tierWidth(TransportLayoutTier{record, panels, keys, true});
+    return tierWidth(TransportLayoutTier{record, panels, true});
 }
 
 void TransportBar::setRightReservedWidth(float width) {
@@ -833,7 +829,6 @@ void TransportBar::layoutComponents() {
     if (tier.showKey) moduleWidths.push_back(KEY_MODULE_W);
     if (tier.showRecord) moduleWidths.push_back(recordModuleWidth());
     if (tier.showPanels) moduleWidths.push_back(panelsModuleWidth());
-    if (tier.showKeys) moduleWidths.push_back(KEYS_MODULE_W);
     const auto modules =
         arrangeLeadingRow(NUILocalRect(0.0f, 0.0f, bounds.width, bounds.height), moduleWidths, bounds.height, 0.0f,
                           0.0f, trace);
@@ -871,13 +866,14 @@ void TransportBar::layoutComponents() {
     m_showKey = tier.showKey;
     if (tier.showKey) {
         const auto& module = modules[next++];
-        m_moduleMarks.push_back({"SONG KEY", module.x, module.width});
+        m_moduleMarks.push_back({"KEY", module.x, module.width});
         const float x = module.x + TM::kPadX;
         const float w = module.width - TM::kPadX * 2.0f;
         const float y = TM::kContentTop + std::round((TM::kContentHeight - 24.0f) * 0.5f);
         m_keyMinusRect = AestraUI::NUIRect(x, y, KEY_STEP_W, 24.0f);
-        m_keyPlusRect = AestraUI::NUIRect(x + w - KEY_STEP_W, y, KEY_STEP_W, 24.0f);
-        m_keyNameRect = AestraUI::NUIRect(x + KEY_STEP_W, y, w - KEY_STEP_W * 2.0f, 24.0f);
+        m_keyNameRect = AestraUI::NUIRect(x + KEY_STEP_W, y, w - KEY_STEP_W * 2.0f - KEY_TYPING_W, 24.0f);
+        m_keyPlusRect = AestraUI::NUIRect(m_keyNameRect.right(), y, KEY_STEP_W, 24.0f);
+        m_keyTypingRect = AestraUI::NUIRect(m_keyPlusRect.right(), y, KEY_TYPING_W, 24.0f);
     }
 
     // ── Record aids ── (a missing chip takes no slot, as before)
@@ -922,13 +918,6 @@ void TransportBar::layoutComponents() {
         m_moduleMarks.push_back({"PANELS", module.x, module.width});
     }
 
-    // ── Keys ──
-    m_showKeys = tier.showKeys;
-    if (tier.showKeys) {
-        const auto& module = modules[next++];
-        m_moduleMarks.push_back({"KEYS", module.x, KEYS_MODULE_W});
-        m_keysValueRect = TM::contentRect(module.x + TM::kPadX, KEYS_MODULE_W - TM::kPadX * 2.0f, 0.0f);
-    }
     finishLayoutPass(trace);
 
     if (m_musicalTypingLabel) {
@@ -965,6 +954,11 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
         if (!moved.empty())
             renderer.drawText(moved, {nameRect.x + 4.0f + nameW + 6.0f, renderer.calculateTextY(nameRect, KEY_VALUE_SIZE)},
                               KEY_VALUE_SIZE, theme.getColor("secondary"));
+        // The typing keyboard's root (right-click this module to change it): C3, or Off.
+        const AestraUI::NUIRect typing = abs(m_keyTypingRect);
+        const std::string root = m_keysEnabled ? "C" + std::to_string(m_keysOctave) : "Off";
+        renderer.drawText(root, {typing.x + 8.0f, renderer.calculateTextY(typing, KEY_VALUE_SIZE)}, KEY_VALUE_SIZE,
+                          m_keysEnabled ? theme.getColor("secondary") : theme.getColor("textMuted"));
         const AestraUI::NUIColor stepInk = theme.getColor("textSecondary");
         const std::pair<AestraUI::NUIRect, const char*> steps[] = {{m_keyMinusRect, "-"}, {m_keyPlusRect, "+"}};
         for (const auto& [rect, glyph] : steps) {
@@ -973,14 +967,6 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
             renderer.drawText(glyph, {r.x + (r.width - gw) * 0.5f, renderer.calculateTextY(r, KEY_VALUE_SIZE + 2.0f)},
                               KEY_VALUE_SIZE + 2.0f, stepInk);
         }
-    }
-
-    if (m_showKeys) {
-        const AestraUI::NUIRect r(bounds.x + m_keysValueRect.x, bounds.y + m_keysValueRect.y,
-                                  m_keysValueRect.width, m_keysValueRect.height);
-        const std::string value = m_keysEnabled ? "C" + std::to_string(m_keysOctave) : "Off";
-        renderer.drawText(value, {r.x, renderer.calculateTextY(r, KEYS_VALUE_SIZE)}, KEYS_VALUE_SIZE,
-                          m_keysEnabled ? theme.getColor("secondary") : theme.getColor("textMuted"));
     }
 
     // The output scope and meter are siblings drawn over the reserved region;
@@ -1038,11 +1024,44 @@ void TransportBar::changeKey(const Audio::ProjectHarmony& next, const char* name
     repaint();
 }
 
+void TransportBar::openTypingMenu() {
+    using Menu = AestraUI::NUIContextMenu;
+    if (m_keyMenu)
+        if (auto* parent = m_keyMenu->getParent()) parent->removeChild(m_keyMenu);
+    m_keyMenu = std::make_shared<Menu>();
+    AestraUI::NUIComponent::hideRemoteTooltip(this); // the hover tip would sit over the first item
+    const bool on = m_keysEnabled;
+    m_keyMenu->addItem(on ? "Computer keyboard: turn off" : "Computer keyboard: turn on", [this, on]() {
+        if (m_onTypingChange) m_onTypingChange(!on, m_keysOctave);
+    });
+    m_keyMenu->addSeparator();
+    for (int octave = 6; octave >= 0; --octave) {
+        auto item = std::make_shared<AestraUI::NUIContextMenuItem>("Root C" + std::to_string(octave));
+        item->setChecked(on && octave == m_keysOctave);
+        item->setOnClick([this, octave]() {
+            if (m_onTypingChange) m_onTypingChange(true, octave);
+        });
+        m_keyMenu->addItem(item);
+    }
+    m_keyMenu->setOnHide([this]() {
+        if (m_keyMenu)
+            if (auto* parent = m_keyMenu->getParent()) parent->removeChild(m_keyMenu);
+    });
+    AestraUI::NUIComponent* root = this;
+    while (root->getParent()) root = root->getParent();
+    root->addChild(m_keyMenu);
+    m_keyMenu->setOwner(weak_from_this());
+    const AestraUI::NUIRect bounds = getBounds();
+    m_keyMenu->showAt(AestraUI::NUIPoint(bounds.x + m_keyNameRect.x, bounds.y + m_keyNameRect.bottom() + 2.0f));
+    root->repaint();
+}
+
 void TransportBar::openKeyMenu() {
     using Menu = AestraUI::NUIContextMenu;
     if (m_keyMenu)
         if (auto* parent = m_keyMenu->getParent()) parent->removeChild(m_keyMenu);
     m_keyMenu = std::make_shared<Menu>();
+    AestraUI::NUIComponent::hideRemoteTooltip(this); // the hover tip would sit over the first item
     const Audio::ProjectHarmony now = m_harmony;
     // Two ways to the same key. Move them there turns the parts that follow the key; Just call it that only renames.
     const auto keyList = [&](bool move) {
@@ -1086,6 +1105,22 @@ bool TransportBar::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         const AestraUI::NUIPoint local(event.position.x - bounds.x, event.position.y - bounds.y);
         const bool onMinus = m_keyMinusRect.contains(local), onPlus = m_keyPlusRect.contains(local),
                    onName = m_keyNameRect.contains(local);
+        const AestraUI::NUIRect moduleRect(m_keyMinusRect.x, m_keyMinusRect.y, m_keyTypingRect.right() - m_keyMinusRect.x,
+                                           m_keyMinusRect.height);
+        if (event.pressed && event.button == AestraUI::NUIMouseButton::Right && moduleRect.contains(local)) {
+            openTypingMenu();
+            return true;
+        }
+        const bool onTyping = m_keyTypingRect.contains(local);
+        if (onTyping && event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
+            openTypingMenu();
+            return true;
+        }
+        if (onTyping) {
+            if (m_platformBridge) m_platformBridge->setCursorStyle(AestraUI::NUICursorStyle::Hand);
+            AestraUI::NUIComponent::showRemoteTooltip("Computer keyboard root (right-click the key to change)", event.position, this);
+            return true;
+        }
         if (onMinus || onPlus || onName) {
             if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
                 if (onName) openKeyMenu();
