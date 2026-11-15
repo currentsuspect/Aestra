@@ -4648,6 +4648,8 @@ endif()
 
 if(AESTRA_ENABLE_UI)
     set(AESTRA_REQUIRED_UI_TESTS
+        NUIDirtyRegionTest
+        NUIComponentInvalidationTest
         NUIThemeConsistencyTest
         NUIKitThemesTest
         NUIContextMenuInteractionTest
