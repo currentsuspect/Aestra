@@ -2085,6 +2085,19 @@ target_include_directories(ExportSchedulesPatternsTest PRIVATE
 add_test(NAME ExportSchedulesPatternsTest COMMAND ExportSchedulesPatternsTest)
 set_tests_properties(ExportSchedulesPatternsTest PROPERTIES LABELS "audio;export;patterns;regression;contract:audio" TIMEOUT 180)
 
+# V83-KEY3 (FD-98): what the transport bar's key pill does (set, step, move or just rename; undo).
+add_executable(ProjectKeyCommandTest AestraAudio/ProjectKeyCommandTest.cpp)
+target_link_libraries(ProjectKeyCommandTest PRIVATE AestraAudio)
+target_include_directories(ProjectKeyCommandTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Tests
+)
+add_test(NAME ProjectKeyCommandTest COMMAND ProjectKeyCommandTest)
+set_tests_properties(ProjectKeyCommandTest PROPERTIES LABELS "audio;harmony;undo;contract:audio" TIMEOUT 120)
+
 # V83-E10 (FD-94): overlapping audio clips crossfade; link, shape, undo, save and reopen.
 add_executable(CrossfadeTest
     AestraAudio/CrossfadeTest.cpp
