@@ -289,14 +289,14 @@ void UnitRow::drawDragHandle(NUIRenderer& renderer, const NUIRect& bounds) {
     }
 }
 
-// A flat lettered key (the mock's M and S): a 1 px outline until it is on, then solid in its colour.
+// A lettered key as the board draws it: a filled surfaceTertiary key, no outline, solid in its colour when on.
 static void drawKey(NUIRenderer& renderer, const NUIRect& bounds, const char* label, bool active, bool engaged, const char* activeToken) {
     auto& theme = NUIThemeManager::getInstance();
     const NUIColor on = theme.getColor(activeToken);
     const float radius = theme.getRadius("xs");
     if (active) renderer.fillRoundedRect(bounds, radius, on);
-    else renderer.strokeRoundedRect(bounds, radius, 1.0f, theme.getColor("border").withAlpha(engaged ? 0.9f : 0.6f));
-    renderer.drawTextCentered(label, bounds, 10.0f, active ? theme.getContrastColor(on) : theme.getColor("textSecondary").withAlpha(engaged ? 1.0f : 0.7f));
+    else renderer.fillRoundedRect(bounds, radius, theme.getColor("surfaceTertiary"));
+    renderer.drawTextCentered(label, bounds, 10.0f, active ? theme.getContrastColor(on) : theme.getColor("textSecondary"));
 }
 
 void UnitRow::drawMuteIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active, bool engaged) { drawKey(renderer, bounds, "M", active, engaged, "warning"); }
@@ -351,15 +351,15 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
         if (m_mixerRouteColorIndex >= 0) dot = colorFromUnitValue(paletteIndexToARGB(m_mixerRouteColorIndex));
         renderer.fillRect(NUIRect{routeRect.x + 8.0f, routeRect.y + routeRect.height * 0.5f - 3.0f, 6.0f, 6.0f}, dot);
         std::string label = m_mixerRouteName;
-        const float room = routeRect.width - 28.0f;
+        const float room = routeRect.width - 40.0f;
         bool cut = false;
         while (label.size() > 1 && renderer.measureText(label, 10.5f).width > room) { label.pop_back(); cut = true; }
         if (cut) label += "\xE2\x80\xA6";
         renderer.drawText(label, {routeRect.x + 20.0f, routeRect.y + routeRect.height * 0.5f - 6.0f}, 10.5f, routeText);
+        for (float side : {-3.0f, 3.0f}) renderer.drawLine({routeRect.right() - 12.0f + side, routeRect.y + routeRect.height * 0.5f - 1.5f}, {routeRect.right() - 12.0f, routeRect.y + routeRect.height * 0.5f + 1.5f}, 1.4f, theme.getColor("textMuted")); // the board's trailing chevron
     }
     drawMuteIcon(renderer, muteRect, m_isMuted, engaged);
     drawSoloIcon(renderer, soloRect, m_isSolo, engaged);
-
 }
 
 void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {

@@ -409,12 +409,12 @@ void ArsenalPanel::refreshUnits() {
     }
     
     // Add "Add Unit" button
-    m_addUnitBtn = std::make_shared<NUIButton>("+ Add unit");
-    m_addUnitBtn->setStyle(NUIButton::Style::Secondary);
-    m_addUnitBtn->setBackgroundColor(theme.getColor("surfaceTertiary").withAlpha(0.88f));
-    m_addUnitBtn->setHoverColor(theme.getColor("accentPrimary").withAlpha(0.20f));
-    m_addUnitBtn->setPressedColor(theme.getColor("accentPrimary").withAlpha(0.30f));
-    m_addUnitBtn->setTextColor(theme.getColor("textPrimary").withAlpha(0.92f));
+    m_addUnitBtn = std::make_shared<NUIButton>("+ Add a sound");
+    // The board's quiet add row: no fill or outline at rest, muted text, a surface wash under the pointer.
+    m_addUnitBtn->setStyle(NUIButton::Style::Text); m_addUnitBtn->setBackgroundColor(theme.getColor("surfaceTertiary").withAlpha(0.0f));
+    m_addUnitBtn->setHoverColor(theme.getColor("surfaceTertiary"));
+    m_addUnitBtn->setPressedColor(theme.getColor("surfaceRaised")); m_addUnitBtn->setTextColor(theme.getColor("textMuted"));
+    m_addUnitBtn->setBorderEnabled(false); m_addUnitBtn->setCornerRadius(6.0f); m_addUnitBtn->setFontSize(12.0f);
     m_addUnitBtn->setOnClick([this]() { onAddUnit(); });
     m_listContainer->addChild(m_addUnitBtn);
     
@@ -437,7 +437,7 @@ void ArsenalPanel::refreshUnits() {
 
 void ArsenalPanel::onAddUnit() {
     m_showUnitTypePicker = !m_showUnitTypePicker;
-    if (m_addUnitBtn) m_addUnitBtn->setText(m_showUnitTypePicker ? "CLOSE" : "+ Add unit");
+    if (m_addUnitBtn) m_addUnitBtn->setText(m_showUnitTypePicker ? "CLOSE" : "+ Add a sound");
     repaint();
 }
 
@@ -456,7 +456,7 @@ void ArsenalPanel::createUnitOfType(UnitType type, const std::string& nameOverri
         m_onSelectedUnitChanged(m_selectedUnitId);
     }
     m_showUnitTypePicker = false;
-    if (m_addUnitBtn) m_addUnitBtn->setText("+ Add unit");
+    if (m_addUnitBtn) m_addUnitBtn->setText("+ Add a sound");
     refreshUnits();
 }
 
@@ -1395,7 +1395,7 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
             }
         } else if (!m_addUnitButtonRect.contains(event.position)) {
             m_showUnitTypePicker = false;
-            if (m_addUnitBtn) m_addUnitBtn->setText("+ Add unit");
+            if (m_addUnitBtn) m_addUnitBtn->setText("+ Add a sound");
             repaint();
             return true;
         }
