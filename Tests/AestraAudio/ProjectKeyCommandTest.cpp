@@ -9,10 +9,12 @@
 //      exactly as they were, so nothing sounds different;
 //   4. a project with no key: naming one takes the label and moves nothing;
 //   5. every one is ONE undoable command that also marks the project modified, and undo puts the key back;
-//   6. the units that follow the key (and so move) are listed, so the board can say which parts moved.
+//   6. the units that follow the key (and so move) are listed, so the board can say which parts moved;
+//   7. the pill's words: the key as HEARD ("A min"), "No key" when there is none, and the transpose ("+3").
 
 #include "Commands/CommandHistory.h"
 #include "Commands/SetProjectKeyCommand.h"
+#include "Music/KeyPillText.h"
 #include "Models/TrackManager.h"
 #include "Models/UnitManager.h"
 
@@ -104,6 +106,17 @@ int main() {
         const auto moving = unitsFollowingKey(units);
         auto has = [&](UnitID id) { return std::find(moving.begin(), moving.end(), id) != moving.end(); };
         check(has(keys) && has(forced) && !has(drums), "an instrument and a sample set to follow move; a drum sampler does not");
+    }
+
+    std::cout << "[7] the pill's words\n";
+    {
+        check(keyName(ProjectHarmony{}) == "No key", "a keyless song says so");
+        check(keyName(keyOf(9, true)) == "A min", "A minor reads \"A min\"");
+        check(keyName(keyOf(0, false)) == "C maj", "C major reads \"C maj\"");
+        check(keyName(keyOf(0, true, 3)) == "D# min", "the key is the one HEARD: C min moved up 3 reads D# min");
+        check(keyName(keyOf(0, false, -1)) == "B maj", "a step down wraps below C");
+        check(transposeText(keyOf(0, false, 0)).empty(), "no transpose, no mark");
+        check(transposeText(keyOf(0, false, 3)) == "+3" && transposeText(keyOf(0, false, -2)) == "-2", "signed transpose");
     }
 
     std::cout << (g_failures ? "FAILED\n" : "All project-key tests passed.\n");
