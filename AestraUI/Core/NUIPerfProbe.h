@@ -10,6 +10,7 @@
 //   [DirtyWho]   which component types START invalidations, as Type<ParentType>=count
 //   [RenderSelf] render self-time per component type, ms per presented frame (children excluded)
 //   [Phase]      widget tree / renderer submit / swap, ms per presented frame
+//   [DirtyArea]  share of the window the frame's invalidations covered (avg, max) and their rectangles (SPEC-028 R0)
 //
 // Main (UI) thread only. When off, every hook is one cached boolean check.
 
@@ -20,6 +21,7 @@
 namespace AestraUI {
 
 class NUIComponent;
+struct NUIRect;
 
 namespace PerfProbe {
 
@@ -43,6 +45,14 @@ void recordRenderSelf(const NUIComponent& component, double ms);
 
 enum class Phase : std::uint8_t { Tree, Submit, Swap };
 void recordPhase(Phase phase, double ms);
+
+/// SPEC-028 R0: how much of the window this presented frame's invalidations covered (0..1), and in how many
+/// rectangles. Today the renderer still redraws the whole window; this is what a retained frame would have needed.
+void recordDirtyArea(float fractionOfWindow, std::size_t rects);
+
+/// Start of a presented frame: record the share of @p window the invalidations since the last one covered (when
+/// the probe is on), then clear the frame's invalidation region so the next frame starts empty.
+void consumeFrameRegion(const NUIRect& window);
 
 /// Why the run loop presented this frame.
 void recordPresentReason(const char* reason);

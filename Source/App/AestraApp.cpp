@@ -1441,7 +1441,7 @@ void AestraApp::run() {
             // (Clearing after present would eat mid-render invalidations; the
             // skip path never clears.)
             if (auto* root = m_windowManager->getRootComponent()) {
-                root->setDirty(false);
+                AestraUI::PerfProbe::consumeFrameRegion(root->getBounds()); root->setDirty(false); // SPEC-028 R0
             }
             m_windowManager->render();
         }

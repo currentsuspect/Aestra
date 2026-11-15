@@ -3466,6 +3466,32 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(UIMixerKitTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
 endif()
 
+# SPEC-028 R1: the invalidation region (pure) and how widgets feed it.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(NUIDirtyRegionTest AestraUI_Core AestraUI_Platform)
+    add_executable(NUIDirtyRegionTest AestraUI/NUIDirtyRegionTest.cpp)
+    target_link_libraries(NUIDirtyRegionTest PRIVATE AestraUI_Core AestraUI_Platform)
+    target_include_directories(NUIDirtyRegionTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME NUIDirtyRegionTest COMMAND NUIDirtyRegionTest)
+    set_tests_properties(NUIDirtyRegionTest PROPERTIES LABELS "ui;regression;performance;contract:application")
+
+    aestra_require_ui_targets(NUIComponentInvalidationTest AestraUI_Core AestraUI_Platform)
+    add_executable(NUIComponentInvalidationTest AestraUI/NUIComponentInvalidationTest.cpp)
+    target_link_libraries(NUIComponentInvalidationTest PRIVATE AestraUI_Core AestraUI_Platform)
+    target_include_directories(NUIComponentInvalidationTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME NUIComponentInvalidationTest COMMAND NUIComponentInvalidationTest)
+    set_tests_properties(NUIComponentInvalidationTest PROPERTIES LABELS "ui;regression;performance;contract:application")
+endif()
+
 # The mixer navigator for overflowing sessions: ticks, bracket, group labels (V81-M1, FD-28 point 7).
 if(AESTRA_ENABLE_UI)
     aestra_require_ui_targets(UIMixerNavigatorTest AestraUI_Core AestraUI_Platform)
@@ -4622,6 +4648,8 @@ endif()
 
 if(AESTRA_ENABLE_UI)
     set(AESTRA_REQUIRED_UI_TESTS
+        NUIDirtyRegionTest
+        NUIComponentInvalidationTest
         NUIThemeConsistencyTest
         NUIKitThemesTest
         NUIContextMenuInteractionTest

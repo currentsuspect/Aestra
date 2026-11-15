@@ -2,6 +2,7 @@
 #pragma once
 
 #include "NUITypes.h"
+#include "NUIDirtyRegion.h"
 #include <vector>
 #include <memory>
 #include <string>
@@ -166,6 +167,16 @@ public:
     void setDirty(bool dirty = true);
     bool isDirty() const { return dirty_; }
     void repaint() { setDirty(true); }
+    /// Invalidate only a region inside this widget (widget-local coordinates): the renderer redraws that rectangle,
+    /// not the whole widget (SPEC-028). Also sets the dirty bit, like repaint().
+    void repaint(const NUIRect& localRegion);
+    /// Pixels this widget paints outside its bounds (a shadow, a glow, a stroke): every invalidation widens by this.
+    void setInvalidationMargin(float pixels) { invalidationMargin_ = pixels > 0.0f ? pixels : 0.0f; }
+    float getInvalidationMargin() const { return invalidationMargin_; }
+    /// What changed on screen since the frame last consumed it (window space; this thread). The run loop clears it
+    /// when it starts a frame; an invalidation made off the UI thread cannot be located and shows up as a dirty root
+    /// with an empty region, which the renderer must read as "the whole window".
+    static NUIDirtyRegion& frameDirtyRegion();
     
     void setOpacity(float opacity);
     float getOpacity() const { return opacity_; }
@@ -200,6 +211,7 @@ private:
     bool enabled_ = true;
     bool focused_ = false;
     bool hovered_ = false;
+    float invalidationMargin_ = 0.0f;
     bool dirty_ = true;
     float opacity_ = 1.0f;
     bool hitTestVisible_ = true;
