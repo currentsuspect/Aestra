@@ -2072,6 +2072,19 @@ set_tests_properties(GraphRenderBufferTest PROPERTIES LABELS "audio;quality;expo
 
 # V8-W5: Bounce in Place -- the track-output tap, the bounce command, refusals,
 # and that the project sounds the same before and after.
+# Issue #1397: an export of a project that has not played must still contain its pattern clips.
+add_executable(ExportSchedulesPatternsTest AestraAudio/ExportSchedulesPatternsTest.cpp)
+target_link_libraries(ExportSchedulesPatternsTest PRIVATE AestraAudio)
+target_include_directories(ExportSchedulesPatternsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Tests
+)
+add_test(NAME ExportSchedulesPatternsTest COMMAND ExportSchedulesPatternsTest)
+set_tests_properties(ExportSchedulesPatternsTest PROPERTIES LABELS "audio;export;patterns;regression;contract:audio" TIMEOUT 180)
+
 # V83-E10 (FD-94): overlapping audio clips crossfade; link, shape, undo, save and reopen.
 add_executable(CrossfadeTest
     AestraAudio/CrossfadeTest.cpp
@@ -2946,6 +2959,7 @@ if(AESTRA_ENABLE_UI)
     target_link_libraries(PianoRollStrokeInteractionTest PRIVATE AestraUI_Core AestraUI_Platform)
     target_include_directories(PianoRollStrokeInteractionTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Platform
         ${CMAKE_SOURCE_DIR}/AestraUI/Common
         ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
     )

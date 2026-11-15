@@ -66,6 +66,7 @@ AESTRA_MUSE_PORT=41952 ./Aestra    # then, from any terminal:
 muse list_units
 muse set_bpm --value 140
 muse render_pattern --pattern 1 --file /tmp/loop.wav
+muse project.save --args-json '{"path":"/tmp/idea.aes"}'
 muse get_schema --result           # every verb, its flags, and the semantics
 ```
 
@@ -75,9 +76,16 @@ token to a file only your user can read (`$XDG_RUNTIME_DIR/aestra/muse-<port>.to
 `%LOCALAPPDATA%\Aestra\` on Windows, `~/Library/Application Support/Aestra/` on macOS) and
 deletes it on exit. `muse` and `muse-agent` read it for you (`--token-file <path>` names another).
 A client of your own sends `{"auth":"<token>"}` as its first line; until then every request is
-answered `"status":"unauthorized"`, and the connection is closed after a few failures. The surface covers
-transport, tracks, units, patterns, notes, step sequencing, effects, metering, arrangement,
-render, batched all-or-nothing edits, and undo/redo.
+answered `"status":"unauthorized"`, and the connection is closed after a few failures. The app
+prints the port and the token's path at startup:
+`[MuseSocket] listening on 127.0.0.1:<port>; token file <path>`.
+
+The surface covers transport, tracks, units, patterns, notes, step sequencing, effects,
+metering, arrangement, render, batched all-or-nothing edits, undo/redo, and the verbs only a
+running app can serve — `project.save`, `project.open`, `project.new`, `view.*` and
+`settings.*`. Those last ones are registered by the application, so they are listed in
+`get_schema` (as `hostVerbs`, with their arguments and their refusal codes) and in
+`get_capabilities`; a headless session lists none, because it has nothing to save.
 
 Effect parameters can be set the way they are shown: `get_effects` publishes each parameter's unit,
 range, curve and step labels, and `set_effect_param --value 3.5k` reaches the same value the plugin
