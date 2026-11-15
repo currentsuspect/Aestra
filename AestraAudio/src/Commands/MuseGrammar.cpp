@@ -268,9 +268,9 @@ static const std::vector<CommandSchema> s_schemas = {
         {"track", FlagType::Int, true, -1.0},
         {"slot", FlagType::Int, true, 0.0, 9.0},
         {"param", FlagType::String, true},
-        {"value", FlagType::Float, true, 0.0, 1.0}
+        {"value", FlagType::String, true}
     },
-     "Set an effect parameter, normalized 0..1. param = name (case-insensitive) or numeric id from get_effects; get_effects shows the resulting display value."},
+     "Set an effect parameter. param = name (case-insensitive) or numeric id from get_effects. value = a plain 0..1 number for normalized, or the parameter's own unit as get_effects declares it: '3.5k' / '3500 Hz' for a frequency, '-1.0 dB' a level, '2:1' a ratio, '36' a stepped slope. The reply's result.display is the value the plugin now shows."},
 
     // === Mixer routing (V82-M5) === tracks by index as list_tracks shows them; -1 = master
     {"route_unit", CommandCategory::Unit, {
@@ -437,7 +437,7 @@ std::string schemaToJsonString() {
   {"verb": "list_clips", "args": "none", "description": "playlist lanes with clips (id, name, startBeat, durationBeats, pattern; pattern 0 = not a pattern clip)."},
   {"verb": "list_patterns", "args": "none", "description": "id, name, lengthBeats, noteCount and type; audio sources also include mixerChannelId."},
   {"verb": "list_plugins", "args": "none", "description": "available effect plugins: id, name, category. Use id or name with add_effect."},
-  {"verb": "get_effects", "args": "{\"track\": <index, or -1 for the master>}", "description": "a track's (or the master's) effect chain: slot, id, name, bypassed, and every parameter (id, name, value 0..1, display, unit)."},
+  {"verb": "get_effects", "args": "{\"track\": <index, or -1 for the master>}", "description": "a track's (or the master's) effect chain: slot, id, name, bypassed, and every parameter (id, name, value 0..1, display, unit, and — where the parameter has display units — min, max, curve, labels, acceptsText)."},
   {"verb": "get_meters", "args": "none", "description": "master + per-track meters (each with track, the value track verbs take, and id, the mixer channel id) from the most recently processed audio block: peakDb, rmsDb, lufs, clip flags. Headless this reflects the last render; in-app it is live."},
   {"verb": "get_audio_health", "args": "none", "description": "A read-only snapshot of published engine telemetry: callback timing and budget, xruns/underruns, RT violations, recovery, command-queue drops, scheduling status, signal sanitization, resampling, and patternScheduling (lateRefills, missedHits, maxLateMs: pattern hits skipped because a main-loop refill came after the playhead, a stutter that counts no xrun). Counters have engine-lifetime scope."},
   {"verb": "get_project_load_report", "args": "none", "description": "The currently loaded project's or latest load attempt's format, migration/recovery state, missing plugins/assets, unrestored state, and structured warnings/errors. A blank project or no observed load returns status unobserved."},
@@ -465,7 +465,7 @@ std::string schemaToJsonString() {
   "steps": "Step strings: 'x' hit at the row velocity, 'X' accented hit (+0.2), digits '1'-'9' hit at velocity n/9, '-', '.', ' ' rest. Default step is 0.25 beats (16ths). swing (0..0.9) delays every second step by swing * step/2 for shuffle feels.",
   "ids": "Track, unit, pattern and clip ids are stable across edits; indexes shift when items are deleted.",
   "units_of_measure": "velocity 0..1, pan -1..1, volume 0..1 linear, positions and durations in beats.",
-  "effects": "Effect parameters are normalized 0..1; get_effects shows the human display value after a set. A track chain has 10 slots.",
+  "effects": "Effect parameter values are normalized 0..1 unless you name a unit. get_effects publishes each parameter's unit, min, max, curve and (for stepped parameters) labels; any of those can be passed to set_effect_param as text ('3.5k', '3500 Hz', '-1.0 dB', '2:1', '36'), and a parameter with no declared unit takes 0..1 only. The reply's result.display is what the plugin now shows. A track chain has 10 slots.",
   "undo": "Every mutation and every batch is one step in the same undo history the UI uses."
 }
 }

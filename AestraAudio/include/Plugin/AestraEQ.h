@@ -8,6 +8,7 @@
 #include "Plugin/InternalPluginBase.h"
 #include "Plugin/PluginHost.h"
 #include "Plugin/EQFilters.h"
+#include "Plugin/ParamTextBuiltins.h"
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -528,6 +529,19 @@ public:
     // smoothed targets and some invalidate filter coefficients.
     void onParameterChanged(uint32_t id, float value) AESTRA_RT_NONBLOCKING override {
         markDirtyForParam(id);
+    }
+
+    // The other direction of the strings above (#1405): "3.5k" -> 0.512. The
+    // ranges live in ParamTextBuiltins.h, beside nothing else, so a parameter's
+    // displayed value and the value it accepts cannot disagree.
+    bool describeParameterText(uint32_t id, ParameterTextInfo& out) const override {
+        return ParamTextDetail::describeEQ<AestraEQ>(id, out);
+    }
+    bool parseParameterText(uint32_t id, const std::string& text, float& normalized,
+                           std::string& error) const override {
+        return ParamTextDetail::parseWith([this](uint32_t paramId, ParameterTextInfo& out) {
+            return describeParameterText(paramId, out);
+        }, id, text, normalized, error);
     }
 
     std::string getParameterDisplay(uint32_t id) const {

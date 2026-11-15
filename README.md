@@ -79,6 +79,11 @@ answered `"status":"unauthorized"`, and the connection is closed after a few fai
 transport, tracks, units, patterns, notes, step sequencing, effects, metering, arrangement,
 render, batched all-or-nothing edits, and undo/redo.
 
+Effect parameters can be set the way they are shown: `get_effects` publishes each parameter's unit,
+range, curve and step labels, and `set_effect_param --value 3.5k` reaches the same value the plugin
+prints back ("3.5kHz"). A plain number 0..1 is still the normalized value, and the reply reports what the
+plugin now displays.
+
 ## Repository Layout
 
 - `AestraCore` - core utilities and shared infrastructure
