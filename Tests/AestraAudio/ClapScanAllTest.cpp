@@ -86,7 +86,8 @@ int main() {
 
     std::cout << "[H6] a path that is not a plugin is refused, not guessed\n";
     check(ask("SCANALL clap " + hex("/nonexistent/none.clap")).compare(0, 4, "ERR ") == 0, "missing bundle -> ERR");
-    check(ask("SCANALL vst3 " + hex(FIXTURE_PATH)).compare(0, 4, "ERR ") == 0, "other formats -> ERR");
+    // VST3 is scanned here too now (PluginScanProtocolTest covers it); a format the helper does not know is still refused.
+    check(ask("SCANALL au " + hex(FIXTURE_PATH)).compare(0, 4, "ERR ") == 0, "unknown formats -> ERR");
 
     std::cout << (failures == 0 ? "ALL PASS\n" : "FAILED\n");
     return failures == 0 ? 0 : 1;
