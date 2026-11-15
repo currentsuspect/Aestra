@@ -1177,7 +1177,7 @@ endif()
 add_executable(PulseClientConfigTest AestraAudio/PulseClientConfigTest.cpp)
 target_include_directories(PulseClientConfigTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)
 add_test(NAME PulseClientConfigTest COMMAND PulseClientConfigTest)
-set_tests_properties(PulseClientConfigTest PROPERTIES LABELS "audio;regression;performance")
+set_tests_properties(PulseClientConfigTest PROPERTIES LABELS "audio;regression;performance;contract:audio")
 
 add_executable(AestraAtomicSaveTest AestraAudio/AtomicSaveTest.cpp)
 target_link_libraries(AestraAtomicSaveTest PRIVATE)
