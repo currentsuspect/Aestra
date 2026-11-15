@@ -193,10 +193,12 @@ public:
         renderer.setClipRect(view);
         for (const auto& p : m_placed) {
             const auto r = chipRect(p);
+            const float tileRadius = 8.0f; // the board's pattern tile
             const auto& scene = m_scenes[p.index];
             const bool on = scene.id == m_activeId;
-            renderer.fillRoundedRect(r, tp.radiusXS, on ? theme.getColor("surfaceRaised") : theme.getColor("backgroundSecondary"));
-            renderer.strokeRoundedRect(r, tp.radiusXS, 1.0f, on ? theme.getColor("textPrimary").withAlpha(0.9f) : theme.getColor("borderSubtle").withAlpha(0.7f));
+            // The open pattern wears the selection wash (the locked board): the accent tinted into the tile, no bright outline.
+            renderer.fillRoundedRect(r, tileRadius, on ? AestraUI::NUIColor::lerp(theme.getColor("backgroundSecondary"), theme.getColor("accentPrimary"), 0.32f) : theme.getColor("backgroundSecondary"));
+            renderer.strokeRoundedRect(r, tileRadius, 1.0f, on ? theme.getColor("accentPrimary").withAlpha(0.55f) : theme.getColor("borderSubtle").withAlpha(0.7f));
             renderer.setClipRect(AestraUI::intersectRects(view, r));
             renderer.drawText(fitName(renderer, scene.name, tp.fontSizeXS + 1.0f, r.width - 24.0f), {r.x + 12.0f, r.y + 8.0f}, tp.fontSizeXS + 1.0f, theme.getColor("textPrimary").withAlpha(on ? 1.0f : 0.9f));
             const float tw = r.width - 24.0f, bw = tw / static_cast<float>(kThumbBars), maxH = 8.0f;
@@ -212,16 +214,26 @@ public:
         renderer.fillRoundedRect(add, tp.radiusXS, theme.getColor("backgroundPrimary"));
         renderer.strokeRoundedRect(add, tp.radiusXS, 1.0f, theme.getColor("borderSubtle").withAlpha(0.7f));
         renderer.drawTextCentered("+", add, tp.fontSizeM, theme.getColor("textSecondary").withAlpha(0.9f));
+        // Swing as the board draws it: a small caps label and a sunk well holding the amount; dragging the zone sets it.
         const auto sw = swingRect();
-        const float ty = sw.y + (sw.height - tp.fontSizeXS) * 0.5f - 2.0f;
-        renderer.drawText("Swing", {sw.x, ty}, tp.fontSizeXS + 1.0f, theme.getColor("textSecondary").withAlpha(0.9f));
-        const std::string pct = std::to_string(swingPercent(m_swing)) + "%";
-        renderer.drawText(pct, {sw.x + renderer.measureText("Swing ", tp.fontSizeXS + 1.0f).width, ty}, tp.fontSizeXS + 1.0f, theme.getColor("textPrimary"));
-        renderer.fillRect({sw.x, sw.bottom() - 10.0f, sw.width, 1.0f}, theme.getColor("borderSubtle").withAlpha(0.7f));
-        renderer.fillRect({sw.x, sw.bottom() - 10.0f, sw.width * m_swing, 1.0f}, theme.getColor("textSecondary"));
+        const float fs = tp.fontSizeXS + 1.0f, wellH = 26.0f;
+        const float swingLabelW = renderer.measureText("SWING", tp.fontSizeMicro).width + 10.0f;
+        const AestraUI::NUIRect well{sw.x + swingLabelW, sw.y + (sw.height - wellH) * 0.5f, std::max(0.0f, sw.width - swingLabelW), wellH};
+        renderer.drawText("SWING", {sw.x, well.y + (wellH - tp.fontSizeMicro) * 0.5f - 1.0f}, tp.fontSizeMicro, theme.getColor("textMuted"));
+        renderer.fillRoundedRect(well, wellH * 0.5f, theme.getColor("backgroundPrimary"));
+        renderer.drawTextCentered(std::to_string(swingPercent(m_swing)) + " %", well, fs, theme.getColor("textPrimary"));
         const auto pl = placeRect(); // the one primary action of the header (the mock's purple button)
         renderer.fillRoundedRect(pl, tp.radiusXS, theme.getColor("accentPrimary"));
-        renderer.drawTextCentered("Place in timeline", pl, tp.fontSizeXS + 1.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
+        const AestraUI::NUIColor white(1.0f, 1.0f, 1.0f, 1.0f);
+        const float labelFont = tp.fontSizeXS + 1.0f, arrowW = 11.0f, arrowGap = 8.0f;
+        const float labelW = renderer.measureText("Place in timeline", labelFont).width;
+        const float startX = pl.x + (pl.width - (labelW + arrowGap + arrowW)) * 0.5f, midY = pl.y + pl.height * 0.5f;
+        renderer.drawText("Place in timeline", {startX, midY - renderer.getFontMetrics(labelFont).lineHeight * 0.5f}, labelFont, white);
+        // The board's trailing arrow: it sends the pattern on to the timeline.
+        const float ax = startX + labelW + arrowGap;
+        renderer.drawLine({ax, midY}, {ax + arrowW, midY}, 1.5f, white);
+        renderer.drawLine({ax + arrowW - 4.0f, midY - 4.0f}, {ax + arrowW, midY}, 1.5f, white);
+        renderer.drawLine({ax + arrowW - 4.0f, midY + 4.0f}, {ax + arrowW, midY}, 1.5f, white);
     }
 
     /// Pointer routing for the strip: chips select, "+" makes the next pattern, the swing zone drags, the wheel scrolls.

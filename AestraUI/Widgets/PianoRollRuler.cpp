@@ -104,9 +104,12 @@ void PianoRollRuler::onRender(NUIRenderer& renderer) {
     const auto rule = theme.getColor("textDisabled");
     const auto number = theme.getColor("textMuted");
     const auto accent = theme.getColor("accentPrimary");
-    renderer.fillRect(bounds, bed);
-    renderer.drawLine(NUIPoint(bounds.x, bounds.bottom() - 0.5f), NUIPoint(bounds.right(), bounds.bottom() - 0.5f), 1.0f,
-                      theme.getColor("border"));
+    // Arsenal's ruler (beat numbers on) is the board's: numbers and ticks over the grid, no bed, no boxes.
+    if (!showBeatNumbers_) {
+        renderer.fillRect(bounds, bed);
+        renderer.drawLine(NUIPoint(bounds.x, bounds.bottom() - 0.5f), NUIPoint(bounds.right(), bounds.bottom() - 0.5f), 1.0f,
+                          theme.getColor("border"));
+    }
 
     renderer.setClipRect(bounds);
 
@@ -135,10 +138,10 @@ void PianoRollRuler::onRender(NUIRenderer& renderer) {
 
     for (int bar = startBar; bar <= endBar; bar += barStride) {
         const float x = snapVerticalLineX(bounds.x + bar * pixelsPerBar - scrollX_);
-        renderer.drawLine(NUIPoint(x, bounds.y), NUIPoint(x, bounds.bottom()), 1.0f, rule);
-        renderer.drawText(std::to_string(bar + 1), NUIPoint(x + 8.0f, bounds.y + 6.0f), 12.0f, number);
+        renderer.drawLine(NUIPoint(x, showBeatNumbers_ ? bounds.bottom() - 9.0f : bounds.y), NUIPoint(x, bounds.bottom()), 1.0f, rule);
+        renderer.drawText(std::to_string(bar + 1), NUIPoint(x + 8.0f, bounds.y + 6.0f), 12.0f, showBeatNumbers_ ? theme.getColor("textPrimary") : number);
         // Every beat named, quieter than the bar, with a short tick, so a step has an address (Design Spec, Arsenal).
-        if (showBeatNumbers_ && barStride == 1 && pixelsPerBeat_ >= 22.0f) {
+        if (showBeatNumbers_ && barStride == 1 && pixelsPerBeat_ >= 16.0f) {
             for (int b = 1; b < beatsPerBar; ++b) {
                 const float bx = snapVerticalLineX(x + b * pixelsPerBeat_);
                 renderer.drawLine(NUIPoint(bx, bounds.bottom() - 6.0f), NUIPoint(bx, bounds.bottom()), 1.0f, rule.withAlpha(0.6f));
