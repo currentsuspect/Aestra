@@ -1,6 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved.
 
 #include "NUIPianoRollWidgets.h"
+#include "Platform/NUIPlatformBridge.h"
 
 #include <algorithm>
 #include <cmath>
@@ -321,7 +322,28 @@ void testAltWheelVelocityScrubIsOneContinuingEdit() {
 
 } // namespace
 
+// The pencil belongs to the grid: moving the pointer out of it (to the keys, the ruler, the toolbar) hands the
+// arrow back instead of leaving the pencil stuck over the rest of the window.
+void testLeavingTheGridHandsTheCursorBack() {
+    NUIPlatformBridge bridge;
+    PianoRollNoteLayer layer;
+    layer.setBounds({100.0f, 100.0f, 800.0f, 600.0f});
+    layer.setPlatformBridge(&bridge);
+    layer.setTool(GlobalTool::Pencil);
+
+    NUIMouseEvent move;
+    move.type = NUIMouseEventType::Move;
+    move.position = {400.0f, 300.0f};
+    layer.onMouseEvent(move);
+    check(bridge.getCursorStyle() == NUICursorStyle::Pencil, "over the grid with Draw the cursor is the pencil");
+
+    move.position = {40.0f, 300.0f}; // out to the left, over the key lane
+    layer.onMouseEvent(move);
+    check(bridge.getCursorStyle() == NUICursorStyle::Arrow, "left of the grid the pencil is handed back as the arrow");
+}
+
 int main() {
+    testLeavingTheGridHandsTheCursorBack();
     testChordBrushPaintsCompleteTriadsAsOneEdit();
     testRightDragEraseCommitsOnce();
     testSelectionHandleStretchesPhraseTimingAsOneEdit();

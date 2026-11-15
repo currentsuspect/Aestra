@@ -791,6 +791,7 @@ private:
     std::function<void(int pitch, bool down)> onKeyPressChanged_;
     std::vector<int> pressedPitches_; // keys shown pressed for the current gesture
     uint64_t defaultUnitId_ = 0;
+    bool pointerInside_ = false; // the pointer was last over the grid (so leaving it restores the arrow)
 
     // Tool
     PianoRollTool tool_ = PianoRollTool::Pencil;
