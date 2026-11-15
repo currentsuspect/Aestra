@@ -262,6 +262,16 @@ void testLaneIdentityRestraintIsNotAnIdentityFunction() {
 
 } // namespace
 
+// A channel the mixer has not been opened for has no saved palette index; the Arsenal output chip and a unit's waveform
+// must resolve the same colour the mixer strip will pick, not fall back to grey / the accent.
+void testUnsetChannelColourResolvesLikeTheMixer() {
+    check(AestraUI::resolveTrackColorIndex(3, 0, 0) == 3, "a saved index wins");
+    check(AestraUI::resolveTrackColorIndex(-1, AestraUI::paletteIndexToARGB(5), 0) == 5, "else the entry nearest its colour");
+    check(AestraUI::resolveTrackColorIndex(-1, 0, 2) == 2, "else its position");
+    check(AestraUI::resolveTrackColorIndex(-1, 0, AestraUI::PALETTE_SIZE + 1) == 1, "position wraps the palette");
+    check(AestraUI::resolveTrackColorIndex(AestraUI::PALETTE_SIZE, 0, 4) == 4, "a stale out-of-range index is not used");
+}
+
 int main() {
     testInkStaysLighterThanBodyForEveryIdentity();
     testForegroundLegibilityDoesNotDependOnRouting();
@@ -271,6 +281,7 @@ int main() {
     testClipStaysVisibleAgainstCanvas();
     testLuminanceCapDarkensWithoutShiftingHue();
     testLaneIdentityRestraintIsNotAnIdentityFunction();
+    testUnsetChannelColourResolvesLikeTheMixer();
 
     if (failures > 0) {
         std::cerr << "[FAIL] TimelineClipContrastTest: " << failures << " check(s) failed\n";

@@ -195,8 +195,9 @@ public:
             const auto r = chipRect(p);
             const auto& scene = m_scenes[p.index];
             const bool on = scene.id == m_activeId;
-            renderer.fillRoundedRect(r, tp.radiusXS, on ? theme.getColor("surfaceRaised") : theme.getColor("backgroundSecondary"));
-            renderer.strokeRoundedRect(r, tp.radiusXS, 1.0f, on ? theme.getColor("textPrimary").withAlpha(0.9f) : theme.getColor("borderSubtle").withAlpha(0.7f));
+            // The open pattern wears the selection wash (the locked board): the accent tinted into the tile, no bright outline.
+            renderer.fillRoundedRect(r, tp.radiusXS, on ? AestraUI::NUIColor::lerp(theme.getColor("backgroundSecondary"), theme.getColor("accentPrimary"), 0.32f) : theme.getColor("backgroundSecondary"));
+            renderer.strokeRoundedRect(r, tp.radiusXS, 1.0f, on ? theme.getColor("accentPrimary").withAlpha(0.55f) : theme.getColor("borderSubtle").withAlpha(0.7f));
             renderer.setClipRect(AestraUI::intersectRects(view, r));
             renderer.drawText(fitName(renderer, scene.name, tp.fontSizeXS + 1.0f, r.width - 24.0f), {r.x + 12.0f, r.y + 8.0f}, tp.fontSizeXS + 1.0f, theme.getColor("textPrimary").withAlpha(on ? 1.0f : 0.9f));
             const float tw = r.width - 24.0f, bw = tw / static_cast<float>(kThumbBars), maxH = 8.0f;
@@ -221,7 +222,16 @@ public:
         renderer.fillRect({sw.x, sw.bottom() - 10.0f, sw.width * m_swing, 1.0f}, theme.getColor("textSecondary"));
         const auto pl = placeRect(); // the one primary action of the header (the mock's purple button)
         renderer.fillRoundedRect(pl, tp.radiusXS, theme.getColor("accentPrimary"));
-        renderer.drawTextCentered("Place in timeline", pl, tp.fontSizeXS + 1.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
+        const AestraUI::NUIColor white(1.0f, 1.0f, 1.0f, 1.0f);
+        const float labelFont = tp.fontSizeXS + 1.0f, arrowW = 11.0f, arrowGap = 8.0f;
+        const float labelW = renderer.measureText("Place in timeline", labelFont).width;
+        const float startX = pl.x + (pl.width - (labelW + arrowGap + arrowW)) * 0.5f, midY = pl.y + pl.height * 0.5f;
+        renderer.drawText("Place in timeline", {startX, midY - renderer.getFontMetrics(labelFont).lineHeight * 0.5f}, labelFont, white);
+        // The board's trailing arrow: it sends the pattern on to the timeline.
+        const float ax = startX + labelW + arrowGap;
+        renderer.drawLine({ax, midY}, {ax + arrowW, midY}, 1.5f, white);
+        renderer.drawLine({ax + arrowW - 4.0f, midY - 4.0f}, {ax + arrowW, midY}, 1.5f, white);
+        renderer.drawLine({ax + arrowW - 4.0f, midY + 4.0f}, {ax + arrowW, midY}, 1.5f, white);
     }
 
     /// Pointer routing for the strip: chips select, "+" makes the next pattern, the swing zone drags, the wheel scrolls.

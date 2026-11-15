@@ -97,7 +97,7 @@ void UnitRow::updateState() {
                 if (channel && channel->getChannelId() == m_mixerChannelId) {
                     m_mixerRouteShortLabel = std::to_string(i + 1);
                     m_mixerRouteName = channel->getName().empty() ? "Channel " + std::to_string(i + 1) : channel->getName();
-                    m_mixerRouteColorIndex = channel->getTrackColorIndex();
+                    m_mixerRouteColorIndex = resolveTrackColorIndex(channel->getTrackColorIndex(), channel->getColor(), i);
                     resolved = true;
                     break;
                 }
@@ -243,8 +243,8 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
         cardBg = theme.getColor("accentPrimary").withAlpha(0.18f);
         border = theme.getColor("accentPrimary").withAlpha(0.95f);
     } else if (m_isSelected) {
-        cardBg = unitAccent.withAlpha(0.06f);
-        border = unitAccent.withAlpha(0.28f);
+        cardBg = NUIColor::lerp(cardBg, theme.getColor("accentPrimary"), 0.28f); // the locked board's selection wash
+        border = theme.getColor("accentPrimary").withAlpha(0.40f);
     } else if (m_isHovered) {
         cardBg = theme.getColor("surfaceRaised");
         border = theme.getColor("accentPrimary").withAlpha(0.22f);
@@ -1758,7 +1758,7 @@ void UnitRow::showMixerRoutingMenu(const NUIPoint& pos) {
     if (m_trackManager->getChannelCount() > 0) m_mixerRoutingMenu->addSeparator(); for (size_t i = 0; i < m_trackManager->getChannelCount(); ++i) {
         const auto* channel = m_trackManager->getChannel(i);
         if (!channel) continue;
-        addRouteItem(channel->getChannelId(), std::to_string(i + 1) + " · " + channel->getName(), channel->getTrackColorIndex());
+        addRouteItem(channel->getChannelId(), std::to_string(i + 1) + " · " + channel->getName(), resolveTrackColorIndex(channel->getTrackColorIndex(), channel->getColor(), i));
     }
 
     m_mixerRoutingMenu->addSeparator();
