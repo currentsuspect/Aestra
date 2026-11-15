@@ -1702,7 +1702,7 @@ bool PianoRollNoteLayer::onKeyEvent(const NUIKeyEvent& event) {
             for (auto n : s_noteClipboard) {
                 n.startBeat += offset;
                 n.selected = true;
-                n.isDeleted = false;
+                n.isDeleted = false; n.unitId = defaultUnitId_; // the unit being edited, not the copied-from one
                 notes_.push_back(n);
             }
             commitNotes();
