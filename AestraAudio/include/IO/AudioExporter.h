@@ -84,6 +84,15 @@ public:
 
         /** @brief Extra seconds appended to capture effect tails after the musical range. */
         double tailSeconds = 2.0;  // Extra time for tails
+        /**
+         * Put the timeline's pattern clips into the pattern scheduler for the range this render covers, and take
+         * them out again afterwards (#1397). Pattern clips reach their instruments through that scheduler, which
+         * only Play fills: a project that has not played since it was opened exported silence, and one that had
+         * played from somewhere else exported that start. Off by default, so a caller that schedules its own
+         * material (a single pattern, a bounce) is left alone. Ignored while the transport is playing: the live
+         * schedule is then the one playback resumes with.
+         */
+        bool scheduleTimelinePatterns = false;
 
         /** @brief Minimum interval between progress callback updates. */
         std::chrono::milliseconds progressInterval{100};
