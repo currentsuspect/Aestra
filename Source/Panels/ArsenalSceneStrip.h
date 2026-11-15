@@ -193,11 +193,12 @@ public:
         renderer.setClipRect(view);
         for (const auto& p : m_placed) {
             const auto r = chipRect(p);
+            const float tileRadius = 8.0f; // the board's pattern tile
             const auto& scene = m_scenes[p.index];
             const bool on = scene.id == m_activeId;
             // The open pattern wears the selection wash (the locked board): the accent tinted into the tile, no bright outline.
-            renderer.fillRoundedRect(r, tp.radiusXS, on ? AestraUI::NUIColor::lerp(theme.getColor("backgroundSecondary"), theme.getColor("accentPrimary"), 0.32f) : theme.getColor("backgroundSecondary"));
-            renderer.strokeRoundedRect(r, tp.radiusXS, 1.0f, on ? theme.getColor("accentPrimary").withAlpha(0.55f) : theme.getColor("borderSubtle").withAlpha(0.7f));
+            renderer.fillRoundedRect(r, tileRadius, on ? AestraUI::NUIColor::lerp(theme.getColor("backgroundSecondary"), theme.getColor("accentPrimary"), 0.32f) : theme.getColor("backgroundSecondary"));
+            renderer.strokeRoundedRect(r, tileRadius, 1.0f, on ? theme.getColor("accentPrimary").withAlpha(0.55f) : theme.getColor("borderSubtle").withAlpha(0.7f));
             renderer.setClipRect(AestraUI::intersectRects(view, r));
             renderer.drawText(fitName(renderer, scene.name, tp.fontSizeXS + 1.0f, r.width - 24.0f), {r.x + 12.0f, r.y + 8.0f}, tp.fontSizeXS + 1.0f, theme.getColor("textPrimary").withAlpha(on ? 1.0f : 0.9f));
             const float tw = r.width - 24.0f, bw = tw / static_cast<float>(kThumbBars), maxH = 8.0f;

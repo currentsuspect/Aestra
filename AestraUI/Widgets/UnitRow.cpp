@@ -235,7 +235,7 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
     renderer.setClipRect(paintClip);
 
     const auto& themeProps = theme.getCurrentTheme();
-    const float radius = std::max(0.0f, themeProps.radiusM - 1.0f);
+    const float radius = 6.0f; // the board's row radius
     const NUIColor unitAccent = identityColor();
     NUIColor cardBg = theme.getColor("backgroundSecondary");
     NUIColor border = theme.getColor("border").withAlpha(0.08f);
@@ -340,7 +340,8 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     const NUIRect& muteRect = pills[1];
     const NUIRect& soloRect = pills[2];
     // The output chip: a flat 1 px outline with the channel's colour square and its name (the mock).
-    renderer.strokeRoundedRect(routeRect, 2.0f, 1.0f, m_mixerRouteShortLabel == "!" ? theme.getColor("error").withAlpha(0.75f) : theme.getColor("border").withAlpha(engaged ? 0.9f : 0.6f));
+    renderer.fillRoundedRect(routeRect, routeRect.height * 0.5f, theme.getColor("backgroundPrimary")); // the board's pill, not an outline
+    if (m_mixerRouteShortLabel == "!") renderer.strokeRoundedRect(routeRect, routeRect.height * 0.5f, 1.0f, theme.getColor("error").withAlpha(0.75f));
     const NUIColor routeText = theme.getColor("textSecondary");
     if (m_density == Density::Minimal) {
         renderer.drawTextCentered(m_mixerRouteShortLabel, routeRect, 7.5f, routeText);
@@ -374,7 +375,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
 
     const auto& themeProps = theme.getCurrentTheme();
     const NUIRect contentCard(bounds.x, bounds.y, std::max(0.0f, bounds.width), std::max(0.0f, bounds.height));
-    renderer.fillRoundedRect(contentCard, themeProps.radiusS + 2.0f, theme.getColor("backgroundPrimary"));
+    renderer.fillRoundedRect(contentCard, 5.0f, theme.getColor("backgroundPrimary")); // the board's lane well
 
     const float lanePadding = 6.0f;
     const NUIRect timelineStrip(contentCard.x + lanePadding, contentCard.y + lanePadding,
@@ -442,15 +443,6 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     // surfaceTertiary; 2, 4 surfaceRaised), so "the 2" is a place you see, not count to. No pad outlines.
     const NUIColor restEven = theme.getColor("surfaceTertiary"), restOdd = theme.getColor("surfaceRaised").lightened(0.10f);
     const auto restFill = [&](int step) { return ((step / 4) & 1) != 0 ? restOdd : restEven; };
-    // The seam in the gap after every fourth pad; the one closing a bar is stronger, so bars read as blocks.
-    const auto drawSeam = [&](int step, const NUIRect& cellRect, float cellGap) {
-        if ((step + 1) % 4 != 0 || step + 1 >= m_stepCount) return;
-        const bool barEnd = (step + 1) % 16 == 0;
-        const float seamX = cellRect.right() + (cellGap + kStepGroupGap) * 0.5f;
-        renderer.drawLine(NUIPoint(seamX, timelineStrip.y + (barEnd ? 0.0f : 4.0f)),
-                          NUIPoint(seamX, timelineStrip.bottom() - (barEnd ? 0.0f : 4.0f)), 1.0f,
-                          barEnd ? theme.getColor("textMuted").withAlpha(0.7f) : theme.getColor("gridMinor"));
-    };
 
     if (m_type == Aestra::Audio::UnitType::Sampler && !noteRollMode) {
         const NUIColor activeFill = identityColor();
@@ -505,7 +497,6 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                 renderer.strokeRoundedRect(haloRect, cellRadius + 1.5f, 1.5f,
                                            theme.getColor("textPrimary").withAlpha(0.9f));
             }
-            drawSeam(step, cellRect, cellGap);
             if (isPlayhead) {
                 renderer.strokeRoundedRect(cellRect, cellRadius, 1.5f,
                                            playheadAccent.withAlpha(isActive ? 0.95f : 0.45f));
@@ -549,7 +540,6 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                 renderer.strokeRoundedRect(haloRect, 4.5f, 1.5f,
                                            theme.getColor("textPrimary").withAlpha(0.9f));
             }
-            drawSeam(step, cellRect, cellGap);
             if (isPlayhead) {
                 renderer.strokeRoundedRect(cellRect, 3.0f, 1.5f, playheadAccent.withAlpha(isActive ? 0.95f : 0.45f));
             }
@@ -582,14 +572,6 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
             const float y = timelineStrip.y + ((lane + 1) * timelineStrip.height / 5.0f);
             renderer.drawLine(NUIPoint(timelineStrip.x, y), NUIPoint(timelineStrip.right(), y), 1.0f,
                               theme.getColor("border").withAlpha(0.07f));
-        }
-
-        const double barLineBeats =
-            m_trackManager ? static_cast<double>(m_trackManager->getTimelineClock().getBeatsPerBar()) : 4.0;
-        for (double beat = barLineBeats; beat < visibleLengthBeats; beat += barLineBeats) {
-            const float x = timelineStrip.x + static_cast<float>(beat / visibleLengthBeats) * totalWidth - m_scrollX;
-            renderer.drawLine(NUIPoint(x, timelineStrip.y), NUIPoint(x, timelineStrip.bottom()), 1.0f,
-                              theme.getColor("border").withAlpha(0.10f));
         }
 
         int minPitch = noteSpans.empty() ? 60 : noteSpans[0].pitch;
