@@ -26,6 +26,7 @@
 #endif
 
 #include "Plugin/PluginHostTestHooks.h"
+#include "Plugin/PluginScanProtocol.h"
 #ifdef AESTRA_HAS_VST3
 #include "Plugin/VST3Host.h"
 #endif
@@ -398,6 +399,21 @@ int main(int argc, char** argv) {
             std::string pathHex;
             input >> format >> pathHex;
             const std::string path = hexDecode(pathHex);
+            if (format == "vst3") {
+                // Loading a VST3 bundle to read its classes keeps it mapped in whoever did it; here that is this
+                // short-lived process, not the app (SPEC: Aestra's own memory, 40 MB of idle RAM for two plugins).
+                if (path.empty()) {
+                    reply("ERR invalid-scan-request");
+                    continue;
+                }
+#ifdef AESTRA_HAS_VST3
+                reply("OK " + Aestra::Audio::ScanProtocol::encodeRecords(
+                                  Aestra::Audio::VST3PluginFactory::scanPlugin(std::filesystem::path(path))));
+#else
+                reply("ERR vst3-unsupported-in-this-build");
+#endif
+                continue;
+            }
             if (format != "clap") {
                 reply("ERR unsupported-format");
                 continue;
