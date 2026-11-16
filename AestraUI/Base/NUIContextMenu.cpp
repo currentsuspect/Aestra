@@ -734,6 +734,9 @@ void NUIContextMenu::onUpdate(double deltaTime)
     const bool wasMoving = rowMotion_.animating();
     rowMotion_.update(static_cast<float>(deltaTime), hoveredItemIndex_ >= 0, false);
     if (wasMoving || rowMotion_.animating()) setDirty(true);
+    // The submenu is rendered and hit-tested directly rather than as a child, so it
+    // gets no onUpdate of its own: without this its rows' hover motion never advances.
+    if (activeSubmenu_ && activeSubmenu_->isVisible()) activeSubmenu_->onUpdate(deltaTime);
 }
 
 void NUIContextMenu::drawItem(NUIRenderer& renderer, std::shared_ptr<NUIContextMenuItem> item, int index)

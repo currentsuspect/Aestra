@@ -851,6 +851,7 @@ void UIMixerInspector::onUpdate(double deltaTime)
                 }
             }
         } else {
+            m_ioInputDropdown->closeOpenPopup(); // hidden while open leaves a registration behind
             m_ioInputDropdown->setVisible(false);
         }
     }
@@ -901,9 +902,11 @@ void UIMixerInspector::onUpdate(double deltaTime)
                 }
             }
         } else {
+            m_mainOutputDropdown->closeOpenPopup();
             m_mainOutputDropdown->setVisible(false);
         }
     } else if (m_mainOutputDropdown) {
+        m_mainOutputDropdown->closeOpenPopup();
         m_mainOutputDropdown->setVisible(false);
     }
 }

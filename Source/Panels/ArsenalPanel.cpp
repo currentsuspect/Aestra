@@ -1,5 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "ArsenalPanel.h"
+
+#include "ArsenalGridScroll.h"
 #include "../AestraUI/Core/NUIWheel.h"
 #include "ArsenalRackDraw.h"
 #include "../App/ServiceLocator.h"
@@ -236,8 +238,10 @@ void ArsenalPanel::snapGridScrollBy(float deltaPx) {
     const float barWidth = static_cast<float>(stepsPerBar) * gridStepWidth() +
                            static_cast<float>((stepsPerBar + 3) / 4) * kGroupGap;
     const float maxScroll = computeGridMaxScrollX();
-    const int current = static_cast<int>(std::lround(m_gridScrollX / barWidth));
-    const float target = std::clamp(static_cast<float>(std::max(0, current + direction)) * barWidth, 0.0f, maxScroll);
+    // The offset can sit between two bar lines (the clamp stops short of one), so the step comes from
+    // ArsenalGridScroll: it leaves the line the offset is on, in the direction of travel, never skipping
+    // the bar behind a clamped endpoint.
+    const float target = ArsenalGridScroll::nextBarOffset(m_gridScrollX, barWidth, maxScroll, direction);
     scrollGridBy(target - m_gridScrollX);
 }
 

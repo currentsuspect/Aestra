@@ -3,8 +3,10 @@
 // FD-27 point 2, "a grouped rack": units sit under Drums, Synth and Audio headers with their counts, in unit
 // order inside a group, and the positions drive layout, scrolling and drag-and-drop from one answer.
 
+#include "ArsenalGridScroll.h"
 #include "ArsenalRackLayout.h"
 
+#include <algorithm>
 #include <iostream>
 #include <string>
 
@@ -95,6 +97,23 @@ int main() {
         check(ArsenalRackLayout::finalIndexAfterMove(order, 40, 1) == 1, "dragged up: the slot index as it is");
         check(ArsenalRackLayout::finalIndexAfterMove(order, 20, 4) == 3, "dragged to the very end: the last place");
         check(ArsenalRackLayout::finalIndexAfterMove(order, 30, 2) == 2 && ArsenalRackLayout::finalIndexAfterMove(order, 30, 3) == 2, "dropped on or just after itself: it stays");
+    }
+
+    std::cout << "[8] a wheel notch lands on a bar line, and reversing never skips one\n";
+    {
+        // A 4-bar loop in a 2.75-bar viewport: the clamp stops at 1.25 bars, not on a bar line.
+        const float bar = 100.0f;
+        const float maxScroll = 1.25f * bar;
+        check(Audio::ArsenalGridScroll::nextBarOffset(0.0f, bar, maxScroll, +1) == bar, "forward from the start: the next bar");
+        const float clampedToEnd = std::min(2.0f * bar, maxScroll); // bar 2 is past the end
+        check(Audio::ArsenalGridScroll::nextBarOffset(bar, bar, maxScroll, +1) == clampedToEnd,
+              "forward from bar 1: the clamp, since bar 2 is past the end");
+        check(Audio::ArsenalGridScroll::nextBarOffset(maxScroll, bar, maxScroll, -1) == bar,
+              "reverse from the clamped 1.25 bars: back to bar 1, not past it to 0");
+        check(Audio::ArsenalGridScroll::nextBarOffset(bar, bar, maxScroll, -1) == 0.0f, "reverse from a bar line: the bar before");
+        check(Audio::ArsenalGridScroll::nextBarOffset(1.5f * bar, bar, maxScroll, -1) == bar,
+              "reverse from half a bar past a line: back to that line");
+        check(Audio::ArsenalGridScroll::nextBarOffset(0.0f, bar, maxScroll, -1) == 0.0f, "reverse at the start: nowhere to go");
     }
 
     std::cout << (g_failures == 0 ? "ALL PASS\n" : "FAILURES\n");
