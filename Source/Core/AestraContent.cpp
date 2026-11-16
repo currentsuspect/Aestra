@@ -913,7 +913,15 @@ void AestraContent::setupBrowserPanels() {
     m_previewPanel->setOnPlay([this](const AestraUI::FileItem& file) { playSoundPreview(file); });
     m_previewPanel->setOnStop([this]() { stopSoundPreview(); });
     m_previewPanel->setOnSeek([this](double seconds) { seekSoundPreview(seconds); });
-    m_previewPanel->setOnAddToArsenal([this](const AestraUI::FileItem& f) { addSampleToArsenal(f.path); });
+    // The Add button follows the mode: a sampler row in the Arsenal, a placement on the arrangement in the Timeline.
+    m_previewPanel->setAddAction(
+        [this]() { return std::string(WorkspaceFocusModel::previewAddLabel(WorkspaceFocusModel::previewAddTarget(m_viewFocus))); },
+        [this](const AestraUI::FileItem& f) {
+            if (WorkspaceFocusModel::previewAddTarget(m_viewFocus) == WorkspaceFocusModel::PreviewAddTarget::Timeline)
+                loadSampleIntoSelectedTrack(f.path);
+            else
+                addSampleToArsenal(f.path);
+        });
     m_previewPanel->setOnAutoPlayChanged([this](bool on) { if (m_fileBrowser) m_fileBrowser->setAutoPreviewEnabled(on); });
     m_workspaceLayer->addChild(m_previewPanel);
 
