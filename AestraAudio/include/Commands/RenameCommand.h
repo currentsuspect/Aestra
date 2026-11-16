@@ -47,7 +47,7 @@ public:
         if (old == cmd->m_name) return cmd;
         cmd->m_edits.push_back({Edit::Lane, 0, head, 0, old});
         if (track) {
-            cmd->m_edits.push_back({Edit::TrackName, track->trackId, {}, 0, track->name});
+            cmd->m_edits.push_back({Edit::TrackName, track->trackId, {}, 0, track->name, track->role});
             if (const auto* ch = tm.getChannelById(track->channelId); ch && track->channelId != 0 &&
                                                                       (ch->getName() == old || ch->getName() == track->name))
                 cmd->m_edits.push_back({Edit::Channel, 0, {}, track->channelId, ch->getName()});
@@ -67,7 +67,7 @@ public:
             const auto* head = tm.getPlaylistModel().getLane(track->laneIds.front());
             if (!head || (head->name != old && track->name != old)) continue;
             cmd->m_edits.push_back({Edit::Lane, 0, track->laneIds.front(), 0, head->name});
-            cmd->m_edits.push_back({Edit::TrackName, track->trackId, {}, 0, track->name});
+            cmd->m_edits.push_back({Edit::TrackName, track->trackId, {}, 0, track->name, track->role});
         }
         return cmd;
     }
@@ -86,6 +86,7 @@ private:
         PlaylistLaneID laneId;
         uint32_t channelId;
         std::string before;
+        MusicalRole roleBefore{}; // a track's role before the rename: undo puts it back
     };
 
     RenameCommand(TrackManager& tm, std::string name, std::string label)
@@ -99,7 +100,11 @@ private:
                 if (auto* lane = m_tm.getPlaylistModel().getLane(e.laneId)) lane->name = to;
                 break;
             case Edit::TrackName:
-                if (auto* track = m_tm.getTrack(e.trackId)) track->name = to;
+                if (auto* track = m_tm.getTrack(e.trackId)) {
+                    track->name = to;
+                    // The user's choice stands; a role the old name gave follows the new name (and back on undo).
+                    track->role = forward ? roleAfterNaming(track->role, to) : e.roleBefore;
+                }
                 break;
             case Edit::Channel:
                 if (auto* ch = m_tm.getChannelById(e.channelId)) ch->setName(to);

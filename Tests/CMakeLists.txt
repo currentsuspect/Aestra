@@ -1811,6 +1811,23 @@ target_include_directories(ArsenalBridgeModeRoundTripTest PRIVATE
 add_test(NAME ArsenalBridgeModeRoundTripTest COMMAND ArsenalBridgeModeRoundTripTest)
 set_tests_properties(ArsenalBridgeModeRoundTripTest PROPERTIES LABELS "arsenal;policy;roundtrip;contract:durability")
 
+# Roles: what a sound or track is in the song (Connected Understanding, owner brief 16 Nov 2026).
+add_executable(MusicalRoleTest AestraAudio/MusicalRoleTest.cpp)
+target_include_directories(MusicalRoleTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)
+add_test(NAME MusicalRoleTest COMMAND MusicalRoleTest)
+set_tests_properties(MusicalRoleTest PROPERTIES LABELS "audio;roles;policy;contract:application")
+
+add_executable(MusicalRoleProjectTest AestraAudio/MusicalRoleProjectTest.cpp)
+target_link_libraries(MusicalRoleProjectTest PRIVATE AestraAudioCore)
+target_include_directories(MusicalRoleProjectTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MusicalRoleProjectTest COMMAND MusicalRoleProjectTest)
+set_tests_properties(MusicalRoleProjectTest PROPERTIES LABELS "audio;roles;roundtrip;undo;contract:durability")
+
 # Sample Rate Converter Test
 add_executable(AestraSampleRateConverterTest AestraAudio/SampleRateConverterTest.cpp)
 target_link_libraries(AestraSampleRateConverterTest PRIVATE AestraAudio)
