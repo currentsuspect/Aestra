@@ -409,7 +409,10 @@ void ArsenalPanel::refreshUnits() {
         m_listContainer->addChild(row);
         m_unitRows.push_back(row);
     }
-    if (m_lastRowCount > 0 && m_unitRows.size() > m_lastRowCount && m_unitRows.size() - m_lastRowCount <= 2) m_targetScrollY = 1.0e9f; // one or two added (not a project or kit loading): scroll to them
+    const size_t rowsBeforeThisRefresh = m_lastRowCount;
+    // One or two added (not a project or kit loading): the new row is revealed below, once the rack has laid it out.
+    const bool rowsAdded = rowsBeforeThisRefresh > 0 && m_unitRows.size() > rowsBeforeThisRefresh &&
+                           m_unitRows.size() - rowsBeforeThisRefresh <= 2;
     m_lastRowCount = m_unitRows.size();
     // Add "Add Unit" button
     m_addUnitBtn = std::make_shared<NUIButton>("+ Add a sound");
@@ -422,6 +425,7 @@ void ArsenalPanel::refreshUnits() {
     m_listContainer->addChild(m_addUnitBtn);
     
     layoutUnits();
+    if (rowsAdded) revealRowsFrom(rowsBeforeThisRefresh);
     scrollGridBy(0.0f); // Re-clamp the shared scroll for the (possibly new) loop length
     syncRowSelection();
     if (m_onPreferredHeightChanged) {
@@ -733,6 +737,22 @@ void ArsenalPanel::layoutUnits() {
         m_unitRows[item.rowIndex]->setBounds(NUIRect(startX, rackTop + item.y, width, item.h));
         m_unitRows[item.rowIndex]->setViewport(m_listViewportRect);
     }
+}
+
+// A row's bottom sits at (progress header bottom + 8 - scroll + item.y + item.h): the scroll that
+// brings the lowest added row to the bottom of the viewport, and never less than where we are.
+void ArsenalPanel::revealRowsFrom(size_t firstNewRow) {
+    if (!m_listContainer) return;
+    float lowestNewRowBottom = 0.0f;
+    bool found = false;
+    for (const auto& item : m_rack.items) {
+        if (item.kind != Aestra::ArsenalRackItem::Kind::Row || item.rowIndex < firstNewRow) continue;
+        lowestNewRowBottom = std::max(lowestNewRowBottom, item.y + item.h);
+        found = true;
+    }
+    if (!found) return;
+    const float roomBelowHeader = m_listViewportRect.bottom() - (m_progressHeaderRect.bottom() + 8.0f);
+    m_targetScrollY = std::max(m_targetScrollY, lowestNewRowBottom - roomBelowHeader);
 }
 
 void ArsenalPanel::onResize(int width, int height) {

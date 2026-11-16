@@ -175,6 +175,7 @@ private:
     bool m_fitToWidth = true; // Fit whole loop to width vs readable-min + scroll
     int m_stepCount = 16; // Default step count
     void layoutUnits();
+    void revealRowsFrom(size_t firstNewRow); // Scroll just far enough that the added row is in the viewport
     void scrollGridBy(float deltaPx, bool userScroll = true); // Clamp + broadcast the shared grid scroll
     float computeGridMaxScrollX() const;
     void followGridPlayhead(); // Keep the playing bar in view unless the user scrolled away
