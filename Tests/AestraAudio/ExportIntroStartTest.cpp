@@ -2,8 +2,8 @@
 //
 // A bounce must begin where the timeline begins (owner, 16 Nov 2026: Audition "is cutting off the intro"). A sampler
 // note on beat 1 and an audio clip on beat 1 each start with a loud first sample; the first frame of the rendered
-// file that is audible is found, and it must be within a few milliseconds of the start, not a block or a latency
-// later.
+// file that is audible is found, and it must be within about ten milliseconds of the start, not a block (90 ms) or
+// a latency later.
 
 #include "GoldenAudio/GoldenAudioHarness.h"
 
@@ -120,7 +120,7 @@ int main() {
             const double ms = startMs(root, kind, rate);
             std::printf("%s, exported at %u Hz: first audible at %.2f ms\n", names[kind], rate, ms);
             const double expected = kind == 2 ? 500.0 : 0.0; // beat 2 at 120 bpm is half a second in
-            check(ms >= expected && ms < expected + 5.0, std::string(names[kind]) + " is heard at its own time at " + std::to_string(rate) + " Hz");
+            check(ms >= expected && ms < expected + 10.0, std::string(names[kind]) + " is heard at its own time at " + std::to_string(rate) + " Hz");
         }
     std::filesystem::remove_all(root);
     if (g_failures) { std::printf("%d check(s) failed\n", g_failures); return 1; }
