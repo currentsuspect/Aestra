@@ -34,7 +34,7 @@ public:
         for (bool joined = true; joined;) {
             joined = false;
             for (size_t i = 0; i < m_rects.size(); ++i) {
-                if (near(merged, m_rects[i])) {
+                if (closeEnough(merged, m_rects[i])) {
                     merged = unite(merged, m_rects[i]);
                     m_rects.erase(m_rects.begin() + static_cast<std::ptrdiff_t>(i));
                     joined = true;
@@ -104,7 +104,7 @@ private:
         return std::isfinite(r.x) && std::isfinite(r.y) && std::isfinite(r.width) && std::isfinite(r.height);
     }
 
-    bool near(const NUIRect& a, const NUIRect& b) const {
+    bool closeEnough(const NUIRect& a, const NUIRect& b) const { // not "near": windows.h defines near as a macro
         const float g = m_config.mergeGap;
         return a.x < b.right() + g && a.right() + g > b.x && a.y < b.bottom() + g && a.bottom() + g > b.y;
     }
