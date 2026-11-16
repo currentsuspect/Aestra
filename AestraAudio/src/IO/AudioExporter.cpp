@@ -424,6 +424,13 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
             m_engine.setGraph(AudioGraphBuilder::buildFromTrackManager(m_trackManager, /*includeClips=*/false));
             sourcesSilenced = true;
         }
+        // The first block is a single frame. Starting the transport makes the engine's first block rewind the note
+        // scheduler, which throws away every note queued before it, so nothing could be queued for that block: a
+        // note on the first beat sounded only when the next refill came round, a whole block (4096 frames, about
+        // 90 ms) later. Live playback holds its first block until the notes are queued; an offline render has no
+        // clock to wait on, so it takes a one-frame step, lets the scheduler plan from the new start, and goes on.
+        // The beat-one note is then a frame late, not a block (owner, 16 Nov 2026: Audition "cuts the intro off").
+        if (result.framesRendered == 0) blockLimit = std::min<uint64_t>(blockLimit, 1);
         uint32_t framesThisBlock = static_cast<uint32_t>(blockLimit);
 
         // Master bounce: use full live engine path with master stage

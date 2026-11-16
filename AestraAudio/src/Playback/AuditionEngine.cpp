@@ -424,7 +424,7 @@ double AuditionEngine::getPositionSeconds() const {
 double AuditionEngine::getDurationSeconds() const {
     auto currentSource = m_currentSource.load(std::memory_order_acquire);
     if (currentSource) {
-        return playableSeconds() > 0.0 ? playableSeconds() : currentSource->getDurationSeconds();
+        return currentSource->getDurationSeconds();
     }
 
     std::lock_guard<std::mutex> lock(m_queueMutex);
@@ -487,12 +487,10 @@ void AuditionEngine::setMixSource(std::shared_ptr<ClipSource> source) {
 
 void AuditionEngine::setReferenceSource(std::shared_ptr<ClipSource> source, double offsetSeconds) {
     m_referenceOffsetSeconds.store(offsetSeconds, std::memory_order_relaxed);
-    m_cachedReferenceSeconds.store(source ? source->getDurationSeconds() : 0.0, std::memory_order_release);
     setReferenceSourcePtr(std::move(source));
 }
 
 void AuditionEngine::clearReferenceSource() {
-    m_cachedReferenceSeconds.store(0.0, std::memory_order_release);
     setReferenceSourcePtr(nullptr);
 }
 
@@ -528,8 +526,9 @@ void AuditionEngine::processBlock(float* output, uint32_t numFrames, uint32_t nu
     double currentPos = m_positionSeconds.load(std::memory_order_relaxed);
     const double startPos = currentPos;
 
-    // Already at the end: nothing is left to play. The position is held at the end, so rendering again would read
-    // the same instant of a longer reference every block, over and over, which is a buzz. Say so and stay quiet.
+    // Already at the end of the mix: nothing is left to play. A reference longer than the mix is cut here, not played
+    // on. The position is held at the end, so rendering again would read the same instant of that reference every
+    // block, over and over, which is a buzz. Say so and stay quiet.
     const double playable = playableSeconds();
     if (playable > 0.0 && startPos >= playable) {
         if (m_repeatMode == RepeatMode::One) m_positionSeconds.store(0.0, std::memory_order_relaxed);
@@ -584,7 +583,7 @@ void AuditionEngine::processBlock(float* output, uint32_t numFrames, uint32_t nu
     }
 
     // Check for end of track
-    const double duration = playable; // the mix, or the reference past it when that is longer
+    const double duration = playable; // the mix's length
     const double boundedPos = (duration > 0.0)
                                   ? std::clamp(currentPos, 0.0, duration)
                                   : std::max(0.0, currentPos);

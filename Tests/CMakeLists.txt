@@ -1550,11 +1550,24 @@ target_link_libraries(AuditionDualPlaybackTest PRIVATE AestraAudio)
 add_test(NAME AuditionDualPlaybackTest COMMAND AuditionDualPlaybackTest)
 set_tests_properties(AuditionDualPlaybackTest PROPERTIES LABELS "audio;audition;contract:audio")
 
-# A reference longer than the mix plays on to its own end and stops, with no buzz (owner, 16 Nov 2026).
+# A reference longer than the mix is cut where the mix ends, with no buzz (owner, 16 Nov 2026).
 add_executable(AuditionReferenceEndTest AestraAudio/AuditionReferenceEndTest.cpp)
 target_link_libraries(AuditionReferenceEndTest PRIVATE AestraAudio)
 add_test(NAME AuditionReferenceEndTest COMMAND AuditionReferenceEndTest)
 set_tests_properties(AuditionReferenceEndTest PROPERTIES LABELS "audio;audition;regression;contract:audio")
+
+# What is measured is what is heard: a longer reference is trimmed to the mix before it is compared.
+add_executable(AuditionCompareTrimTest Integration/AuditionCompareTrimTest.cpp)
+target_link_libraries(AuditionCompareTrimTest PRIVATE AestraAudio)
+target_include_directories(AuditionCompareTrimTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+)
+add_test(NAME AuditionCompareTrimTest COMMAND AuditionCompareTrimTest)
+set_tests_properties(AuditionCompareTrimTest PROPERTIES LABELS "audio;audition;regression;contract:audio")
 
 add_executable(PreviewAuditionGainParityTest AestraAudio/PreviewAuditionGainParityTest.cpp)
 target_link_libraries(PreviewAuditionGainParityTest PRIVATE AestraAudio)
@@ -1741,6 +1754,19 @@ target_include_directories(ArsenalExportCurrentPolicyTest PRIVATE
 )
 add_test(NAME ArsenalExportCurrentPolicyTest COMMAND ArsenalExportCurrentPolicyTest)
 set_tests_properties(ArsenalExportCurrentPolicyTest PROPERTIES LABELS "arsenal;policy;offline;contract:audio")
+
+# A bounce begins where the timeline begins: the intro is not cut (owner, 16 Nov 2026).
+add_executable(ExportIntroStartTest AestraAudio/ExportIntroStartTest.cpp)
+target_link_libraries(ExportIntroStartTest PRIVATE AestraAudio)
+target_include_directories(ExportIntroStartTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Tests
+)
+add_test(NAME ExportIntroStartTest COMMAND ExportIntroStartTest)
+set_tests_properties(ExportIntroStartTest PROPERTIES LABELS "audio;offline;regression;contract:audio")
 
 # An export at another rate keeps the pitch (owner, 16 Nov 2026).
 add_executable(ExportPitchAcrossRatesTest AestraAudio/ExportPitchAcrossRatesTest.cpp)
