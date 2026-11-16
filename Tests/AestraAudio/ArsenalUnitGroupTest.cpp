@@ -57,6 +57,19 @@ int main() {
     tracks.getCommandHistory().redo();
     check(units.getUnit(clap)->group == UnitGroup::Synth, "redo moves it again");
 
+    // Regroup by name: every sampler re-guessed at once (an old project had them all under Drums), one undo step.
+    TrackManager old;
+    auto& oldUnits = old.getUnitManager();
+    const UnitID oldBell = oldUnits.createUnit("bell - alot", UnitType::Sampler), oldHat = oldUnits.createUnit("hh - huge", UnitType::Sampler);
+    oldUnits.setUnitGroup(oldBell, UnitGroup::Drums);   // as a project saved before the first guess
+    auto regroup = std::make_shared<RegroupUnitsByNameCommand>(old);
+    old.getCommandHistory().pushAndExecute(regroup);
+    check(oldUnits.getUnit(oldBell)->group == UnitGroup::Synth, "regroup moves the bell to Synth");
+    check(oldUnits.getUnit(oldHat)->group == UnitGroup::Drums, "regroup leaves the hat in Drums");
+    check(regroup->changedCount() == 1, "only the units that change are recorded");
+    old.getCommandHistory().undo();
+    check(oldUnits.getUnit(oldBell)->group == UnitGroup::Drums, "one undo puts every regrouped unit back");
+
     if (failures) { std::cerr << "[FAIL] ArsenalUnitGroupTest: " << failures << " check(s)\n"; return 1; }
     std::cout << "[PASS] ArsenalUnitGroupTest\n";
     return 0;

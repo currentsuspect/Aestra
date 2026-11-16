@@ -22,6 +22,22 @@ inline void addUnitGroupMoveItem(NUIContextMenu& menu, Aestra::Audio::TrackManag
         tracks->getCommandHistory().pushAndExecute(std::make_shared<SetUnitGroupCommand>(*tracks, unitId, to));
         if (onMoved) onMoved(unitId);
     });
+    // Every sound at once, from its name: for racks from before the first guess, where everything sat under Drums.
+    menu.addItem("Regroup all sounds by name", [tracks, onMoved]() {
+        auto regroup = std::make_shared<RegroupUnitsByNameCommand>(*tracks);
+        tracks->getCommandHistory().pushAndExecute(regroup);
+        if (onMoved) onMoved(0);
+    });
+}
+
+/// A row dropped under another group's header joins that group (Synth / Drums only; audio stays audio), one undo step.
+inline bool moveUnitToDroppedGroup(Aestra::Audio::TrackManager& tracks, Aestra::Audio::UnitID unitId, Aestra::Audio::UnitGroup group) {
+    using namespace Aestra::Audio;
+    const auto* unit = tracks.getUnitManager().getUnit(unitId);
+    if (!unit || unit->type == UnitType::Audio || unit->group == group) return false;
+    if (group != UnitGroup::Synth && group != UnitGroup::Drums) return false;
+    tracks.getCommandHistory().pushAndExecute(std::make_shared<SetUnitGroupCommand>(tracks, unitId, group));
+    return true;
 }
 
 } // namespace AestraUI

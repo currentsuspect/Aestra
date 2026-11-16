@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "ArsenalPanel.h"
+#include "UnitGroupMenu.h"
 #include "ArsenalRackDraw.h"
 
 #include "Commands/AssignUnitToFirstFreeInsertCommand.h"
@@ -408,7 +409,7 @@ void ArsenalPanel::refreshUnits() {
         m_listContainer->addChild(row);
         m_unitRows.push_back(row);
     }
-    if (m_lastRowCount > 0 && m_unitRows.size() > m_lastRowCount) m_targetScrollY = 1.0e9f; // a unit was added: scroll to it (clamped)
+    if (m_lastRowCount > 0 && m_unitRows.size() > m_lastRowCount && m_unitRows.size() - m_lastRowCount <= 2) m_targetScrollY = 1.0e9f; // one or two added (not a project or kit loading): scroll to them
     m_lastRowCount = m_unitRows.size();
     // Add "Add Unit" button
     m_addUnitBtn = std::make_shared<NUIButton>("+ Add a sound");
@@ -1275,12 +1276,9 @@ void ArsenalPanel::onUnitDragStart(UnitID unitId) {
 
 void ArsenalPanel::onUnitDrop(UnitID unitId, int dropIndex) {
     if (!m_trackManager) return;
-    
     m_trackManager->getUnitManager().reorderUnit(unitId, Aestra::ArsenalRackLayout::finalIndexAfterMove(m_trackManager->getUnitManager().getAllUnitIDs(), unitId, static_cast<size_t>(dropIndex)));
-    m_isDragging = false;
-    m_draggedUnitId = 0;
-    m_dropTargetIndex = -1;
-    
+    AestraUI::moveUnitToDroppedGroup(*m_trackManager, unitId, m_dropGroup); // dropped under another header (#1400)
+    m_isDragging = false; m_draggedUnitId = 0; m_dropTargetIndex = -1;
     refreshUnits();
     Log::info("[Arsenal] Dropped Unit " + std::to_string(unitId) + " at index " + std::to_string(dropIndex));
 }
@@ -1474,6 +1472,7 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
         // The drop lands before the row under the pointer, in the grouped display order.
         const float rackTop = m_progressHeaderRect.bottom() + 8.0f - m_scrollY;
         const int dropIndex = static_cast<int>(m_rack.insertIndexForSlot(m_rack.dropSlotForY(event.position.y - rackTop), m_unitRows.size()));
+        m_dropGroup = m_rack.groupAtY(event.position.y - rackTop); // under another group's header: it joins that group
 
         if (dropIndex != m_dropTargetIndex) {
             m_dropTargetIndex = dropIndex;
