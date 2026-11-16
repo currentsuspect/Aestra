@@ -139,6 +139,7 @@ private:
     std::shared_ptr<AestraUI::NUIComponent> m_listContainer;
     std::vector<std::shared_ptr<AestraUI::UnitRow>> m_unitRows;
     Aestra::ArsenalKitCard m_kitCard; ///< the empty state (FD-27 point 6)
+    size_t m_lastRowCount{0}; ///< rows at the last refresh: more now means a unit was added, so scroll to it
     Aestra::ArsenalRowLanes m_lanes; ///< which rows are open into step lanes (FD-27 point 4)
     Aestra::ArsenalSceneStrip m_scenes; ///< pattern chips under the command header (FD-27 point 1)
     AestraUI::NUIRect m_sceneRect{};

@@ -48,6 +48,7 @@ UnitGroup unitGroupForType(UnitType type) {
     }
 }
 
+
 void applySamplerDefaultsForUnitType(const UnitInfo& unit) {
     auto sampler = std::dynamic_pointer_cast<Plugins::SamplerPlugin>(unit.plugin);
     if (!sampler) {
@@ -117,6 +118,22 @@ ArsenalBridgeMode bridgeModeFallbackFromRouteId(int routeId) {
     return routeId < 0 ? ArsenalBridgeMode::PreviewToMaster : ArsenalBridgeMode::LinkedRack;
 }
 } // namespace
+
+// The first group for a sampled sound, from its name (#1400): melodic one-shots (bells, keys, plucks, pads, basses...)
+// follow the key, so they go under Synth; everything else under Drums. A word matches whole or as a word's start, so
+// "keys" and "keyboard" match "key" and "monkey" does not. The user can always move a unit.
+UnitGroup unitGroupForSample(UnitType type, const std::string& name) {
+    if (type != UnitType::Sampler && type != UnitType::PitchedSampler) return unitGroupForType(type);
+    static const char* const kSynth[] = {"bell", "key", "lead", "pluck", "synth", "pad", "chord", "piano", "rhodes", "organ",
+                                         "string", "brass", "flute", "guitar", "arp", "bass", "melod", "choir", "harp", "marimba"};
+    std::string lower(name);
+    for (auto& c : lower) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    for (const char* word : kSynth) {
+        for (size_t at = lower.find(word); at != std::string::npos; at = lower.find(word, at + 1))
+            if (at == 0 || !std::isalpha(static_cast<unsigned char>(lower[at - 1]))) return UnitGroup::Synth;
+    }
+    return UnitGroup::Drums;
+}
 
 std::string unitTypeName(UnitType type) {
     switch (type) {
@@ -317,7 +334,7 @@ UnitID UnitManager::createUnit(const std::string& name, UnitType type) {
     info.id = id;
     info.name = name;
     info.type = type;
-    info.group = unitGroupForType(type);
+    info.group = unitGroupForSample(type, name);
     if (m_defaultColor) info.color = m_defaultColor(m_unitOrder.size());
     info.bridgeMode = bridgeModeFallbackFromRouteId(info.targetMixerRoute);
 
@@ -961,7 +978,8 @@ void UnitManager::loadFromJSON(const JSON& json) {
             unit.group = unitGroupFromJson(ju["group"]);
         }
         unit.type = ju.has("type") ? unitTypeFromJson(ju["type"]) : unitTypeFromGroup(unit.group);
-        unit.group = unitGroupForType(unit.type);
+        // A saved group is the user's (or the first guess they kept): only a file without one falls back to the type.
+        if (!ju.has("group") || unit.group == UnitGroup::Unknown) unit.group = unitGroupForType(unit.type);
 
         unit.pluginId = ju.has("pluginId") ? ju["pluginId"].asString() : std::string{};
         if (ju.has("pluginStateHex") && ju["pluginStateHex"].isString()) {

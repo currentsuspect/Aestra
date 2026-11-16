@@ -1533,6 +1533,10 @@ add_test(NAME AestraWavLoaderTest COMMAND AestraWavLoaderTest)
 set_tests_properties(AestraWavLoaderTest PROPERTIES LABELS "contract:audio")
 
 # Arsenal content-type transition regression
+add_executable(ArsenalUnitGroupTest AestraAudio/ArsenalUnitGroupTest.cpp)
+target_link_libraries(ArsenalUnitGroupTest PRIVATE AestraAudio)
+add_test(NAME ArsenalUnitGroupTest COMMAND ArsenalUnitGroupTest)
+set_tests_properties(ArsenalUnitGroupTest PROPERTIES LABELS "arsenal;regression;contract:application")
 add_executable(ArsenalUnitTypeTransitionTest AestraAudio/ArsenalUnitTypeTransitionTest.cpp)
 target_link_libraries(ArsenalUnitTypeTransitionTest PRIVATE AestraAudio)
 add_test(NAME ArsenalUnitTypeTransitionTest COMMAND ArsenalUnitTypeTransitionTest)

@@ -28,6 +28,7 @@ constexpr float kGroupGap = UnitRow::kStepGroupGap;
 // sits flush against the panel edge. One definition for preferred height and
 // both scroll computations — they used to disagree by this amount.
 constexpr float kArsenalListBottomPadding = 40.0f + 12.0f;
+constexpr float kArsenalDropFloor = 72.0f; // empty space under "Add a sound", always there to drop into
 
 std::string unitTypeContentLabel(UnitType type, int stepCount, double durationSeconds) {
     switch (type) {
@@ -390,6 +391,7 @@ void ArsenalPanel::refreshUnits() {
             m_selectedUnitId = id;
             removeSelectedUnit();
         });
+        row->setOnGroupChanged([this](UnitID) { refreshUnits(); }); // moved to Synth / Drums: its new header
         row->setOnDuplicateUnit([this](UnitID id) {
             if (!m_trackManager) return;
             UnitID newId = m_trackManager->getUnitManager().duplicateUnit(id);
@@ -405,9 +407,9 @@ void ArsenalPanel::refreshUnits() {
 
         m_listContainer->addChild(row);
         m_unitRows.push_back(row);
-        
     }
-    
+    if (m_lastRowCount > 0 && m_unitRows.size() > m_lastRowCount) m_targetScrollY = 1.0e9f; // a unit was added: scroll to it (clamped)
+    m_lastRowCount = m_unitRows.size();
     // Add "Add Unit" button
     m_addUnitBtn = std::make_shared<NUIButton>("+ Add a sound");
     // The board's quiet add row: no fill or outline at rest, muted text, a surface wash under the pointer.
@@ -426,13 +428,8 @@ void ArsenalPanel::refreshUnits() {
                                       m_rack.contentHeight + kArsenalListBottomPadding;
         m_onPreferredHeightChanged(preferredHeight);
     }
-    if (shouldRestoreDropTargets) {
-        registerDropTargets(true);
-    }
-    
-    if (auto parent = getParent()) {
-        parent->repaint();
-    }
+    if (shouldRestoreDropTargets) registerDropTargets(true);
+    if (auto parent = getParent()) parent->repaint();
 }
 
 void ArsenalPanel::onAddUnit() {
@@ -727,7 +724,8 @@ void ArsenalPanel::layoutUnits() {
     }
     m_rack = Aestra::ArsenalRackLayout::compute(groups, extras);
     m_kitCard.place(m_trackManager && Aestra::ArsenalRowLanes::noSounds(m_trackManager->getUnitManager()), {startX, rackTop + m_rack.contentHeight, width, Aestra::ArsenalKitCard::kReserve}); if (m_kitCard.shown()) m_rack.contentHeight += Aestra::ArsenalKitCard::kReserve; // empty state: a kit card under the rows
-    m_addUnitButtonRect = {startX + 16.0f, rackTop + m_rack.contentHeight + 8.0f, 112.0f, 32.0f}; m_rack.contentHeight += 48.0f; // "Add unit" ends the rack (the mock)
+    // "Add a sound" ends the rack, then a row's worth of open floor: a full rack still has somewhere to drop a sound
+    m_addUnitButtonRect = {startX + 16.0f, rackTop + m_rack.contentHeight + 8.0f, 112.0f, 32.0f}; m_rack.contentHeight += 48.0f + kArsenalDropFloor;
     if (m_addUnitBtn) { m_addUnitBtn->setBounds(m_addUnitButtonRect); m_addUnitBtn->setVisible(m_addUnitButtonRect.y >= m_progressHeaderRect.bottom() && m_addUnitButtonRect.bottom() <= bounds.bottom()); }
     for (const auto& item : m_rack.items) {
         if (item.kind != Aestra::ArsenalRackItem::Kind::Row || !m_unitRows[item.rowIndex]) continue;
