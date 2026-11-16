@@ -212,8 +212,10 @@ void AuditionEngine::nextTrack() {
     std::string title;
     {
         std::lock_guard<std::mutex> lock(m_queueMutex);
-        if (m_queue.empty())
+        if (m_queue.empty()) {
+            pause(); // a mix set directly has no queue to advance: the end is the end, not a held position
             return;
+        }
 
         if (m_shuffle.load()) {
             std::random_device rd;
@@ -320,6 +322,10 @@ void AuditionEngine::play() {
         loadCurrentTrackImpl(filePath, lastPosition, isTimeline, title, true);
     }
 
+    // Play at the very end starts again from the top, as every player does.
+    if (const double playable = playableSeconds(); playable > 0.0 && m_positionSeconds.load() >= playable)
+        m_positionSeconds.store(0.0);
+
     bool wasPlaying = m_isPlaying.exchange(true);
     std::function<void(bool)> onPlaybackStateChanged;
     {
@@ -418,7 +424,7 @@ double AuditionEngine::getPositionSeconds() const {
 double AuditionEngine::getDurationSeconds() const {
     auto currentSource = m_currentSource.load(std::memory_order_acquire);
     if (currentSource) {
-        return currentSource->getDurationSeconds();
+        return playableSeconds() > 0.0 ? playableSeconds() : currentSource->getDurationSeconds();
     }
 
     std::lock_guard<std::mutex> lock(m_queueMutex);
@@ -432,6 +438,9 @@ double AuditionEngine::getDurationSeconds() const {
 
 void AuditionEngine::setDSPPreset(const AuditionDSPPreset& preset) {
     m_currentPreset = preset;
+    // Choosing a preset is choosing to hear it: nothing else ever turned the chain on, so every preset but Studio
+    // was silent (it was applied only in "wet" A/B mode, which no control sets). Studio is the bypass.
+    m_abWetMode.store(preset.enabled, std::memory_order_relaxed);
     Log::info("[AuditionEngine] DSP Preset: " + preset.name);
 }
 
@@ -478,10 +487,12 @@ void AuditionEngine::setMixSource(std::shared_ptr<ClipSource> source) {
 
 void AuditionEngine::setReferenceSource(std::shared_ptr<ClipSource> source, double offsetSeconds) {
     m_referenceOffsetSeconds.store(offsetSeconds, std::memory_order_relaxed);
+    m_cachedReferenceSeconds.store(source ? source->getDurationSeconds() : 0.0, std::memory_order_release);
     setReferenceSourcePtr(std::move(source));
 }
 
 void AuditionEngine::clearReferenceSource() {
+    m_cachedReferenceSeconds.store(0.0, std::memory_order_release);
     setReferenceSourcePtr(nullptr);
 }
 
@@ -516,6 +527,16 @@ void AuditionEngine::processBlock(float* output, uint32_t numFrames, uint32_t nu
 
     double currentPos = m_positionSeconds.load(std::memory_order_relaxed);
     const double startPos = currentPos;
+
+    // Already at the end: nothing is left to play. The position is held at the end, so rendering again would read
+    // the same instant of a longer reference every block, over and over, which is a buzz. Say so and stay quiet.
+    const double playable = playableSeconds();
+    if (playable > 0.0 && startPos >= playable) {
+        if (m_repeatMode == RepeatMode::One) m_positionSeconds.store(0.0, std::memory_order_relaxed);
+        else m_trackTransitionPending.store(true, std::memory_order_release);
+        return;
+    }
+
     currentPos += static_cast<double>(numFrames) / dstRate;
     renderSource(srcBuffer, startPos, output, numFrames, numChannels);
 
@@ -563,7 +584,7 @@ void AuditionEngine::processBlock(float* output, uint32_t numFrames, uint32_t nu
     }
 
     // Check for end of track
-    double duration = m_cachedDurationSeconds.load(std::memory_order_acquire);
+    const double duration = playable; // the mix, or the reference past it when that is longer
     const double boundedPos = (duration > 0.0)
                                   ? std::clamp(currentPos, 0.0, duration)
                                   : std::max(0.0, currentPos);
@@ -890,11 +911,12 @@ void AuditionEngine::applyDSPChain(float* buffer, uint32_t numFrames, uint32_t n
             // Previous was: float newHpL = lowCutAlpha * (hpStateL + left - lpStateL);
             // That looked like a mistake in previous code (mix of variables).
             // Simple HP: y = x - (x processed by LP).
-            static float hp_lp_L = 0, hp_lp_R = 0; // Local state for HP implementation
-            hp_lp_L = lowCutAlpha * left + (1.0f - lowCutAlpha) * hp_lp_L;
-            hp_lp_R = lowCutAlpha * right + (1.0f - lowCutAlpha) * hp_lp_R;
-            left -= hp_lp_L; // This creates a High Pass
-            right -= hp_lp_R;
+            // The low-pass state lives with the rest of the chain's state: a function-local static was shared by every
+            // engine and survived a preset change or a seek, so a switch carried the last preset's low end with it.
+            m_dspState.hpStateL = lowCutAlpha * left + (1.0f - lowCutAlpha) * m_dspState.hpStateL;
+            m_dspState.hpStateR = lowCutAlpha * right + (1.0f - lowCutAlpha) * m_dspState.hpStateR;
+            left -= m_dspState.hpStateL; // This creates a High Pass
+            right -= m_dspState.hpStateR;
         }
 
         // 2. Shelving EQ (Biquad)

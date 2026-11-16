@@ -1550,6 +1550,12 @@ target_link_libraries(AuditionDualPlaybackTest PRIVATE AestraAudio)
 add_test(NAME AuditionDualPlaybackTest COMMAND AuditionDualPlaybackTest)
 set_tests_properties(AuditionDualPlaybackTest PROPERTIES LABELS "audio;audition;contract:audio")
 
+# A reference longer than the mix plays on to its own end and stops, with no buzz (owner, 16 Nov 2026).
+add_executable(AuditionReferenceEndTest AestraAudio/AuditionReferenceEndTest.cpp)
+target_link_libraries(AuditionReferenceEndTest PRIVATE AestraAudio)
+add_test(NAME AuditionReferenceEndTest COMMAND AuditionReferenceEndTest)
+set_tests_properties(AuditionReferenceEndTest PROPERTIES LABELS "audio;audition;regression;contract:audio")
+
 add_executable(PreviewAuditionGainParityTest AestraAudio/PreviewAuditionGainParityTest.cpp)
 target_link_libraries(PreviewAuditionGainParityTest PRIVATE AestraAudio)
 add_test(NAME PreviewAuditionGainParityTest COMMAND PreviewAuditionGainParityTest)
@@ -1735,6 +1741,19 @@ target_include_directories(ArsenalExportCurrentPolicyTest PRIVATE
 )
 add_test(NAME ArsenalExportCurrentPolicyTest COMMAND ArsenalExportCurrentPolicyTest)
 set_tests_properties(ArsenalExportCurrentPolicyTest PROPERTIES LABELS "arsenal;policy;offline;contract:audio")
+
+# An export at another rate keeps the pitch (owner, 16 Nov 2026).
+add_executable(ExportPitchAcrossRatesTest AestraAudio/ExportPitchAcrossRatesTest.cpp)
+target_link_libraries(ExportPitchAcrossRatesTest PRIVATE AestraAudio)
+target_include_directories(ExportPitchAcrossRatesTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Tests
+)
+add_test(NAME ExportPitchAcrossRatesTest COMMAND ExportPitchAcrossRatesTest)
+set_tests_properties(ExportPitchAcrossRatesTest PROPERTIES LABELS "audio;offline;regression;contract:audio")
 
 # Arsenal live/export parity hardening test (Phase 3)
 add_executable(ArsenalExportLiveParityTest AestraAudio/ArsenalExportLiveParityTest.cpp)

@@ -318,6 +318,14 @@ private:
     std::atomic<double> m_positionSeconds{0.0};
     std::atomic<double> m_sampleRate{48000.0};
     std::atomic<double> m_cachedDurationSeconds{0.0};
+    std::atomic<double> m_cachedReferenceSeconds{0.0}; ///< the reference's own length, 0 with none
+    /// How long playback runs: the mix, or the reference past it when the reference is longer (RT-safe).
+    double playableSeconds() const noexcept {
+        const double mix = m_cachedDurationSeconds.load(std::memory_order_acquire);
+        const double reference = m_cachedReferenceSeconds.load(std::memory_order_acquire);
+        if (reference <= 0.0) return mix;
+        return std::max(mix, reference - m_referenceOffsetSeconds.load(std::memory_order_relaxed));
+    }
     std::atomic<bool> m_trackTransitionPending{false};
 
     // RT-safe source pointer (C++17 atomic shared_ptr via std::atomic_load/store)

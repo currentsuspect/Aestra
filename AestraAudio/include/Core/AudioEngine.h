@@ -1135,6 +1135,7 @@ private:
     // Tracks last sample rate synced to Arsenal units (avoids per-block scans).
     // Replaces static local in processArsenalUnits for RT safety.
     uint32_t m_lastSyncedArsenalSampleRate{0};
+    const void* m_lastSyncedSamplerCache{nullptr}; ///< the cache generation that rate reached (see syncCachedSamplerSampleRatesRt)
 
     // --- Antigravity Routing Engine (v3.1) ---
     // Moved struct definitions to AudioGraphState.h
