@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIRendererGL.h"
+#include "NUIFallbackFaces.h"
 #include <cassert>
 #include <cstring>
 #include <cmath>
@@ -574,30 +575,11 @@ bool NUIRendererGL::initialize(int width, int height) {
                 "and measureText to width estimation");
         }
 
-        // Load CJK fallback face (no atlas — glyphs added on demand)
-        static const std::vector<std::string> cjkFallbackPaths = {
-            // Linux
-            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-            "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
-            "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
-            // macOS
-            "/System/Library/Fonts/PingFang.ttc",
-            "/System/Library/Fonts/Hiragino Sans GB.ttc",
-            // Windows
-            "C:/Windows/Fonts/meiryo.ttc",
-            "C:/Windows/Fonts/msgothic.ttc",
-        };
-        bool cjkFontLoaded = false;
-        for (const auto& path : cjkFallbackPaths) {
-            if (FT_New_Face(ftLibrary_, path.c_str(), 0, &ftCJKFace_) == 0) {
-                AESTRA_LOG_DEBUG("CJK fallback font loaded: " + path);
-                cjkFontLoaded = true;
-                break;
-            }
-        }
-        if (!cjkFontLoaded) {
-            AESTRA_LOG_WARNING("No CJK fallback font found. CJK characters may not render correctly.");
-        }
+        // Fallback faces, no atlas: glyphs are added on demand (CJK, then symbols; NUIFallbackFaces.h).
+        std::string fallbackPath;
+        if ((ftCJKFace_ = openFirstFace(ftLibrary_, cjkFallbackFacePaths(), fallbackPath))) AESTRA_LOG_DEBUG("CJK fallback font loaded: " + fallbackPath);
+        else AESTRA_LOG_WARNING("No CJK fallback font found. CJK characters may not render correctly.");
+        if ((ftSymbolFace_ = openFirstFace(ftLibrary_, symbolFallbackFacePaths(), fallbackPath))) AESTRA_LOG_DEBUG("Symbol fallback font loaded: " + fallbackPath);
 
     // Set initial state
     glEnable(GL_BLEND);
@@ -664,6 +646,7 @@ void NUIRendererGL::shutdown() {
         fontCacheSmall_.clear();
         fontCacheXSmall_.clear();
         
+        if (ftSymbolFace_) { FT_Done_Face(ftSymbolFace_); ftSymbolFace_ = nullptr; }
         if (ftCJKFace_) {
             FT_Done_Face(ftCJKFace_);
             ftCJKFace_ = nullptr;
@@ -2664,8 +2647,8 @@ bool NUIRendererGL::tryAddGlyphToAtlas(uint32_t codepoint, FT_Face face, int atl
 }
 
 bool NUIRendererGL::tryLoadFallbackGlyph(uint32_t codepoint, int atlasSize) {
-    // The UI face first: only ASCII is preloaded, so the minus sign, infinity and the ellipsis load here. Then CJK.
-    for (FT_Face face : {ftFace_, ftCJKFace_}) {
+    // The UI face first: only ASCII is preloaded, so the minus sign, infinity and the ellipsis load here. Then CJK, then symbols.
+    for (FT_Face face : {ftFace_, ftCJKFace_, ftSymbolFace_}) {
         if (!face) continue;
         bool added = false;
         if (atlasSize == atlasFontSize_)
