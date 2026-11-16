@@ -1,6 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AuditionQueuePage.h"
 #include "../AestraUI/Core/NUIWheel.h"
+#include "AuditionFit.h"
 
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
@@ -113,9 +114,9 @@ void AuditionQueuePage::onRender(NUIRenderer& r) {
                 r.fillRect({row.x + 42.0f + static_cast<float>(k) * 5.0f, row.y + 26.0f - h * 0.5f, 3.0f, h}, NUIColor::white());
             }
         }
-        r.drawText(titleOf(item), {row.x + 80.0f, row.y + 11.0f}, 13.0f, playing ? theme.getColor("accentPrimary").lightened(0.3f) : text);
+        r.drawText(fitText(r, titleOf(item), 13.0f, row.width - 80.0f - 120.0f), {row.x + 80.0f, row.y + 11.0f}, 13.0f, playing ? theme.getColor("accentPrimary").lightened(0.3f) : text);
         const std::string sub = item.isReference ? "Reference" : item.isFromTimeline ? "From the timeline" : (item.artist.empty() || item.artist == "Unknown Artist" ? "" : item.artist);
-        r.drawText(sub, {row.x + 80.0f, row.y + 29.0f}, 11.0f, muted);
+        r.drawText(fitText(r, sub, 11.0f, row.width - 80.0f - 120.0f), {row.x + 80.0f, row.y + 29.0f}, 11.0f, muted);
         const std::string dur = mmss(item.durationSeconds);
         const float dw = r.measureText(dur, 11.0f).width;
         r.drawText(dur, {row.right() - 32.0f - 24.0f - 20.0f - dw, std::round(r.calculateTextY(row, 11.0f))}, 11.0f, muted);

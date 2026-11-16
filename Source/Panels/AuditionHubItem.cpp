@@ -2,6 +2,7 @@
 // The Audition hub's page of one mix or reference, and the comparison between a mix and a reference.
 #include "AuditionHub.h"
 #include "../AestraUI/Core/NUIWheel.h"
+#include "AuditionFit.h"
 #include "AuditionCover.h"
 
 #include "../AestraUI/Core/NUIThemeSystem.h"
@@ -192,11 +193,20 @@ void AuditionHub::renderItemPage(NUIRenderer& r, const AuditionHubLayout::Frame&
     drawCover(r, p.cover, m_item.seed);
     const float tx = p.cover.right() + 32.0f;
     const std::string kicker = ref ? "REFERENCE" : "MIX \xc2\xb7 VERSION " + m_item.badge.substr(m_item.badge.empty() ? 0 : 1) + " OF " + std::to_string(m_versions.size());
-    r.drawText(kicker + (m_ref ? "  \xc2\xb7  COMPARING WITH " + AuditionLibrary::displayName(*m_ref) : ""), {tx, p.cover.y + 4.0f}, 10.5f, violet);
-    r.drawText(m_item.title, {tx, p.cover.y + 28.0f}, 52.0f, text);
+    // Everything in the hero is drawn inside the hero, and fitted to the room beside the cover, so a long name or
+    // a long reference never runs under the level-match rail.
+    const float heroText = std::max(40.0f, p.hero.right() - AuditionHubLayout::kPad - tx);
+    r.setClipRect(p.hero);
+    r.drawText(fitText(r, kicker + (m_ref ? "  \xc2\xb7  COMPARING WITH " + AuditionLibrary::displayName(*m_ref) : ""), 10.5f, heroText),
+               {tx, p.cover.y + 4.0f}, 10.5f, violet);
+    // The title takes the biggest size it fits at, down to a floor, then is cut with "..." rather than overflow.
+    constexpr float kTitleSizes[] = {52.0f, 44.0f, 36.0f, 30.0f, 26.0f};
+    const float titleSize = fitFontSize(r, m_item.title, kTitleSizes, heroText);
+    r.drawText(fitText(r, m_item.title, titleSize, heroText), {tx, p.cover.y + 28.0f + (52.0f - titleSize) * 0.5f}, titleSize, text);
     std::string meta = m_item.subtitle;
     if (m_item.seconds > 0.0) meta += "  \xc2\xb7  " + mmss(m_item.seconds);
-    r.drawText(meta, {tx, p.cover.y + 98.0f}, 12.0f, muted);
+    r.drawText(fitText(r, meta, 12.0f, heroText), {tx, p.cover.y + 98.0f}, 12.0f, muted);
+    r.setClipRect(f.content);
 
     const bool playingThis = m_engine && m_engine->isPlaying() && m_hasNow && m_now.path == m_item.path;
     const NUIPoint pc{p.play.x + p.play.width * 0.5f, p.play.y + p.play.height * 0.5f};
@@ -216,7 +226,8 @@ void AuditionHub::renderItemPage(NUIRenderer& r, const AuditionHubLayout::Frame&
     if (m_ref) {
         r.drawText("Comparing with", {p.compare.x + 16.0f, std::round(r.calculateTextY(p.compare, 12.0f))}, 12.0f, muted);
         const float lw = r.measureText("Comparing with ", 12.0f).width;
-        r.drawText(AuditionLibrary::displayName(*m_ref), {p.compare.x + 16.0f + lw, std::round(r.calculateTextY(p.compare, 12.0f))}, 12.0f, kRef);
+        r.drawText(fitText(r, AuditionLibrary::displayName(*m_ref), 12.0f, p.compare.width - 32.0f - lw),
+                   {p.compare.x + 16.0f + lw, std::round(r.calculateTextY(p.compare, 12.0f))}, 12.0f, kRef);
     } else {
         r.drawText("Compare with a reference...", {p.compare.x + 16.0f, std::round(r.calculateTextY(p.compare, 12.0f))}, 12.0f, text);
     }
@@ -241,11 +252,11 @@ void AuditionHub::renderItemPage(NUIRenderer& r, const AuditionHubLayout::Frame&
     r.drawText("WAVEFORM", {p.wave.x, p.wave.y - 24.0f}, 9.5f, muted.withAlpha(0.8f));
     float lx = p.wave.x + 78.0f;
     r.fillRect({lx, p.wave.y - 21.0f, 8.0f, 8.0f}, theme.getColor("accentPrimary"));
-    r.drawText(ref ? m_item.title : (m_item.badge.empty() ? "Mix" : "Mix " + m_item.badge), {lx + 14.0f, p.wave.y - 24.0f}, 10.5f, violet);
+    r.drawText(fitText(r, ref ? m_item.title : (m_item.badge.empty() ? "Mix" : "Mix " + m_item.badge), 10.5f, 62.0f), {lx + 14.0f, p.wave.y - 24.0f}, 10.5f, violet);
     if (m_ref && m_result) {
         lx += 90.0f;
         r.fillRect({lx, p.wave.y - 18.0f, 14.0f, 2.0f}, kRef);
-        r.drawText(AuditionLibrary::displayName(*m_ref) + ", level-matched " + signedDb(m_result->referenceGainDb + m_nudgeDb), {lx + 20.0f, p.wave.y - 24.0f}, 10.5f, kRef);
+        r.drawText(fitText(r, AuditionLibrary::displayName(*m_ref) + ", level-matched " + signedDb(m_result->referenceGainDb + m_nudgeDb), 10.5f, p.wave.right() - (lx + 20.0f)), {lx + 20.0f, p.wave.y - 24.0f}, 10.5f, kRef);
     }
     r.fillRect(p.wave, theme.getColor("backgroundSecondary"));
     if (!mixSide) {
@@ -358,7 +369,7 @@ void AuditionHub::renderItemPage(NUIRenderer& r, const AuditionHubLayout::Frame&
         r.drawText("LEVEL MATCH", {rx, p.rail.y + 28.0f}, 9.5f, muted.withAlpha(0.8f));
         const float aw = r.measureText("AUTO", 9.5f).width;
         r.drawText("AUTO", {rx + rw - aw, p.rail.y + 28.0f}, 9.5f, theme.getColor("accentCyan"));
-        r.drawText(signedDb(m_result->referenceGainDb + m_nudgeDb), {rx, p.rail.y + 56.0f}, 34.0f, kRef);
+        r.drawText(fitText(r, signedDb(m_result->referenceGainDb + m_nudgeDb), 34.0f, rw), {rx, p.rail.y + 56.0f}, 34.0f, kRef);
         r.drawText("on the reference", {rx, p.rail.y + 100.0f}, 11.0f, muted);
         r.drawText("Match by", {rx, p.rail.y + 140.0f}, 11.5f, muted);
         const float mw = r.measureText("Integrated LUFS", 11.5f).width;
@@ -372,7 +383,8 @@ void AuditionHub::renderItemPage(NUIRenderer& r, const AuditionHubLayout::Frame&
         }
         r.drawText("SWITCH", {rx, p.rail.y + 232.0f}, 9.5f, muted.withAlpha(0.8f));
         r.drawText("Same position, no gap", {rx, p.rail.y + 256.0f}, 11.5f, muted);
-        r.drawText("A and B run together; a switch is a short ramp", {rx, p.rail.y + 276.0f}, 10.0f, muted.withAlpha(0.7f));
+        r.drawText(fitText(r, "A and B run together;", 10.0f, rw), {rx, p.rail.y + 276.0f}, 10.0f, muted.withAlpha(0.7f)); // two lines: one overran the rail
+        r.drawText(fitText(r, "a switch is a short ramp", 10.0f, rw), {rx, p.rail.y + 292.0f}, 10.0f, muted.withAlpha(0.7f));
     }
     r.clearClipRect();
 }
