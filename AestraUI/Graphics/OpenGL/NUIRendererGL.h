@@ -434,6 +434,7 @@ private:
     FT_Library ftLibrary_;
     FT_Face ftFace_;
     FT_Face ftCJKFace_ = nullptr;
+    FT_Face ftSymbolFace_ = nullptr; ///< dingbats/arrows the UI face lacks (after CJK)
     
     // Projection matrix (orthographic)
     float projectionMatrix_[16];
