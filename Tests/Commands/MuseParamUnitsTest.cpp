@@ -267,6 +267,46 @@ int main() {
         check(statusOf(r) == "ok" && r["result"]["display"].asString() == "4:1", "a ratio reads as '4:1'");
     }
 
+    // ---- A stepped parameter publishes its labels, not a 0..1 range dressed in a unit ----
+    {
+        JSON slope = findParam(service, 0.0, 0.0, "High-Pass Slope");
+        check(!slope.has("min") && !slope.has("max"),
+              "a stepped parameter publishes no numeric bounds (its labels are the range)");
+        check(slope.has("labels") && slope["labels"].size() == 7, "and still publishes its labels");
+    }
+
+    // ---- "=0.5" is the display value, for a unitless parameter whose own range covers 0..1 ----
+    {
+        JSON q = findParam(service, 0.0, 0.0, "Bell 1 Q");
+        check(q.has("min") && std::abs(q["min"].asNumber() - 0.1) < 1e-6, "bell Q min is 0.1");
+        check(q.has("max") && std::abs(q["max"].asNumber() - 10.0) < 1e-6, "bell Q max is 10");
+        check(q.has("note") && q["note"].asString().find("=0.5") != std::string::npos,
+              "bell Q says how to write its own 0.5");
+
+        JSON r = call(service, "set_effect_param", setParamArgs("Bell 1 Q", JSON("=0.50")));
+        check(statusOf(r) == "ok" && r["result"]["display"].asString() == "0.50",
+              "'=0.50' sets Q 0.50, not the middle of the range");
+
+        r = call(service, "set_effect_param", setParamArgs("Bell 1 Q", JSON("0.5")));
+        check(statusOf(r) == "ok" && r["result"]["display"].asString() == "5.05",
+              "a bare 0.5 is still normalized: the middle of 0.1..10");
+
+        r = call(service, "set_effect_param", setParamArgs("Bell 1 Q", JSON("=")));
+        check(statusOf(r) != "ok" && messageOf(r).find("'=' needs a value") != std::string::npos,
+              "'=' with nothing after it is refused by name");
+    }
+
+    // ---- A mistyped unit is refused, not read as "some Hz" ----
+    {
+        JSON r = call(service, "set_effect_param", setParamArgs("Bell 1 Frequency", JSON("3500 xyzHz")));
+        check(statusOf(r) != "ok" && messageOf(r).find("wrong unit") != std::string::npos,
+              "'3500 xyzHz' is refused as a wrong unit: " + messageOf(r));
+
+        r = call(service, "set_effect_param", setParamArgs("Bell 1 Frequency", JSON("3.5kHz")));
+        check(statusOf(r) == "ok" && r["result"]["display"].asString() == "3.5kHz",
+              "'3.5kHz' still reads as 3.5 kHz");
+    }
+
     // ---- The limiter's ceiling, the way a mastering move is spoken ----
     {
         JSON added = call(service, "add_effect", effectArgs(-1.0, -1.0, "com.Aestrastudios.limiter"));

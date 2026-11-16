@@ -12,8 +12,8 @@
 // The tables are templates over the plugin type so they can name its parameter
 // ids without including the plugin header: EQ.h includes this, not the other way
 // round. Every range below is the one the plugin's own display mapping uses, and
-// ParamTextBuiltinsTest checks the two agree by writing the limit in and reading
-// the display back.
+// MuseParamUnitsTest checks the two agree by writing a limit in and reading the
+// display back.
 //
 // A parameter that is not listed here stays normalized-only, and get_effects
 // says so rather than publishing a 0..1 "range" dressed as a unit.
@@ -73,11 +73,16 @@ inline bool describeEQ(uint32_t id, ParameterTextInfo& out) {
     case EQ::kParamBell2Gain:
     case EQ::kParamHShGain:
     case EQ::kParamOutputGain: return linear(-18.0, 18.0, "dB", out);
-    // Q is linear 0.1..10.
+    // Q is linear 0.1..10 and has no unit of its own, so a bare 0..1 number can
+    // only mean normalized: "=0.5" is how the display value 0.5 is written.
     case EQ::kParamLShQ:
     case EQ::kParamBell1Q:
     case EQ::kParamBell2Q:
-    case EQ::kParamHShQ: return linear(0.1, 10.0, "", out);
+    case EQ::kParamHShQ: {
+        const bool ok = linear(0.1, 10.0, "", out);
+        out.note = "a bare 0..1 number means normalized; '=0.5' means Q 0.5";
+        return ok;
+    }
     // Slopes pick from a fixed list; the numbers are the labels the display prints.
     case EQ::kParamHPFSlope:
     case EQ::kParamLPFSlope:

@@ -85,11 +85,29 @@ thread_local std::string t_lastBuildError;
  * that prints those strings parses them, so the mapping has exactly one owner
  * (#1405). Out of range is refused with the range quoted, never clamped: a
  * value the parameter cannot hold is a mistake worth reporting.
+ *
+ * "=0.5" is the explicit display-value form, for the parameters whose own range
+ * runs through 0..1 (EQ Q is 0.1..10 with no unit, so a bare 0.5 can only ever
+ * mean normalized). It reads the value after the '=' in the parameter's own unit.
  */
 bool resolveEffectParamValue(IPluginInstance& plugin, uint32_t paramId, const std::string& text,
                              float& normalized, std::string& error) {
     if (text.find_first_not_of(" \t") == std::string::npos) {
         error = "value is empty";
+        return false;
+    }
+    // "=0.5": the parameter's own 0.5, not the middle of its normalized range.
+    if (text[0] == '=') {
+        const std::string displayValue = text.substr(1);
+        if (displayValue.find_first_not_of(" \t") == std::string::npos) {
+            error = "'=' needs a value after it (remember: '=' means the parameter's own unit)";
+            return false;
+        }
+        std::string pluginError;
+        if (plugin.parseParameterText(paramId, displayValue, normalized, pluginError)) return true;
+        error = (pluginError.empty() ? "this parameter publishes no display units, so '=' has nothing to read: " + displayValue
+                                     : pluginError) +
+                " (a bare 0..1 number means normalized; '=' means the parameter's own unit)";
         return false;
     }
     if (auto plain = safeStof(text); plain && *plain >= 0.0f && *plain <= 1.0f) {
@@ -104,7 +122,8 @@ bool resolveEffectParamValue(IPluginInstance& plugin, uint32_t paramId, const st
         error = "value must be a normalized 0..1 number — this parameter publishes no display units, got: " + text;
         return false;
     }
-    error = pluginError + " (a plain 0..1 number means normalized; get_effects lists units and ranges)";
+    error = pluginError +
+            " (a plain 0..1 number means normalized; '=0.5' means the parameter's own 0.5; get_effects lists units and ranges)";
     return false;
 }
 } // namespace

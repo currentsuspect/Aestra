@@ -143,7 +143,6 @@ inline bool unitMatches(const std::string& written, const std::string& declared)
     const std::string want = detail::lowered(declared);
     if (written.empty()) return true;
     if (written == want) return true;
-    if (detail::endsWith(want, "hz") && detail::endsWith(written, "hz")) return true;
     if (want == "ms" &&
         (written == "s" || written == "sec" || written == "secs" || written == "second" || written == "seconds"))
         return true;

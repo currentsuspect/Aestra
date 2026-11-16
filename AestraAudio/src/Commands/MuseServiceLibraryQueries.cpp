@@ -293,8 +293,14 @@ std::optional<std::string> handleLibraryVerbs(const RequestContext& ctx, const R
                 // 0..1 range published as if it were Hz.
                 ParameterTextInfo text;
                 if (plugin->describeParameterText(param.id, text)) {
-                    paramJson.set("min", JSON(text.min));
-                    paramJson.set("max", JSON(text.max));
+                    // A stepped parameter's range is its labels, each one carrying
+                    // its own value ("6 dB/oct" .. "96 dB/oct"): publishing the
+                    // normalized 0..1 the steps index as if it were the unit's
+                    // range would advertise two bounds the parameter refuses.
+                    if (text.curve != ParamCurve::Stepped) {
+                        paramJson.set("min", JSON(text.min));
+                        paramJson.set("max", JSON(text.max));
+                    }
                     const char* curve = text.curve == ParamCurve::Log
                                             ? "log"
                                             : (text.curve == ParamCurve::Stepped ? "stepped" : "linear");
