@@ -55,6 +55,17 @@ runs:
       run: |
         echo "SCCACHE_CACHE_SIZE=2G" >> "$GITHUB_ENV"
         echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
+        # Pull requests read the cache and never write it (2026-11-14). A PR's entries are scoped to its own
+        # ref, so no other branch can reuse them, yet they count against the repository's shared 10 GB cap.
+        # Measured that day: 10.7 GB in 17,673 entries, the oldest all from PR refs, develop's entries evicted,
+        # and Windows (MSVC) at 67-87 minutes against the ~18 warm and ~47 cold the workflow was tuned for.
+        # Only pushes (develop, main) and the nightly write, so the cache holds what every PR can read.
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          echo "SCCACHE_GHA_RW_MODE=READ_ONLY" >> "$GITHUB_ENV"
+        fi
+        # A new namespace, so the thrashed entries above are never read again and age out first under
+        # GitHub's least-recently-used eviction. Bump it again only to deliberately start the cache cold.
+        echo "SCCACHE_GHA_VERSION=2026-11-14" >> "$GITHUB_ENV"
         # A cache outage must cost speed, never a red build: when the client cannot reach a working server it
         # compiles directly. 2026-10-30 the GHA cache answered "Egress is over the account limit", the server
         # failed to start, and every compile in every lane failed with it.

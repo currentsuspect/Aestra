@@ -2,6 +2,7 @@
 #include "IO/BounceInPlace.h"
 
 #include "Commands/BounceInPlaceCommand.h"
+#include "Commands/ThawTrackCommand.h"
 #include "IO/AudioExporter.h"
 #include "Models/TrackManager.h"
 
@@ -62,7 +63,7 @@ bool shares(const std::vector<uint32_t>& a, const std::vector<uint32_t>& b) {
 } // namespace
 
 BounceInPlaceResult bounceClipsInPlace(AudioEngine& engine, TrackManager& trackManager,
-                                       const std::vector<ClipInstanceID>& clipIds) {
+                                       const std::vector<ClipInstanceID>& clipIds, bool freeze) {
     auto& playlist = trackManager.getPlaylistModel();
     if (clipIds.empty())
         return refuse("Select the clips to bounce first.");
@@ -94,6 +95,13 @@ BounceInPlaceResult bounceClipsInPlace(AudioEngine& engine, TrackManager& trackM
     // sounds the same, rendered after each track's fader and pan and summed, placed on Master, so it passes
     // through none of those tracks and nothing is applied twice.
     const bool toMaster = channels.size() != 1 || channels.front() == MASTER_MIXER_CHANNEL_ID;
+    if (freeze) {
+        if (toMaster)
+            return refuse("Freeze works on a track that plays through one mixer track of its own.");
+        MixerChannel* target = trackManager.getChannelById(channels.front());
+        if (target && target->frozenTrack().active())
+            return refuse("This track is already frozen.");
+    }
 
     // Anything else playing through the same tracks across the span would be baked into the bounce and then
     // play again from its own source.
@@ -105,7 +113,8 @@ BounceInPlaceResult bounceClipsInPlace(AudioEngine& engine, TrackManager& trackM
         if (!lane)
             continue;
         for (const auto& other : lane->clips) {
-            if (isSelected(other.id) || !overlaps(spanStart, spanEnd, other.startBeat, other.endBeat()))
+            // A muted clip plays nothing, so it cannot be baked in twice (and a frozen track's own sources are muted).
+            if (isSelected(other.id) || other.edits.muted || !overlaps(spanStart, spanEnd, other.startBeat, other.endBeat()))
                 continue;
             const PatternSource* otherPattern = trackManager.getPatternManager().getPattern(other.patternId);
             std::vector<uint32_t> otherChannels;
@@ -123,7 +132,11 @@ BounceInPlaceResult bounceClipsInPlace(AudioEngine& engine, TrackManager& trackM
     config.endBeat = spanEnd;
     config.sampleRate = static_cast<uint32_t>(std::max(1.0, playlist.getProjectSampleRate()));
     config.numChannels = 2;
-    config.tailSeconds = 0.0; // the unit is the clips' span (owner ruling 2026-10-11)
+    // A bounce's unit is the clips' span (owner ruling 2026-10-11). A freeze stands in for the live track, so it
+    // keeps a reverb or delay tail the span would cut.
+    constexpr double kFreezeTailSeconds = 2.0;
+    config.tailSeconds = freeze ? kFreezeTailSeconds : 0.0;
+    const double tailBeats = freeze ? kFreezeTailSeconds * std::max(1.0, playlist.getBPM()) / 60.0 : 0.0;
 
     // Pattern clips reach their instruments through the pattern scheduler, which only timeline PLAY fills.
     // Schedule the timeline into it for each render without touching the transport, and take it out again
@@ -170,7 +183,7 @@ BounceInPlaceResult bounceClipsInPlace(AudioEngine& engine, TrackManager& trackM
 
     auto command = std::make_shared<BounceInPlaceCommand>(trackManager, clipIds,
                                                           toMaster ? MASTER_MIXER_CHANNEL_ID : channels.front(),
-                                                          std::move(buffer), spanStart, spanEnd - spanStart);
+                                                          std::move(buffer), spanStart, spanEnd - spanStart + tailBeats, freeze);
     trackManager.getCommandHistory().pushAndExecute(command);
     if (!command->isUndoable())
         return refuse("The bounced audio could not be saved.");
@@ -179,6 +192,25 @@ BounceInPlaceResult bounceClipsInPlace(AudioEngine& engine, TrackManager& trackM
     done.ok = true;
     done.clip = command->bouncedClipId();
     return done;
+}
+
+BounceInPlaceResult freezeTrack(AudioEngine& engine, TrackManager& trackManager, const PlaylistLaneID& laneId) {
+    const PlaylistLane* lane = trackManager.getPlaylistModel().getLane(laneId);
+    if (!lane)
+        return refuse("That track no longer exists.");
+    std::vector<ClipInstanceID> ids;
+    for (const auto& clip : lane->clips)
+        if (!clip.edits.muted)
+            ids.push_back(clip.id);
+    if (ids.empty())
+        return refuse("This track has nothing to freeze.");
+    return bounceClipsInPlace(engine, trackManager, ids, true);
+}
+
+bool thawTrack(TrackManager& trackManager, uint32_t mixerChannelId) {
+    auto command = std::make_shared<ThawTrackCommand>(trackManager, mixerChannelId);
+    trackManager.getCommandHistory().pushAndExecute(command);
+    return command->isUndoable();
 }
 
 } // namespace Audio

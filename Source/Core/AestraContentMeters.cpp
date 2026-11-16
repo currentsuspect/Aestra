@@ -17,7 +17,13 @@ void AestraContent::updateDspLoadReadout(double dt) {
     auto& telemetry = m_audioEngine->telemetry();
     const float percent = Aestra::DspLoadReadout::percentOf(telemetry.lastCallbackNs.load(std::memory_order_relaxed),
                                                             telemetry.getCallbackBudgetNs());
-    m_transportBar->setDspLoad(m_dspLoad.update(percent, dt));
+    const float shown = m_dspLoad.update(percent, dt);
+    m_dspSinceDrawn += dt;
+    if (Aestra::DspLoadReadout::refreshDue(shown, m_dspDrawn, m_dspSinceDrawn)) {
+        m_transportBar->setDspLoad(shown); // repaints the window: only on a tick, a spike or a level change
+        m_dspDrawn = shown;
+        m_dspSinceDrawn = 0.0;
+    }
 }
 
 // #456: MidiInputService::refreshPorts() re-scans and opens newly connected ports, but nothing called it, so a

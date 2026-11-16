@@ -129,6 +129,8 @@ public:
     /// undo steps go, and the project's own presets. Nothing returned = no bar for that plugin.
     struct PresetContext {
         std::string trackName;
+        /// Where it sits, for the header's context text: "Channel 1 · Insert 2". Empty shows nothing.
+        std::string where;
         std::function<void(std::shared_ptr<Aestra::Audio::ICommand>)> record;
         Aestra::Audio::Presets::PresetSession::ProjectPresets projectPresets;
         Aestra::Audio::Presets::PresetSession::SaveToProject saveToProject;
@@ -338,7 +340,7 @@ private:
     std::vector<std::pair<std::weak_ptr<NUIComponent>, std::string>> m_editorKeys; ///< editor -> its anchor key
     void applyEditorMode(const std::shared_ptr<AestraPanelWindow>& editor, const std::string& anchorKey);
     void showEditorMenu(const std::shared_ptr<AestraPanelWindow>& editor, const std::string& anchorKey,
-                        const NUIPoint& at);
+                        const NUIPoint& at, std::function<void()> resetToDefault = {});
     void placeEditorComp(const std::shared_ptr<NUIComponent>& editorComp, double anchorX, double anchorY);
     void centreEditor(const std::shared_ptr<NUIComponent>& editorComp, const std::string& anchorKey);
 };

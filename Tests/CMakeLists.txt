@@ -584,14 +584,18 @@ endif()
 # Rumble Plugin Factory Test (requires runtime plugin system)
 if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/RumblePluginFactoryTest.cpp")
     add_executable(RumblePluginFactoryTest Integration/RumblePluginFactoryTest.cpp)
-    target_link_libraries(RumblePluginFactoryTest PRIVATE AestraAudioCore AestraPremiumPlugins)
+    if(UNIX AND NOT APPLE)
+        target_link_libraries(RumblePluginFactoryTest PRIVATE -Wl,--start-group -Wl,--whole-archive AestraRumble -Wl,--no-whole-archive AestraAudioCore -Wl,--end-group)
+    else()
+        target_link_libraries(RumblePluginFactoryTest PRIVATE AestraAudioCore AestraPremiumPlugins)
+    endif()
     target_include_directories(RumblePluginFactoryTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     if(AESTRA_ENABLE_RUNTIME_TESTS)
         add_test(NAME RumblePluginFactoryTest COMMAND RumblePluginFactoryTest)
-        set_tests_properties(RumblePluginFactoryTest PROPERTIES LABELS "plugins;rumble;factory;runtime")
+        set_tests_properties(RumblePluginFactoryTest PROPERTIES LABELS "plugins;rumble;factory;runtime;contract:plugins")
     else()
         message(STATUS "RumblePluginFactoryTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
     endif()
@@ -600,14 +604,18 @@ endif()
 # Rumble Usage Path Test (requires runtime plugin system)
 if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/RumbleUsagePathTest.cpp")
     add_executable(RumbleUsagePathTest Integration/RumbleUsagePathTest.cpp)
-    target_link_libraries(RumbleUsagePathTest PRIVATE AestraAudioCore AestraPremiumPlugins)
+    if(UNIX AND NOT APPLE)
+        target_link_libraries(RumbleUsagePathTest PRIVATE -Wl,--start-group -Wl,--whole-archive AestraRumble -Wl,--no-whole-archive AestraAudioCore -Wl,--end-group)
+    else()
+        target_link_libraries(RumbleUsagePathTest PRIVATE AestraAudioCore AestraPremiumPlugins)
+    endif()
     target_include_directories(RumbleUsagePathTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     if(AESTRA_ENABLE_RUNTIME_TESTS)
         add_test(NAME RumbleUsagePathTest COMMAND RumbleUsagePathTest)
-        set_tests_properties(RumbleUsagePathTest PROPERTIES LABELS "plugins;rumble;usage;runtime")
+        set_tests_properties(RumbleUsagePathTest PROPERTIES LABELS "plugins;rumble;usage;runtime;contract:plugins")
     else()
         message(STATUS "RumbleUsagePathTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
     endif()
@@ -616,14 +624,18 @@ endif()
 # Rumble Discovery Test (requires runtime plugin system)
 if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/RumbleDiscoveryTest.cpp")
     add_executable(RumbleDiscoveryTest Integration/RumbleDiscoveryTest.cpp)
-    target_link_libraries(RumbleDiscoveryTest PRIVATE AestraAudioCore AestraPremiumPlugins)
+    if(UNIX AND NOT APPLE)
+        target_link_libraries(RumbleDiscoveryTest PRIVATE -Wl,--start-group -Wl,--whole-archive AestraRumble -Wl,--no-whole-archive AestraAudioCore -Wl,--end-group)
+    else()
+        target_link_libraries(RumbleDiscoveryTest PRIVATE AestraAudioCore AestraPremiumPlugins)
+    endif()
     target_include_directories(RumbleDiscoveryTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     if(AESTRA_ENABLE_RUNTIME_TESTS)
         add_test(NAME RumbleDiscoveryTest COMMAND RumbleDiscoveryTest)
-        set_tests_properties(RumbleDiscoveryTest PROPERTIES LABELS "plugins;rumble;discovery;runtime")
+        set_tests_properties(RumbleDiscoveryTest PROPERTIES LABELS "plugins;rumble;discovery;runtime;contract:plugins")
     else()
         message(STATUS "RumbleDiscoveryTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
     endif()
@@ -655,7 +667,7 @@ if(TARGET AestraAudio AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CURREN
     )
     if(AESTRA_ENABLE_RUNTIME_TESTS)
         add_test(NAME InternalPluginProjectRoundTripTest COMMAND InternalPluginProjectRoundTripTest)
-        set_tests_properties(InternalPluginProjectRoundTripTest PROPERTIES LABELS "integration;plugins;project;runtime")
+        set_tests_properties(InternalPluginProjectRoundTripTest PROPERTIES LABELS "integration;plugins;project;runtime;contract:durability")
     else()
         message(STATUS "InternalPluginProjectRoundTripTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
     endif()
@@ -671,7 +683,7 @@ if(TARGET AestraAudio AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CURREN
     )
     if(AESTRA_ENABLE_RUNTIME_TESTS)
         add_test(NAME ArsenalInstrumentAttachmentTest COMMAND ArsenalInstrumentAttachmentTest)
-        set_tests_properties(ArsenalInstrumentAttachmentTest PROPERTIES LABELS "integration;arsenal;plugins;runtime")
+        set_tests_properties(ArsenalInstrumentAttachmentTest PROPERTIES LABELS "integration;arsenal;plugins;runtime;contract:plugins")
     else()
         message(STATUS "ArsenalInstrumentAttachmentTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
     endif()
@@ -956,6 +968,17 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternContentEditDuringPlayb
         PROPERTIES LABELS "audio;playback;regression;contract:audio")
 endif()
 
+# V83-KEY2 (FD-76): the project key and the global transpose; key-following units sound transposed.
+add_executable(GlobalTransposePlaybackTest AestraAudio/GlobalTransposePlaybackTest.cpp)
+target_link_libraries(GlobalTransposePlaybackTest PRIVATE AestraAudio)
+target_include_directories(GlobalTransposePlaybackTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME GlobalTransposePlaybackTest COMMAND GlobalTransposePlaybackTest)
+set_tests_properties(GlobalTransposePlaybackTest PROPERTIES TIMEOUT 120 LABELS "audio;playback;contract:audio")
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternLateRefillTest.cpp")
     add_executable(PatternLateRefillTest AestraAudio/PatternLateRefillTest.cpp)
     target_link_libraries(PatternLateRefillTest PRIVATE AestraAudio)
@@ -1150,6 +1173,12 @@ else()
 endif()
 
 # Atomic Save Test (self-contained filesystem atomic-write smoke test)
+# SPEC-capable audio memory: the PulseAudio client pool is 4 MB, not 64 MB per connection.
+add_executable(PulseClientConfigTest AestraAudio/PulseClientConfigTest.cpp)
+target_include_directories(PulseClientConfigTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)
+add_test(NAME PulseClientConfigTest COMMAND PulseClientConfigTest)
+set_tests_properties(PulseClientConfigTest PROPERTIES LABELS "audio;regression;performance;contract:audio")
+
 add_executable(AestraAtomicSaveTest AestraAudio/AtomicSaveTest.cpp)
 target_link_libraries(AestraAtomicSaveTest PRIVATE)
 add_test(NAME AestraAtomicSaveTest COMMAND AestraAtomicSaveTest)
@@ -1572,7 +1601,7 @@ if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins)
     add_executable(ArsenalParameterStressTest AestraAudio/ArsenalParameterStressTest.cpp)
     if(UNIX AND NOT APPLE)
         target_link_libraries(ArsenalParameterStressTest PRIVATE
-            -Wl,--start-group AestraRumble AestraAudioCore -Wl,--end-group
+            -Wl,--start-group -Wl,--whole-archive AestraRumble -Wl,--no-whole-archive AestraAudioCore -Wl,--end-group
         )
     else()
         target_link_libraries(ArsenalParameterStressTest PRIVATE AestraPremiumPlugins AestraAudioCore)
@@ -1580,6 +1609,7 @@ if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins)
     target_compile_definitions(ArsenalParameterStressTest PRIVATE AESTRA_HEADLESS)
     if(AESTRA_ENABLE_RUNTIME_TESTS)
         add_test(NAME ArsenalParameterStressTest COMMAND ArsenalParameterStressTest)
+        set_tests_properties(ArsenalParameterStressTest PROPERTIES LABELS "arsenal;plugins;runtime;contract:plugins")
     else()
         message(STATUS "ArsenalParameterStressTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
     endif()
@@ -1893,6 +1923,28 @@ target_include_directories(RecordingTakeLengthTest PRIVATE
 add_test(NAME RecordingTakeLengthTest COMMAND RecordingTakeLengthTest)
 set_tests_properties(RecordingTakeLengthTest PROPERTIES LABELS "audio;recording;regression;durability;contract:audio")
 
+# Loop record: one take per pass of the timeline loop.
+add_executable(LoopRecordTest
+    AestraAudio/LoopRecordTest.cpp
+)
+target_link_libraries(LoopRecordTest PRIVATE AestraAudio)
+target_include_directories(LoopRecordTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+)
+add_test(NAME LoopRecordTest COMMAND LoopRecordTest)
+set_tests_properties(LoopRecordTest PROPERTIES LABELS "audio;recording;regression;contract:audio")
+
 # FD-14 phase-5: lane deletion is undoable and identity-stable (DeleteLaneCommand).
 add_executable(DeleteLaneCommandTest
     AestraAudio/DeleteLaneCommandTest.cpp
@@ -2026,6 +2078,53 @@ set_tests_properties(GraphRenderBufferTest PROPERTIES LABELS "audio;quality;expo
 
 # V8-W5: Bounce in Place -- the track-output tap, the bounce command, refusals,
 # and that the project sounds the same before and after.
+# Issue #1397: an export of a project that has not played must still contain its pattern clips.
+add_executable(ExportSchedulesPatternsTest AestraAudio/ExportSchedulesPatternsTest.cpp)
+target_link_libraries(ExportSchedulesPatternsTest PRIVATE AestraAudio)
+target_include_directories(ExportSchedulesPatternsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Tests
+)
+add_test(NAME ExportSchedulesPatternsTest COMMAND ExportSchedulesPatternsTest)
+set_tests_properties(ExportSchedulesPatternsTest PROPERTIES LABELS "audio;export;patterns;regression;contract:audio" TIMEOUT 180)
+
+# V83-E10 (FD-94): overlapping audio clips crossfade; link, shape, undo, save and reopen.
+add_executable(CrossfadeTest
+    AestraAudio/CrossfadeTest.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+)
+target_link_libraries(CrossfadeTest PRIVATE AestraAudio)
+target_include_directories(CrossfadeTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+    ${CMAKE_SOURCE_DIR}/Tests
+)
+add_test(NAME CrossfadeTest COMMAND CrossfadeTest)
+set_tests_properties(CrossfadeTest PROPERTIES LABELS "audio;clips;export;undo;contract:audio" TIMEOUT 180)
+
+# V83-E11: freeze a track, thaw it, including after a save and reopen.
+add_executable(FreezeTrackTest
+    AestraAudio/FreezeTrackTest.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+)
+target_link_libraries(FreezeTrackTest PRIVATE AestraAudio)
+target_include_directories(FreezeTrackTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+    ${CMAKE_SOURCE_DIR}/Tests
+)
+add_test(NAME FreezeTrackTest COMMAND FreezeTrackTest)
+set_tests_properties(FreezeTrackTest PROPERTIES LABELS "audio;clips;export;undo;contract:audio" TIMEOUT 180)
+
 add_executable(BounceInPlaceTest AestraAudio/BounceInPlaceTest.cpp)
 target_link_libraries(BounceInPlaceTest PRIVATE AestraAudio)
 target_include_directories(BounceInPlaceTest PRIVATE
@@ -2048,6 +2147,18 @@ target_include_directories(StemExportTest PRIVATE
 )
 add_test(NAME StemExportTest COMMAND StemExportTest)
 set_tests_properties(StemExportTest PROPERTIES LABELS "audio;export;stems;contract:audio" TIMEOUT 180)
+
+# Loudness target on export: lands on the target, the true-peak ceiling caps the gain, silence is left alone.
+add_executable(LoudnessExportTest AestraAudio/LoudnessExportTest.cpp)
+target_link_libraries(LoudnessExportTest PRIVATE AestraAudio)
+target_include_directories(LoudnessExportTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME LoudnessExportTest COMMAND LoudnessExportTest)
+set_tests_properties(LoudnessExportTest PROPERTIES LABELS "audio;export;contract:audio" TIMEOUT 180)
 
 # V8-A7: automation clips -- the operations, undo through the lane, and the project format.
 add_executable(AutomationRegionsTest AestraAudio/AutomationRegionsTest.cpp)
@@ -2739,6 +2850,15 @@ if(AESTRA_ENABLE_UI)
 endif()
 
 if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(NUIKitThemesTest AestraUI_Core)
+    add_executable(NUIKitThemesTest AestraUI/NUIKitThemesTest.cpp)
+    target_link_libraries(NUIKitThemesTest PRIVATE AestraUI_Core)
+    target_include_directories(NUIKitThemesTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraUI/Graphics)
+    add_test(NAME NUIKitThemesTest COMMAND NUIKitThemesTest)
+    set_tests_properties(NUIKitThemesTest PROPERTIES LABELS "ui;theme;consistency;contract:application")
+endif()
+
+if(AESTRA_ENABLE_UI)
     aestra_require_ui_targets(NUIContextMenuInteractionTest AestraUI_Core)
     aestra_require_ui_targets(ModalDialogInteractionTest AestraUI_Core)
     add_executable(NUIContextMenuInteractionTest AestraUI/NUIContextMenuInteractionTest.cpp)
@@ -2845,6 +2965,7 @@ if(AESTRA_ENABLE_UI)
     target_link_libraries(PianoRollStrokeInteractionTest PRIVATE AestraUI_Core AestraUI_Platform)
     target_include_directories(PianoRollStrokeInteractionTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Platform
         ${CMAKE_SOURCE_DIR}/AestraUI/Common
         ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
     )
@@ -3351,6 +3472,32 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(UIMixerKitTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
 endif()
 
+# SPEC-028 R1: the invalidation region (pure) and how widgets feed it.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(NUIDirtyRegionTest AestraUI_Core AestraUI_Platform)
+    add_executable(NUIDirtyRegionTest AestraUI/NUIDirtyRegionTest.cpp)
+    target_link_libraries(NUIDirtyRegionTest PRIVATE AestraUI_Core AestraUI_Platform)
+    target_include_directories(NUIDirtyRegionTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME NUIDirtyRegionTest COMMAND NUIDirtyRegionTest)
+    set_tests_properties(NUIDirtyRegionTest PROPERTIES LABELS "ui;regression;performance;contract:application")
+
+    aestra_require_ui_targets(NUIComponentInvalidationTest AestraUI_Core AestraUI_Platform)
+    add_executable(NUIComponentInvalidationTest AestraUI/NUIComponentInvalidationTest.cpp)
+    target_link_libraries(NUIComponentInvalidationTest PRIVATE AestraUI_Core AestraUI_Platform)
+    target_include_directories(NUIComponentInvalidationTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME NUIComponentInvalidationTest COMMAND NUIComponentInvalidationTest)
+    set_tests_properties(NUIComponentInvalidationTest PROPERTIES LABELS "ui;regression;performance;contract:application")
+endif()
+
 # The mixer navigator for overflowing sessions: ticks, bracket, group labels (V81-M1, FD-28 point 7).
 if(AESTRA_ENABLE_UI)
     aestra_require_ui_targets(UIMixerNavigatorTest AestraUI_Core AestraUI_Platform)
@@ -3820,6 +3967,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIMarkers.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
@@ -3882,6 +4030,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIMarkers.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
@@ -3944,6 +4093,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIMarkers.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
@@ -4008,6 +4158,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIMarkers.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
@@ -4071,6 +4222,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIMarkers.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
@@ -4134,6 +4286,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIMarkers.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
@@ -4199,6 +4352,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIMarkers.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
@@ -4263,6 +4417,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIMarkers.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
@@ -4325,6 +4480,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIMarkers.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
@@ -4368,6 +4524,60 @@ if(AESTRA_ENABLE_UI)
     add_test(NAME TimelineGridSelectionTest COMMAND TimelineGridSelectionTest)
     set_tests_properties(TimelineGridSelectionTest PROPERTIES
         LABELS "ui;timeline;selection;regression;contract:application")
+endif()
+
+# Song markers on the ruler (v0.8.3 essentials, slice 2): the chip layer, its
+# hit-tests, the drag as one undo step, the inline rename and the keyboard.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(MarkerRulerTest AestraUI_Core AestraUI_Platform AestraUI_OpenGL)
+    add_executable(MarkerRulerTest
+        AestraUI/MarkerRulerTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentHeader.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentMute.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentComp.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationRow.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineClipPaint.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIMarkers.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIMarkers.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIFold.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapRenderer.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineSummaryCache.cpp
+    )
+    target_link_libraries(MarkerRulerTest PRIVATE
+        AestraUI_Core AestraUI_Platform AestraUI_OpenGL AestraAudio AestraCore)
+    target_include_directories(MarkerRulerTest PRIVATE
+        ${CMAKE_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/Source/Settings
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Graphics
+        ${CMAKE_SOURCE_DIR}/AestraUI/Helpers
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME MarkerRulerTest COMMAND MarkerRulerTest)
+    set_tests_properties(MarkerRulerTest PROPERTIES
+        LABELS "ui;timeline;markers;regression;contract:application")
 endif()
 
 # Ownership contract tests (contract:ownership). Registration and the
@@ -4444,7 +4654,10 @@ endif()
 
 if(AESTRA_ENABLE_UI)
     set(AESTRA_REQUIRED_UI_TESTS
+        NUIDirtyRegionTest
+        NUIComponentInvalidationTest
         NUIThemeConsistencyTest
+        NUIKitThemesTest
         NUIContextMenuInteractionTest
         ClipContextMenuReachabilityTest
         TimelineMinimapCursorClaimTest
@@ -4453,6 +4666,7 @@ if(AESTRA_ENABLE_UI)
         ClipEdgeZonesTest
         TimelineFollowPreferenceTest
         TimelineGridSelectionTest
+        MarkerRulerTest
         ModalDialogInteractionTest
         PianoRollInteractionTest
         PianoRollDuplicateTest

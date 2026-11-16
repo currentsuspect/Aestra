@@ -20,6 +20,7 @@
 #include "Commands/SetSoloCommand.h"
 #include "Commands/SetClipEditsCommand.h"
 #include "Commands/TrimClipCommand.h"
+#include "ClipFadesView.h"
 
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
@@ -427,9 +428,9 @@ TrackUIComponent::FadeHandle TrackUIComponent::fadeHandleAt(const AestraUI::NUIR
     // Each handle sits at the END of its ramp, so it tracks the fade as it is
     // dragged. At zero the in-handle rests on the clip's left corner and the
     // out-handle on its right, which is what makes them discoverable.
-    const float inX = clipBounds.x + static_cast<float>(clip.edits.fadeInBeats) * m_pixelsPerBeat;
-    const float outX =
-        clipBounds.x + clipBounds.width - static_cast<float>(clip.edits.fadeOutBeats) * m_pixelsPerBeat;
+    const ResolvedFades fades = fadesForDisplay(m_trackManager, m_laneId, clip);
+    const float inX = clipBounds.x + static_cast<float>(fades.fadeInBeats) * m_pixelsPerBeat;
+    const float outX = clipBounds.x + clipBounds.width - static_cast<float>(fades.fadeOutBeats) * m_pixelsPerBeat;
 
     const float dIn = std::abs(position.x - inX);
     const float dOut = std::abs(position.x - outX);
@@ -444,10 +445,11 @@ TrackUIComponent::FadeHandle TrackUIComponent::fadeHandleAt(const AestraUI::NUIR
     const float outReach = outUnset ? FADE_CORNER_REACH : FADE_HANDLE_GRAB;
 
     const bool inCornerBand = position.y <= bandTop + FADE_CORNER_HEIGHT;
-    const bool inHit = inUnset ? (inCornerBand && position.x - inX >= 0.0f && position.x - inX <= inReach)
-                               : dIn <= inReach;
-    const bool outHit = outUnset ? (inCornerBand && outX - position.x >= 0.0f && outX - position.x <= outReach)
-                                 : dOut <= outReach;
+    // A crossfade's ramp has no grip of its own: dragging it would edit a fade the crossfade overrides.
+    const bool inHit = !fades.fadeInIsCrossfade && (inUnset ? (inCornerBand && position.x - inX >= 0.0f && position.x - inX <= inReach)
+                                                            : dIn <= inReach);
+    const bool outHit = !fades.fadeOutIsCrossfade && (outUnset ? (inCornerBand && outX - position.x >= 0.0f && outX - position.x <= outReach)
+                                                               : dOut <= outReach);
     if (!inHit && !outHit) {
         return FadeHandle::None;
     }
@@ -501,10 +503,9 @@ void TrackUIComponent::drawClipFades(AestraUI::NUIRenderer& renderer, const Aest
 
     const bool hot = m_hoveredClipId == clip.id || isClipHighlighted(clip.id) ||
                      (m_fadeDragHandle != FadeHandle::None && m_fadeDragClipId == clip.id);
-    const float fadeInPx = std::clamp(static_cast<float>(clip.edits.fadeInBeats) * m_pixelsPerBeat, 0.0f,
-                                      clipBounds.width);
-    const float fadeOutPx = std::clamp(static_cast<float>(clip.edits.fadeOutBeats) * m_pixelsPerBeat, 0.0f,
-                                       clipBounds.width);
+    const ResolvedFades fades = fadesForDisplay(m_trackManager, m_laneId, clip);
+    const float fadeInPx = std::clamp(static_cast<float>(fades.fadeInBeats) * m_pixelsPerBeat, 0.0f, clipBounds.width);
+    const float fadeOutPx = std::clamp(static_cast<float>(fades.fadeOutBeats) * m_pixelsPerBeat, 0.0f, clipBounds.width);
     if (fadeInPx <= 0.0f && fadeOutPx <= 0.0f && !hot) {
         return;
     }
@@ -528,6 +529,11 @@ void TrackUIComponent::drawClipFades(AestraUI::NUIRenderer& renderer, const Aest
         const AestraUI::NUIPoint apex(clipLeft, centerY);
         renderer.drawLine(apex, AestraUI::NUIPoint(clipLeft + fadeInPx, centerY - halfH), 1.25f, guide);
         renderer.drawLine(apex, AestraUI::NUIPoint(clipLeft + fadeInPx, centerY + halfH), 1.25f, guide);
+        if (fades.fadeInIsCrossfade) { // the earlier clip's ramp runs the other way under this one: together, the X
+            const AestraUI::NUIPoint end(clipLeft + fadeInPx, centerY);
+            renderer.drawLine(AestraUI::NUIPoint(clipLeft, centerY - halfH), end, 1.25f, guide);
+            renderer.drawLine(AestraUI::NUIPoint(clipLeft, centerY + halfH), end, 1.25f, guide);
+        }
     }
     if (fadeOutPx > 0.0f) {
         const AestraUI::NUIPoint apex(clipRight, centerY);
@@ -549,8 +555,10 @@ void TrackUIComponent::drawClipFades(AestraUI::NUIRenderer& renderer, const Aest
         renderer.fillCircle(AestraUI::NUIPoint(x, centerY), r,
                             themeManager.getColor("textPrimary").withAlpha(alpha));
     };
-    drawGrip(clipLeft + fadeInPx, fadeInPx);
-    drawGrip(clipRight - fadeOutPx, fadeOutPx);
+    if (!fades.fadeInIsCrossfade)
+        drawGrip(clipLeft + fadeInPx, fadeInPx);
+    if (!fades.fadeOutIsCrossfade)
+        drawGrip(clipRight - fadeOutPx, fadeOutPx);
 }
 
 double TrackUIComponent::getSnapGridSizeBeats() const {
@@ -1147,11 +1155,15 @@ void TrackUIComponent::drawChannelWaveform(AestraUI::NUIRenderer& renderer, floa
             return 1.0f;
         }
         float g = 1.0f;
+        // The same ramp shape the engine applies (Smooth bends the ramp, Straight leaves it).
+        const auto ramp = [](float x, bool equalPower) { return equalPower ? std::sin(x * 1.5707963f) : x; };
         if (m_waveformFade.fadeInPx > 0.0f) {
-            g = std::min(g, std::clamp((px - m_waveformFade.clipLeft) / m_waveformFade.fadeInPx, 0.0f, 1.0f));
+            g = std::min(g, ramp(std::clamp((px - m_waveformFade.clipLeft) / m_waveformFade.fadeInPx, 0.0f, 1.0f),
+                                 m_waveformFade.inEqualPower));
         }
         if (m_waveformFade.fadeOutPx > 0.0f) {
-            g = std::min(g, std::clamp((m_waveformFade.clipRight - px) / m_waveformFade.fadeOutPx, 0.0f, 1.0f));
+            g = std::min(g, ramp(std::clamp((m_waveformFade.clipRight - px) / m_waveformFade.fadeOutPx, 0.0f, 1.0f),
+                                 m_waveformFade.outEqualPower));
         }
         return g;
     };
@@ -1415,12 +1427,13 @@ void TrackUIComponent::drawClipAtPosition(AestraUI::NUIRenderer& renderer, const
                     m_waveformFade.active = true;
                     m_waveformFade.clipLeft = insetFullClipBounds.x;
                     m_waveformFade.clipRight = insetFullClipBounds.x + insetFullClipBounds.width;
-                    m_waveformFade.fadeInPx =
-                        std::clamp(static_cast<float>(clip.edits.fadeInBeats) * m_pixelsPerBeat, 0.0f,
-                                   insetFullClipBounds.width);
-                    m_waveformFade.fadeOutPx =
-                        std::clamp(static_cast<float>(clip.edits.fadeOutBeats) * m_pixelsPerBeat, 0.0f,
-                                   insetFullClipBounds.width);
+                    const ResolvedFades waveFades = fadesForDisplay(m_trackManager, m_laneId, clip);
+                    m_waveformFade.fadeInPx = std::clamp(static_cast<float>(waveFades.fadeInBeats) * m_pixelsPerBeat, 0.0f,
+                                                         insetFullClipBounds.width);
+                    m_waveformFade.fadeOutPx = std::clamp(static_cast<float>(waveFades.fadeOutBeats) * m_pixelsPerBeat, 0.0f,
+                                                          insetFullClipBounds.width);
+                    m_waveformFade.inEqualPower = waveFades.fadeInShape == FadeShape::EqualPower;
+                    m_waveformFade.outEqualPower = waveFades.fadeOutShape == FadeShape::EqualPower;
                     drawWaveformForClip(renderer, waveformInsideClip, clip, offsetRatio, visibleRatio);
                     m_waveformFade = WaveformFade{};
                     drawSampleClipHeader(renderer, insetClippedClipBounds, clip, seamLeft, seamRight);
@@ -1772,8 +1785,8 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
         // full 24 px button; only the drawn key is smaller.
         const auto keyInk = themeManager.getColor("textSecondary");
         const auto keyInkHover = themeManager.getColor("textPrimary");
-        const auto keyBorder = themeManager.getColor("border");
-        const auto keyBorderHover = themeManager.getColor("borderStrong");
+        const auto keyRest = themeManager.getColor("surfaceTertiary"); // Design Spec: flat tile, no edge
+        const auto keyHover = themeManager.getColor("surfaceRaised");
         const auto onActive = themeManager.getColor("backgroundPrimary");
 
         const auto drawKey = [&](const std::shared_ptr<AestraUI::NUIButton>& button, const char* letter,
@@ -1787,12 +1800,7 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
             const AestraUI::NUIRect key(std::round(hit.x + (hit.width - kKeyW) * 0.5f),
                                         std::round(hit.y + (hit.height - kKeyH) * 0.5f), kKeyW, kKeyH);
             const bool hovered = button->isHovered() && button->isEnabled();
-            if (active) {
-                renderer.fillRoundedRect(key, 3.0f, activeColor);
-            } else {
-                if (hovered) renderer.fillRoundedRect(key, 3.0f, themeManager.getColor("surfaceRaised"));
-                renderer.strokeRoundedRect(key, 3.0f, 1.0f, hovered ? keyBorderHover : keyBorder);
-            }
+            renderer.fillRoundedRect(key, 3.0f, active ? activeColor : (hovered ? keyHover : keyRest));
             constexpr float kLetterSize = 9.5f;
             renderer.drawTextCentered(letter, key, kLetterSize, active ? onActive : (hovered ? keyInkHover : keyInk));
         };

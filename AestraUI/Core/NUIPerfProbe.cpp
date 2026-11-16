@@ -29,6 +29,8 @@ struct Counters {
     std::map<std::string, double> dirtyOriginsAt;
     std::map<std::string, double> renderSelfMs;
     std::array<double, 3> phaseMs{};
+    double areaSum = 0.0, areaMax = 0.0, rectSum = 0.0;
+    size_t areaFrames = 0;
 };
 
 Counters& counters() {
@@ -148,6 +150,20 @@ void recordPhase(Phase phase, double ms) { counters().phaseMs.at(static_cast<siz
 
 void recordPresentReason(const char* reason) { counters().presentReasons[reason]++; }
 
+void consumeFrameRegion(const NUIRect& window) {
+    auto& changed = NUIComponent::frameDirtyRegion();
+    if (enabled()) recordDirtyArea(changed.fractionOf(window), changed.resolve(window).size());
+    changed.clear();
+}
+
+void recordDirtyArea(float fractionOfWindow, std::size_t rects) {
+    auto& c = counters();
+    c.areaSum += fractionOfWindow;
+    c.areaMax = std::max(c.areaMax, static_cast<double>(fractionOfWindow));
+    c.rectSum += static_cast<double>(rects);
+    ++c.areaFrames;
+}
+
 std::string takeReport(std::size_t presentedFrames) {
     auto& c = counters();
     const double frames = static_cast<double>(std::max<size_t>(1, presentedFrames));
@@ -159,6 +175,13 @@ std::string takeReport(std::size_t presentedFrames) {
     std::snprintf(phase.data(), phase.size(), "\n[Phase] ms/frame: tree=%.2f submit=%.2f swap=%.2f", c.phaseMs[0] / frames,
                   c.phaseMs[1] / frames, c.phaseMs[2] / frames);
     report += phase.data();
+    if (c.areaFrames > 0) {
+        const double n = static_cast<double>(c.areaFrames);
+        std::array<char, kLineBuffer> area{};
+        std::snprintf(area.data(), area.size(), "\n[DirtyArea] frames=%zu avg=%.2f%% max=%.2f%% rects avg=%.1f", c.areaFrames,
+                      100.0 * c.areaSum / n, 100.0 * c.areaMax, c.rectSum / n);
+        report += area.data();
+    }
     c = Counters{};
     return report;
 }

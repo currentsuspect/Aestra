@@ -632,6 +632,8 @@ private:
     void updateFrameServices(double dt);
     double m_midiPortPollSeconds = 0.0;
     Aestra::DspLoadReadout m_dspLoad;
+    float m_dspDrawn = -1.0f;      ///< the DSP percent last handed to the transport bar (-1: none yet)
+    double m_dspSinceDrawn = 0.0;  ///< seconds since then
     Aestra::SamplerEditHistory m_samplerEdits; ///< undo for the Sample Editor's controls
     void enqueueMainThreadTask(std::function<void()> task);
     // AestraContentImport.cpp: the sample decodes on a worker thread, the clip is placed on the main one.

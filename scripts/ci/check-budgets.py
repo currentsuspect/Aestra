@@ -18,7 +18,8 @@
 # WHAT IT MEASURES
 #
 #   bundle_bytes          stripped Aestra binary + the AestraAssets/ tree shipped
-#                         beside it. FD-35 promises a lean core installer (20–50 MB);
+#                         beside it. FD-35 promised a lean core installer (20–50 MB) and
+#                         FD-77 tightened it (Aestra stays small);
 #                         the cap row holds that promise.
 #   rss_kb.<scenario>     peak resident memory (ru_maxrss) of AestraHeadless running
 #                         a fixed offline scenario — no audio device, no UI, no

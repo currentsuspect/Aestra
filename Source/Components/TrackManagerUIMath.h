@@ -26,7 +26,13 @@ namespace Audio {
 // FD-50 board 7 makes the toolbar the band's first row: labelled tools, the snap value, Follow, Fit song and
 // + Track, across the whole width. Every position below is measured from the component's top edge.
 constexpr float kTimelineToolbarHeight = 30.0f;
-constexpr float kTimelineRulerHeight = 28.0f;
+// The ruler is two rows: a marker lane on top, then the bar numbers over the
+// ticks. Song markers are wide (they carry a name) and a chip drawn over the
+// number row hides the bar it sits on — the one thing you read while placing a
+// section. The lane is the cheap fix: 16 px, and every position below derives
+// from kTimelineTimeBandHeight, so nothing else has to move.
+constexpr float kTimelineMarkerLaneHeight = 16.0f;
+constexpr float kTimelineRulerHeight = 28.0f + kTimelineMarkerLaneHeight;
 constexpr float kTimelineMinimapHeight = 24.0f;
 constexpr float kTimelineMinimapTop = kTimelineToolbarHeight;
 constexpr float kTimelineRulerTop = kTimelineMinimapTop + kTimelineMinimapHeight;

@@ -94,6 +94,9 @@ public:
     // the compatibility run reports it per plugin (V82-H7).
     uint64_t helperBlockCount() const { return m_helperBlocks.load(std::memory_order_relaxed); }
     uint64_t dryBlockCount() const { return m_dryBlocks.load(std::memory_order_relaxed); }
+    /// How many times the helper's reply pipe has been read (0 with no helper). A reply is a read or two
+    /// whatever its length; ClapSandboxParamsTest holds the hex transport to that.
+    uint64_t helperPipeReadCount() const;
 
     // Blocks whose input and MIDI never reached the helper because the previous
     // block was still with it. A note-on in such a block is lost (V82-H7).

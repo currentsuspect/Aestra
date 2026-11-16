@@ -304,6 +304,17 @@ void PatternPlaybackEngine::refillWindow(uint16_t ticket, uint64_t currentFrame,
     // second to be heard, so every active pattern is fingerprinted on each pass and any change is
     // treated exactly like an announced edit. First sight of an instance only records its print.
     bool contentEdited = m_contentEditRequested.exchange(false, std::memory_order_acq_rel);
+    // The global transpose (FD-76) moves the note numbers of every key-following unit, so a change to it, or to
+    // who follows while it is not zero, is handled as a content edit: notes queued ahead are re-queued at their
+    // new pitch, and a note sounding at its old pitch no longer matches its gate and is released below.
+    std::shared_ptr<const PlaybackHarmony> harmony = m_unitManager ? m_unitManager->playbackHarmony() : nullptr;
+    if (!harmony) harmony = std::make_shared<const PlaybackHarmony>();
+    if (m_refillHarmony && (harmony->transposeSemitones != m_refillHarmony->transposeSemitones ||
+                            (harmony->transposeSemitones != 0 &&
+                             harmony->followingUnits != m_refillHarmony->followingUnits))) {
+        contentEdited = true;
+    }
+    m_refillHarmony = std::move(harmony);
     for (auto& inst : m_activeInstances) {
         const PatternSource* pattern = m_patternManager ? m_patternManager->getPattern(inst.patternId) : nullptr;
         const uint64_t print = pattern ? contentFingerprint(*pattern) : 0;
@@ -383,6 +394,7 @@ void PatternPlaybackEngine::refillWindow(uint16_t ticket, uint64_t currentFrame,
                         unit ? std::dynamic_pointer_cast<Plugins::SamplerPlugin>(unit->plugin) : nullptr;
                     resolved = resolvePitchedSamplerMidiNote(note, sampler ? sampler->getRootMidiNote() : 60);
                 }
+                resolved = transposedMidiNote(resolved, m_refillHarmony->transposeFor(note.unitId));
                 if (resolved != static_cast<int>(gated.noteNumber))
                     continue;
                 const double onBeat = repeatStartBeat + note.startBeat;
@@ -539,10 +551,13 @@ void PatternPlaybackEngine::refillWindow(uint16_t ticket, uint64_t currentFrame,
             const UnitInfo* unit = m_unitManager->getUnit(note.unitId);
             const bool isPitchedSampler = unit && unit->type == UnitType::PitchedSampler;
             const auto sampler = unit ? std::dynamic_pointer_cast<Plugins::SamplerPlugin>(unit->plugin) : nullptr;
-            const int resolvedMidiNote = isPitchedSampler
-                                             ? resolvePitchedSamplerMidiNote(note,
-                                                                             sampler ? sampler->getRootMidiNote() : 60)
-                                             : std::clamp(note.pitch, 0, 127);
+            const int writtenMidiNote = isPitchedSampler
+                                            ? resolvePitchedSamplerMidiNote(note,
+                                                                            sampler ? sampler->getRootMidiNote() : 60)
+                                            : std::clamp(note.pitch, 0, 127);
+            // Played where the global transpose puts it; a unit that does not follow the key plays as written.
+            const int resolvedMidiNote =
+                transposedMidiNote(writtenMidiNote, m_refillHarmony->transposeFor(note.unitId));
             double noteBeat = repeatStartBeat + note.startBeat;
             uint64_t noteFrame = loopBase + m_clock->sampleFrameAtBeat(noteBeat, sampleRate);
             // A one-shot sample may continue to its natural endpoint when no

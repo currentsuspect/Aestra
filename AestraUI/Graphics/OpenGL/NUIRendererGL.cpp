@@ -361,6 +361,22 @@ void main() {
         color.a *= 1.0 - smoothstep(-edge, edge, dist);
     }
 
+    if (primitiveID == 9 || primitiveID == 10) {
+        // Inner shadow of a squircle (Design Spec: a sunk well, light from above). The shade is the part of the
+        // shape that a copy shifted by the offset does not cover, softened by vBlur, so a positive offset darkens
+        // the top-left inner edge and a negative one lights the bottom-right. Type 9 shifts diagonally, type 10
+        // vertically only. One quad, no blur pass.
+        vec2 pos = (vTexCoord - 0.5) * vQuadSize;
+        vec2 halfSize = vRectSize * 0.5;
+        float dist = sdSquircle(pos, halfSize, vRadius);
+        float aaWidth = fwidth(dist) * 1.25;
+        float inside = 1.0 - smoothstep(-aaWidth, aaWidth, dist);
+        vec2 offset = primitiveID == 9 ? vec2(vStrokeWidth) : vec2(0.0, vStrokeWidth);
+        float shifted = sdSquircle(pos - offset, halfSize, vRadius);
+        float soft = max(vBlur, aaWidth);
+        color.a *= inside * smoothstep(-soft, soft, shifted);
+    }
+
     if (primitiveID == 3) {
         // Stroked Squircle
         vec2 pos = (vTexCoord - 0.5) * vQuadSize;
@@ -1224,47 +1240,6 @@ void NUIRendererGL::fillWaveformGradient(const NUIPoint* topPoints, const NUIPoi
 
 // ============================================================================
 // Gradient Drawing
-// ============================================================================
-
-void NUIRendererGL::fillRectGradient(const NUIRect& rect, const NUIColor& colorStart, const NUIColor& colorEnd, bool vertical) {
-    ensureBasicPrimitive();
-    if (vertical) {
-        addVertex(rect.x, rect.y, 0, 0, colorStart);
-        addVertex(rect.right(), rect.y, 1, 0, colorStart);
-        addVertex(rect.right(), rect.bottom(), 1, 1, colorEnd);
-        addVertex(rect.x, rect.bottom(), 0, 1, colorEnd);
-    } else {
-        addVertex(rect.x, rect.y, 0, 0, colorStart);
-        addVertex(rect.right(), rect.y, 1, 0, colorEnd);
-        addVertex(rect.right(), rect.bottom(), 1, 1, colorEnd);
-        addVertex(rect.x, rect.bottom(), 0, 1, colorStart);
-    }
-    
-    uint32_t base = static_cast<uint32_t>(vertices_.size()) - 4;
-    pushQuadIndices(base);
-}
-
-void NUIRendererGL::fillCircleGradient(const NUIPoint& center, float radius, const NUIColor& colorInner, const NUIColor& colorOuter) {
-    ensureBasicPrimitive();
-    // Simple radial gradient
-    // These vertices have never had indices, so they have never drawn. Keep it
-    // that way here: on the quad-only path they would be drawn as quads.
-    useExplicitIndices();
-    const int segments = 32;
-    const float angleStep = 2.0f * 3.14159f / segments;
-    
-    for (int i = 0; i < segments; ++i) {
-        float angle1 = i * angleStep;
-        float angle2 = (i + 1) * angleStep;
-        
-        addVertex(center.x, center.y, 0.5f, 0.5f, colorInner);
-        addVertex(center.x + std::cos(angle1) * radius, center.y + std::sin(angle1) * radius, 0, 0, colorOuter);
-        addVertex(center.x + std::cos(angle2) * radius, center.y + std::sin(angle2) * radius, 1, 1, colorOuter);
-    }
-}
-
-// ============================================================================
-// Effects (Simplified for now)
 // ============================================================================
 
 void NUIRendererGL::drawGlow(const NUIRect& rect, float radius, float intensity, const NUIColor& color) {
@@ -2689,24 +2664,23 @@ bool NUIRendererGL::tryAddGlyphToAtlas(uint32_t codepoint, FT_Face face, int atl
 }
 
 bool NUIRendererGL::tryLoadFallbackGlyph(uint32_t codepoint, int atlasSize) {
-    if (!ftCJKFace_) return false;
-
-    if (atlasSize == atlasFontSize_) {
-        return tryAddGlyphToAtlas(codepoint, ftCJKFace_, atlasSize,
-            fontAtlasTextureId_, fontCache_,
-            fontAtlasX_, fontAtlasY_, fontAtlasRowHeight_);
-    } else if (atlasSize == atlasFontSizeMedium_) {
-        return tryAddGlyphToAtlas(codepoint, ftCJKFace_, atlasSize,
-            fontAtlasTextureIdMedium_, fontCacheMedium_,
-            fontAtlasXMedium_, fontAtlasYMedium_, fontAtlasRowHeightMedium_);
-    } else if (atlasSize == atlasFontSizeSmall_) {
-        return tryAddGlyphToAtlas(codepoint, ftCJKFace_, atlasSize,
-            fontAtlasTextureIdSmall_, fontCacheSmall_,
-            fontAtlasXSmall_, fontAtlasYSmall_, fontAtlasRowHeightSmall_);
-    } else if (atlasSize == atlasFontSizeXSmall_) {
-        return tryAddGlyphToAtlas(codepoint, ftCJKFace_, atlasSize,
-            fontAtlasTextureIdXSmall_, fontCacheXSmall_,
-            fontAtlasXXSmall_, fontAtlasYXSmall_, fontAtlasRowHeightXSmall_);
+    // The UI face first: only ASCII is preloaded, so the minus sign, infinity and the ellipsis load here. Then CJK.
+    for (FT_Face face : {ftFace_, ftCJKFace_}) {
+        if (!face) continue;
+        bool added = false;
+        if (atlasSize == atlasFontSize_)
+            added = tryAddGlyphToAtlas(codepoint, face, atlasSize, fontAtlasTextureId_, fontCache_, fontAtlasX_,
+                                       fontAtlasY_, fontAtlasRowHeight_);
+        else if (atlasSize == atlasFontSizeMedium_)
+            added = tryAddGlyphToAtlas(codepoint, face, atlasSize, fontAtlasTextureIdMedium_, fontCacheMedium_,
+                                       fontAtlasXMedium_, fontAtlasYMedium_, fontAtlasRowHeightMedium_);
+        else if (atlasSize == atlasFontSizeSmall_)
+            added = tryAddGlyphToAtlas(codepoint, face, atlasSize, fontAtlasTextureIdSmall_, fontCacheSmall_,
+                                       fontAtlasXSmall_, fontAtlasYSmall_, fontAtlasRowHeightSmall_);
+        else if (atlasSize == atlasFontSizeXSmall_)
+            added = tryAddGlyphToAtlas(codepoint, face, atlasSize, fontAtlasTextureIdXSmall_, fontCacheXSmall_,
+                                       fontAtlasXXSmall_, fontAtlasYXSmall_, fontAtlasRowHeightXSmall_);
+        if (added) return true;
     }
     return false;
 }

@@ -2,6 +2,7 @@
 #include "RtAudioDriver.h"
 
 #include "Core/AudioTelemetry.h"
+#include "Drivers/PulseClientConfig.h"
 
 #include <algorithm>
 #include <cerrno>
@@ -42,6 +43,9 @@ pthread_t tokenToPthread(uintptr_t threadToken) {
 #endif
 
 RtAudioDriver::RtAudioDriver() {
+#ifdef __LINUX_PULSE__
+    limitPulseClientMemory(); // before the first PulseAudio connection: 4 MB pool, not 64 MB per connection
+#endif
     std::vector<RtAudio::Api> candidates;
 #ifdef __LINUX_PULSE__
     candidates.push_back(RtAudio::LINUX_PULSE);

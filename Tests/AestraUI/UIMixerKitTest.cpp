@@ -64,6 +64,29 @@ int main() {
             roundTrip = roundTrip && std::fabs(MixerScale::db(MixerScale::norm(db)) - db) < 0.02f;
         check(roundTrip, "norm() and db() are inverses");
         check(MixerScale::norm(0.0f) > MixerScale::norm(-6.0f) + 0.1f, "the 6 dB below 0 take real height (mixing happens there)");
+        // Design Spec, Mixer (locked): a console scale, 0 dB at three quarters of the travel.
+        check(std::fabs(MixerScale::norm(0.0f) - 0.75f) < 1e-4f, "0 dB sits at three quarters of the travel");
+        check(MixerScale::norm(6.0f) - MixerScale::norm(0.0f) > MixerScale::norm(-42.0f) - MixerScale::norm(-48.0f),
+              "6 dB around unity is wider than 6 dB near the bottom");
+    }
+
+    std::cout << "[1b] peak hold: holds 1.5 s, then falls 20 dB a second\n";
+    {
+        float hold = -90.0f;
+        double timer = 0.0;
+        MixerScale::stepPeakHold(hold, timer, -6.0f, 1.0 / 60.0);
+        check(hold == -6.0f, "a new peak sets the line at once");
+        for (int i = 0; i < 89; ++i) // 89 frames of quiet: 1.483 s
+            MixerScale::stepPeakHold(hold, timer, -40.0f, 1.0 / 60.0);
+        check(hold == -6.0f, "the line holds for 1.5 s");
+        for (int i = 0; i < 31; ++i) // past 1.5 s, then half a second more
+            MixerScale::stepPeakHold(hold, timer, -40.0f, 1.0 / 60.0);
+        check(hold < -6.0f && std::fabs(hold - (-6.0f - 20.0f * 0.5f)) < 0.5f, "then it falls at 20 dB per second");
+        MixerScale::stepPeakHold(hold, timer, -3.0f, 1.0 / 60.0);
+        check(hold == -3.0f && timer == 0.0, "a louder peak resets the hold");
+        for (int i = 0; i < 600; ++i)
+            MixerScale::stepPeakHold(hold, timer, -90.0f, 1.0 / 60.0);
+        check(hold >= -90.0f, "it never falls below the signal");
     }
 
     std::cout << "[2] the parameter bar drags, commits and resets\n";
@@ -153,26 +176,26 @@ int main() {
         fader.setRangeDb(-90.0f, 6.0f);
         fader.setDefaultDb(0.0f);
         fader.setOverlay(true, 26.0f);
-        fader.setBounds({100, 100, 14, 400}); // track runs from y=109 to y=491
+        fader.setBounds({100, 100, 20, 400}); // the 26px cap hangs 13px over each end: track y=113 to y=487
         fader.setValueDb(0.0f);
         float seen = 99.0f;
         fader.onValueChanged = [&](float db) { seen = db; };
         // A click at the height 0 dB occupies on the shared scale lands on 0 dB.
-        const float trackTop = 109.0f, trackBottom = 491.0f;
+        const float trackTop = 113.0f, trackBottom = 487.0f;
         const float y0 = trackBottom - MixerScale::norm(0.0f) * (trackBottom - trackTop);
         fader.setValueDb(-30.0f);
-        fader.onMouseEvent(down(107, y0));
+        fader.onMouseEvent(down(110, y0));
         check(std::fabs(fader.getValueDb()) < 0.3f, "clicking where the scale puts 0 dB sets 0 dB (" + std::to_string(fader.getValueDb()) + ")");
-        fader.onMouseEvent(up(107, y0));
+        fader.onMouseEvent(up(110, y0));
         pauseBetweenGestures();
         const float yMinus12 = trackBottom - MixerScale::norm(-12.0f) * (trackBottom - trackTop);
-        fader.onMouseEvent(down(107, yMinus12));
+        fader.onMouseEvent(down(110, yMinus12));
         check(std::fabs(fader.getValueDb() - (-12.0f)) < 0.3f, "and -12 dB lands on -12 dB");
-        fader.onMouseEvent(up(107, yMinus12));
+        fader.onMouseEvent(up(110, yMinus12));
         pauseBetweenGestures();
-        fader.onMouseEvent(down(107, trackBottom + 8.0f));
+        fader.onMouseEvent(down(110, trackBottom + 8.0f));
         check(fader.getValueDb() <= -60.0f, "the very bottom is minus infinity");
-        fader.onMouseEvent(up(107, trackBottom + 8.0f));
+        fader.onMouseEvent(up(110, trackBottom + 8.0f));
         (void)seen;
     }
 

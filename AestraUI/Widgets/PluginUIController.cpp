@@ -105,10 +105,23 @@ void PluginUIController::applyEditorMode(const std::shared_ptr<AestraPanelWindow
 }
 
 void PluginUIController::showEditorMenu(const std::shared_ptr<AestraPanelWindow>& editor, const std::string& anchorKey,
-                                        const NUIPoint& at) {
-    if (!m_popupLayer || !m_editorModeGetter)
+                                        const NUIPoint& at, std::function<void()> resetToDefault) {
+    if (!m_popupLayer || (!m_editorModeGetter && !resetToDefault))
         return;
+    if (!m_editorModeGetter) {
+        // No panel-mode provider: the header's menu is just Reset.
+        auto menu = std::make_shared<NUIContextMenu>();
+        menu->addItem("Reset to default", std::move(resetToDefault));
+        menu->setOnHide([this, weak = std::weak_ptr<NUIContextMenu>(menu)]() {
+            if (auto shown = weak.lock(); shown && m_popupLayer)
+                m_popupLayer->removeChild(shown);
+        });
+        m_popupLayer->addChild(menu);
+        menu->showAt(at);
+        return;
+    }
     PanelModeMenuActions actions;
+    actions.resetToDefault = std::move(resetToDefault);
     actions.setMode = [this](PanelMode next) {
         if (m_editorModeSaver)
             m_editorModeSaver(next);
@@ -973,7 +986,50 @@ void PluginUIController::attachPresetBar(const std::shared_ptr<AestraPanelWindow
     session->setOnSoundChanged([weak] {
         if (auto e = weak.lock()) e->setDirty(true);
     });
-    editor->setTitleAccessory(std::make_shared<PluginPresetBar>(std::move(session)));
+    auto bar = std::make_shared<PluginPresetBar>(std::move(session));
+
+    // The two-row header's power button and "···" menu (FD-73). Power is the plugin's own bypass parameter;
+    // Reset puts every other parameter back to its default.
+    std::weak_ptr<Aestra::Audio::IPluginInstance> weakPlugin = instance;
+    auto bypassId = [weakPlugin]() -> std::optional<uint32_t> {
+        if (auto p = weakPlugin.lock())
+            for (const auto& param : p->getParameters())
+                if (param.isBypass) return param.id;
+        return std::nullopt;
+    };
+    PluginPresetBar::HeaderActions actions;
+    if (bypassId()) {
+        actions.isBypassed = [weakPlugin, bypassId]() {
+            auto p = weakPlugin.lock();
+            auto id = bypassId();
+            return p && id && p->getParameter(*id) > 0.5f;
+        };
+        actions.setBypassed = [weak, weakPlugin, bypassId](bool on) {
+            auto p = weakPlugin.lock();
+            auto id = bypassId();
+            if (!p || !id) return;
+            p->setParameter(*id, on ? 1.0f : 0.0f);
+            if (auto e = weak.lock()) e->setDirty(true);
+        };
+    }
+    actions.openMenu = [this, weak, weakPlugin](const NUIPoint& at) {
+        auto e = weak.lock();
+        if (!e) return;
+        std::string key;
+        for (const auto& entry : m_editorKeys)
+            if (entry.first.lock() == e) key = entry.second;
+        auto reset = [weakPlugin, weak]() {
+            auto p = weakPlugin.lock();
+            if (!p) return;
+            for (const auto& param : p->getParameters())
+                if (!param.isBypass && !param.isReadOnly) p->setParameter(param.id, param.defaultValue);
+            if (auto live = weak.lock()) live->setDirty(true);
+        };
+        showEditorMenu(e, key, at, std::move(reset));
+    };
+    bar->setHeaderActions(std::move(actions));
+    editor->setTitleAccessory(bar);
+    editor->setPanelContext(context->where);
 }
 
 bool PluginUIController::routeKeyToPresetBar(const NUIKeyEvent& event) {

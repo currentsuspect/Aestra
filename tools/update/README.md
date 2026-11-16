@@ -8,6 +8,7 @@ Settings when you say so. The feed is signed; the app trusts the signature, not 
 | Feed format, signature check, version order | `AestraLicense/include/UpdateFeed.h` |
 | Make a signed feed for a build | `tools/update/make_feed.py` |
 | Publish a build (feed + package) | `tools/update/publish.sh` |
+| Download size budget (FD-77): `publish.sh` refuses a package over its row | `tools/update/size_budget.txt`, `check_package_size.py` |
 | The host (Cloudflare Worker + R2 bucket `aestra-releases`) | `tools/update/worker/` |
 | Founder keys for the `early` channel | `tools/update/founders.py` |
 

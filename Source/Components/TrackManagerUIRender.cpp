@@ -8,6 +8,7 @@
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include "../AestraUI/Common/MusicHelpers.h"
 #include "../AestraUI/Core/NUIDragDrop.h"
+#include "../AestraUI/Base/NUITextInput.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
 #include "../AestraUI/Helpers/TimelineGridRenderer.h"
@@ -168,6 +169,9 @@ void TrackManagerUI::onRender(AestraUI::NUIRenderer& renderer) {
     if (m_scrollbar && m_scrollbar->isVisible())
         m_scrollbar->onRender(renderer);
 
+    // A live text field cannot live inside the FBO cache (it repaints per keystroke).
+    renderMarkerRenameBox(renderer);
+
     // Panels are now handled by OverlayLayer rendering.
 
     // Render toolbar OUTSIDE cache (interactive tool selection)
@@ -221,6 +225,8 @@ void TrackManagerUI::onRender(AestraUI::NUIRenderer& renderer) {
             renderer.strokeRoundedRect(clippedRect, 2.0f, 1.0f, accent.withAlpha(0.55f));
         }
     }
+
+    m_trackRename.render(renderer); // the rename field sits over a header name, above the cached rows
 
     // Render Context Menu LAST (Topmost Z-order, not clipped)
     if (m_activeContextMenu && m_activeContextMenu->isVisible()) {
@@ -367,6 +373,7 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
         AestraUI::NUIRect rulerRect(bounds.x, bounds.y + kTimelineRulerTop, bounds.width,
                                     kTimelineRulerHeight);
         renderTimeRuler(renderer, rulerRect);
+        renderSongMarkers(renderer, rulerRect);
         renderLoopMarkers(renderer, rulerRect);
 
         const auto borderColor = themeManager.getColor("border");
@@ -499,7 +506,8 @@ void TrackManagerUI::renderChildren(AestraUI::NUIRenderer& renderer) {
             continue;
 
         // Always render UI controls (scrollbars)
-        if (child == m_scrollbar || child == m_timelineMinimap || child == m_activeContextMenu) {
+        if (child == m_scrollbar || child == m_timelineMinimap || child == m_activeContextMenu ||
+            child == m_markerRenameInput) {
             // Skip - these are rendered explicitly in onRender()
             continue;
         }
@@ -533,6 +541,14 @@ void TrackManagerUI::renderChildren(AestraUI::NUIRenderer& renderer) {
 }
 
 void TrackManagerUI::onUpdate(double deltaTime) {
+    m_trackRename.onUpdate(deltaTime);
+    if (m_namesDirty->exchange(false) && m_trackManager) {
+        for (auto& row : m_trackUIComponents) {
+            if (const auto* lane = row ? m_trackManager->getPlaylistModel().getLane(row->getLaneId()) : nullptr)
+                row->syncName(lane->name);
+        }
+        invalidateCache();
+    }
     // Process pending main-thread tasks (e.g., from async loaders)
     {
         std::vector<std::function<void()>> tasks;
@@ -876,6 +892,11 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
 
     AestraUI::NUIRect gridRulerRect(gridStartX, rulerBounds.y, gridWidth, rulerBounds.height);
 
+    // The bar numbers and their ticks keep the row they had: the marker lane
+    // took the space above them, not out of them.
+    const AestraUI::NUIRect numberBand(rulerBounds.x, rulerBounds.y + kTimelineMarkerLaneHeight, rulerBounds.width,
+                                       kTimelineRulerHeight - kTimelineMarkerLaneHeight);
+
     // The ruler is part of the coordinate plane, not a strip bolted onto it:
     // the continuous grid's bar lines already run through this row, so the
     // grid area gets no shell of its own — the numbers are labels attached to
@@ -924,8 +945,8 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
 
         auto textSize = renderer.measureText(barText, fontSize);
 
-        // Place text vertically centered in ruler area (top-left Y positioning)
-        float textY = std::round(renderer.calculateTextY(rulerBounds, fontSize));
+        // Place text vertically centered in the number row, under the marker lane.
+        float textY = std::round(renderer.calculateTextY(numberBand, fontSize));
 
         // Position text to the RIGHT of the grid line with small offset
         float textX = x + 4.0f;
@@ -936,9 +957,9 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
 
         // Bar tick line - major bars get full height, others half
         // Mature Style: Ticks bottom-up
-        float tickHeight = isMajorBar ? rulerBounds.height * 0.58f : rulerBounds.height * 0.24f;
-        renderer.drawLine(AestraUI::NUIPoint(x, rulerBounds.y + rulerBounds.height - tickHeight),
-                          AestraUI::NUIPoint(x, rulerBounds.y + rulerBounds.height), isMajorBar ? 1.15f : 1.0f,
+        float tickHeight = isMajorBar ? numberBand.height * 0.58f : numberBand.height * 0.24f;
+        renderer.drawLine(AestraUI::NUIPoint(x, numberBand.bottom() - tickHeight),
+                          AestraUI::NUIPoint(x, numberBand.bottom()), isMajorBar ? 1.15f : 1.0f,
                           isMajorBar ? majorTickCol.withAlpha(0.65f) : minorTickCol.withAlpha(0.40f));
 
         // Beat ticks within the bar (only if zoomed in enough AND not striding)
@@ -947,11 +968,11 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
             for (int beat = 1; beat < beatsPerBar; ++beat) {
                 float beatX = x + (beat * m_pixelsPerBeat);
 
-                float beatTickHeight = rulerBounds.height * 0.22f;
+                float beatTickHeight = numberBand.height * 0.22f;
                 AestraUI::NUIColor beatTickColor = minorTickCol.withAlpha(0.35f);
 
-                renderer.drawLine(AestraUI::NUIPoint(beatX, rulerBounds.y + rulerBounds.height - beatTickHeight),
-                                  AestraUI::NUIPoint(beatX, rulerBounds.y + rulerBounds.height), 1.0f, beatTickColor);
+                renderer.drawLine(AestraUI::NUIPoint(beatX, numberBand.bottom() - beatTickHeight),
+                                  AestraUI::NUIPoint(beatX, numberBand.bottom()), 1.0f, beatTickColor);
             }
         }
     }
@@ -1168,8 +1189,8 @@ void TrackManagerUI::renderPlayhead(AestraUI::NUIRenderer& renderer) {
     // Draw if playhead center is within the visible timeline bounds
     // Allow triangle to extend outside as long as center line is visible
     if (playheadX >= gridStartX && playheadX <= playheadEndX) {
-        // Flat and filled: a solid 2 px line and a filled head (PlayheadMarker.h).
-        const AestraUI::NUIColor playheadColor = themeManager.getColor("accentPrimary");
+        // Flat and filled: a 1 px textPrimary line and a filled head (PlayheadMarker.h, Design Spec Clip).
+        const AestraUI::NUIColor playheadColor = themeManager.getColor("textPrimary");
         AestraUI::Playhead::drawLine(renderer, playheadX, playheadStartY, playheadEndY, playheadColor);
         AestraUI::Playhead::drawHead(renderer, playheadX, playheadStartY, playheadColor);
     }
@@ -1387,11 +1408,13 @@ void Aestra::Audio::TrackManagerUI::renderPendingImports(AestraUI::NUIRenderer& 
     for (auto& item : m_pendingImports) {
         // Find Y position based on Lane ID
         float yPos = -1.0f;
+        float height = static_cast<float>(m_trackHeight);
 
         // Find track index for this lane
         for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
             if (m_trackUIComponents[i] && m_trackUIComponents[i]->getLaneId() == item.laneId) {
                 yPos = m_trackUIComponents[i]->getBounds().y;
+                height = m_trackUIComponents[i]->getBounds().height;
                 break;
             }
         }
@@ -1403,7 +1426,6 @@ void Aestra::Audio::TrackManagerUI::renderPendingImports(AestraUI::NUIRenderer& 
         // Calculate X position
         float xPos = gridStartX + (static_cast<float>(item.startBeat) * m_pixelsPerBeat) - m_timelineScrollOffset;
         float width = static_cast<float>(item.estimatedDurationBeats) * m_pixelsPerBeat;
-        float height = static_cast<float>(m_trackHeight);
 
         AestraUI::NUIRect rect(xPos, yPos, width, height);
 

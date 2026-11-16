@@ -7,6 +7,7 @@
 #include "AudioDeviceManager.h"
 #include "../App/ServiceLocator.h"
 #include "../Core/AestraAudioController.h"
+#include "../../AestraUI/Widgets/MixerScale.h"
 #include "../../AestraUI/Widgets/TrackColorPalette.h"
 #include "Models/AutomationPresence.h"
 #include <algorithm>
@@ -654,28 +655,9 @@ void MixerViewModel::smoothMeterChannel(ChannelViewModel& channel,
 
     channel.peakSinceResetDb = std::max({channel.peakSinceResetDb, peakDbL, peakDbR});
 
-    // Peak hold uses true peak (for gain-staging confidence).
-    if (peakDbL > channel.peakHoldL) {
-        channel.peakHoldL = peakDbL;
-        channel.peakHoldTimerL = 0.0;
-    } else {
-        channel.peakHoldTimerL += deltaTime;
-        if (channel.peakHoldTimerL > PEAK_HOLD_MS / 1000.0) {
-            float decayCoeff = 1.0f - std::exp(static_cast<float>(-deltaTime * 1000.0 / PEAK_DECAY_MS));
-            channel.peakHoldL += (MixerMath::DB_MIN - channel.peakHoldL) * decayCoeff;
-        }
-    }
-
-    if (peakDbR > channel.peakHoldR) {
-        channel.peakHoldR = peakDbR;
-        channel.peakHoldTimerR = 0.0;
-    } else {
-        channel.peakHoldTimerR += deltaTime;
-        if (channel.peakHoldTimerR > PEAK_HOLD_MS / 1000.0) {
-            float decayCoeff = 1.0f - std::exp(static_cast<float>(-deltaTime * 1000.0 / PEAK_DECAY_MS));
-            channel.peakHoldR += (MixerMath::DB_MIN - channel.peakHoldR) * decayCoeff;
-        }
-    }
+    // Peak hold uses true peak (for gain-staging confidence): holds 1.5 s, then falls 20 dB/s (Design Spec, Mixer).
+    AestraUI::MixerScale::stepPeakHold(channel.peakHoldL, channel.peakHoldTimerL, peakDbL, deltaTime);
+    AestraUI::MixerScale::stepPeakHold(channel.peakHoldR, channel.peakHoldTimerR, peakDbR, deltaTime);
 
     // Clip latch:
     // - user clear suppresses immediate re-latch while the same continuous clip is still active

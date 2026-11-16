@@ -97,7 +97,7 @@ void UnitRow::updateState() {
                 if (channel && channel->getChannelId() == m_mixerChannelId) {
                     m_mixerRouteShortLabel = std::to_string(i + 1);
                     m_mixerRouteName = channel->getName().empty() ? "Channel " + std::to_string(i + 1) : channel->getName();
-                    m_mixerRouteColorIndex = channel->getTrackColorIndex();
+                    m_mixerRouteColorIndex = resolveTrackColorIndex(channel->getTrackColorIndex(), channel->getColor(), i);
                     resolved = true;
                     break;
                 }
@@ -235,7 +235,7 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
     renderer.setClipRect(paintClip);
 
     const auto& themeProps = theme.getCurrentTheme();
-    const float radius = std::max(0.0f, themeProps.radiusM - 1.0f);
+    const float radius = 6.0f; // the board's row radius
     const NUIColor unitAccent = identityColor();
     NUIColor cardBg = theme.getColor("backgroundSecondary");
     NUIColor border = theme.getColor("border").withAlpha(0.08f);
@@ -243,8 +243,8 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
         cardBg = theme.getColor("accentPrimary").withAlpha(0.18f);
         border = theme.getColor("accentPrimary").withAlpha(0.95f);
     } else if (m_isSelected) {
-        cardBg = unitAccent.withAlpha(0.06f);
-        border = unitAccent.withAlpha(0.28f);
+        cardBg = NUIColor::lerp(cardBg, theme.getColor("accentPrimary"), 0.28f); // the locked board's selection wash
+        border = theme.getColor("accentPrimary").withAlpha(0.40f);
     } else if (m_isHovered) {
         cardBg = theme.getColor("surfaceRaised");
         border = theme.getColor("accentPrimary").withAlpha(0.22f);
@@ -289,14 +289,14 @@ void UnitRow::drawDragHandle(NUIRenderer& renderer, const NUIRect& bounds) {
     }
 }
 
-// A flat lettered key (the mock's M and S): a 1 px outline until it is on, then solid in its colour.
+// A lettered key as the board draws it: a filled surfaceTertiary key, no outline, solid in its colour when on.
 static void drawKey(NUIRenderer& renderer, const NUIRect& bounds, const char* label, bool active, bool engaged, const char* activeToken) {
     auto& theme = NUIThemeManager::getInstance();
     const NUIColor on = theme.getColor(activeToken);
     const float radius = theme.getRadius("xs");
     if (active) renderer.fillRoundedRect(bounds, radius, on);
-    else renderer.strokeRoundedRect(bounds, radius, 1.0f, theme.getColor("border").withAlpha(engaged ? 0.9f : 0.6f));
-    renderer.drawTextCentered(label, bounds, 10.0f, active ? theme.getContrastColor(on) : theme.getColor("textSecondary").withAlpha(engaged ? 1.0f : 0.7f));
+    else renderer.fillRoundedRect(bounds, radius, theme.getColor("surfaceTertiary"));
+    renderer.drawTextCentered(label, bounds, 10.0f, active ? theme.getContrastColor(on) : theme.getColor("textSecondary"));
 }
 
 void UnitRow::drawMuteIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active, bool engaged) { drawKey(renderer, bounds, "M", active, engaged, "warning"); }
@@ -340,7 +340,8 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     const NUIRect& muteRect = pills[1];
     const NUIRect& soloRect = pills[2];
     // The output chip: a flat 1 px outline with the channel's colour square and its name (the mock).
-    renderer.strokeRoundedRect(routeRect, 2.0f, 1.0f, m_mixerRouteShortLabel == "!" ? theme.getColor("error").withAlpha(0.75f) : theme.getColor("border").withAlpha(engaged ? 0.9f : 0.6f));
+    renderer.fillRoundedRect(routeRect, routeRect.height * 0.5f, theme.getColor("backgroundPrimary")); // the board's pill, not an outline
+    if (m_mixerRouteShortLabel == "!") renderer.strokeRoundedRect(routeRect, routeRect.height * 0.5f, 1.0f, theme.getColor("error").withAlpha(0.75f));
     const NUIColor routeText = theme.getColor("textSecondary");
     if (m_density == Density::Minimal) {
         renderer.drawTextCentered(m_mixerRouteShortLabel, routeRect, 7.5f, routeText);
@@ -350,15 +351,15 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
         if (m_mixerRouteColorIndex >= 0) dot = colorFromUnitValue(paletteIndexToARGB(m_mixerRouteColorIndex));
         renderer.fillRect(NUIRect{routeRect.x + 8.0f, routeRect.y + routeRect.height * 0.5f - 3.0f, 6.0f, 6.0f}, dot);
         std::string label = m_mixerRouteName;
-        const float room = routeRect.width - 28.0f;
+        const float room = routeRect.width - 40.0f;
         bool cut = false;
         while (label.size() > 1 && renderer.measureText(label, 10.5f).width > room) { label.pop_back(); cut = true; }
         if (cut) label += "\xE2\x80\xA6";
         renderer.drawText(label, {routeRect.x + 20.0f, routeRect.y + routeRect.height * 0.5f - 6.0f}, 10.5f, routeText);
+        for (float side : {-3.0f, 3.0f}) renderer.drawLine({routeRect.right() - 12.0f + side, routeRect.y + routeRect.height * 0.5f - 1.5f}, {routeRect.right() - 12.0f, routeRect.y + routeRect.height * 0.5f + 1.5f}, 1.4f, theme.getColor("textMuted")); // the board's trailing chevron
     }
     drawMuteIcon(renderer, muteRect, m_isMuted, engaged);
     drawSoloIcon(renderer, soloRect, m_isSolo, engaged);
-
 }
 
 void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
@@ -374,7 +375,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
 
     const auto& themeProps = theme.getCurrentTheme();
     const NUIRect contentCard(bounds.x, bounds.y, std::max(0.0f, bounds.width), std::max(0.0f, bounds.height));
-    renderer.fillRoundedRect(contentCard, themeProps.radiusS + 2.0f, theme.getColor("backgroundPrimary"));
+    renderer.fillRoundedRect(contentCard, 5.0f, theme.getColor("backgroundPrimary")); // the board's lane well
 
     const float lanePadding = 6.0f;
     const NUIRect timelineStrip(contentCard.x + lanePadding, contentCard.y + lanePadding,
@@ -438,19 +439,14 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     const int playStep = (playBeat >= 0.0) ? static_cast<int>(std::floor(playBeat / 0.25)) : -1;
     const NUIColor playheadAccent = theme.getColor("accentPrimary");
 
-    const NUIColor inactiveFill = theme.getColor("surfaceTertiary").lightened(0.05f);
-    const NUIColor inactiveStroke = theme.getColor("border").withAlpha(0.14f);
-    // The beat-group seam after every fourth pad.
-    const auto drawSeam = [&](int step, const NUIRect& cellRect, float cellGap) {
-        if ((step + 1) % 4 != 0 || step + 1 >= m_stepCount) return;
-        const float seamX = cellRect.right() + (cellGap + kStepGroupGap) * 0.5f;
-        renderer.drawLine(NUIPoint(seamX, timelineStrip.y + 2.0f), NUIPoint(seamX, timelineStrip.bottom() - 2.0f), 1.0f,
-                          theme.getColor("border").withAlpha(0.18f));
-    };
+    // Design Spec, Arsenal (locked 13 Nov): resting pads come in beat groups of four that alternate shade (beats 1, 3
+    // surfaceTertiary; 2, 4 surfaceRaised), so "the 2" is a place you see, not count to. No pad outlines.
+    const NUIColor restEven = theme.getColor("surfaceTertiary"), restOdd = theme.getColor("surfaceRaised").lightened(0.10f);
+    const auto restFill = [&](int step) { return ((step / 4) & 1) != 0 ? restOdd : restEven; };
 
     if (m_type == Aestra::Audio::UnitType::Sampler && !noteRollMode) {
         const NUIColor activeFill = identityColor();
-        const float cellGap = 3.0f;
+        const float cellGap = padGap(stepWidth);
         const float cellRadius = 2.0f; // flat pads (the Arsenal mock: sharp, opaque)
         const float cellHeight = std::max(10.0f, timelineStrip.height - 6.0f);
         const float cellY = timelineStrip.y + (timelineStrip.height - cellHeight) * 0.5f;
@@ -468,8 +464,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
             const bool isPlayhead = (step == playStep);
             const bool isSelected = isStepSelected(step);
             NUIRect cellRect(cellX, cellY, cellWidth, cellHeight);
-            NUIColor cellFill = isActive ? activeFill : inactiveFill;
-            if (((step / 4) & 1) != 0 && !isActive) cellFill = cellFill.lightened(0.06f); // neutral beat-group tint
+            NUIColor cellFill = isActive ? activeFill : restFill(step);
             if (isPlayhead && isActive) {
                 cellFill = activeFill.lightened(0.35f); // note lights up under the playhead
             }
@@ -488,7 +483,6 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
             } else {
                 renderer.fillRoundedRect(cellRect, cellRadius, cellFill);
             }
-            renderer.strokeRoundedRect(cellRect, cellRadius, 1.0f, inactiveStroke);
             if (isActive && !isSelected) {
                 // Subtle inner rim keeps adjacent active pads legible as
                 // individual steps instead of one merged bar.
@@ -503,7 +497,6 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                 renderer.strokeRoundedRect(haloRect, cellRadius + 1.5f, 1.5f,
                                            theme.getColor("textPrimary").withAlpha(0.9f));
             }
-            drawSeam(step, cellRect, cellGap);
             if (isPlayhead) {
                 renderer.strokeRoundedRect(cellRect, cellRadius, 1.5f,
                                            playheadAccent.withAlpha(isActive ? 0.95f : 0.45f));
@@ -512,7 +505,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     } else if (m_type == Aestra::Audio::UnitType::PitchedSampler) {
         const NUIColor activeFill = identityColor();
         const NUIColor pitchText = theme.getColor("textSecondary").withAlpha(0.72f);
-        const float cellGap = 3.0f;
+        const float cellGap = padGap(stepWidth);
         const float topHeight = std::max(8.0f, timelineStrip.height * 0.58f);
         const float pitchLaneHeight = std::max(8.0f, timelineStrip.height * 0.24f);
         const float lengthLaneHeight = std::max(3.0f, timelineStrip.height * 0.10f);
@@ -533,8 +526,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
             const bool isPlayhead = (step == playStep);
             const bool isSelected = isStepSelected(step);
             NUIRect cellRect(cellX, topY, cellWidth, topHeight);
-            NUIColor cellFill = isActive ? activeFill : inactiveFill;
-            if (((step / 4) & 1) != 0 && !isActive) cellFill = cellFill.lightened(0.06f); // neutral beat-group tint
+            NUIColor cellFill = isActive ? activeFill : restFill(step);
             if (isPlayhead && isActive) {
                 cellFill = activeFill.lightened(0.35f);
             }
@@ -542,14 +534,12 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                 cellFill = cellFill.lightened(0.28f); // selection brightens the note
             }
             renderer.fillRoundedRect(cellRect, 3.0f, cellFill);
-            renderer.strokeRoundedRect(cellRect, 3.0f, 1.0f, inactiveStroke);
             if (isSelected) {
                 const NUIRect haloRect(cellRect.x - 1.5f, cellRect.y - 1.5f,
                                        cellRect.width + 3.0f, cellRect.height + 3.0f);
                 renderer.strokeRoundedRect(haloRect, 4.5f, 1.5f,
                                            theme.getColor("textPrimary").withAlpha(0.9f));
             }
-            drawSeam(step, cellRect, cellGap);
             if (isPlayhead) {
                 renderer.strokeRoundedRect(cellRect, 3.0f, 1.5f, playheadAccent.withAlpha(isActive ? 0.95f : 0.45f));
             }
@@ -566,7 +556,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
             }
 
             const NUIRect lengthBg(cellX, lengthY, cellWidth, lengthLaneHeight);
-            renderer.fillRoundedRect(lengthBg, 1.5f, inactiveStroke.withAlpha(0.35f));
+            renderer.fillRoundedRect(lengthBg, 1.5f, theme.getColor("border").withAlpha(0.05f));
             if (stepLength[step] > 0.0f) {
                 const float ratio = std::clamp(stepLength[step] / 1.0f, 0.15f, 1.0f);
                 NUIRect lengthFill(cellX, lengthY, std::max(2.0f, cellWidth * ratio), lengthLaneHeight);
@@ -582,14 +572,6 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
             const float y = timelineStrip.y + ((lane + 1) * timelineStrip.height / 5.0f);
             renderer.drawLine(NUIPoint(timelineStrip.x, y), NUIPoint(timelineStrip.right(), y), 1.0f,
                               theme.getColor("border").withAlpha(0.07f));
-        }
-
-        const double barLineBeats =
-            m_trackManager ? static_cast<double>(m_trackManager->getTimelineClock().getBeatsPerBar()) : 4.0;
-        for (double beat = barLineBeats; beat < visibleLengthBeats; beat += barLineBeats) {
-            const float x = timelineStrip.x + static_cast<float>(beat / visibleLengthBeats) * totalWidth - m_scrollX;
-            renderer.drawLine(NUIPoint(x, timelineStrip.y), NUIPoint(x, timelineStrip.bottom()), 1.0f,
-                              theme.getColor("border").withAlpha(0.10f));
         }
 
         int minPitch = noteSpans.empty() ? 60 : noteSpans[0].pitch;
@@ -751,7 +733,7 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
         // Exact pad containment: 4-step groups carry a structural gap, and the
         // 3px lane gap between pads is not clickable — only the drawn cell
         // itself registers (bounded, 32 steps max -> trivial loop).
-        constexpr float kCellGap = 3.0f;
+        const float kCellGap = padGap(stepWidth);
         const float contentX = relativeX + m_scrollX;
         for (int s = 0; s < m_stepCount; ++s) {
             const float slotLeft = s * stepWidth + static_cast<float>(s / 4) * kStepGroupGap;
@@ -1758,7 +1740,7 @@ void UnitRow::showMixerRoutingMenu(const NUIPoint& pos) {
     if (m_trackManager->getChannelCount() > 0) m_mixerRoutingMenu->addSeparator(); for (size_t i = 0; i < m_trackManager->getChannelCount(); ++i) {
         const auto* channel = m_trackManager->getChannel(i);
         if (!channel) continue;
-        addRouteItem(channel->getChannelId(), std::to_string(i + 1) + " · " + channel->getName(), channel->getTrackColorIndex());
+        addRouteItem(channel->getChannelId(), std::to_string(i + 1) + " · " + channel->getName(), resolveTrackColorIndex(channel->getTrackColorIndex(), channel->getColor(), i));
     }
 
     m_mixerRoutingMenu->addSeparator();

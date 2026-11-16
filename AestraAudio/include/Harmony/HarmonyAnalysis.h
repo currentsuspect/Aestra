@@ -6,6 +6,7 @@
 // chord for the transport bar is HarmonyTimeline::chordAt — a binary search that allocates nothing.
 #pragma once
 
+#include <array>
 #include <string>
 #include <vector>
 
@@ -85,6 +86,13 @@ HarmonyTimeline analyzeHarmony(const std::vector<HarmonyNote>& notes, double bea
 
 /** Key only: Krumhansl-Schmuckler profiles over the duration-weighted pitch-class histogram. */
 Key detectKey(const std::vector<HarmonyNote>& notes);
+
+/**
+ * The key of a pitch-class weighting (index 0 = C): how much of each pitch class the music holds, in any unit.
+ * This is the scorer detectKey uses; audio key detection (Harmony/AudioKeyDetect.h) feeds it a chroma vector.
+ * All zero gives the invalid key.
+ */
+Key keyFromPitchClassWeights(const std::array<double, 12>& weights);
 
 /** Parse a chord name such as "Dm7", "F/A", "Bbmaj7". False when it is not a chord. */
 bool parseChordName(const std::string& text, int& root, ChordQuality& quality, int& bass);

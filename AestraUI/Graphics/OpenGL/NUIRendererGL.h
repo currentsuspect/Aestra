@@ -71,6 +71,10 @@ public:
     
     void fillRect(const NUIRect& rect, const NUIColor& color) override;
     void fillRoundedRect(const NUIRect& rect, float radius, const NUIColor& color) override;
+    void fillRoundedRectVertical(const NUIRect& rect, float radius, const NUIColor& top,
+                                 const NUIColor& bottom) override;
+    void drawInnerShadow(const NUIRect& rect, float radius, float offset, float blur, const NUIColor& color,
+                         bool verticalOnly = false) override;
     void strokeRect(const NUIRect& rect, float thickness, const NUIColor& color) override;
     void strokeRoundedRect(const NUIRect& rect, float radius, float thickness, const NUIColor& color) override;
     void fillCircle(const NUIPoint& center, float radius, const NUIColor& color) override;

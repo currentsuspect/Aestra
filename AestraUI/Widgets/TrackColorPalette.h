@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <climits>
 
@@ -223,6 +224,15 @@ inline int nearestPaletteIndex(uint32_t argb) {
         }
     }
     return (bestDist < 5000) ? best : -1;
+}
+
+/// A channel's palette index as the mixer strip derives it: the saved index when set, else the palette entry nearest its
+/// colour, else its position. A channel nobody has opened the mixer for yet still has no saved index, so anything that
+/// reads the raw index (the Arsenal output chip) must go through this to agree with the strip.
+inline int resolveTrackColorIndex(int savedIndex, uint32_t argb, size_t slot) {
+    if (savedIndex >= 0 && savedIndex < PALETTE_SIZE) return savedIndex;
+    const int nearest = nearestPaletteIndex(argb);
+    return nearest >= 0 ? nearest : static_cast<int>(slot % PALETTE_SIZE);
 }
 
 } // namespace AestraUI

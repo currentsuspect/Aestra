@@ -118,5 +118,68 @@ inline float timelineMaxVerticalScroll(const TimelineLayout& layout, float rowHe
     return overflow > 0.0f ? overflow : 0.0f;
 }
 
+// --- Rows of their own height (resize a track; vertical zoom) -----------------------------------------------------
+
+/** @brief Each row's height, top to bottom; a row past the list (a new row a drop would make) takes @ref fallback. */
+struct TimelineRowHeights {
+    std::vector<float> heights;
+    float fallback = 46.0f;
+    float at(std::size_t i) const { return i < heights.size() ? heights[i] : fallback; }
+};
+
+/** @brief Rows stacked at their own heights, in Local space, each flagged visible when it meets the viewport. */
+inline std::vector<AestraUI::Layout::NUIScrollItem> arrangeTimelineRows(const TimelineLayout& layout,
+                                                                       const TimelineRowHeights& rows, float rowSpacing,
+                                                                       std::size_t rowCount, float scrollOffset) {
+    std::vector<AestraUI::Layout::NUIScrollItem> out;
+    out.reserve(rowCount);
+    float y = layout.rows.y - scrollOffset;
+    for (std::size_t i = 0; i < rowCount; ++i) {
+        const float h = rows.at(i);
+        AestraUI::Layout::NUIScrollItem item;
+        item.rect = AestraUI::Layout::NUILocalRect(layout.rows.x, y, layout.rows.width, h);
+        item.visible = (y + h) >= layout.rows.y && y <= layout.rows.bottom();
+        out.push_back(item);
+        y += h + rowSpacing;
+    }
+    return out;
+}
+
+/** @brief Local-space top edge of row `index` (which need not exist yet). */
+inline float timelineRowTopY(const TimelineLayout& layout, const TimelineRowHeights& rows, float rowSpacing, int index,
+                             float scrollOffset) {
+    float y = layout.rows.y - scrollOffset;
+    for (int i = 0; i < index; ++i) y += rows.at(static_cast<std::size_t>(i)) + rowSpacing;
+    return y;
+}
+
+/** @brief Which row a Local-space y falls in (a gap belongs to the row above): -1 above the rows, and past the last
+ *         row the slots continue at the fallback height, as new rows would. */
+inline int timelineRowSlotAt(const TimelineLayout& layout, const TimelineRowHeights& rows, float rowSpacing,
+                             float scrollOffset, float localY) {
+    float y = layout.rows.y - scrollOffset;
+    if (localY < y) return -1;
+    for (int i = 0;; ++i) {
+        const float step = rows.at(static_cast<std::size_t>(i)) + rowSpacing;
+        if (localY < y + step) return i;
+        y += step;
+        if (i > 100000) return i; // a bound for absurd inputs
+    }
+}
+
+/** @brief Height of all rows together. */
+inline float timelineRowsContentHeight(const TimelineRowHeights& rows, float rowSpacing, std::size_t rowCount) {
+    if (rowCount == 0) return 0.0f;
+    float total = 0.0f;
+    for (std::size_t i = 0; i < rowCount; ++i) total += rows.at(i) + rowSpacing;
+    return total - rowSpacing;
+}
+
+inline float timelineMaxVerticalScroll(const TimelineLayout& layout, const TimelineRowHeights& rows, float rowSpacing,
+                                       std::size_t rowCount) {
+    const float overflow = timelineRowsContentHeight(rows, rowSpacing, rowCount) - layout.rows.height;
+    return overflow > 0.0f ? overflow : 0.0f;
+}
+
 } // namespace Audio
 } // namespace Aestra

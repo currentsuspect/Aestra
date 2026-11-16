@@ -1,0 +1,10 @@
+# Download size budget (FD-77): Aestra stays small. publish.sh refuses to publish a package larger than its row,
+# on every channel, before anything is uploaded. Checked by tools/update/check_package_size.py.
+#
+# Measured at 0.8.3-preview.24: windows-x64 6322753 bytes, linux-x64 5521634 bytes.
+# To move a budget, change the row in a PR that cites the founder decision allowing it. Sounds and other content
+# do not go in the package; they are downloaded separately.
+#
+# <platform> <largest package, bytes>
+windows-x64 8000000
+linux-x64 7000000

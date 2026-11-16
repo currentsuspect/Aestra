@@ -1,4 +1,5 @@
 #include "NUIButton.h"
+#include "../Graphics/NUIDepth.h"
 #include "NUITheme.h"
 #include "NUIThemeSystem.h"
 #include <algorithm>
@@ -50,8 +51,108 @@ void NUIButton::setText(const std::string& text) {
 // Component Overrides
 // ============================================================================
 
+void NUIButton::setLook(Look look, Tone tone, HoverStrength hover) {
+    look_ = look;
+    tone_ = tone;
+    hoverStrength_ = hover;
+    if (look != Look::Legacy)
+        cornerRadius_ = -1.0f;
+    setDirty();
+}
+
+namespace {
+float easeOut(float t) {
+    t = std::clamp(t, 0.0f, 1.0f);
+    return 1.0f - (1.0f - t) * (1.0f - t) * (1.0f - t);
+}
+} // namespace
+
+void NUIButton::renderSpecLook(NUIRenderer& renderer) {
+    // Design Spec, Buttons (locked 12 Nov 2026). Values from the spec's .ak-btn.
+    const auto& t = NUIThemeManager::getInstance().getCurrentTheme();
+    const auto b = getBounds();
+    NUIRect r{std::floor(b.x), std::floor(b.y), std::floor(b.width), std::floor(b.height)};
+    const float radius = r.height * 0.5f;
+    const float fontSize = fontSize_ > 0.0f ? fontSize_ : (r.height <= 26.0f ? t.fontSizeS : t.fontSizeM);
+
+    // tc: the tone; ton: what reads on it; tt: the tone as text.
+    NUIColor tc = t.textPrimary, ton = t.backgroundPrimary, tt = t.textPrimary;
+    if (tone_ == Tone::Accent) {
+        tc = t.primary;
+        ton = t.textOnPrimary;
+        tt = t.secondary;
+    } else if (tone_ == Tone::Danger) {
+        tc = t.error;
+        ton = t.textOnStatus;
+        tt = t.error;
+    }
+    if (look_ == Look::Quiet && tone_ == Tone::Neutral)
+        tt = t.textSecondary;
+
+    if (!isEnabled()) {
+        if (look_ != Look::Quiet)
+            renderer.fillRoundedRect(r, radius, t.surfaceTertiary);
+        renderer.drawTextCentered(text_, r, fontSize, t.textDisabled);
+        renderChildren(renderer);
+        return;
+    }
+
+    const bool full = hoverStrength_ == HoverStrength::Full;
+    const float e = easeOut(fill_);
+    const bool latched = toggleable_ && toggled_;
+
+    NUIColor text = look_ == Look::Solid ? ton : tt;
+
+    if (!full && latched) {
+        // In a dense row an engaged button is pushed into the surface (Design Spec rule 1).
+        Depth::bed(renderer, r, radius, Depth::Cut::Shallow);
+        text = tone_ == Tone::Neutral ? t.textPrimary : tt;
+    } else {
+        const NUIColor fill = look_ == Look::Solid ? NUIColor::lerp(tc, ton, 0.18f) : tc;
+        switch (look_) {
+        case Look::Solid:
+            renderer.fillRoundedRect(r, radius, tc);
+            break;
+        case Look::Soft:
+            renderer.fillRoundedRect(r, radius, (!full && e > 0.0f) ? NUIColor::lerp(t.surfaceTertiary, t.surfaceRaised, e)
+                                                                    : t.surfaceTertiary);
+            break;
+        case Look::Outline:
+            renderer.strokeRoundedRect(r, radius, 1.0f, tt.withAlpha(0.55f));
+            break;
+        default:
+            break;
+        }
+        if (full && e > 0.0f) {
+            // Hover fills the pill in its tone: a plain, quick colour change (owner 13 Nov: no glow, no grow).
+            renderer.fillRoundedRect(r, radius, fill.withAlpha(fill.a * e));
+            text = NUIColor::lerp(text, ton, e);
+        } else if (!full && e > 0.0f && look_ == Look::Quiet) {
+            renderer.fillRoundedRect(r, radius, t.hover.withAlpha(t.hover.a * e));
+            text = NUIColor::lerp(text, tone_ == Tone::Neutral ? t.textPrimary : tt, e);
+        }
+        if (pressed_)
+            renderer.fillRoundedRect(r, radius, t.pressed);
+    }
+
+    NUIRect textRect = r;
+    if (trailingArrow_) {
+        textRect.width -= 14.0f;
+        const float ax = textRect.right() + 2.0f, ay = r.y + r.height * 0.5f;
+        renderer.drawLine({ax - 4.0f, ay}, {ax + 4.0f, ay}, 1.5f, text);
+        renderer.drawLine({ax + 1.0f, ay - 3.0f}, {ax + 4.0f, ay}, 1.5f, text);
+        renderer.drawLine({ax + 1.0f, ay + 3.0f}, {ax + 4.0f, ay}, 1.5f, text);
+    }
+    renderer.drawTextCentered(text_, textRect, fontSize, text);
+    renderChildren(renderer);
+}
+
 void NUIButton::onRender(NUIRenderer& renderer) {
     if (!isVisible()) return;
+    if (look_ != Look::Legacy) {
+        renderSpecLook(renderer);
+        return;
+    }
 
     auto theme = getTheme();
     auto& themeManager = NUIThemeManager::getInstance();
@@ -142,6 +243,17 @@ void NUIButton::onRender(NUIRenderer& renderer) {
 
 void NUIButton::onUpdate(double deltaTime) {
     NUIComponent::onUpdate(deltaTime);
+    if (look_ == Look::Legacy)
+        return;
+    const bool hovered = isEnabled() && isHovered();
+    // Hover is a quick colour change, the same 120ms for every look.
+    const float seconds = 0.12f;
+    const float target = hovered ? 1.0f : 0.0f;
+    if (fill_ != target) {
+        const float step = static_cast<float>(deltaTime) / seconds;
+        fill_ = hovered ? std::min(1.0f, fill_ + step) : std::max(0.0f, fill_ - step);
+        setDirty();
+    }
 }
 
 bool NUIButton::onMouseEvent(const NUIMouseEvent& event) {

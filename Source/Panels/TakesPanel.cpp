@@ -3,6 +3,7 @@
 
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
+#include "../AestraUI/Graphics/NUIDepth.h"
 
 #include <algorithm>
 #include <chrono>
@@ -494,44 +495,48 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
     const NUIColor rule = theme.getColor("borderSubtle");
     const NUIColor text = theme.getColor("textPrimary");
     const NUIColor muted = theme.getColor("textSecondary");
+    const NUIColor quiet = theme.getColor("textMuted");
     const NUIColor bed = theme.getColor("backgroundPrimary");
     const uint64_t now = nowMs();
     const int shown = getDockVersion();
 
     renderer.fillRect(NUIRect(bounds.x, layout.bar.y, bounds.width, bounds.bottom() - layout.bar.y), theme.getColor("backgroundSecondary"));
-    renderer.fillRect(layout.timeline, bed);
+    // Design Spec, "Panels: Versions": the map sits in the bed; branches are lanes, time runs left to right.
+    Depth::bed(renderer, layout.timeline, 0.0f, Depth::Cut::Deep);
 
     // --- Top bar: what this is, the project, the open branch; the two verbs you reach for most.
     int openRow = -1;
     for (int i = 0; i < static_cast<int>(m_takeRows.size()); ++i) if (m_takeRows[static_cast<size_t>(i)].take.active) openRow = i;
-    renderer.drawText("HISTORY  \xc2\xb7  AESTRA VERSIONS", {layout.bar.x + kPad, layout.bar.y + 20.0f}, 10.0f, muted.withAlpha(0.85f));
-    float cx = layout.bar.x + kPad + renderer.measureText("HISTORY  \xc2\xb7  AESTRA VERSIONS", 10.0f).width + 20.0f;
+    const float barMid = layout.bar.y + 26.0f;
+    renderer.drawText("Versions", {layout.bar.x + kPad, barMid - 16.0f * 0.62f}, 16.0f, text);
+    float cx = layout.bar.x + kPad + renderer.measureText("Versions", 16.0f).width + 10.0f;
     const std::string project = m_projectNameProvider ? m_projectNameProvider() : std::string();
     if (!project.empty()) {
-        renderer.drawText(project, {cx, layout.bar.y + 16.0f}, 14.0f, text);
-        cx += renderer.measureText(project, 14.0f).width + 14.0f;
+        renderer.drawText(project, {cx, barMid - 12.0f * 0.62f}, 12.0f, quiet);
+        cx += renderer.measureText(project, 12.0f).width + 12.0f;
     }
     if (openRow >= 0) {
         const auto& open = m_takeRows[static_cast<size_t>(openRow)].take;
         const std::string branch = open.branch.empty() ? "Main" : open.branch;
-        const float bw = renderer.measureText(laneLabel(branch), 11.0f).width + 34.0f;
-        const NUIRect chip{cx, layout.bar.y + 14.0f, bw, 24.0f};
-        renderer.fillRect(chip, theme.getColor("surfaceTertiary"));
+        // The open lane as a field: a sunk pill with the lane's dot.
+        const float bw = renderer.measureText(laneLabel(branch), 12.0f).width + 36.0f;
+        const NUIRect chip{cx, barMid - 14.0f, bw, 28.0f};
+        Depth::bed(renderer, chip, Depth::Radius::pill(chip.height));
         const int lane = static_cast<int>(std::find(layout.nodes.lanes.begin(), layout.nodes.lanes.end(), branch) - layout.nodes.lanes.begin());
-        renderer.fillCircle({chip.x + 12.0f, chip.y + 12.0f}, 3.5f, laneColor(lane));
-        renderer.drawText(laneLabel(branch), {chip.x + 24.0f, chip.y + 7.0f}, 11.0f, text);
+        renderer.fillCircle({chip.x + 16.0f, barMid}, 4.0f, laneColor(lane));
+        renderer.drawText(laneLabel(branch), {chip.x + 26.0f, barMid - 12.0f * 0.62f}, 12.0f, text);
     }
     const auto drawButton = [&](const NUIRect& r, const std::string& label, bool primary, bool danger, bool hot) {
-        NUIColor fill = primary ? theme.getColor("accentPrimary") : theme.getColor("surfaceTertiary");
-        if (hot) fill = fill.lightened(0.08f);
-        renderer.fillRect(r, fill);
+        // Soft pills; Save version is the panel's one accent action.
+        NUIColor fill = primary ? theme.getColor("primary") : theme.getColor(hot ? "surfaceRaised" : "surfaceTertiary");
+        if (hot && primary) fill = fill.lightened(0.08f);
+        renderer.fillRoundedRect(r, Depth::Radius::pill(r.height), fill);
         const float tw = renderer.measureText(label, 12.0f).width;
         renderer.drawText(label, {r.x + (r.width - tw) * 0.5f, std::round(renderer.calculateTextY(r, 12.0f))}, 12.0f,
-                          primary ? NUIColor::white() : danger ? theme.getColor("error") : text);
+                          primary ? theme.getColor("textOnPrimary") : danger ? theme.getColor("error") : text);
     };
     drawButton(layout.branchButton, "Try an alt from here", false, false, m_hoveredButton == "bar-branch");
     drawButton(layout.saveButton, "Save version", true, false, m_hoveredButton == "bar-save");
-    renderer.fillRect({bounds.x, layout.bar.bottom() - 1.0f, bounds.width, 1.0f}, rule);
 
     // --- Timeline: lanes, links, nodes.
     renderer.setClipRect({layout.timeline.x + kLaneColumn, layout.timeline.y, std::max(0.0f, layout.timeline.width - kLaneColumn), layout.timeline.height});
@@ -552,36 +557,36 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
         const auto& v = m_takeRows[i].take;
         const NUIColor c = laneColor(n.lane);
         const bool isShown = static_cast<int>(i) == shown;
-        if (n.autosave) {
-            renderer.fillCircle({n.x, n.y}, 3.5f, theme.getColor("textDisabled").withAlpha(0.9f));
+        if (n.autosave) {  // an autosave: a small sunk dot
+            renderer.fillCircle({n.x, n.y}, 4.0f, theme.getColor("meterBackground"));
+            renderer.strokeCircle({n.x, n.y}, 4.0f, 1.0f, rule);
             continue;
         }
-        if (n.open) {
-            renderer.fillCircle({n.x, n.y}, 18.0f, c.withAlpha(0.18f));
-            renderer.fillCircle({n.x, n.y}, 12.0f, c);
-        } else {
-            renderer.fillCircle({n.x, n.y}, 8.0f, bed);
-            renderer.strokeCircle({n.x, n.y}, 8.0f, isShown ? 3.0f : 2.0f, c);
-        }
+        // A saved version: a lit cap you could pick up; the open one is bigger and carries a ring.
+        const float r = n.open ? 10.0f : (isShown ? 9.0f : 8.0f);
+        if (n.open) renderer.strokeCircle({n.x, n.y}, r + 4.0f, 2.0f, text);
+        else if (isShown) renderer.strokeCircle({n.x, n.y}, r + 3.0f, 1.5f, muted);
+        Depth::ObjectLook look;
+        look.base = c;
+        Depth::object(renderer, {n.x - r, n.y - r, r * 2.0f, r * 2.0f}, r, look);
         // The name over the lane at the top, under it on the lanes below, with the date beneath the name.
         const float labelY = n.lane == 0 ? n.y - 44.0f : n.y + 20.0f;
         const std::string name = v.name.empty() ? v.id : v.name;
-        const float nw = renderer.measureText(name, 12.0f).width;
-        renderer.drawText(name, {n.x - nw * 0.5f, labelY}, 12.0f, text);
-        const std::string when = VersionsTimeline::timeLabel(v.updatedAtMs ? v.updatedAtMs : v.createdAtMs, now);
+        const float nw = renderer.measureText(name, 11.5f).width;
+        renderer.drawText(name, {n.x - nw * 0.5f, labelY}, 11.5f, text);
+        // The open version says so where the others give their time.
+        const std::string when = n.open ? std::string("Open now")
+                                        : VersionsTimeline::timeLabel(v.updatedAtMs ? v.updatedAtMs : v.createdAtMs, now);
         const float ww = renderer.measureText(when, 10.0f).width;
-        renderer.drawText(when, {n.x - ww * 0.5f, labelY + 16.0f}, 10.0f, muted.withAlpha(0.75f));
+        renderer.drawText(when, {n.x - ww * 0.5f, labelY + 16.0f}, 10.0f, n.open ? theme.getColor("secondary") : quiet);
         if (n.open) {
-            const std::string here = "YOU ARE HERE";
-            const float hw = renderer.measureText(here, 9.5f).width;
-            renderer.drawText(here, {n.x - hw * 0.5f, n.lane == 0 ? n.y + 24.0f : labelY + 32.0f}, 9.5f, c.lightened(0.15f));
             if (unsaved > 0) { // the dashed tail: what has been done since the version was saved
                 const NUIPoint tailEnd{std::min(layout.timeline.right() - 24.0f, n.x + 150.0f), n.y};
                 dashedLine(renderer, {n.x + 16.0f, n.y}, tailEnd, muted.withAlpha(0.6f));
                 const std::string label = std::to_string(unsaved) + (unsaved == 1 ? " unsaved change" : " unsaved changes");
                 const float lw = renderer.measureText(label, 11.0f).width;
                 const NUIRect chip{std::min(tailEnd.x + 8.0f, layout.timeline.right() - lw - 40.0f), n.y - 14.0f, lw + 34.0f, 28.0f};
-                renderer.fillRect(chip, theme.getColor("surfaceTertiary"));
+                renderer.fillRoundedRect(chip, Depth::Radius::pill(chip.height), theme.getColor("surfaceTertiary"));
                 renderer.fillCircle({chip.x + 14.0f, chip.y + 14.0f}, 3.5f, theme.getColor("warning"));
                 renderer.drawText(label, {chip.x + 24.0f, chip.y + 8.0f}, 11.0f, text);
             }
@@ -589,7 +594,6 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
     }
     {   // The time axis: a rule near the bottom with the first version of each day under it.
         const float axisY = layout.timeline.bottom() - 34.0f;
-        renderer.fillRect({layout.timeline.x + 24.0f, axisY, layout.timeline.width - 48.0f, 1.0f}, rule);
         std::string lastDay;
         for (size_t i = 0; i < layout.nodes.nodes.size(); ++i) {
             const auto& v = m_takeRows[i].take;
@@ -597,40 +601,39 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
             const std::string day = when.substr(0, when.find(" \xc2\xb7"));
             if (day.empty() || day == lastDay || layout.nodes.nodes[i].autosave) continue;
             lastDay = day;
-            std::string up;
-            for (char c : day) up.push_back(static_cast<char>(std::toupper(static_cast<unsigned char>(c))));
-            renderer.drawText(up, {layout.nodes.nodes[i].x - 12.0f, axisY + 10.0f}, 9.5f, muted.withAlpha(0.7f));
+            renderer.drawText(day, {layout.nodes.nodes[i].x - 12.0f, axisY + 10.0f}, 10.0f, quiet);
         }
     }
     if (m_takeRows.empty()) {
         const std::string hint = !m_manifestError.empty() ? ("Versions unavailable: " + m_manifestError)
                                                           : "No versions yet. Save one to start the timeline.";
-        renderer.drawTextCentered(hint, layout.timeline, 12.0f, muted.withAlpha(0.7f));
+        renderer.drawTextCentered(hint, layout.timeline, 12.0f, quiet);
     }
     renderer.clearClipRect();
     // The branch names stay put while the versions pan under them.
-    renderer.fillRect({layout.timeline.x, layout.timeline.y, kLaneColumn, layout.timeline.height}, bed);
+    renderer.fillRect({layout.timeline.x, layout.timeline.y + 3.0f, kLaneColumn, layout.timeline.height - 3.0f}, bed);
     for (size_t i = 0; i < layout.nodes.lanes.size(); ++i) {
         const float y = layout.nodes.laneY[i];
-        renderer.fillCircle({layout.timeline.x + 30.0f, y}, 3.5f, laneColor(static_cast<int>(i)));
-        renderer.drawText(laneLabel(layout.nodes.lanes[i]), {layout.timeline.x + 42.0f, y - 6.0f}, 11.0f, text.withAlpha(0.9f));
+        renderer.fillCircle({layout.timeline.x + 18.0f, y}, 3.5f, laneColor(static_cast<int>(i)));
+        renderer.drawText(laneLabel(layout.nodes.lanes[i]), {layout.timeline.x + 28.0f, y - 11.0f * 0.62f}, 11.0f, muted);
     }
 
     // --- Legend.
-    renderer.fillRect({layout.legend.x, layout.legend.y, layout.legend.width, 1.0f}, rule);
     float lx = layout.legend.x + kPad;
     const float ly = layout.legend.y + 12.0f;
-    renderer.strokeCircle({lx + 6.0f, ly + 6.0f}, 5.5f, 2.0f, muted);
-    renderer.drawText("Version you saved", {lx + 20.0f, ly}, 11.0f, muted);
-    lx += 150.0f;
-    renderer.fillCircle({lx + 4.0f, ly + 6.0f}, 3.5f, theme.getColor("textDisabled"));
-    renderer.drawText("Autosave", {lx + 16.0f, ly}, 11.0f, muted);
-    lx += 100.0f;
-    dashedLine(renderer, {lx, ly + 6.0f}, {lx + 26.0f, ly + 6.0f}, muted.withAlpha(0.7f), 4.0f, 3.0f);
-    renderer.drawText("Unsaved changes", {lx + 34.0f, ly}, 11.0f, muted);
+    Depth::ObjectLook legendLook;
+    legendLook.base = muted;
+    Depth::object(renderer, {lx + 1.0f, ly + 1.0f, 10.0f, 10.0f}, 5.0f, legendLook);
+    renderer.drawText("Version you saved", {lx + 18.0f, ly}, 10.5f, quiet);
+    lx += 140.0f;
+    renderer.fillCircle({lx + 4.0f, ly + 6.0f}, 3.5f, theme.getColor("meterBackground"));
+    renderer.strokeCircle({lx + 4.0f, ly + 6.0f}, 3.5f, 1.0f, rule);
+    renderer.drawText("Autosave", {lx + 14.0f, ly}, 10.5f, quiet);
+    lx += 90.0f;
+    dashedLine(renderer, {lx, ly + 6.0f}, {lx + 18.0f, ly + 6.0f}, quiet, 3.0f, 3.0f);
+    renderer.drawText("Unsaved changes", {lx + 26.0f, ly}, 10.5f, quiet);
 
     // --- Dock.
-    renderer.fillRect({layout.dock.x, layout.dock.y, 1.0f, layout.dock.height}, rule);
     const float dx = layout.dock.x + kPad, dw = layout.dock.width - kPad * 2.0f;
     if (m_selectedSnapshot >= 0 && m_selectedSnapshot < static_cast<int>(m_snapshotRows.size())) {
         renderer.fillCircle({dx + 5.0f, layout.dock.y + 36.0f}, 5.0f, theme.getColor("warning"));
@@ -643,21 +646,18 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
         const int lane = static_cast<int>(std::find(layout.nodes.lanes.begin(), layout.nodes.lanes.end(), v.branch.empty() ? "Main" : v.branch) - layout.nodes.lanes.begin());
         const NUIColor c = laneColor(lane);
         const float titleY = layout.dock.y + 26.0f;
-        if (v.active) renderer.fillCircle({dx + 6.0f, titleY + 11.0f}, 6.0f, c);
-        else renderer.strokeCircle({dx + 6.0f, titleY + 11.0f}, 6.0f, 2.0f, c);
+        // Heading: the lane's dot and the name; under it, quietly, the lane, whether it is open, and when.
+        renderer.fillCircle({dx + 5.0f, titleY + 9.0f}, 5.0f, c);
         const bool renaming = m_renameActive && m_renameTakeId == v.id;
         const std::string title = renaming ? m_renameBuffer + "|" : (v.name.empty() ? v.id : v.name);
-        renderer.drawText(title, {dx + 22.0f, titleY}, 18.0f, text);
-        const float tw = renderer.measureText(title, 18.0f).width;
-        renderer.drawText(laneLabel(v.branch) + (v.active ? "  \xc2\xb7  open" : ""), {dx + 30.0f + tw, titleY + 4.0f}, 11.0f, muted);
+        renderer.drawText(title, {dx + 18.0f, titleY}, 15.0f, text);
         const std::string when = VersionsTimeline::timeLabel(v.updatedAtMs ? v.updatedAtMs : v.createdAtMs, now);
-        const float ww = renderer.measureText(when, 10.5f).width;
-        renderer.drawText(when, {layout.dock.right() - kPad - ww, titleY + 5.0f}, 10.5f, muted.withAlpha(0.8f));
+        renderer.drawText(laneLabel(v.branch) + (v.active ? "  \xc2\xb7  open  \xc2\xb7  " : "  \xc2\xb7  saved  \xc2\xb7  ") + when,
+                          {dx + 18.0f, titleY + 22.0f}, 10.5f, quiet);
 
         if (const auto* bounce = getDockBounce()) {  // the bounce: play it, see its shape and loudness
             const NUIRect& c = layout.bounceCard;
-            renderer.fillRect(c, bed);
-            renderer.strokeRect(c, 1.0f, rule);
+            Depth::bed(renderer, c, Depth::Radius::medium);
             const bool playing = m_bouncePlaying && m_bouncePlaying(bounce->path);
             const NUIRect& pb = layout.bouncePlay;
             renderer.fillCircle({pb.x + pb.width * 0.5f, pb.y + pb.height * 0.5f}, pb.width * 0.5f, m_hoveredButton == "bounce-play" ? theme.getColor("accentPrimary").lightened(0.1f) : theme.getColor("accentPrimary"));
@@ -685,41 +685,39 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
             }
         }
         if (v.active) {
-            renderer.drawText("STEPS IN THIS VERSION  \xc2\xb7  CLICK TO GO BACK", {dx, layout.stepsList.y - 26.0f}, 9.5f, muted.withAlpha(0.8f));
+            renderer.drawText("Steps in this version", {dx, layout.stepsList.y - 22.0f}, 10.5f, muted);
+            // The steps sit in a sunk well with inset rows, like a menu.
+            Depth::bed(renderer, layout.stepsList, Depth::Radius::medium);
             renderer.setClipRect(layout.stepsList);
-            renderer.fillRect(layout.stepsList, bed);
             for (int i = 0; i < static_cast<int>(m_steps.size()); ++i) {
                 const float ry = layout.stepsList.y + static_cast<float>(i) * STEP_ROW_HEIGHT - m_stepScroll;
                 if (ry + STEP_ROW_HEIGHT < layout.stepsList.y || ry > layout.stepsList.bottom()) continue;
-                const NUIRect row{layout.stepsList.x, ry, layout.stepsList.width, STEP_ROW_HEIGHT};
+                const NUIRect row{layout.stepsList.x + 4.0f, ry + 2.0f, layout.stepsList.width - 8.0f, STEP_ROW_HEIGHT - 2.0f};
                 const bool current = !m_steps[static_cast<size_t>(i)].undone && (i == 0 || m_steps[static_cast<size_t>(i - 1)].undone);
-                if (i == m_hoveredStep) renderer.fillRect(row, theme.getColor("surfaceTertiary"));
-                if (current) renderer.fillRect(row, c.withAlpha(0.18f));
-                const NUIColor dot = current ? c : theme.getColor("textDisabled");
-                renderer.fillCircle({row.x + 14.0f, row.y + row.height * 0.5f}, 3.5f, dot);
-                renderer.drawText(m_steps[static_cast<size_t>(i)].label, {row.x + 28.0f, std::round(renderer.calculateTextY(row, 12.0f))}, 12.0f,
-                                  m_steps[static_cast<size_t>(i)].undone ? muted.withAlpha(0.5f) : text);
+                if (current) renderer.fillRoundedRect(row, 6.0f, theme.getColor("selected"));
+                else if (i == m_hoveredStep) renderer.fillRoundedRect(row, 6.0f, theme.getColor("hover"));
+                const bool undone = m_steps[static_cast<size_t>(i)].undone;
+                renderer.fillCircle({row.x + 12.0f, row.y + row.height * 0.5f}, 3.0f, current ? c : quiet);
+                renderer.drawText(m_steps[static_cast<size_t>(i)].label, {row.x + 24.0f, std::round(renderer.calculateTextY(row, 12.0f))}, 12.0f,
+                                  undone ? quiet : (current || i == m_hoveredStep ? text : muted));
                 if (const std::string clock = VersionsTimeline::clockLabel(m_steps[static_cast<size_t>(i)].atMs); !clock.empty()) {
-                    const float cw = renderer.measureText(clock, 10.5f).width;
-                    renderer.drawText(clock, {row.right() - 12.0f - cw, std::round(renderer.calculateTextY(row, 10.5f))}, 10.5f, muted.withAlpha(0.7f));
+                    const float cw = renderer.measureText(clock, 10.0f).width;
+                    renderer.drawText(clock, {row.right() - 8.0f - cw, std::round(renderer.calculateTextY(row, 10.0f))}, 10.0f, quiet);
                 }
-                renderer.fillRect({row.x, row.bottom() - 1.0f, row.width, 1.0f}, rule.withAlpha(0.6f));
             }
-            renderer.strokeRect(layout.stepsList, 1.0f, rule);
-            if (m_steps.empty()) renderer.drawTextCentered("Nothing done in this version yet", layout.stepsList, 12.0f, muted.withAlpha(0.6f));
+            if (m_steps.empty()) renderer.drawTextCentered("Nothing done in this version yet", layout.stepsList, 12.0f, quiet);
             renderer.clearClipRect();
-            renderer.fillCircle({dx + 4.0f, layout.stepsList.bottom() + 16.0f}, 3.5f, theme.getColor("accentCyan"));
-            renderer.drawText("Recording a take is a step too", {dx + 18.0f, layout.stepsList.bottom() + 10.0f}, 11.0f, muted.withAlpha(0.8f));
+            renderer.drawText("Click a step to go back to it. Recording a take is a step too.", {dx, layout.stepsList.bottom() + 10.0f}, 10.5f, quiet);
         } else {
             // An older version: its notes and its read-only log. Going back into it means opening it.
             float y = layout.stepsList.y - 26.0f;
             if (!v.notes.empty()) {
-                renderer.drawText("NOTES ON THIS VERSION", {dx, y}, 9.5f, muted.withAlpha(0.8f));
+                renderer.drawText("Notes on this version", {dx, y}, 10.5f, muted);
                 y += 20.0f;
                 for (const auto& n : v.notes) { renderer.drawText(n.text, {dx, y}, 12.0f, text); y += 22.0f; }
                 y += 10.0f;
             }
-            renderer.drawText("STEPS IN THIS VERSION  \xc2\xb7  READ-ONLY LOG", {dx, y}, 9.5f, muted.withAlpha(0.8f));
+            renderer.drawText("Steps in this version", {dx, y}, 10.5f, muted);
             y += 22.0f;
             std::string line;
             for (const auto& s : v.steps) line += (line.empty() ? "" : "  \xc2\xb7  ") + s.label;
@@ -742,16 +740,16 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
             if (!forks.empty()) renderer.drawText("Alts from here: " + forks + ". Open this version to work inside it.", {dx, y}, 11.0f, muted.withAlpha(0.75f));
         }
     }
-    for (const auto& b : layout.buttons) drawButton(b.rect, b.label, b.primary, b.danger, m_hoveredButton == b.id);
+    // One accent action in the panel (Save version, top right): the dock's buttons are soft pills.
+    for (const auto& b : layout.buttons) drawButton(b.rect, b.label, false, b.danger, m_hoveredButton == b.id);
 
     // Recovery snapshots (the app's automatic saves), when there are any.
     if (!m_snapshotRows.empty()) {
-        renderer.fillRect({layout.dock.x + 1.0f, layout.snapshotHeader.y - 1.0f, layout.dock.width - 1.0f, 1.0f}, rule);
-        renderer.drawText("RESCUED SESSIONS", {dx, layout.snapshotHeader.y + 6.0f}, 9.5f, muted.withAlpha(0.8f));
+        renderer.drawText("Rescued sessions", {dx, layout.snapshotHeader.y + 6.0f}, 10.5f, muted);
         for (int i = 0; i < static_cast<int>(m_snapshotRows.size()); ++i) {
-            const NUIRect row{layout.dock.x + 1.0f, layout.snapshotList.y + static_cast<float>(i) * SNAPSHOT_ROW_HEIGHT, layout.dock.width - 1.0f, SNAPSHOT_ROW_HEIGHT};
-            if (i == m_selectedSnapshot) renderer.fillRect(row, theme.getColor("surfaceRaised"));
-            else if (i == m_hoveredSnapshot) renderer.fillRect(row, theme.getColor("surfaceTertiary"));
+            const NUIRect row{dx - 8.0f, layout.snapshotList.y + static_cast<float>(i) * SNAPSHOT_ROW_HEIGHT + 1.0f, dw + 16.0f, SNAPSHOT_ROW_HEIGHT - 2.0f};
+            if (i == m_selectedSnapshot) renderer.fillRoundedRect(row, 6.0f, theme.getColor("selected"));
+            else if (i == m_hoveredSnapshot) renderer.fillRoundedRect(row, 6.0f, theme.getColor("hover"));
             renderer.fillCircle({dx + 4.0f, row.y + row.height * 0.5f}, 3.5f, theme.getColor("warning"));
             renderer.drawText(m_snapshotRows[static_cast<size_t>(i)].label, {dx + 18.0f, std::round(renderer.calculateTextY(row, 11.0f))}, 11.0f, muted);
         }

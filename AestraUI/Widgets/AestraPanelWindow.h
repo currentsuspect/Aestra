@@ -70,6 +70,9 @@ public:
     virtual bool wantsKeys() const = 0;
     /// Narrower title bars do not show it.
     virtual float minimumWidth() const = 0;
+    /// True when the panel gives it a second header row of its own (the two-row header, FD-73) instead of the
+    /// title bar's free space. render() then gets that row.
+    virtual void setHeaderMode(bool /*twoRow*/) {}
 };
 
 /**
@@ -102,6 +105,14 @@ public:
     /// Keys for the accessory while its popover is open; false when it does not want them.
     bool routeKeyToAccessory(const NUIKeyEvent& event);
     void setBadgeText(const std::string& text);   // empty = no badge
+    /// The two-row header (FD-73): row one is the title, the context text and close; row two belongs to the
+    /// accessory (preset controls, menu, power). Plugin editors turn it on; every other panel keeps one row.
+    void setTwoRowHeader(bool twoRow);
+    bool hasTwoRowHeader() const { return m_twoRowHeader; }
+    /// Where the plugin sits ("Channel 1 · Insert 1"), drawn after the title in the two-row header.
+    void setPanelContext(const std::string& text);
+    /// Height of everything above the content: 32 px, or 64 px with the two-row header.
+    float headerHeight() const { return m_twoRowHeader ? 2.0f * TITLE_BAR_H : TITLE_BAR_H; }
     void setOnClose(std::function<void()> callback) { m_onClose = std::move(callback); }
     void setCloseOnOutsideClick(bool close) { m_closeOnOutsideClick = close; }
     bool closesOnOutsideClick() const { return m_closeOnOutsideClick; }
@@ -110,9 +121,14 @@ public:
     bool isLocked() const { return m_locked; }
     void setOnMenuRequested(std::function<void(const NUIPoint&)> callback) { m_onMenuRequested = std::move(callback); }
     bool isDraggingWindow() const { return m_isDraggingWindow; }
+    /// The pointer's position while it is over the window, for hover states; nullptr once it has left.
+    const NUIPoint* hoverPoint() const { return m_hoverIn ? &m_hoverPos : nullptr; }
 
     // Derived classes render here; rect is the global content area (below title bar)
     virtual void drawContent(NUIRenderer& renderer, const NUIRect& contentRect) {}
+
+    // Drawn last and unclipped, over the header too: for a menu that opens from a control (a dropdown).
+    virtual void drawOverlay(NUIRenderer& renderer) {}
 
     // Called when a title-bar drag ends (before m_isDraggingWindow is cleared)
     virtual void onDragEnd() {}
@@ -124,7 +140,7 @@ public:
 
     // Helpers
     static constexpr float TITLE_BAR_H = 32.0f;
-    static constexpr float kRadius = 14.0f;
+    static constexpr float kRadius = 0.0f; // sharp corners, as in the FD-73 mock
     NUIRect getContentRect() const;
     bool hitTestCloseButton(float x, float y) const;
     bool hitTestTitleBar(float x, float y) const;
@@ -205,9 +221,14 @@ protected:
 private:
     void cacheThemeColors();
     void drawTitleBar(NUIRenderer& renderer);
+    void drawTwoRowHeader(NUIRenderer& renderer);
 
     std::string m_title;
     std::string m_badgeText;
+    NUIPoint m_hoverPos;
+    bool m_hoverIn = false;
+    std::string m_contextText;
+    bool m_twoRowHeader = false;
     std::shared_ptr<PanelTitleAccessory> m_accessory;
     std::function<void()> m_onClose;
     std::function<void()> m_onWindowDragEnd;

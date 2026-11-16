@@ -171,6 +171,7 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/AestraPanelWindow.h
     Widgets/AestraPanelWindow.cpp
     Widgets/PluginEditorKit.cpp
+    Widgets/EmberControls.cpp
     Widgets/AestraDialogChrome.cpp
     Widgets/GenericPluginEditor.h
     Widgets/GenericPluginEditor.cpp
@@ -208,6 +209,8 @@ endif()
 set(AESTRAUI_GRAPHICS_SOURCES
     Graphics/NUIRenderer.h
     Graphics/NUIRenderer.cpp
+    Graphics/NUIDepth.h
+    Graphics/NUIDepth.cpp
     Graphics/NUISVGParser.h
     Graphics/NUISVGParser.cpp
     Graphics/NUISVGCache.h
@@ -333,6 +336,7 @@ if(AESTRAUI_BUILD_OPENGL)
         Graphics/OpenGL/NUIRendererGL.h
         Graphics/OpenGL/NUIRendererGL.cpp
         Graphics/OpenGL/NUIRendererGLBatch.cpp
+        Graphics/OpenGL/NUIRendererGLShapes.cpp
         Graphics/OpenGL/NUIRenderCache.h
         Graphics/OpenGL/NUIRenderCache.cpp
     )

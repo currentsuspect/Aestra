@@ -274,6 +274,16 @@ void UnitManager::publishSnapshot() {
         snapshot->units.push_back(state);
     }
 
+    // What playback needs of the project key: the transpose and who follows it (FD-76).
+    auto playbackHarmony = std::make_shared<PlaybackHarmony>();
+    playbackHarmony->transposeSemitones = m_harmony.transposeSemitones;
+    for (UnitID id : m_unitOrder) {
+        const auto* unit = getUnit(id);
+        if (unit && unit->followsKey()) playbackHarmony->followingUnits.push_back(id);
+    }
+    std::sort(playbackHarmony->followingUnits.begin(), playbackHarmony->followingUnits.end());
+    m_playbackHarmony.store(std::move(playbackHarmony));
+
     m_realtimeSnapshot.publish(snapshot);
     // Retire old snapshot through GC so the audio thread never dereferences freed memory.
     auto old = m_publishedSnapshot.exchange(snapshot, std::memory_order_acq_rel);
@@ -425,9 +435,25 @@ bool UnitManager::removeUnit(UnitID id) {
     return erased;
 }
 
+void UnitManager::setHarmony(ProjectHarmony harmony) {
+    harmony.transposeSemitones = clampTranspose(harmony.transposeSemitones);
+    if (harmony.writtenTonic < 0 || harmony.writtenTonic > 11) harmony.writtenTonic = -1;
+    if (harmony == m_harmony) return;
+    m_harmony = harmony;
+    publishSnapshot();
+}
+
+void UnitManager::setUnitFollowsKey(UnitID id, std::optional<bool> follows) {
+    auto* unit = getUnit(id);
+    if (!unit || unit->followsKeyOverride == follows) return;
+    unit->followsKeyOverride = follows;
+    publishSnapshot();
+}
+
 void UnitManager::clear() {
     m_units.clear();
     m_unitOrder.clear();
+    m_harmony = ProjectHarmony{};
     nextId = 1;
     publishSnapshot();
 }
@@ -790,11 +816,21 @@ JSON UnitManager::saveToJSON() const {
         if (!state.empty()) {
             u.set("pluginStateHex", JSON(bytesToHex(state)));
         }
+        // Only a switch the user set: a unit on its type's default writes nothing (FD-76).
+        if (unit->followsKeyOverride) u.set("followsKey", JSON(*unit->followsKeyOverride));
 
         units.push(u);
     }
 
     root.set("units", units);
+    // The project key and global transpose (FD-76); absent for a project that never set either.
+    if (m_harmony != ProjectHarmony{}) {
+        JSON harmony = JSON::object();
+        harmony.set("writtenTonic", JSON(static_cast<double>(m_harmony.writtenTonic)));
+        harmony.set("minor", JSON(m_harmony.minor));
+        harmony.set("transpose", JSON(static_cast<double>(m_harmony.transposeSemitones)));
+        root.set("harmony", harmony);
+    }
     return root;
 }
 
@@ -807,6 +843,20 @@ void UnitManager::loadFromJSON(const JSON& json) {
     if (json.has("nextId")) {
         nextId = static_cast<UnitID>(json["nextId"].asNumber());
         if (nextId == 0) nextId = 1;
+    }
+
+    // The project key and global transpose (FD-76). A damaged section loads as "no key, no transpose".
+    if (json.has("harmony") && json["harmony"].isObject()) {
+        const JSON& jh = json["harmony"];
+        const auto wholeNumber = [&jh](const char* key, double low, double high, int fallback) {
+            if (!jh.has(key) || !jh[key].isNumber()) return fallback;
+            const double v = jh[key].asNumber();
+            return std::isfinite(v) && v >= low && v <= high ? static_cast<int>(std::lround(v)) : fallback;
+        };
+        m_harmony.writtenTonic = wholeNumber("writtenTonic", -1.0, 11.0, -1);
+        m_harmony.minor = jh.has("minor") && jh["minor"].isBool() && jh["minor"].asBool();
+        m_harmony.transposeSemitones =
+            wholeNumber("transpose", ProjectHarmony::kMinTranspose, ProjectHarmony::kMaxTranspose, 0);
     }
 
     if (!json.has("units") || !json["units"].isArray()) {
@@ -905,6 +955,7 @@ void UnitManager::loadFromJSON(const JSON& json) {
         if (ju.has("defaultPatternId")) {
             unit.defaultPatternId = PatternID(static_cast<uint64_t>(ju["defaultPatternId"].asNumber()));
         }
+        if (ju.has("followsKey") && ju["followsKey"].isBool()) unit.followsKeyOverride = ju["followsKey"].asBool();
 
         if (ju.has("group")) {
             unit.group = unitGroupFromJson(ju["group"]);
