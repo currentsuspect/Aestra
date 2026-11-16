@@ -95,6 +95,10 @@ public:
     /// Highest peak currently shown, in dBFS (peak-hold when one is latched).
     float getDisplayPeakDb() const;
 
+    /// Where the bars start below the meter's top: the readout band (track strips) plus the clip lamp's band.
+    /// The channel fader lines its track up with this, so level and gain read against each other.
+    float barsTopOffset() const { return (m_masterMode ? 0.0f : READOUT_BAND) + LAMP_BAND; }
+
     /// True when either channel has a latched clip.
     bool isClipped() const { return m_clipL || m_clipR; }
 
@@ -135,7 +139,9 @@ private:
 
     // Layout constants
     static constexpr float METER_GAP = 2.0f;      // Gap between L and R bars
-    static constexpr float CLIP_HEIGHT = 6.0f;   // Height of clip indicator
+    static constexpr float CLIP_LAMP = 8.0f;     // the clip lamp's diameter (Design Spec, Mixer)
+    static constexpr float LAMP_BAND = 12.0f;    // the band above the bars that holds it
+    static constexpr float READOUT_BAND = 24.0f; // a track strip's level readout, above the lamp
     static constexpr float PEAK_OVERLAY_HEIGHT = 2.0f; // Height of fast peak overlay marker
     static constexpr float PEAK_HOLD_HEIGHT = 1.0f; // Height of peak hold line
 

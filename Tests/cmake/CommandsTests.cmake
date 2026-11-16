@@ -327,7 +327,7 @@ endif()
 # Rumble state and migration are deterministic pure-logic coverage. Keep this in
 # the normal test tier so stable parameter IDs cannot drift behind a runtime gate.
 # --- Premium plugin commands -------------------------------------------------
-# Guarded on AestraPremiumPlugins; absent from public builds.
+# Aestra's own plugins always build (FD-57, FD-80), so these always run.
 # Append new targets for this group at the END of this sub-section.
 
 # TARGET AestraRumble is required as well as AestraPremiumPlugins: the Linux
@@ -339,7 +339,7 @@ if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND TARGET AestraRumbl
    AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/RumbleStateTest.cpp")
     add_executable(RumbleStateTest Commands/RumbleStateTest.cpp)
     if(UNIX AND NOT APPLE)
-        target_link_libraries(RumbleStateTest PRIVATE -Wl,--start-group AestraRumble AestraAudioCore -Wl,--end-group)
+        target_link_libraries(RumbleStateTest PRIVATE -Wl,--start-group -Wl,--whole-archive AestraRumble -Wl,--no-whole-archive AestraAudioCore -Wl,--end-group)
     else()
         target_link_libraries(RumbleStateTest PRIVATE AestraPremiumPlugins AestraAudioCore)
     endif()
@@ -348,7 +348,7 @@ if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND TARGET AestraRumbl
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME RumbleStateTest COMMAND RumbleStateTest)
-    set_tests_properties(RumbleStateTest PROPERTIES LABELS "plugins;rumble;state")
+    set_tests_properties(RumbleStateTest PROPERTIES LABELS "plugins;rumble;state;contract:durability")
 endif()
 
 # TARGET AestraRumble is required as well as AestraPremiumPlugins: the Linux
@@ -357,20 +357,20 @@ endif()
 # build with Rumble absent emits -lAestraRumble and fails to link. AestraPlugins
 # guards its own use the same way (if(TARGET AestraRumble)).
 if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND TARGET AestraRumble
-   AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/RumbleUnauthorizedOutputSafetyTest.cpp")
-    add_executable(RumbleUnauthorizedOutputSafetyTest Commands/RumbleUnauthorizedOutputSafetyTest.cpp)
+   AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/RumbleSilentOutputTest.cpp")
+    add_executable(RumbleSilentOutputTest Commands/RumbleSilentOutputTest.cpp)
     if(UNIX AND NOT APPLE)
-        target_link_libraries(RumbleUnauthorizedOutputSafetyTest PRIVATE -Wl,--start-group AestraRumble AestraAudioCore -Wl,--end-group)
+        target_link_libraries(RumbleSilentOutputTest PRIVATE -Wl,--start-group -Wl,--whole-archive AestraRumble -Wl,--no-whole-archive AestraAudioCore -Wl,--end-group)
     else()
-        target_link_libraries(RumbleUnauthorizedOutputSafetyTest PRIVATE AestraPremiumPlugins AestraAudioCore)
+        target_link_libraries(RumbleSilentOutputTest PRIVATE AestraPremiumPlugins AestraAudioCore)
     endif()
-    target_include_directories(RumbleUnauthorizedOutputSafetyTest PRIVATE
+    target_include_directories(RumbleSilentOutputTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
         ${CMAKE_SOURCE_DIR}/AestraPlugins/AestraRumble/include
     )
-    add_test(NAME RumbleUnauthorizedOutputSafetyTest COMMAND RumbleUnauthorizedOutputSafetyTest)
-    set_tests_properties(RumbleUnauthorizedOutputSafetyTest PROPERTIES LABELS "plugins;rumble;license;safety")
+    add_test(NAME RumbleSilentOutputTest COMMAND RumbleSilentOutputTest)
+    set_tests_properties(RumbleSilentOutputTest PROPERTIES LABELS "plugins;rumble;safety;contract:audio")
 endif()
 
 if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/ClipRenderServiceTest.cpp")
@@ -544,3 +544,55 @@ target_include_directories(FactoryPresetsTest PRIVATE
 )
 add_test(NAME FactoryPresetsTest COMMAND FactoryPresetsTest)
 set_tests_properties(FactoryPresetsTest PROPERTIES TIMEOUT 120 LABELS "commands;plugins;presets;contract:application")
+
+# MoveTrackCommandTest — reorder tracks (DAW Essentials Checklist P0): a row moves, its lanes travel, undo restores.
+add_executable(MoveTrackCommandTest Commands/MoveTrackCommandTest.cpp)
+target_link_libraries(MoveTrackCommandTest PRIVATE AestraAudioCore)
+target_include_directories(MoveTrackCommandTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MoveTrackCommandTest COMMAND MoveTrackCommandTest)
+set_tests_properties(MoveTrackCommandTest PROPERTIES TIMEOUT 120 LABELS "commands;timeline;contract:application")
+
+# RenameCommandTest — rename tracks and mixer channels; names that matched stay matched; one undo step.
+add_executable(RenameCommandTest Commands/RenameCommandTest.cpp)
+target_link_libraries(RenameCommandTest PRIVATE AestraAudioCore)
+target_include_directories(RenameCommandTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME RenameCommandTest COMMAND RenameCommandTest)
+set_tests_properties(RenameCommandTest PROPERTIES TIMEOUT 120 LABELS "commands;timeline;mixer;contract:application")
+
+# RemoveTrackCommandTest — delete a track: lanes, track and its own channel in one undo step; a shared channel stays.
+add_executable(RemoveTrackCommandTest Commands/RemoveTrackCommandTest.cpp)
+target_link_libraries(RemoveTrackCommandTest PRIVATE AestraAudioCore)
+target_include_directories(RemoveTrackCommandTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME RemoveTrackCommandTest COMMAND RemoveTrackCommandTest)
+set_tests_properties(RemoveTrackCommandTest PROPERTIES TIMEOUT 120 LABELS "commands;timeline;mixer;contract:application")
+
+# DuplicateTrackCommandTest — duplicate a track: own channel (settings + chain), lanes and clips, audio routed to the copy.
+add_executable(DuplicateTrackCommandTest Commands/DuplicateTrackCommandTest.cpp)
+target_link_libraries(DuplicateTrackCommandTest PRIVATE AestraAudioCore)
+target_include_directories(DuplicateTrackCommandTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME DuplicateTrackCommandTest COMMAND DuplicateTrackCommandTest)
+set_tests_properties(DuplicateTrackCommandTest PROPERTIES TIMEOUT 120 LABELS "commands;timeline;mixer;contract:application")
+
+# MuseDiscoveryTest — what an agent can learn from the surface itself (#1409):
+# host verbs (project.save) in get_schema, the connecting note, and refusals
+# that name the flags/args that would have worked.
+add_executable(MuseDiscoveryTest Commands/MuseDiscoveryTest.cpp)
+target_link_libraries(MuseDiscoveryTest PRIVATE AestraAudioCore)
+target_include_directories(MuseDiscoveryTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MuseDiscoveryTest COMMAND MuseDiscoveryTest)
+set_tests_properties(MuseDiscoveryTest PROPERTIES TIMEOUT 120 LABELS "commands;muse;contract:application")

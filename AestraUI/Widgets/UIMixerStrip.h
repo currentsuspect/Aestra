@@ -81,6 +81,8 @@ public:
     std::function<void(bool soloed)> onSoloChanged;
     std::function<void(float pan)> onPanChanged;
     std::function<void(bool monitored)> onMonitorToggled;
+    /// The header asked to rename this channel; @p nameplate is where its name is drawn.
+    std::function<void(uint32_t channelId, const NUIRect& nameplate)> onRenameRequested;
 
 private:
     uint32_t m_channelId{0};
@@ -104,7 +106,6 @@ private:
     NUIColor m_selectedTint;
     NUIColor m_selectedOutline;
     NUIColor m_selectedTopHighlight;
-    NUIColor m_masterBackground;
     NUIColor m_mutedOverlay;
     NUIColor m_stripBg;
     NUIColor m_masterBorder;

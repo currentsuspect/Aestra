@@ -22,6 +22,8 @@ namespace EditorKit {
  */
 
 /// A row of knobs under section headers, spread across a width the way the mock's rowGroups() does.
+inline constexpr uint32_t kNoParam = 0xFFFFFFFFu;
+
 class EmberKnobBoard {
 public:
     struct Spec {
@@ -29,7 +31,11 @@ public:
         const char* label = "";
         KnobSize size = KnobSize::Medium;
         bool bipolar = false;
+        /// A slot the editor fills itself (a dropdown): param is kNoParam, width is the slot's width.
+        float width = 0.0f;
     };
+    /// A reserved slot in a row; read its rect with rectOf(kNoParam).
+    static Spec slot(float width) { return Spec{kNoParam, "", KnobSize::Medium, false, width}; }
     struct Group {
         const char* label = "";
         std::vector<Spec> knobs;
@@ -38,6 +44,7 @@ public:
         Spec spec;
         NUIRect rect;       ///< the knob, its label and its value
         bool enabled = true;
+        std::string valueText; ///< replaces the plugin's display string when not empty
     };
 
     void clear();
@@ -48,6 +55,7 @@ public:
     /// A header over an explicit span (for boards that place their knobs by hand).
     void addHeader(const NUIRect& span, const char* label);
     void setEnabled(uint32_t param, bool enabled);
+    void setValueText(uint32_t param, const std::string& text);
     const std::vector<Cell>& cells() const { return m_cells; }
     NUIRect rectOf(uint32_t param) const;
 
@@ -64,12 +72,17 @@ private:
     std::vector<Header> m_headers;
 };
 
+/// The 13 note divisions in the plugins' own index order, and the order a menu lists them in (musical).
+const std::vector<std::string>& noteDivisionLabels();
+const std::vector<int>& noteDivisionMenuOrder();
+
 /// Stepped parameter shown as one cell per label (value = index / (count - 1)).
 struct EmberSegments {
     uint32_t param = 0;
     std::vector<std::string> labels;
     NUIRect rect;
     bool enabled = true;
+    SegmentGlyph glyph; ///< optional mark in each cell
 
     int index(const Aestra::Audio::IPluginInstance& plugin) const;
     int hit(const NUIPoint& p) const; ///< the cell under @p p, or -1
@@ -92,6 +105,29 @@ struct EmberSliderControl {
     bool onMouse(const NUIMouseEvent& event, Aestra::Audio::IPluginInstance& plugin);
     void draw(NUIRenderer& renderer, const Aestra::Audio::IPluginInstance& plugin, const NUIPoint* mouse,
               bool bypassed) const;
+};
+
+/// A stepped parameter shown as a dropdown. Labels are in the parameter's own index order; @c order is the order
+/// the menu lists them in, so a table that is not musical can still be picked musically without changing what is
+/// stored. The menu is drawn by the editor's drawOverlay() and kept inside the window.
+struct EmberDropdown {
+    uint32_t param = 0;
+    std::vector<std::string> labels;
+    std::vector<int> order; ///< indices into labels; empty = labels' own order
+    NUIRect rect;
+    bool enabled = true;
+    bool open = false;
+
+    int index(const Aestra::Audio::IPluginInstance& plugin) const;
+    NUIRect menuRect(const NUIRect& window) const;
+    /// The closed control.
+    void draw(NUIRenderer& renderer, const Aestra::Audio::IPluginInstance& plugin, const NUIPoint* mouse,
+              bool bypassed) const;
+    /// The open list; call from drawOverlay().
+    void drawMenu(NUIRenderer& renderer, const Aestra::Audio::IPluginInstance& plugin, const NUIPoint* mouse,
+                  const NUIRect& window) const;
+    /// True when the event was taken: a press on the control toggles, on an item picks it, anywhere else closes.
+    bool onMouse(const NUIMouseEvent& event, Aestra::Audio::IPluginInstance& plugin, const NUIRect& window);
 };
 
 /// True when the plugin's bypass parameter @p bypassParam is on.

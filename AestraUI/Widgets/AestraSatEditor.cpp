@@ -104,7 +104,7 @@ void AestraSatEditor::drawTransferCurve(NUIRenderer& renderer, bool bypassed) {
 
     EditorKit::drawTextRight(renderer, "in", w.right() - 8.0f, w.y + w.height * 0.5f + 8.0f, 9.0f, c.inkMuted);
     EditorKit::drawTextLeft(renderer, "out", w.x + w.width * 0.5f + 6.0f, w.y + 12.0f, 9.0f, c.inkMuted);
-    const char* names[3] = {"Tape \xC2\xB7 tanh", "Tube \xC2\xB7 asymmetric", "Hard \xC2\xB7 clip"};
+    const char* names[3] = {"Tape - tanh", "Tube - asymmetric", "Hard - clip"};
     EditorKit::drawTextLeft(renderer, names[mode], w.x + 8.0f, w.bottom() - 10.0f, 10.0f, c.inkMuted);
 }
 

@@ -5,6 +5,7 @@
 
 #include "ChannelDisplayName.h"
 #include "NUIThemeSystem.h"
+#include "../Graphics/NUIDepth.h"
 #include "../../AestraCore/include/AestraLog.h"
 #include "NUIRenderer.h"
 #include "NUIMixerWidgets.h"
@@ -24,16 +25,14 @@ namespace {
     constexpr float TAB_H = 28.0f;
     constexpr float TAB_RADIUS = 12.0f;
     constexpr float SECTION_GAP = 10.0f;
-    constexpr float HEADER_H = 54.0f;
+    constexpr float HEADER_H = 30.0f;
     constexpr float CHANNEL_ROW_H = 22.0f;
     // Two rows (trim, width) under the header, with a little air either side.
-    constexpr float CHANNEL_BLOCK_H = CHANNEL_ROW_H * 2.0f + 10.0f;
+    constexpr float CHANNEL_BLOCK_H = CHANNEL_ROW_H * 2.0f + 14.0f;
     constexpr float INSERT_SUMMARY_H = 28.0f;
     constexpr float ROW_H = 28.0f;
-    constexpr float ROW_RADIUS = 12.0f;
     constexpr float INPUT_METER_H = 12.0f;
     constexpr float IO_CARD_RADIUS = 14.0f;
-    constexpr float HEADER_RADIUS = 12.0f;
     constexpr float IO_DROPDOWN_H = 22.0f;
     constexpr float SEND_STATUS_CARD_H = 50.0f;
     constexpr float SEND_OUTPUT_CARD_H = 70.0f;
@@ -230,10 +229,11 @@ void UIMixerInspector::computeColumn(const Aestra::ChannelViewModel* channel)
     const auto b = getBounds();
     const float x = b.x + PAD;
     const float w = std::max(1.0f, b.width - PAD * 2.0f);
-    m_headerRect = NUIRect{x, b.y + PAD, w, HEADER_H};
-    m_viewportRect = NUIRect{b.x, m_headerRect.bottom() + 6.0f, b.width, std::max(0.0f, b.bottom() - m_headerRect.bottom() - 6.0f)};
+    m_headerRect = NUIRect{x, b.y + PAD + 2.0f, w, HEADER_H};
+    m_viewportRect = NUIRect{b.x, m_headerRect.bottom() + 8.0f, b.width, std::max(0.0f, b.bottom() - m_headerRect.bottom() - 14.0f)};
     m_fedChips.clear();
-    m_addFxRect = m_addSidechainRect = m_linkRect = NUIRect{};
+    m_addFxRect = m_addSidechainRect = m_linkRect = m_levelHeadRect = NUIRect{};
+    m_monitorAutoRect = m_monitorArmedRect = NUIRect{};
 
     constexpr float kHeadH = 22.0f;
     constexpr float kSectionGap = 10.0f;
@@ -251,8 +251,10 @@ void UIMixerInspector::computeColumn(const Aestra::ChannelViewModel* channel)
 
     // Channel block (trim, width): not for the master.
     if (!master) {
-        if (m_trimBar) m_trimBar->setBounds(x + 4.0f, y + 4.0f, w - 8.0f, CHANNEL_ROW_H);
-        if (m_widthBar) m_widthBar->setBounds(x + 4.0f, y + 4.0f + CHANNEL_ROW_H, w - 8.0f, CHANNEL_ROW_H);
+        m_levelHeadRect = NUIRect{x, y, w, kHeadH};
+        y += kHeadH;
+        if (m_trimBar) m_trimBar->setBounds(x, y, w, CHANNEL_ROW_H);
+        if (m_widthBar) m_widthBar->setBounds(x, y + CHANNEL_ROW_H, w, CHANNEL_ROW_H);
         y += CHANNEL_BLOCK_H;
     }
 
@@ -260,11 +262,11 @@ void UIMixerInspector::computeColumn(const Aestra::ChannelViewModel* channel)
     m_sectionOffset[2] = y - columnTop + m_scrollOffset;
     m_outputHeadRect = NUIRect{x, y, w, kHeadH};
     y += kHeadH;
-    m_outputRowRect = NUIRect{x + 2.0f, y, w - 4.0f, IO_DROPDOWN_H + 2.0f};
+    m_outputRowRect = NUIRect{x, y, w, IO_DROPDOWN_H + 6.0f};
     if (m_mainOutputDropdown && !master) m_mainOutputDropdown->setBounds(m_outputRowRect);
     y += m_outputRowRect.height + 4.0f;
-    m_linkRect = NUIRect{x + 2.0f, y, w - 4.0f, 18.0f};
-    y += m_linkRect.height + 2.0f;
+    // "Routing →" is a quiet button at the end of the Output heading.
+    m_linkRect = NUIRect{m_outputHeadRect.right() - 74.0f, m_outputHeadRect.y + 1.0f, 74.0f, kHeadH - 4.0f};
 
     // FED BY (a bus lists what feeds it)
     if (m_viewModel) {
@@ -335,23 +337,29 @@ void UIMixerInspector::computeColumn(const Aestra::ChannelViewModel* channel)
                 y += sendCardH + 4.0f;
             }
         }
-        y += 6.0f;
-        const float gap = 6.0f;
-        const float half = (w - gap) * 0.5f;
-        m_addFxRect = NUIRect{x, y, half, ROW_H};
-        m_addSidechainRect = NUIRect{x + half + gap, y, half, ROW_H};
+        // Adding is a quiet row each, as "Add an effect" is.
+        m_addFxRect = NUIRect{x, y, w, ROW_H};
+        y += ROW_H;
+        m_addSidechainRect = NUIRect{x, y, w, ROW_H};
         y += ROW_H + kSectionGap;
 
         // INPUT
         m_inputHeadRect = NUIRect{x, y, w, kHeadH};
         y += kHeadH;
-        m_inputRowRect = NUIRect{x + 2.0f, y, w - 4.0f, IO_DROPDOWN_H + 2.0f};
+        m_inputRowRect = NUIRect{x, y, w, IO_DROPDOWN_H + 6.0f};
         if (m_ioInputDropdown) m_ioInputDropdown->setBounds(m_inputRowRect);
-        y += m_inputRowRect.height + 4.0f;
-        m_inputMetaRect = NUIRect{x + 2.0f, y, w - 4.0f, 14.0f};
-        y += 18.0f;
-        m_inputMeterRect = NUIRect{x + 2.0f, y, w - 4.0f, 8.0f};
-        y += 8.0f + kSectionGap;
+        y += m_inputRowRect.height + 6.0f;
+        // Monitor: label, then the segment switch.
+        m_inputMetaRect = NUIRect{x, y, w, 24.0f};
+        {
+            const float segX = x + 52.0f;
+            const float segW = std::max(40.0f, x + w - segX);
+            m_monitorAutoRect = NUIRect{segX + 2.0f, y + 2.0f, segW * 0.5f - 2.0f, 20.0f};
+            m_monitorArmedRect = NUIRect{segX + segW * 0.5f, y + 2.0f, segW * 0.5f - 2.0f, 20.0f};
+        }
+        y += 24.0f + 8.0f;
+        m_inputMeterRect = NUIRect{x, y, w, 6.0f};
+        y += 6.0f + kSectionGap;
     }
 
     m_maxScrollOffset = std::max(0.0f, (y + m_scrollOffset) - m_viewportRect.bottom() + 4.0f);
@@ -556,102 +564,141 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
     const auto b = getBounds();
     if (b.isEmpty()) return;
 
+    auto& themeManager = NUIThemeManager::getInstance();
+    const auto& th = themeManager.getCurrentTheme();
+    // Design Spec, "Panels: inspector": a panel resting on the mixer bed, like a strip: flat, rounded, a soft
+    // shadow, no outline.
     renderer.fillRect(b, m_bg);
-    // The inspector is a distinct functional region, so it earns one quiet boundary.
-    renderer.drawLine({b.x, b.y}, {b.x, b.bottom()}, 1.0f, m_border.withAlpha(0.55f));
+    const NUIRect panel{b.x + 4.0f, b.y + 4.0f, std::max(0.0f, b.width - 8.0f), std::max(0.0f, b.height - 8.0f)};
+    Depth::restingPanel(renderer, panel, Depth::Radius::medium, th.mixerStripBg);
 
     const auto* channel = m_viewModel ? m_viewModel->getSelectedChannel() : nullptr;
     updateHeaderCache(channel);
     if (channel) rebuildInsertRack(channel); // keeps the rack in step with automation and backend changes
     computeColumn(channel);
 
-    const NUIColor accent = NUIThemeManager::getInstance().getColor("primary");
+    const NUIColor accent = th.primary;
+    const NUIColor muted = th.textMuted;
 
     if (!channel) {
         const float emptyY = m_viewportRect.y + std::max(24.0f, m_viewportRect.height * 0.22f);
         renderer.drawTextCentered("Select a mixer channel",
-                                  {b.x + PAD, emptyY, b.width - PAD * 2.0f, 18.0f}, 12.0f, m_textSecondary.withAlpha(0.78f));
-        renderer.drawTextCentered("to inspect its inserts, sends, and input",
-                                  {b.x + PAD, emptyY + 18.0f, b.width - PAD * 2.0f, 14.0f}, 9.5f, m_textSecondary.withAlpha(0.48f));
+                                  {b.x + PAD, emptyY, b.width - PAD * 2.0f, 18.0f}, 12.0f, m_textSecondary);
+        renderer.drawTextCentered("to see its inserts, sends and input",
+                                  {b.x + PAD, emptyY + 18.0f, b.width - PAD * 2.0f, 14.0f}, 10.0f, muted);
         return;
     }
     const bool master = channel->id == 0;
 
-    // --- Pinned header: the channel's colour, name and what it is -----------------------------------------
-    NUIColor titleAccent = accent;
-    if (channel->trackColorIndex >= 0) {
-        const uint32_t argb = paletteIndexToARGB(channel->trackColorIndex);
-        titleAccent = NUIColor(((argb >> 16) & 0xFF) / 255.0f, ((argb >> 8) & 0xFF) / 255.0f, (argb & 0xFF) / 255.0f,
-                               ((argb >> 24) & 0xFF) / 255.0f);
-    }
-    renderer.fillRoundedRect(m_headerRect, HEADER_RADIUS, m_tabBg.withAlpha(0.52f));
-    renderer.fillRoundedRect(NUIRect{m_headerRect.x + 12.0f, m_headerRect.y + 12.0f, 4.0f, m_headerRect.height - 24.0f}, 2.0f,
-                             titleAccent.withAlpha(0.90f));
-    renderer.drawText(m_cachedHeaderTitle, {m_headerRect.x + 26.0f, m_headerRect.y + 11.0f}, 13.0f, m_text);
-    if (!m_cachedHeaderSubtitle.empty()) {
-        renderer.drawText(m_cachedHeaderSubtitle, {m_headerRect.x + 26.0f, m_headerRect.y + 29.0f}, 10.0f,
-                          m_textSecondary.withAlpha(0.70f));
+    // --- Pinned head: the channel's name on its colour (as on the strip), where it goes in quiet text ---------------
+    {
+        NUIColor plate = th.surfaceRaised;
+        if (channel->trackColorIndex >= 0) {
+            const uint32_t argb = paletteIndexToARGB(channel->trackColorIndex);
+            plate = NUIColor(((argb >> 16) & 0xFF) / 255.0f, ((argb >> 8) & 0xFF) / 255.0f, (argb & 0xFF) / 255.0f, 1.0f);
+        }
+        const NUIColor ink = channel->trackColorIndex >= 0 ? themeManager.getColor("textOnStatus") : m_text;
+        std::string dest = "Output";
+        if (!master) {
+            const auto* out = m_viewModel->getChannelById(channel->mainOutputId);
+            dest = channel->mainOutputId == 0 || !out ? std::string("Master")
+                 : (out->name.empty() ? channelFallbackLabel(out->id) : out->name);
+        }
+        constexpr float kPlateH = 26.0f;
+        constexpr float kFs = 12.0f;
+        const float toW = renderer.measureText("to", 11.0f).width + 4.0f + renderer.measureText(dest, 11.0f).width;
+        const float maxName = std::max(20.0f, m_headerRect.width - toW - 8.0f - 24.0f);
+        const std::string name = fitText(renderer, m_cachedHeaderTitle, kFs, maxName);
+        const float plateW = renderer.measureText(name, kFs).width + 24.0f;
+        const NUIRect pr{m_headerRect.x, m_headerRect.y + (m_headerRect.height - kPlateH) * 0.5f, plateW, kPlateH};
+        renderer.fillRoundedRect(pr, kPlateH * 0.5f, plate);
+        renderer.drawTextCentered(name, pr, kFs, ink);
+        const float ty = pr.y + kPlateH * 0.5f - 11.0f * 0.62f;
+        const float tx = pr.right() + 8.0f;
+        renderer.drawText("to", {tx, ty}, 11.0f, muted);
+        renderer.drawText(fitText(renderer, dest, 11.0f, std::max(0.0f, m_headerRect.right() - tx - 14.0f)),
+                          {tx + renderer.measureText("to", 11.0f).width + 4.0f, ty}, 11.0f, m_textSecondary);
     }
 
     // --- The scrolling column ---------------------------------------------------------------------------
     renderer.setClipRect(m_viewportRect);
 
+    // Section names are labels; space separates sections, not boxes or rules.
     auto heading = [&](const NUIRect& r, const char* label, int count, bool showCount) {
-        renderer.drawText(label, {r.x + 2.0f, r.y + 6.0f}, 9.5f, m_textSecondary.withAlpha(0.8f));
+        const float fy = r.y + r.height * 0.5f - 10.5f * 0.62f;
+        renderer.drawText(label, {r.x, fy}, 10.5f, m_textSecondary);
         if (showCount) {
-            const float lw = renderer.measureText(label, 9.5f).width;
-            renderer.drawText(std::to_string(count), {r.x + 2.0f + lw + 8.0f, r.y + 6.0f}, 9.5f, m_textSecondary.withAlpha(0.5f));
+            const float lw = renderer.measureText(label, 10.5f).width;
+            renderer.drawText(std::to_string(count), {r.x + lw + 6.0f, fy + 0.5f}, 10.0f, muted);
         }
-        renderer.fillRect(NUIRect{r.x, r.bottom() - 1.0f, r.width, 1.0f}, m_border.withAlpha(0.35f));
+    };
+    // A quiet row: muted "+ label", the row lights on hover.
+    auto quietRow = [&](const NUIRect& r, const char* label, bool hot) {
+        if (hot) renderer.fillRoundedRect(r, 6.0f, th.surfaceTertiary);
+        const NUIColor ink = hot ? th.textPrimary : muted;
+        const float cy = r.y + r.height * 0.5f;
+        const float px = r.x + 14.0f;
+        renderer.drawLine({px - 4.5f, cy}, {px + 4.5f, cy}, 1.5f, ink);
+        renderer.drawLine({px, cy - 4.5f}, {px, cy + 4.5f}, 1.5f, ink);
+        renderer.drawText(label, {r.x + 26.0f, cy - th.fontSizeS * 0.62f}, th.fontSizeS, ink);
     };
 
+    if (!master) heading(m_levelHeadRect, "Level", 0, false);
+
     // OUTPUT
-    heading(m_outputHeadRect, "OUTPUT", 0, false);
+    heading(m_outputHeadRect, "Output", 0, false);
     if (master) {
-        renderer.drawText("Hardware output 1/2", {m_outputRowRect.x + 4.0f, m_outputRowRect.y + 6.0f}, 11.0f, m_text.withAlpha(0.9f));
+        renderer.drawText("Hardware output 1/2", {m_outputRowRect.x + 4.0f, m_outputRowRect.y + 7.0f}, 11.0f, m_text);
     }
     {
-        const bool hovered = m_linkHovered;
-        const NUIColor link = NUIThemeManager::getInstance().getColor("accentPrimary");
-        renderer.drawText("Show in routing graph \xE2\x86\x92", {m_linkRect.x + 2.0f, m_linkRect.y + 3.0f}, 10.5f,
-                          link.withAlpha(hovered ? 1.0f : 0.8f));
+        // "Routing →": a quiet button, lit on hover.
+        const bool hot = m_linkHovered;
+        if (hot) renderer.fillRoundedRect(m_linkRect, m_linkRect.height * 0.5f, th.surfaceTertiary);
+        const NUIColor ink = hot ? th.textPrimary : m_textSecondary;
+        const float lw = renderer.measureText("Routing", 10.5f).width;
+        const float lx = m_linkRect.right() - 10.0f - 12.0f - 4.0f - lw;
+        const float cy = m_linkRect.y + m_linkRect.height * 0.5f;
+        renderer.drawText("Routing", {lx, cy - 10.5f * 0.62f}, 10.5f, ink);
+        const float ax = lx + lw + 4.0f;
+        renderer.drawLine({ax, cy}, {ax + 10.0f, cy}, 1.4f, ink);
+        renderer.drawLine({ax + 6.5f, cy - 3.5f}, {ax + 10.0f, cy}, 1.4f, ink);
+        renderer.drawLine({ax + 6.5f, cy + 3.5f}, {ax + 10.0f, cy}, 1.4f, ink);
     }
 
     // FED BY
     if (!m_fedChips.empty()) {
-        heading(m_fedHeadRect, "FED BY", static_cast<int>(m_fedChips.size()), true);
+        heading(m_fedHeadRect, "Fed by", static_cast<int>(m_fedChips.size()), true);
         for (const auto& chip : m_fedChips) {
-            renderer.fillRoundedRect(chip.rect, 3.0f, m_tabBg.withAlpha(0.7f));
-            renderer.strokeRoundedRect(chip.rect, 3.0f, 1.0f, m_border.withAlpha(0.4f));
-            renderer.fillRect(NUIRect{chip.rect.x + 6.0f, chip.rect.y + 7.0f, 6.0f, 6.0f}, chip.color);
-            renderer.drawText(fitText(renderer, chip.name, 10.0f, chip.rect.width - 22.0f),
-                              {chip.rect.x + 17.0f, chip.rect.y + 4.5f}, 10.0f, m_text.withAlpha(0.92f));
+            renderer.fillRoundedRect(chip.rect, chip.rect.height * 0.5f, th.surfaceTertiary);
+            renderer.fillRoundedRect(NUIRect{chip.rect.x + 7.0f, chip.rect.y + 6.5f, 7.0f, 7.0f}, 3.5f, chip.color);
+            renderer.drawText(fitText(renderer, chip.name, 10.0f, chip.rect.width - 24.0f),
+                              {chip.rect.x + 18.0f, chip.rect.y + 4.5f}, 10.0f, m_text);
         }
     }
 
     // INSERTS
     int insertCount = 0;
     for (const auto& ins : channel->inserts) if (!ins.isEmpty && !ins.pendingRemoval) ++insertCount;
-    heading(m_insertsHeadRect, "INSERTS", insertCount, true);
+    heading(m_insertsHeadRect, "Inserts", insertCount, true);
 
     // SENDS
     if (!master) {
-        heading(m_sendsHeadRect, "SENDS", static_cast<int>(channel->sends.size()), true);
+        heading(m_sendsHeadRect, "Sends", static_cast<int>(channel->sends.size()), true);
         if (!m_warningRect.isEmpty()) {
             renderer.drawText(fitText(renderer, m_viewModel->getRoutingWarning(channel->id), 10.0f, m_warningRect.width),
-                              {m_warningRect.x, m_warningRect.y + 2.0f}, 10.0f,
-                              NUIThemeManager::getInstance().getColor("warning").withAlpha(0.92f));
+                              {m_warningRect.x, m_warningRect.y + 2.0f}, 10.0f, themeManager.getColor("warning"));
         }
         // The sends, one line each: destination, level, and how it is tapped.
         for (size_t i = 0; i < m_sendRowRects.size() && i < channel->sends.size(); ++i) {
             const auto& send = channel->sends[i];
             const auto& r = m_sendRowRects[i];
             const bool open = static_cast<int>(i) == m_expandedSend;
-            if (open || static_cast<int>(i) == m_hoveredSendRow) renderer.fillRect(r, m_tabBg.withAlpha(open ? 0.55f : 0.35f));
-            if (open) renderer.fillRect(NUIRect{r.x, r.y, 2.0f, r.height}, accent);
+            if (open || static_cast<int>(i) == m_hoveredSendRow) {
+                renderer.fillRoundedRect(r, 6.0f, open ? th.surfaceRaised : th.surfaceTertiary);
+            }
             const float alpha = send.muted ? 0.4f : 1.0f;
             const float cy = r.y + r.height * 0.5f;
-            const NUIColor amber = NUIThemeManager::getInstance().getColor("warning");
+            const NUIColor amber = themeManager.getColor("warning");
             if (send.sidechainOnly) {
                 renderer.drawLine({r.x + 12.0f, cy - 4.0f}, {r.x + 16.0f, cy}, 1.4f, amber.withAlpha(alpha));
                 renderer.drawLine({r.x + 16.0f, cy}, {r.x + 12.0f, cy + 4.0f}, 1.4f, amber.withAlpha(alpha));
@@ -664,53 +711,56 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
                     const uint32_t argb = paletteIndexToARGB(target->trackColorIndex);
                     swatch = NUIColor(((argb >> 16) & 0xFF) / 255.0f, ((argb >> 8) & 0xFF) / 255.0f, (argb & 0xFF) / 255.0f, 1.0f);
                 }
-                renderer.fillRect(NUIRect{r.x + 8.0f, cy - 4.0f, 8.0f, 8.0f}, swatch.withAlpha(alpha));
+                renderer.fillRoundedRect(NUIRect{r.x + 8.0f, cy - 4.0f, 8.0f, 8.0f}, 4.0f, swatch.withAlpha(alpha));
             }
-            renderer.drawText(fitText(renderer, send.targetName, 11.0f, 64.0f), {r.x + 22.0f, cy - 6.5f}, 11.0f, m_text.withAlpha(0.92f * alpha));
-            const std::string tag = send.sidechainOnly ? "SC" : (send.postFader ? "POST" : "PRE");
-            const float tagW = renderer.measureText(tag, 8.5f).width;
+            renderer.drawText(fitText(renderer, send.targetName, 11.0f, 64.0f), {r.x + 22.0f, cy - 6.5f}, 11.0f, m_text.withAlpha(alpha));
+            const std::string tag = send.sidechainOnly ? "SC" : (send.postFader ? "Post" : "Pre");
+            const float tagW = renderer.measureText(tag, 9.0f).width;
             const float db = send.gain > 1e-6f ? 20.0f * std::log10(send.gain) : -90.0f;
             const std::string dbText = send.sidechainOnly ? std::string() : UIMixerSendList::formatLevel(db);
             const float dbW = renderer.measureText(dbText, 10.0f).width;
-            renderer.drawText(tag, {r.right() - 8.0f - tagW, cy - 4.5f}, 8.5f, m_textSecondary.withAlpha(0.6f * alpha));
-            if (!dbText.empty()) renderer.drawText(dbText, {r.right() - 8.0f - tagW - 6.0f - dbW, cy - 5.5f}, 10.0f, m_textSecondary.withAlpha(0.9f * alpha));
+            renderer.drawText(tag, {r.right() - 8.0f - tagW, cy - 5.0f}, 9.0f, muted.withAlpha(alpha));
+            if (!dbText.empty()) renderer.drawText(dbText, {r.right() - 8.0f - tagW - 6.0f - dbW, cy - 5.5f}, 10.0f, m_textSecondary.withAlpha(alpha));
             const float barL = r.x + 22.0f + 66.0f;
             const float barR = r.right() - 8.0f - tagW - 6.0f - dbW - 8.0f;
             if (barR - barL > 10.0f) {
-                const NUIRect bar{barL, cy - 2.0f, barR - barL, 4.0f};
-                renderer.fillRect(bar, m_border.withAlpha(0.4f));
+                // The shared slider's slot, read-only here (click the row to edit the send).
                 const float norm = send.sidechainOnly ? 1.0f : MixerScale::norm(db);
-                renderer.fillRect(NUIRect{bar.x, bar.y, bar.width * norm, bar.height}, (send.sidechainOnly ? amber : m_textSecondary).withAlpha(0.8f * alpha));
+                Depth::sliderSlot(renderer, NUIRect{barL, cy - 8.0f, barR - barL, 16.0f}, norm, 0.0f, !send.muted);
             }
         }
 
-        const NUIColor addBg = m_addPressed ? m_addHover : (m_addHovered ? m_addHover : m_addBg);
-        renderer.fillRoundedRect(m_addFxRect, ROW_RADIUS, addBg);
-        renderer.strokeRoundedRect(m_addFxRect, ROW_RADIUS, 1.0f, m_border);
-        renderer.drawTextCentered("Add Send", m_addFxRect, 11.0f, m_addText);
-        const NUIColor scBg = m_addSidechainPressed ? m_addHover : (m_addSidechainHovered ? m_addHover : m_addBg);
-        renderer.fillRoundedRect(m_addSidechainRect, ROW_RADIUS, scBg);
-        renderer.strokeRoundedRect(m_addSidechainRect, ROW_RADIUS, 1.0f, m_border);
-        renderer.drawTextCentered("Add Sidechain", m_addSidechainRect, 11.0f, m_addText);
+        quietRow(m_addFxRect, "Add a send", m_addHovered || m_addPressed);
+        quietRow(m_addSidechainRect, "Add a sidechain", m_addSidechainHovered || m_addSidechainPressed);
 
         // INPUT
-        heading(m_inputHeadRect, "INPUT", 0, false);
-        renderer.drawText("Source", {m_inputMetaRect.x, m_inputMetaRect.y + 1.0f}, 10.0f, m_textSecondary.withAlpha(0.7f));
-        renderer.drawText(fitText(renderer, channel->inputSourceName, 10.0f, 70.0f), {m_inputMetaRect.x + 44.0f, m_inputMetaRect.y + 1.0f},
-                          10.0f, m_text.withAlpha(0.92f));
-        const std::string mode = channel->monitored ? "Arm + Monitor" : "Arm Only";
-        renderer.drawText(fitText(renderer, mode, 10.0f, m_inputMetaRect.width * 0.4f),
-                          {m_inputMetaRect.x + m_inputMetaRect.width * 0.55f, m_inputMetaRect.y + 1.0f}, 10.0f, m_text.withAlpha(0.8f));
-        const float peakDb = (channel->inputPeak > 0.0001f) ? (20.0f * std::log10(channel->inputPeak)) : -90.0f;
-        renderer.fillRect(m_inputMeterRect, m_border.withAlpha(0.35f));
+        heading(m_inputHeadRect, "Input", 0, false);
+        {
+            // Monitor: the segment switch (sunk pill track, the choice on a lit thumb, unchosen labels muted).
+            const float cy = m_inputMetaRect.y + m_inputMetaRect.height * 0.5f;
+            renderer.drawText("Monitor", {m_inputMetaRect.x, cy - 10.5f * 0.62f}, 10.5f, m_textSecondary);
+            const NUIRect track{m_monitorAutoRect.x - 2.0f, m_monitorAutoRect.y - 2.0f,
+                                m_monitorArmedRect.right() - m_monitorAutoRect.x + 4.0f, m_monitorAutoRect.height + 4.0f};
+            Depth::bed(renderer, track, Depth::Radius::pill(track.height), Depth::Cut::Shallow);
+            const bool autoOn = channel->monitored;
+            const NUIRect& thumb = autoOn ? m_monitorAutoRect : m_monitorArmedRect;
+            Depth::object(renderer, thumb, Depth::Radius::pill(thumb.height));
+            const char* labels[2] = {"On", "Off"};
+            const NUIRect* rects[2] = {&m_monitorAutoRect, &m_monitorArmedRect};
+            for (int i = 0; i < 2; ++i) {
+                const bool chosen = (i == 0) == autoOn;
+                const NUIColor ink = chosen ? th.textPrimary : (m_hoveredMonitor == i ? m_textSecondary : muted);
+                renderer.drawTextCentered(fitText(renderer, labels[i], 10.0f, rects[i]->width - 8.0f), *rects[i], 10.0f, ink);
+            }
+        }
+        // The input level: a slim sunk meter.
+        Depth::bed(renderer, m_inputMeterRect, 3.0f, Depth::Cut::Slot);
         const float fill = std::clamp(channel->inputPeak, 0.0f, 1.0f) * m_inputMeterRect.width;
         if (fill > 1.0f) {
-            auto& theme = NUIThemeManager::getInstance();
-            const NUIColor c = channel->inputPeak >= 0.95f ? theme.getColor("error")
-                             : channel->inputPeak >= 0.75f ? theme.getColor("warning") : theme.getColor("meterSafe");
-            renderer.fillRect(NUIRect{m_inputMeterRect.x, m_inputMeterRect.y, fill, m_inputMeterRect.height}, c.withAlpha(0.95f));
+            const NUIColor c = channel->inputPeak >= 0.95f ? themeManager.getColor("error")
+                             : channel->inputPeak >= 0.75f ? themeManager.getColor("warning") : themeManager.getColor("meterSafe");
+            renderer.fillRoundedRect(NUIRect{m_inputMeterRect.x, m_inputMeterRect.y, fill, m_inputMeterRect.height}, 3.0f, c);
         }
-        (void)peakDb;
     }
 
     // Children inside the clip: the bars, the rack and the send cards.
@@ -897,6 +947,10 @@ bool UIMixerInspector::onMouseEvent(const NUIMouseEvent& event)
         int rowHover = -1;
         for (size_t i = 0; i < m_sendRowRects.size(); ++i) if (m_sendRowRects[i].contains(event.position) && m_viewportRect.contains(event.position)) rowHover = static_cast<int>(i);
         if (rowHover != m_hoveredSendRow) { m_hoveredSendRow = rowHover; repaint(); }
+        const bool inView = m_viewportRect.contains(event.position);
+        const int monHover = !inView ? -1 : m_monitorAutoRect.contains(event.position) ? 0
+                           : m_monitorArmedRect.contains(event.position) ? 1 : -1;
+        if (monHover != m_hoveredMonitor) { m_hoveredMonitor = monHover; repaint(); }
         const bool addHover = (m_viewModel && m_viewModel->getSelectedChannel()) && m_addFxRect.contains(event.position);
         const bool sidechainHover =
             (m_viewModel && m_viewModel->getSelectedChannel()) && m_addSidechainRect.contains(event.position);
@@ -919,6 +973,18 @@ bool UIMixerInspector::onMouseEvent(const NUIMouseEvent& event)
                 repaint();
                 return true;
             }
+        }
+        const bool onAuto = m_monitorAutoRect.contains(event.position);
+        if ((onAuto || m_monitorArmedRect.contains(event.position)) && m_viewportRect.contains(event.position) &&
+            m_viewModel && m_viewModel->getSelectedChannel()) {
+            auto* ch = m_viewModel->getSelectedChannel();
+            // Input monitoring, as the track header's Input Monitoring menu sets it (not the arm state).
+            if (ch->id != 0 && ch->monitored != onAuto) {
+                ch->monitored = onAuto;
+                if (onMonitorEdited) onMonitorEdited(ch->id, onAuto);
+                repaint();
+            }
+            return true;
         }
         if (m_linkRect.contains(event.position) && m_viewportRect.contains(event.position) && m_viewModel &&
             m_viewModel->getSelectedChannel() && onShowRoutingGraph) {

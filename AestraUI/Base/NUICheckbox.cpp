@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUICheckbox.h"
+#include "../Graphics/NUIDepth.h"
 #include "NUIRenderer.h"
 #include "NUITheme.h"
 #include "NUIThemeSystem.h"
@@ -57,7 +58,7 @@ void NUICheckbox::onRender(NUIRenderer& renderer)
         drawText(renderer);
     }
 
-    if (isEnabled() && isFocused()) {
+    if (isEnabled() && isFocused() && style_ != Style::Toggle) {
         const auto& props = NUIThemeManager::getInstance().getCurrentTheme();
         renderer.strokeRoundedRect(stableBounds, props.radiusS, 1.5f, props.focusRing);
     }
@@ -498,7 +499,7 @@ void NUICheckbox::drawText(NUIRenderer& renderer)
     NUISize textSize = renderer.measureText(text_, fontSize);
 
     // Calculate text position: to the right of the checkbox square, vertically centered
-    float textX = bounds.x + checkboxSize_ + textMargin_;
+    float textX = bounds.x + (style_ == Style::Toggle ? kToggleW : checkboxSize_) + textMargin_;
     float textY = bounds.y + (bounds.height - textSize.height) * 0.5f;
 
     const NUIColor color = isEnabled() ? textColor_ : NUIThemeManager::getInstance().getColor("textDisabled");
@@ -521,7 +522,7 @@ bool NUICheckbox::isPointOnText(const NUIPoint& point) const
     if (text_.empty()) return false;
     
     NUIRect bounds = getBounds();
-    float textX = bounds.x + checkboxSize_ + textMargin_;
+    float textX = bounds.x + (style_ == Style::Toggle ? kToggleW : checkboxSize_) + textMargin_;
     NUIRect textRect(textX, bounds.y, bounds.width - checkboxSize_ - textMargin_, bounds.height);
     return textRect.contains(point);
 }
@@ -620,30 +621,25 @@ void NUICheckbox::drawEnhancedCheckbox(NUIRenderer& renderer, const NUIRect& bou
 
 void NUICheckbox::drawEnhancedToggle(NUIRenderer& renderer, const NUIRect& bounds)
 {
+    // Design Spec, Toggle (locked 12 Nov 2026): a sunk pill track, 36 by 20, with a lit 14px thumb sitting in it. On,
+    // the track fills with the accent and the thumb sits right. No outline.
     const auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
-    const float toggleWidth = checkboxSize_ * 2.0f;
-    const float toggleHeight = checkboxSize_ * 0.6f;
-    const float toggleX = bounds.x;
-    const float toggleY = bounds.y + (bounds.height - toggleHeight) * 0.5f;
-    NUIRect toggleRect(toggleX, toggleY, toggleWidth, toggleHeight);
-
-    NUIColor trackColor = (state_ == State::Checked) ? toggleTrackCheckedColor_ : toggleTrackColor_;
-    if (state_ != State::Checked) {
-        if (isPressed_) trackColor = pressedColor_;
-        else if (isHovered_) trackColor = hoverColor_;
+    const NUIRect track(bounds.x, std::round(bounds.y + (bounds.height - kToggleH) * 0.5f), kToggleW, kToggleH);
+    const bool on = state_ == State::Checked;
+    if (on) {
+        renderer.fillRoundedRect(track, kToggleH * 0.5f, isEnabled() ? theme.primary : theme.primary.withAlpha(0.42f));
+        renderer.drawInnerShadow(track, kToggleH * 0.5f, 1.0f, 1.5f, NUIColor::black().withAlpha(0.4f));
+    } else {
+        Depth::bed(renderer, track, kToggleH * 0.5f, Depth::Cut::Shallow);
     }
-    if (!isEnabled()) trackColor = trackColor.withAlpha(0.38f);
-
-    renderer.fillRoundedRect(toggleRect, toggleHeight * 0.5f, trackColor);
-    renderer.strokeRoundedRect(toggleRect, toggleHeight * 0.5f, theme.layout.dividerWidth,
-                               isEnabled() ? theme.borderStrong : theme.borderSubtle);
-
-    const float thumbSize = toggleHeight * 0.8f;
-    const float thumbY = toggleY + (toggleHeight - thumbSize) * 0.5f;
-    const float thumbX = toggleX + (state_ == State::Checked ? toggleWidth - thumbSize - 2.0f : 2.0f);
-    const NUIPoint thumbCenter = NUIRect(thumbX, thumbY, thumbSize, thumbSize).center();
-    renderer.fillCircle(thumbCenter, thumbSize * 0.5f,
-                        isEnabled() ? toggleThumbColor_ : toggleThumbColor_.withAlpha(0.42f));
+    const float thumb = kToggleH - 6.0f;
+    const NUIRect knob(on ? track.right() - 3.0f - thumb : track.x + 3.0f, track.y + 3.0f, thumb, thumb);
+    Depth::ObjectLook look;
+    look.base = isHovered_ || isPressed_ ? theme.textPrimary : theme.surfaceRaised;
+    if (!on && !(isHovered_ || isPressed_)) look.base = NUIColor::lerp(theme.surfaceRaised, theme.textSecondary, 0.25f);
+    if (on) look.base = theme.textOnPrimary;
+    if (!isEnabled()) look.base = look.base.withAlpha(0.5f);
+    Depth::object(renderer, knob, thumb * 0.5f, look);
 }
 
 void NUICheckbox::drawEnhancedRadio(NUIRenderer& renderer, const NUIRect& bounds)

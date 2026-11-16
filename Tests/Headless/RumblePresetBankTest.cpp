@@ -44,14 +44,16 @@ RenderResult renderPreset(const RumbleFactoryPreset& preset) {
     constexpr uint64_t secondNoteOffFrame = static_cast<uint64_t>(sampleRate * 0.88);
     constexpr uint64_t firstNoteOffFrame = static_cast<uint64_t>(sampleRate * 1.00);
 
-    RumbleInstance rumble(RumbleInstance::TestLicense::GrantRumble);
+    RumbleInstance rumble;
     RenderResult result;
     if (!rumble.initialize(sampleRate, blockSize)) {
         result.finite = false;
         return result;
     }
-    for (uint32_t parameterId = 0; parameterId < preset.values.size(); ++parameterId) {
-        rumble.setParameter(parameterId, preset.values[parameterId]);
+    rumble.setSound(Aestra::Plugins::rumbleSoundOf(preset));
+    if (!rumble.waitForLevels(20000)) {
+        result.finite = false;
+        return result;
     }
     rumble.activate();
 
@@ -111,7 +113,7 @@ double differenceRms(const std::vector<float>& a, const std::vector<float>& b) {
 
 int main() {
     bool ok = true;
-    ok &= check(kRumbleFactoryPresets.size() >= 16, "factory bank has fewer than 16 presets");
+    ok &= check(kRumbleFactoryPresets.size() == 7, "the bank is the sketch's seven starting sounds");
 
     std::set<std::string> names;
     std::vector<RenderResult> renders;
@@ -149,6 +151,6 @@ int main() {
     if (!ok) {
         return 1;
     }
-    std::cout << "Rumble factory bank passed: 16 distinct, finite, audible, mono-safe presets.\n";
+    std::cout << "Rumble factory bank passed: 7 distinct, finite, audible, mono-safe sounds.\n";
     return 0;
 }

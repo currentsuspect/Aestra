@@ -127,6 +127,9 @@ public:
     // Derived classes render here; rect is the global content area (below title bar)
     virtual void drawContent(NUIRenderer& renderer, const NUIRect& contentRect) {}
 
+    // Drawn last and unclipped, over the header too: for a menu that opens from a control (a dropdown).
+    virtual void drawOverlay(NUIRenderer& renderer) {}
+
     // Called when a title-bar drag ends (before m_isDraggingWindow is cleared)
     virtual void onDragEnd() {}
 

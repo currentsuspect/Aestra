@@ -7,9 +7,12 @@
 #include "Commands/MuseGrammar.h"
 #include "Commands/MuseService.h"
 #include "Core/AestraContent.h"
+#include "Components/TrackManagerUI.h"
 #include "Core/ProjectSerializer.h"
 #include "Models/ProjectReset.h"
 #include "MuseProjectLoadReport.h"
+#include "Preferences.h"
+#include "../AestraUI/Base/NUIContextMenu.h"
 
 #include "AestraLog.h"
 #include "Settings/ConfirmationDialog.h"
@@ -31,6 +34,7 @@
 // namespace Aestra.
 using Aestra::Log;
 using Aestra::JSON;
+using Aestra::Preferences;
 using Aestra::MuseProjectLoadOrigin;
 using Aestra::makeMuseProjectLoadReport;
 using Aestra::Audio::FlagType;
@@ -137,10 +141,91 @@ ProjectSerializer::LoadResult AestraApp::openProjectFromPath(const std::string& 
     auto result = loadProjectFromPath(path);
     if (result.ok) {
         cleanupUnreferencedRecordings(oldKeeperPath);
+        rememberRecentProject(path);
     } else {
         Log::error("Failed to load project: " + path + " (" + result.errorMessage + ")");
     }
     return result;
+}
+
+// --- Recent projects ---------------------------------------------------------
+
+void AestraApp::rememberRecentProject(const std::string& path) {
+    std::error_code ec;
+    const auto absolute = std::filesystem::weakly_canonical(path, ec);
+    auto& prefs = Preferences::instance();
+    prefs.addRecentFile(ec ? path : absolute.string());
+    prefs.save();
+}
+
+void AestraApp::addOpenRecentMenu(AestraUI::NUIContextMenu& menu) {
+    auto recent = std::make_shared<AestraUI::NUIContextMenu>();
+    int shown = 0;
+    for (const auto& path : Preferences::instance().recentFiles) {
+        std::error_code ec;
+        if (path.empty() || !std::filesystem::exists(path, ec))
+            continue; // moved or deleted since: leave it out rather than offer a dead entry
+        const std::filesystem::path p(path);
+        recent->addItem(p.stem().string() + "  \xc2\xb7  " + p.parent_path().filename().string(), [this, path]() {
+            confirmLeaveProject("opening another project", [this, path]() { openProjectFromPath(path); });
+        });
+        ++shown;
+    }
+    if (shown == 0) {
+        auto none = std::make_shared<AestraUI::NUIContextMenuItem>("No recent projects");
+        none->setEnabled(false);
+        recent->addItem(none);
+    } else {
+        recent->addSeparator();
+        recent->addItem("Clear the list", []() {
+            Preferences::instance().clearRecentFiles();
+            Preferences::instance().save();
+        });
+    }
+    menu.addSubmenu("Open Recent", recent);
+}
+
+// --- Timeline confirmations --------------------------------------------------
+
+void AestraApp::wireTimelineConfirmations() {
+    auto tmUI = m_content ? m_content->getTrackManagerUI() : nullptr;
+    if (!tmUI) return;
+    tmUI->setOnConfirmDialogRequest([this](const std::string& title, const std::string& message,
+                                           const std::string& confirmLabel, std::function<void(bool)> onResult) {
+        if (!onResult) return;
+        if (m_windowManager) ensureSettingsAndDialogs(); // the confirmation dialog is built with the others
+        auto dialog = m_windowManager ? m_windowManager->getConfirmationDialog() : nullptr;
+        if (!dialog) {
+            onResult(false); // fail closed: a destructive action must not run without its confirmation surface
+            return;
+        }
+        if (auto* root = m_windowManager->getRootComponent()) { // over everything, as requestClose's dialog is
+            dialog->setBounds(root->getBounds());
+            root->removeChild(dialog);
+            root->addChild(dialog);
+        }
+        dialog->showConfirm(title, message, confirmLabel,
+                            [onResult](Aestra::DialogResponse response) { onResult(response == Aestra::DialogResponse::Confirm); });
+    });
+}
+
+// --- Timeline view in the project --------------------------------------------
+
+void AestraApp::captureTimelineView(ProjectSerializer::UIState& state) const {
+    auto timeline = m_content ? m_content->getTrackManagerUI() : nullptr;
+    if (!timeline) return;
+    state.trackHeight = timeline->defaultTrackHeight();
+    state.trackHeights.assign(timeline->rowHeightOverrides().begin(), timeline->rowHeightOverrides().end());
+}
+
+void AestraApp::applyTimelineView(const ProjectSerializer::UIState& state) {
+    auto timeline = m_content ? m_content->getTrackManagerUI() : nullptr;
+    if (!timeline) return;
+    if (state.trackHeight <= 0.0f) { // a file saved without heights opens at the default, not the last project's
+        timeline->restoreTrackHeights(Aestra::Audio::TrackManagerUI::kDefaultTrackHeight, {});
+        return;
+    }
+    timeline->restoreTrackHeights(state.trackHeight, {state.trackHeights.begin(), state.trackHeights.end()});
 }
 
 // --- The verbs ---------------------------------------------------------------
@@ -214,6 +299,10 @@ void AestraApp::registerMuseProjectVerbs(Aestra::Audio::MuseService& service) {
         copy.required = false;
         copy.description = "Save a Copy: write 'path' and keep the open project where it is.";
         spec.args.push_back(copy);
+        // The refusals a caller can act on: each one has an answer (pass a path,
+        // or a different one), so they belong in the manifest rather than in a
+        // message the agent only sees after a failed attempt.
+        spec.failureCodes = {"no_canonical_path", "save_as_required", "copy_needs_path", "save_failed"};
 
         registerOrLog(std::move(spec), [this](const JSON& args) -> HostVerbResult {
             const bool wantsPath = args.has("path") && args["path"].isString() &&
@@ -294,6 +383,8 @@ void AestraApp::registerMuseProjectVerbs(Aestra::Audio::MuseService& service) {
         path.required = true;
         path.description = "Path to an Aestra project file (.aes).";
         spec.args.push_back(path);
+
+        spec.failureCodes = {"no_such_file", "load_failed"};
 
         registerOrLog(std::move(spec), [this, &service](const JSON& args) -> HostVerbResult {
             const std::string path = args["path"].asString();

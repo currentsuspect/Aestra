@@ -723,8 +723,8 @@ double TrackManagerUI::snapBeatToGridForward(double beat) const {
 int TrackManagerUI::getTrackAtPosition(float y) const {
     // y arrives window-absolute; the timeline layout answers in our Local space.
     // -1 above the first row; may be >= the row count below the last one.
-    return timelineRowSlotAt(currentTimelineLayout(), static_cast<float>(m_trackHeight),
-                             static_cast<float>(m_trackSpacing), m_scrollOffset, y - getBounds().y);
+    return timelineRowSlotAt(currentTimelineLayout(), rowHeights(), static_cast<float>(m_trackSpacing), m_scrollOffset,
+                             y - getBounds().y);
 }
 
 double TrackManagerUI::getTimeAtPosition(float x) const {
@@ -769,8 +769,10 @@ void TrackManagerUI::renderDropPreview(AestraUI::NUIRenderer& renderer) {
     float gridStartX = bounds.x + controlAreaWidth + kTimelineGridInsetX;
 
     // The target row's top, from the same layout layoutTracks() places rows with.
-    float trackY = bounds.y + timelineRowTopY(currentTimelineLayout(), static_cast<float>(m_trackHeight),
-                                              static_cast<float>(m_trackSpacing), m_dropTargetTrack, m_scrollOffset);
+    const TimelineRowHeights heights = rowHeights();
+    const float rowH = heights.at(static_cast<size_t>(m_dropTargetTrack));
+    float trackY = bounds.y + timelineRowTopY(currentTimelineLayout(), heights, static_cast<float>(m_trackSpacing),
+                                              m_dropTargetTrack, m_scrollOffset);
 
     // Calculate X position from time
     double bpm = m_trackManager->getPlaylistModel().getBPM();
@@ -778,8 +780,7 @@ void TrackManagerUI::renderDropPreview(AestraUI::NUIRenderer& renderer) {
     float timeX = gridStartX + static_cast<float>(beats * m_pixelsPerBeat) - m_timelineScrollOffset;
 
     // Draw subtle track highlight (just a hint)
-    AestraUI::NUIRect trackHighlight(gridStartX, trackY, bounds.width - controlAreaWidth - 20,
-                                     static_cast<float>(m_trackHeight));
+    AestraUI::NUIRect trackHighlight(gridStartX, trackY, bounds.width - controlAreaWidth - 20, rowH);
     AestraUI::NUIColor highlightColor(0.733f, 0.525f, 0.988f, 0.08f); // Very subtle
     renderer.fillRect(trackHighlight, highlightColor);
 
@@ -790,7 +791,7 @@ void TrackManagerUI::renderDropPreview(AestraUI::NUIRenderer& renderer) {
         AestraUI::NUIRect clipPreview(timeX,
                                       trackY + 2, // Same as real clip: bounds.y + 2
                                       previewWidth,
-                                      static_cast<float>(m_trackHeight) - 4 // Same as real clip: bounds.height - 4
+                                      rowH - 4 // Same as real clip: bounds.height - 4
         );
 
         const float clipRadius = 6.0f;

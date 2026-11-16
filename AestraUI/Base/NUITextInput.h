@@ -267,6 +267,7 @@ private:
     NUIColor selectionColor_ = NUIColor::fromHex(0xffa855f7);
     NUIColor caretColor_ = NUIColor::fromHex(0xffffffff);
     bool customColors_ = false;
+    bool pillShape_ = true; ///< Design Spec: a field is a pill well until a caller sets its own radius
     float borderWidth_ = 1.0f;
     float borderRadius_ = 4.0f;
     float padding_ = 8.0f;

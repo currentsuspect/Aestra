@@ -2,10 +2,9 @@
 #pragma once
 
 // One playhead for the timeline, the piano roll and the Arsenal ruler: a flat,
-// filled head (a short bar over a point) and a solid 2 px line. The heads used
-// to be three 1.2 px strokes, which read as a hollow, jagged outline; the line
-// was a 1 px stroke at 72 %. Both are now whole-pixel fills, so they stay crisp
-// at any x and match the flat look of the clips and the Arsenal (v0.8.1).
+// filled head (a short bar over a point) and a solid line. Design Spec, Clip
+// (locked 12 Nov 2026): the line is 1px of textPrimary and is never eased. Both
+// are whole-pixel fills, so they stay crisp at any x.
 //
 // Header-only and renderer-only, so every widget can share it.
 
@@ -15,14 +14,14 @@
 
 namespace AestraUI::Playhead {
 
-constexpr float kLineWidth = 2.0f;
+constexpr float kLineWidth = 1.0f;
 constexpr float kHeadWidth = 11.0f;   // odd, so the point lands on the line's centre
 constexpr float kHeadBarHeight = 4.0f;
 constexpr float kHeadPointHeight = 5.0f;
 constexpr float kHeadHeight = kHeadBarHeight + kHeadPointHeight;
 
-/** @brief Left edge of the 2 px line for a playhead at @p x (whole pixels). */
-inline float lineLeft(float x) { return std::floor(x) - 1.0f; }
+/** @brief Left edge of the 1 px line for a playhead at @p x (whole pixels). */
+inline float lineLeft(float x) { return std::floor(x); }
 
 /** @brief The solid line from @p top to @p bottom. */
 inline void drawLine(NUIRenderer& renderer, float x, float top, float bottom, const NUIColor& color) {

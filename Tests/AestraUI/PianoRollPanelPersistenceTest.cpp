@@ -324,11 +324,39 @@ void testMuseIdeasAfterAPause() {
     expect(editor.getMuseIdeas().empty(), "Off: no ideas, however long the pause");
 }
 
+// A loop zone was drawn on the ruler and played, then cleared. Stopped at the top, the playhead must be at beat 0
+// (bar 1). The panel used to read the zone the last playback was SCHEDULED with, which only resets on the next play,
+// so it kept showing the cleared zone's start bar: "stuck at a bar, reset does not go back to 1".
+void testClearedLoopZoneDoesNotPinTheStoppedPlayhead() {
+    auto trackManager = std::make_shared<TrackManager>();
+    const PatternID patternId = trackManager->getPatternManager().createMidiPattern("Zone", 16.0, MidiPayload{});
+
+    PianoRollPanel editor(trackManager);
+    editor.setVisible(true);
+    editor.loadPattern(patternId);
+
+    trackManager->setArsenalLoopZone(TrackManager::ArsenalLoopZone{patternId, 8.0, 12.0});
+    trackManager->playPatternInArsenal(patternId, 0.0, true); // scheduled with the zone
+    trackManager->stop();
+
+    editor.onUpdate(1.0 / 60.0);
+    expect(std::abs(editor.getPlayheadBeat() - 8.0) < 1e-6,
+           "stopped with the zone still drawn, the playhead sits at the zone's start");
+
+    trackManager->setArsenalLoopZone(std::nullopt); // the user clears the range
+    trackManager->setPosition(0.0);
+    trackManager->setPlayStartPosition(0.0); // reset / rewind to the start
+    editor.onUpdate(1.0 / 60.0);
+    expect(std::abs(editor.getPlayheadBeat() - 0.0) < 1e-6,
+           "after the zone is cleared and the transport reset, the playhead is back at bar 1");
+}
+
 int main() {
     testDuplicateKeepsChanceAndRatchet();
     testChordsReachTheRulerAndFollowEdits();
     testMuseIdeasAfterAPause();
     testTimelinePlaybackMovesThePanelPlayhead();
+    testClearedLoopZoneDoesNotPinTheStoppedPlayhead();
     testHarmonyContextRoundtripThroughPanel();
     testSelectionSurvivesCommittedEditRoundTrip();
     testNoteEditsGrowButNeverShrinkThePattern();

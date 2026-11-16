@@ -842,7 +842,7 @@ NUICursorStyle PianoRollNoteLayer::toolCursor() const {
 
 bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
     if (state_ == State::None && !getBounds().contains(event.position)) {
-        // Reset hover when leaving bounds
+        if (pointerInside_ && platformBridge_) platformBridge_->setCursorStyle(NUICursorStyle::Arrow); pointerInside_ = false; // leaving the grid hands the pencil/eraser back
         if (hoveredNoteIndex_ != -1) {
             hoveredNoteIndex_ = -1;
             hoverOnRightEdge_ = false;
@@ -866,7 +866,7 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
         return false;
     }
 
-    auto b = getBounds();
+    auto b = getBounds(); pointerInside_ = true;
     float localX = event.position.x - b.x + scrollX_;
     float localY = event.position.y - b.y + scrollY_;
 
@@ -1702,7 +1702,7 @@ bool PianoRollNoteLayer::onKeyEvent(const NUIKeyEvent& event) {
             for (auto n : s_noteClipboard) {
                 n.startBeat += offset;
                 n.selected = true;
-                n.isDeleted = false;
+                n.isDeleted = false; n.unitId = defaultUnitId_; // the unit being edited, not the copied-from one
                 notes_.push_back(n);
             }
             commitNotes();

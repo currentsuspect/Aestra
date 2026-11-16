@@ -144,6 +144,6 @@ if(AESTRA_ENABLE_UI)
     aestra_contract_piano_roll_test(ContractPianoRollUndoStaysInPatternTest cross-pattern GUARDS F2)
     # guards: F1 — Ctrl+Z at the Piano Roll reaches the global history. Closed in Pass 2.
     aestra_contract_piano_roll_test(ContractPianoRollReachesGlobalUndoTest global-undo GUARDS F1)
-    # guards: F5 — paste keeps the copied unitId. Fix: Pass 3.
-    aestra_contract_piano_roll_test(ContractPianoRollPasteTargetsEditingUnitTest paste-target GUARDS F5 KNOWN_VIOLATION)
+    # guards: F5 — pasted notes target the editing unit, not the unit they were copied from.
+    aestra_contract_piano_roll_test(ContractPianoRollPasteTargetsEditingUnitTest paste-target GUARDS F5)
 endif()

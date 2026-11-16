@@ -101,7 +101,7 @@ int main() {
     std::cout << "[1] settings screen\n";
     std::vector<std::shared_ptr<NUIComponent>> shown;
     visibleControls(std::shared_ptr<NUIComponent>(&dialog, [](NUIComponent*) {}), shown);
-    check(shown.size() == 8, "name, folder, format, depth, rate, tail, export and cancel are shown (" +
+    check(shown.size() == 9, "name, folder, format, depth, rate, loudness, tail, export and cancel are shown (" +
                                  std::to_string(shown.size()) + ")");
     // Board 3: 560 x 392, centred.
     const NUIRect dialogRect(1280 * 0.5f - 280.0f, 400.0f - 196.0f, 560.0f, 392.0f);
@@ -170,6 +170,15 @@ int main() {
         click(doneButton);
         check(callbackFired && !callbackOk, "Close reports the failure");
         check(!dialog.isVisible(), "and the dialog closes");
+    }
+
+    std::cout << "[t] the time left is said in plain words (Design Spec, Progress)\n";
+    {
+        check(ExportDialog::formatTimeLeft(0.2, 0.5) == "Working out the time left", "too early to judge says so");
+        check(ExportDialog::formatTimeLeft(10.0, 0.01) == "Working out the time left", "so does too little progress");
+        check(ExportDialog::formatTimeLeft(3.0, 0.5) == "About 3 s left", "half done after 3 s: about 3 s left");
+        check(ExportDialog::formatTimeLeft(60.0, 0.25) == "About 3 min left", "minutes past a minute");
+        check(ExportDialog::formatTimeLeft(10.0, 1.0) == "Almost done", "nothing left says almost done");
     }
 
     std::cout << (g_failures == 0 ? "ALL PASS\n" : "FAILURES\n");

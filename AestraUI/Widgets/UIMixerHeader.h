@@ -5,6 +5,7 @@
 #include "NUITypes.h"
 #include "TrackColorPalette.h"
 #include "NUIContextMenu.h"
+#include "InlineRename.h"
 #include <string>
 
 namespace AestraUI {
@@ -31,6 +32,8 @@ public:
 
     // Fired when user picks a color from the context menu
     std::function<void(int colorIndex)> onColorChanged;
+    /// Double-click the name, or "Rename" in the right-click menu: the panel opens the rename field over the plate.
+    std::function<void()> onRenameRequested;
 
 private:
     std::string m_name;
@@ -42,6 +45,7 @@ private:
     bool m_compact{false};
 
     std::shared_ptr<NUIContextMenu> m_colorMenu;
+    DoubleClickTimer m_doubleClick; ///< double-click the name to rename
 
     // Cached theme colors
     NUIColor m_text;

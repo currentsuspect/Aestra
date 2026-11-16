@@ -217,6 +217,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     
     # Models
     src/Models/TrackManager.cpp
+    src/Models/FrozenTrackState.cpp
     src/Models/RecordingTakeStream.cpp
     src/Models/ClipPrefilterService.cpp
     src/Models/PlaylistModel.cpp
@@ -264,6 +265,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/RenderAudioClipCommand.cpp
     src/Commands/DeleteSilenceCommand.cpp
     src/Commands/BounceInPlaceCommand.cpp
+    src/Commands/ThawTrackCommand.cpp
     src/Commands/ImportAudioClipCommand.cpp
     src/Commands/AddClipCommand.cpp
     src/Commands/AttachLaneToTrackCommand.cpp
@@ -804,7 +806,17 @@ elseif(UNIX)
         # No ALSA - stub already in AestraAudioCore
         # Create an interface library for compatibility
         add_library(AestraAudio INTERFACE)
-        target_link_libraries(AestraAudio INTERFACE AestraAudioCore)
+        if(TARGET AestraRumble AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+            # Rumble is always built now (FD-57), including in headless lab builds without ALSA. GNU ld reads
+            # each archive once, so Rumble's registration (which calls into AestraAudioCore) must sit in the same
+            # rescan group as the core, as in the ALSA branch above. macOS's linker resolves in any order.
+            target_link_libraries(AestraAudio INTERFACE
+                "$<LINK_GROUP:RESCAN,AestraAudioCore,$<LINK_LIBRARY:WHOLE_ARCHIVE,AestraRumble>>"
+            )
+            set(AESTRA_RUMBLE_IN_LINK_GROUP TRUE)
+        else()
+            target_link_libraries(AestraAudio INTERFACE AestraAudioCore)
+        endif()
     endif()
 endif()
 
