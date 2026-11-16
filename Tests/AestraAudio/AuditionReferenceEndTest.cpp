@@ -66,8 +66,8 @@ int main() {
         // The reference is heard up to the mix's end (1 s), rising, then silence: no held instant repeating.
         size_t lastAudible = 0;
         for (size_t i = 0; i < out.size(); ++i) if (std::fabs(out[i]) > 1e-6f) lastAudible = i;
-        check(lastAudible > static_cast<size_t>(0.9 * kRate) && lastAudible <= static_cast<size_t>(1.02 * kRate),
-              "the reference is heard to the end of the mix and not a moment past it");
+        check(lastAudible > static_cast<size_t>(0.9 * kRate) && lastAudible < static_cast<size_t>(kRate),
+              "the reference is heard to the frame the mix ends on and not one frame past it (the block that crosses the end is cut)");
         check(!engine.isPlaying(), "playback stops where the mix ends");
         bool silentAfter = true;
         for (size_t i = static_cast<size_t>(1.05 * kRate); i < out.size(); ++i) if (std::fabs(out[i]) > 1e-6f) { silentAfter = false; break; }

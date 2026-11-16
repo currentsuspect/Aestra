@@ -323,8 +323,10 @@ void AuditionEngine::play() {
     }
 
     // Play at the very end starts again from the top, as every player does.
-    if (const double playable = playableSeconds(); playable > 0.0 && m_positionSeconds.load() >= playable)
+    if (const double playable = playableSeconds(); playable > 0.0 && m_positionSeconds.load() >= playable) {
         m_positionSeconds.store(0.0);
+        m_trackTransitionPending.store(false, std::memory_order_release); // an end queued before this restart is void
+    }
 
     bool wasPlaying = m_isPlaying.exchange(true);
     std::function<void(bool)> onPlaybackStateChanged;
@@ -438,9 +440,10 @@ double AuditionEngine::getDurationSeconds() const {
 
 void AuditionEngine::setDSPPreset(const AuditionDSPPreset& preset) {
     m_currentPreset = preset;
+    m_rtPreset.publish(std::make_shared<const AuditionDSPPreset>(preset));
     // Choosing a preset is choosing to hear it: nothing else ever turned the chain on, so every preset but Studio
     // was silent (it was applied only in "wet" A/B mode, which no control sets). Studio is the bypass.
-    m_abWetMode.store(preset.enabled, std::memory_order_relaxed);
+    m_abWetMode.store(preset.enabled, std::memory_order_release);
     Log::info("[AuditionEngine] DSP Preset: " + preset.name);
 }
 
@@ -537,7 +540,13 @@ void AuditionEngine::processBlock(float* output, uint32_t numFrames, uint32_t nu
     }
 
     currentPos += static_cast<double>(numFrames) / dstRate;
-    renderSource(srcBuffer, startPos, output, numFrames, numChannels);
+
+    // The block that crosses the mix's end plays only the frames up to it. Rendering the whole block would play a
+    // longer reference past the end of the mix for the rest of that block; what follows stays silent.
+    uint32_t frames = numFrames;
+    if (playable > 0.0 && currentPos > playable)
+        frames = static_cast<uint32_t>(std::clamp(std::ceil((playable - startPos) * dstRate - 1e-6), 0.0, static_cast<double>(numFrames)));
+    renderSource(srcBuffer, startPos, output, frames, numChannels);
 
     // Match the main engine's centered-track reference gain. Audition is a
     // separate listening surface, but bypass should not be louder than placing
@@ -546,7 +555,7 @@ void AuditionEngine::processBlock(float* output, uint32_t numFrames, uint32_t nu
     // the old equal-power centre factor is gone.
     const float outputGain = m_volume.load(std::memory_order_relaxed);
     if (outputGain != 1.0f) {
-        for (uint32_t i = 0; i < numFrames * numChannels; ++i) {
+        for (uint32_t i = 0; i < frames * numChannels; ++i) {
             output[i] *= outputGain;
         }
     }
@@ -564,8 +573,8 @@ void AuditionEngine::processBlock(float* output, uint32_t numFrames, uint32_t nu
         const float slew = 1.0f / rampSamples;
         const double refStart = startPos + m_referenceOffsetSeconds.load(std::memory_order_relaxed);
         const uint32_t chunkFrames = static_cast<uint32_t>(m_referenceScratch.size() / std::max<uint32_t>(1, numChannels));
-        for (uint32_t done = 0; done < numFrames && chunkFrames > 0; done += chunkFrames) {
-            const uint32_t n = std::min(chunkFrames, numFrames - done);
+        for (uint32_t done = 0; done < frames && chunkFrames > 0; done += chunkFrames) {
+            const uint32_t n = std::min(chunkFrames, frames - done);
             if (refPlayable) renderSource(refBuffer, refStart + static_cast<double>(done) / dstRate, m_referenceScratch.data(), n, numChannels);
             else std::fill(m_referenceScratch.begin(), m_referenceScratch.begin() + n * numChannels, 0.0f);
             for (uint32_t i = 0; i < n; ++i) {
@@ -598,8 +607,9 @@ void AuditionEngine::processBlock(float* output, uint32_t numFrames, uint32_t nu
     }
 
     // Apply DSP chain if enabled
-    if (m_abWetMode.load(std::memory_order_relaxed) && m_currentPreset.enabled) {
-        applyDSPChain(output, numFrames, numChannels);
+    const auto presetPin = m_rtPreset.readRealtime();
+    if (const AuditionDSPPreset* preset = presetPin.get(); preset && preset->enabled && m_abWetMode.load(std::memory_order_acquire)) {
+        applyDSPChain(output, frames, numChannels, *preset);
     }
 
     // Position callback (throttled)
@@ -766,8 +776,8 @@ std::shared_ptr<ClipSource> AuditionEngine::getCurrentSource() const {
     return m_currentSource.load(std::memory_order_acquire);
 }
 
-void AuditionEngine::applyDSPChain(float* buffer, uint32_t numFrames, uint32_t numChannels) {
-    if (!m_currentPreset.enabled) {
+void AuditionEngine::applyDSPChain(float* buffer, uint32_t numFrames, uint32_t numChannels, const AuditionDSPPreset& preset) {
+    if (!preset.enabled) {
         m_dspState.reset();
         return;
     }
@@ -779,16 +789,16 @@ void AuditionEngine::applyDSPChain(float* buffer, uint32_t numFrames, uint32_t n
 
     // -- Loudness Gain --
     float targetGain = 1.0f;
-    if (m_currentPreset.targetLufs < 0.0f) {
+    if (preset.targetLufs < 0.0f) {
         // -14 LUFS target (approximate gain calc)
-        targetGain = std::pow(10.0f, (m_currentPreset.targetLufs + 14.0f) / 20.0f);
+        targetGain = std::pow(10.0f, (preset.targetLufs + 14.0f) / 20.0f);
         targetGain = std::clamp(targetGain, 0.1f, 4.0f);
     }
 
     // -- High/Low Cuts (1-pole) --
     float highCutAlpha = 1.0f;
-    if (m_currentPreset.highCutHz < 20000.0f) {
-        float wc = 2.0f * 3.14159f * m_currentPreset.highCutHz;
+    if (preset.highCutHz < 20000.0f) {
+        float wc = 2.0f * 3.14159f * preset.highCutHz;
         highCutAlpha = wc / (wc + sampleRate);
     }
 
@@ -796,8 +806,8 @@ void AuditionEngine::applyDSPChain(float* buffer, uint32_t numFrames, uint32_t n
     // We want a Low Pass filter at the cutoff freq, then subtract it.
     // LPF coefficient alpha = wc / (wc + sampleRate)
     float lowCutAlpha = 0.0f;
-    if (m_currentPreset.lowCutHz > 20.0f) {
-        float wc = 2.0f * 3.14159f * m_currentPreset.lowCutHz;
+    if (preset.lowCutHz > 20.0f) {
+        float wc = 2.0f * 3.14159f * preset.lowCutHz;
         lowCutAlpha = wc / (wc + sampleRate);
     }
 
@@ -863,21 +873,21 @@ void AuditionEngine::applyDSPChain(float* buffer, uint32_t numFrames, uint32_t n
 
     // Bass Boost (Low Shelf @ 100Hz)
     float ls_b0, ls_b1, ls_b2, ls_a1, ls_a2;
-    calcShelfCoeffs(m_currentPreset.bassBoostDb, 100.0f, true, ls_b0, ls_b1, ls_b2, ls_a1, ls_a2);
+    calcShelfCoeffs(preset.bassBoostDb, 100.0f, true, ls_b0, ls_b1, ls_b2, ls_a1, ls_a2);
 
     // Treble Shelf (High Shelf @ 10kHz)
     float hs_b0, hs_b1, hs_b2, hs_a1, hs_a2;
-    calcShelfCoeffs(m_currentPreset.trebleShelfDb, 10000.0f, false, hs_b0, hs_b1, hs_b2, hs_a1, hs_a2);
+    calcShelfCoeffs(preset.trebleShelfDb, 10000.0f, false, hs_b0, hs_b1, hs_b2, hs_a1, hs_a2);
 
     // -- Dynamics (Limiter/Compressor) --
-    float compRatio = m_currentPreset.compressionRatio;
-    float limitCeiling = std::pow(10.0f, m_currentPreset.limiterCeilingDb / 20.0f);
+    float compRatio = preset.compressionRatio;
+    float limitCeiling = std::pow(10.0f, preset.limiterCeilingDb / 20.0f);
     // Attack/Release coefficients
-    float attCoef = std::exp(-dt / (m_currentPreset.limiterAttackMs * 0.001f));
-    float relCoef = std::exp(-dt / (m_currentPreset.limiterReleaseMs * 0.001f));
+    float attCoef = std::exp(-dt / (preset.limiterAttackMs * 0.001f));
+    float relCoef = std::exp(-dt / (preset.limiterReleaseMs * 0.001f));
 
     // -- Lo-fi --
-    float lofiAmount = m_currentPreset.lofiAmount;
+    float lofiAmount = preset.lofiAmount;
     int decimationFactor = 1;
     float bitDepthLevels = 65536.0f; // 16-bit
     if (lofiAmount > 0.0f) {
@@ -927,7 +937,7 @@ void AuditionEngine::applyDSPChain(float* buffer, uint32_t numFrames, uint32_t n
         };
 
         // Bass Boost
-        if (std::abs(m_currentPreset.bassBoostDb) > 0.1f) {
+        if (std::abs(preset.bassBoostDb) > 0.1f) {
             left = processBiquad(left, ls_b0, ls_b1, ls_b2, ls_a1, ls_a2, m_dspState.lowShelf.z1_L,
                                  m_dspState.lowShelf.z2_L);
             right = processBiquad(right, ls_b0, ls_b1, ls_b2, ls_a1, ls_a2, m_dspState.lowShelf.z1_R,
@@ -935,7 +945,7 @@ void AuditionEngine::applyDSPChain(float* buffer, uint32_t numFrames, uint32_t n
         }
 
         // Treble Shelf
-        if (std::abs(m_currentPreset.trebleShelfDb) > 0.1f) {
+        if (std::abs(preset.trebleShelfDb) > 0.1f) {
             left = processBiquad(left, hs_b0, hs_b1, hs_b2, hs_a1, hs_a2, m_dspState.highShelf.z1_L,
                                  m_dspState.highShelf.z2_L);
             right = processBiquad(right, hs_b0, hs_b1, hs_b2, hs_a1, hs_a2, m_dspState.highShelf.z1_R,

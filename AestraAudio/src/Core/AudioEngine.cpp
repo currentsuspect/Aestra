@@ -644,6 +644,7 @@ void AudioEngine::refreshSamplerCache() {
     m_samplerCacheSource = std::move(snapshot);
     auto newCache = std::make_shared<SamplerCacheData>();
     refreshSamplerCacheToSnapshot(*unitMgr, *newCache);
+    newCache->generation = ++m_samplerCacheGeneration;
     m_cachedSamplerCount.store(newCache->count, std::memory_order_release);
     m_samplerCache.publish(std::move(newCache)); // the old generation goes once no audio-thread pin reads it
 }
@@ -849,9 +850,10 @@ void AudioEngine::resetCachedSamplerVoicesRt(bool soft) noexcept {
 void AudioEngine::syncCachedSamplerSampleRatesRt(uint32_t sampleRate) noexcept {
     const auto pin = m_samplerCache.readRealtime(); // held for the walk: a refresh cannot free it
     const auto* cache = pin.get();
-    // Synced for this rate AND this cache: a cache published after the rate was set (units added later, or the
-    // first block before any unit existed) holds samplers that have not heard the rate yet.
-    if (m_lastSyncedArsenalSampleRate == sampleRate && m_lastSyncedSamplerCache == cache) {
+    // Synced for this rate AND this cache generation (not its address, which a later cache can reuse): a cache
+    // published after the rate was set holds samplers that have not heard the rate yet.
+    const uint64_t generation = cache ? cache->generation : 0;
+    if (m_lastSyncedArsenalSampleRate == sampleRate && m_lastSyncedSamplerGeneration == generation) {
         return;
     }
     if (!cache)
@@ -863,7 +865,7 @@ void AudioEngine::syncCachedSamplerSampleRatesRt(uint32_t sampleRate) noexcept {
         }
     }
     m_lastSyncedArsenalSampleRate = sampleRate;
-    m_lastSyncedSamplerCache = cache;
+    m_lastSyncedSamplerGeneration = generation;
 }
 
 /**

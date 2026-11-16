@@ -343,7 +343,10 @@ private:
     }
 
     // DSP
-    AuditionDSPPreset m_currentPreset{AuditionDSPPreset::Bypass()};
+    AuditionDSPPreset m_currentPreset{AuditionDSPPreset::Bypass()}; // UI thread's copy (names, menus)
+    // What the audio thread reads: an immutable snapshot published by setDSPPreset and pinned for each block, so a
+    // preset chosen mid-playback is never half old and half new (the same slot pattern as the sources).
+    RealtimeSharedSlot<const AuditionDSPPreset> m_rtPreset{std::make_shared<const AuditionDSPPreset>(AuditionDSPPreset::Bypass())};
     std::atomic<bool> m_abWetMode{false}; // Default to DRY (no effects)
 
     // Internal DSP State (for filters/dynamics)
@@ -410,7 +413,7 @@ private:
 
     // Internal helpers
     void loadCurrentTrack();
-    void applyDSPChain(float* buffer, uint32_t numFrames, uint32_t numChannels);
+    void applyDSPChain(float* buffer, uint32_t numFrames, uint32_t numChannels, const AuditionDSPPreset& preset);
     void notifyTrackChanged();
 };
 

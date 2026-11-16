@@ -17,6 +17,7 @@ inline std::string fitText(AestraUI::NUIRenderer& r, const std::string& text, fl
     if (text.empty() || maxWidth <= 0.0f) return {};
     if (r.measureText(text, fontSize).width <= maxWidth) return text;
     const std::string dots = "...";
+    if (r.measureText(dots, fontSize).width > maxWidth) return {}; // not even the dots fit: nothing, not an overrun
     size_t lo = 0, hi = text.size();
     while (lo < hi) { // the longest prefix that still fits with the dots
         const size_t mid = (lo + hi + 1) / 2;
