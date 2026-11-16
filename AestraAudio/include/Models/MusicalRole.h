@@ -297,6 +297,7 @@ inline MusicalRole roleFromName(std::string_view name) {
     const std::vector<std::string> w = role_detail::words(name);
     std::vector<Cue> cues;
     RoleSub modifier = RoleSub::None; // lead / backing / double: only means something beside a vocal
+    bool modifierConflict = false;    // two different ones ("Lead Backing Vocal"): word order must not pick one
 
     for (size_t i = 0; i < w.size(); ++i) {
         Cue cue{};
@@ -305,13 +306,17 @@ inline MusicalRole roleFromName(std::string_view name) {
             ++i;
             continue;
         }
-        if (const RoleSub m = role_detail::vocalModifier(w.at(i)); m != RoleSub::None) { modifier = m; continue; }
+        if (const RoleSub m = role_detail::vocalModifier(w.at(i)); m != RoleSub::None) {
+            if (modifier != RoleSub::None && modifier != m) modifierConflict = true;
+            modifier = m;
+            continue;
+        }
         if (role_detail::wordCue(w.at(i), cue)) cues.push_back(cue);
     }
 
     Cue folded = role_detail::foldCues(cues);
     if (folded.category == RoleCategory::Unknown) return {}; // nothing named, or two different things: not a guess
-    if (folded.sub == RoleSub::None && folded.category == RoleCategory::Vocals) folded.sub = modifier;
+    if (folded.sub == RoleSub::None && folded.category == RoleCategory::Vocals && !modifierConflict) folded.sub = modifier;
     if (!roleSubFits(folded.category, folded.sub)) folded.sub = RoleSub::None;
     return {folded.category, folded.sub, RoleSource::Name};
 }

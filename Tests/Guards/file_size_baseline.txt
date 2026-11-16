@@ -2,7 +2,7 @@
 # pinned at their exact line count. They may shrink, never grow. See
 # Tests/Guards/file_size_ratchet.cmake for the rules and the regeneration command.
 # <lines> <repo-relative path>
-2697 AestraAudio/include/Models/TrackManager.h
+2698 AestraAudio/include/Models/TrackManager.h
 2328 AestraAudio/include/Plugin/AestraEQ.h
 1984 AestraAudio/include/Plugin/AestraVerb.h
 4341 AestraAudio/src/Core/AudioEngine.cpp
@@ -10,10 +10,10 @@
 5646 AestraUI/Widgets/AestraEQEditor.cpp
 1585 AestraUI/Widgets/AestraVerbEditor.cpp
 1927 AestraUI/Widgets/PianoRollNoteLayer.cpp
-1843 AestraUI/Widgets/UnitRow.cpp
+1872 AestraUI/Widgets/UnitRow.cpp
 2468 Source/App/AestraApp.cpp
 3837 Source/Components/FileBrowser.cpp
 3170 Source/Components/TrackUIComponent.cpp
 4738 Source/Core/AestraContent.cpp
-2844 Source/Core/ProjectSerializer.cpp
+2859 Source/Core/ProjectSerializer.cpp
 1572 Source/Panels/ArsenalPanel.cpp

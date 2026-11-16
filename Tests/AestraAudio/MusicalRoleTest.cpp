@@ -66,6 +66,11 @@ int main() {
     expectRole("kick vocal", RoleCategory::Unknown, RoleSub::None);
     expectRole("Skick", RoleCategory::Unknown, RoleSub::None);      // a word that merely contains one is not it
 
+    // Two different vocal modifiers are the category, nothing finer, whichever word comes first.
+    expectRole("Lead Backing Vocal", RoleCategory::Vocals, RoleSub::None);
+    expectRole("Backing Lead Vocal", RoleCategory::Vocals, RoleSub::None);
+    expectRole("Backing Backing Vocal", RoleCategory::Vocals, RoleSub::Backing); // the same one twice is still that one
+
     // Two sub-roles in one category are the category, nothing finer.
     expectRole("kick snare", RoleCategory::Drums, RoleSub::None);
     // A vocal modifier next to something that is not a vocal means nothing.
