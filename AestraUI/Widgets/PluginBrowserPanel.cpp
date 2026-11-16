@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "PluginBrowserPanel.h"
+#include "NUIWheel.h"
 #include "../Platform/NUIPlatformBridge.h"
 #include "NUIRenderer.h"
 #include "NUIDragDrop.h"
@@ -514,7 +515,7 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
         float listHeight = bounds.height - CONTENT_TOP_PAD - HEADER_BAR_HEIGHT - FILTER_BAR_HEIGHT - 4.0f;
         float contentHeight = m_filteredPlugins.size() * ROW_HEIGHT;
         float maxScroll = std::max(0.0f, contentHeight - listHeight);
-        m_targetScrollOffset -= event.wheelDelta * 40.0f;
+        m_targetScrollOffset -= event.wheelDelta * kWheelNotchPx;
         if (m_targetScrollOffset < 0.0f) m_targetScrollOffset = 0.0f;
         if (m_targetScrollOffset > maxScroll) m_targetScrollOffset = maxScroll;
         repaint();
@@ -983,7 +984,7 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
 
     // Wheel support (Scroll)
     if (std::abs(event.wheelDelta) > 0.001f && m_activeKnobSlot == -1) {
-        m_scrollOffset -= event.wheelDelta * 20.0f;
+        m_scrollOffset -= event.wheelDelta * kWheelNotchPx;
 
         // Clamp against the rows actually drawn, not MAX_SLOTS. Bounding by ten
         // rows let the offset run past the compact row set, and hitTestSlot then

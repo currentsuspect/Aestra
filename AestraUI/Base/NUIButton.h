@@ -2,6 +2,7 @@
 #pragma once
 
 #include "NUIComponent.h"
+#include "../Core/NUIButtonMotion.h"
 #include "NUIRenderer.h"
 #include <string>
 #include <functional>
@@ -124,6 +125,13 @@ public:
     bool isBorderEnabled() const { return borderEnabled_; }
     
     /**
+     * The button's motion group (NUIButtonMotion.h). Pills are Action; glyph-only buttons should be Icon.
+     * A toggleable button is a Toggle unless a group was set.
+     */
+    void setButtonGroup(ButtonGroup group) { motion_.setGroup(group); groupSet_ = true; }
+    ButtonGroup buttonGroup() const { return motion_.group(); }
+
+    /**
      * Enable/disable glow effect on hover.
      */
     void setGlowEnabled(bool enabled) { glowEnabled_ = enabled; setDirty(); }
@@ -172,6 +180,8 @@ private:
     
     // State
     bool pressed_ = false;
+    bool groupSet_ = false;
+    bool latchedForMotion_ = false;
     float hoverAlpha_ = 0.0f; // Animated hover state (0.0 to 1.0)
     bool toggleable_ = false;
     bool toggled_ = false;
@@ -190,8 +200,9 @@ private:
     Tone tone_ = Tone::Neutral;
     HoverStrength hoverStrength_ = HoverStrength::Full;
     bool trailingArrow_ = false;
-    float fill_ = 0.0f;        ///< 0..1, hover fade
+    ButtonMotion motion_{ButtonGroup::Action}; ///< hover colour pop and the press bounce (NUIButtonMotion.h)
     void renderSpecLook(NUIRenderer& renderer);
+    void renderContents(NUIRenderer& renderer);
 
     // Helpers
     NUIColor getCurrentBackgroundColor() const;

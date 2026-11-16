@@ -157,7 +157,9 @@ FileBrowser::FileBrowser()
     m_searchIcon->setColor(themeManager.getColor("textSecondary").withAlpha(0.72f));
 
     // Design Spec, browser rows (locked): 14px line glyphs on a 14-unit grid, square joins, one stroke weight;
-    // the row colours them (renderFileList). Every audio format shares the one audio glyph.
+    // the row colours them (renderFileList). The glyph says what the file is, in the fewest strokes:
+    // a page with a waveform = uncompressed audio (wav, aiff), a disc = lossless (flac), a page with a note =
+    // compressed audio (mp3, ogg, m4a), a bare page = anything else.
     const auto lineIcon = [](const char* paths) {
         auto icon = std::make_shared<NUIIcon>();
         icon->loadSVG(std::string(R"(<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.15" )"
@@ -167,15 +169,17 @@ FileBrowser::FileBrowser()
     };
     folderIcon_ = lineIcon(R"(<path d="M1.5 3h4L7 4.5h5.5v7h-11z"/>)");
     folderOpenIcon_ = lineIcon(R"(<path d="M1.5 11.5V3h4L7 4.5h4.5V6"/><path d="M1.5 11.5L3.3 6h9.2l-1.8 5.5z"/>)");
-    const char* audioPaths = R"(<path d="M3 1.5h5.5L11 4v8.5H3z"/><path d="M8.5 1.5V4H11"/>)"
-                             R"(<path d="M4.4 8.6c.6-2 1.2-2 1.7 0s1.1 2 1.7 0 1.1-2 1.7 0"/>)";
-    audioFileIcon_ = lineIcon(audioPaths);
-    wavFileIcon_ = lineIcon(audioPaths);
-    mp3FileIcon_ = lineIcon(audioPaths);
-    flacFileIcon_ = lineIcon(audioPaths);
-    oggFileIcon_ = lineIcon(audioPaths);
-    musicFileIcon_ = lineIcon(audioPaths);
-    unknownFileIcon_ = lineIcon(R"(<path d="M3 1.5h5.5L11 4v8.5H3z"/><path d="M8.5 1.5V4H11"/>)");
+    const char* page = R"(<path d="M3 1.5h5.5L11 4v8.5H3z"/><path d="M8.5 1.5V4H11"/>)";
+    const std::string waveformPage = std::string(page) + R"(<path d="M4.4 8.6c.6-2 1.2-2 1.7 0s1.1 2 1.7 0 1.1-2 1.7 0"/>)";
+    const std::string notePage = std::string(page) + R"(<circle cx="6" cy="10" r="1.2"/><path d="M7.2 10V6"/>)";
+    const std::string disc = R"(<circle cx="7" cy="7" r="5.5"/><circle cx="7" cy="7" r="1.5"/>)";
+    audioFileIcon_ = lineIcon(waveformPage.c_str());
+    wavFileIcon_ = lineIcon(waveformPage.c_str());
+    flacFileIcon_ = lineIcon(disc.c_str());
+    mp3FileIcon_ = lineIcon(notePage.c_str());
+    oggFileIcon_ = lineIcon(notePage.c_str());
+    musicFileIcon_ = lineIcon(notePage.c_str());
+    unknownFileIcon_ = lineIcon(page);
     // MIDI: note bars on the page (no waveform: MIDI carries no audio). Project: an arrangement of lanes.
     midiFileIcon_ = lineIcon(R"(<path d="M3 1.5h5.5L11 4v8.5H3z"/><path d="M4.5 7h2.5M6 9h3M4.5 11h2"/>)");
     projectFileIcon_ = lineIcon(R"(<path d="M1.5 2.5h11v9h-11z"/><path d="M3.5 5h4M5.5 7h5M3.5 9h3"/>)");
@@ -463,8 +467,10 @@ void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& boun
         }
         renderLocationRow(renderer, browserLayout);
         renderTagChips(renderer, browserLayout);
-        renderListHeader(renderer, browserLayout);
+        // Rows first, header over them: a row scrolling under the top edge (its text sits a hair outside a
+        // fractional clip) is covered by the header's own fill instead of showing through it.
         renderFileList(renderer);
+        renderListHeader(renderer, browserLayout);
         renderScrollbar(renderer);
     }
     renderNavigationPane(renderer, browserLayout);
@@ -1000,7 +1006,7 @@ bool FileBrowser::handleDragInitiation(const NUIMouseEvent& event, const std::ve
 	        if (dist >= dragManager.getDragThreshold()) {
 	            const FileItem* dragFile = view[dragSourceIndex_];
 
-	            if (!dragFile->isDirectory && FileFilter::isAllowed(dragFile->path)) {
+	            if (!dragFile->isDirectory && dragFile->type != FileType::ProjectFile && FileFilter::isAllowed(dragFile->path)) { // a project is opened, not dropped
 	                AestraUI::DragData dragData;
 	                if (dragFile->type == FileType::MidiFile) {
 	                    dragData.type = AestraUI::DragDataType::MidiClip;
@@ -1167,7 +1173,7 @@ bool FileBrowser::handleListMouse(const NUIMouseEvent& event, const std::vector<
                 const FileItem* hoveredItem =
                     hoveredIndex_ >= 0 && hoveredIndex_ < static_cast<int>(view.size()) ? view[hoveredIndex_] : nullptr;
                 const bool canDrag = hoveredItem && !hoveredItem->isDirectory && !hoveredItem->isPlaceholder &&
-                                     FileFilter::isAllowed(hoveredItem->path);
+                                     hoveredItem->type != FileType::ProjectFile && FileFilter::isAllowed(hoveredItem->path);
                 m_platformBridge->setCursorStyle(canDrag ? NUICursorStyle::Grab
                                                          : hoveredItem ? NUICursorStyle::Hand : NUICursorStyle::Arrow);
             }
@@ -1246,7 +1252,7 @@ bool FileBrowser::handleListMouse(const NUIMouseEvent& event, const std::vector<
 	                }
 
 		                // Store drag potential state for allowed files
-		                if (!clickedFile->isDirectory && FileFilter::isAllowed(clickedFile->path)) {
+		                if (!clickedFile->isDirectory && clickedFile->type != FileType::ProjectFile && FileFilter::isAllowed(clickedFile->path)) {
 		                    dragPotential_ = true;
 	                    dragSourceIndex_ = itemIndex;
 	                    dragStartPos_ = event.position;
@@ -1279,7 +1285,13 @@ bool FileBrowser::handleListMouse(const NUIMouseEvent& event, const std::vector<
                         // Double-click on folder: toggle it
                         toggleFolder(const_cast<FileItem*>(selectedFile_));
                     }
-                    // Double-click on files now only previews; loading is Enter/drag-drop
+                    // A project opens on double-click, as it does on Enter.
+                    if (selectedFile_->type == FileType::ProjectFile && onFileOpened_) {
+                        onFileOpened_(*selectedFile_);
+                        invalidateCache();
+                        return true;
+                    }
+                    // Double-click on a sound now only previews; loading is Enter/drag-drop
                     if (onSoundPreview_ && !selectedFile_->isDirectory) {
                         FileType type = selectedFile_->type;
                         if (type == FileType::AudioFile || type == FileType::MusicFile ||
@@ -2295,7 +2307,14 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
     const int lastVisibleIndex = std::min(static_cast<int>(view.size()),
         static_cast<int>((scrollOffset_ + listClip.height) / itemHeight) + 2);
 
-    renderer.setClipRect(listClip);
+    // Whole pixels: a fractional clip edge lets the half-covered row's glyphs through at the top. Rows still
+    // lay out from listClip, so they line up with the hover wash and hit-testing.
+    NUIRect pixelClip = listClip;
+    pixelClip.x = std::floor(listClip.x);
+    pixelClip.y = std::floor(listClip.y);
+    pixelClip.width = std::ceil(listClip.right()) - pixelClip.x;
+    pixelClip.height = std::ceil(listClip.bottom()) - pixelClip.y;
+    renderer.setClipRect(pixelClip);
 
     const NUIColor evenRow = themeManager.getColor("backgroundPrimary"); // flat rows: no zebra
     const NUIColor selectedRow = themeManager.getColor("selected"); // selection is the wash, never an edge

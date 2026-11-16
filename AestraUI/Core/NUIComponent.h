@@ -226,6 +226,7 @@ private:
     
     // Static Global Tooltip State
     static TooltipState s_tooltipState;
+    static std::vector<const void*> s_openPopups; ///< Dropdowns, menus and pickers open now (setPopupOpen).
     static bool s_cursorCaptureActive;
     static unsigned s_pointerButtonsHeld; ///< One bit per NUIMouseButton currently down.
     // Press ownership (2026-11-08): who took the press hears its release, wherever it lands. See dispatchMouseEvent.
@@ -260,6 +261,15 @@ public:
                                   bool force = false);
     static void showRemoteTooltip(const std::string& text, const NUIPoint& position, const void* owner = nullptr, bool force = false);
     static void hideRemoteTooltip(const void* owner = nullptr);
+    /**
+     * @brief A dropdown, menu or picker tells the tooltip system it is open (or closed).
+     *
+     * While any popup is open, hover tooltips stay down: the controls under or beside a popup are not what the
+     * user is looking at, and a tooltip drawn from them landed on top of the popup. Opening one dismisses the
+     * tooltip on screen. Forced readouts (a drag's live value) still show. A destroyed popup is forgotten.
+     */
+    static void setPopupOpen(const void* popup, bool open);
+    static bool isAnyPopupOpen();
     static void renderGlobalTooltip(NUIRenderer& renderer, const NUIRect& viewport = {});
     /// A tooltip's label and its trailing shortcut, split from "Name (F6)". The key is empty when there is none.
     struct TooltipParts {

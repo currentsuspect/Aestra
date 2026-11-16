@@ -47,17 +47,27 @@ inline const char* nuiCursorSvg(NUICursorStyle style) {
                R"SVG(<path d="M10.6 9.6 V12.8 M13.4 10.4 V13 M16.1 11.2 V13.2" stroke="#141416" stroke-width="1" stroke-linecap="round"/>)SVG"
                R"SVG(</svg>)SVG";
     case NUICursorStyle::Grab:
+        // Layered: one black silhouette under one white one, so the outline is even all round and the
+        // finger gaps are drawn, not stitched (owner, 2026-11-16: the old hands looked lumpy).
         return R"SVG(<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">)SVG"
-               R"SVG(<path d="M8.4 14.2 V6.3 C8.4 5.5 9 4.9 9.8 4.9 C10.6 4.9 11.2 5.5 11.2 6.3 V4.9 C11.2 4.1 11.8 3.5 12.6 3.5 C13.4 3.5 14 4.1 14 4.9 V5.8 C14 5 14.6 4.4 15.4 4.4 C16.2 4.4 16.8 5 16.8 5.8 V7.6 C16.8 6.9 17.3 6.4 18 6.4 C18.7 6.4 19.2 6.9 19.2 7.6 V14.6 C19.2 18.2 16.6 21 13.2 21 H12.4 C10.4 21 8.8 20 7.7 18.4 L4.9 14.3 C4.5 13.7 4.6 13 5.3 12.6 C6 12.2 6.9 12.4 7.4 13 Z" fill="#000" fill-opacity="0.32" transform="translate(0.7 1)"/>)SVG"
-               R"SVG(<path d="M8.4 14.2 V6.3 C8.4 5.5 9 4.9 9.8 4.9 C10.6 4.9 11.2 5.5 11.2 6.3 V4.9 C11.2 4.1 11.8 3.5 12.6 3.5 C13.4 3.5 14 4.1 14 4.9 V5.8 C14 5 14.6 4.4 15.4 4.4 C16.2 4.4 16.8 5 16.8 5.8 V7.6 C16.8 6.9 17.3 6.4 18 6.4 C18.7 6.4 19.2 6.9 19.2 7.6 V14.6 C19.2 18.2 16.6 21 13.2 21 H12.4 C10.4 21 8.8 20 7.7 18.4 L4.9 14.3 C4.5 13.7 4.6 13 5.3 12.6 C6 12.2 6.9 12.4 7.4 13 Z" fill="#fff" stroke="#141416" stroke-width="1.35" stroke-linejoin="round"/>)SVG"
-               R"SVG(<path d="M11.2 6.3 V11.6 M14 5.8 V11.4 M16.8 7.6 V11.7" stroke="#141416" stroke-width="1" stroke-linecap="round"/>)SVG"
+               R"SVG(<g transform="translate(0.7 1)" opacity="0.32" fill="#000" stroke="#000" stroke-linecap="round" stroke-linejoin="round"><g stroke-width="5.4" fill="none"><path d="M8.5 7.8 V13"/><path d="M11.5 6.2 V13"/><path d="M14.5 6.6 V13"/><path d="M17.5 8.6 V13"/></g>)SVG"
+               R"SVG(<path d="M7 12 H19 V14.6 C19 18.4 16.4 21 13 21 C10.6 21 8.8 20 7.6 18.2 L7 17 Z" stroke-width="2.4"/><path d="M7.6 16.4 L4.9 12.4" stroke-width="5.4" fill="none"/></g>)SVG"
+               R"SVG(<g fill="none" stroke="#141416" stroke-linecap="round" stroke-linejoin="round"><g stroke-width="5.4"><path d="M8.5 7.8 V13"/><path d="M11.5 6.2 V13"/><path d="M14.5 6.6 V13"/><path d="M17.5 8.6 V13"/></g>)SVG"
+               R"SVG(<path d="M7 12 H19 V14.6 C19 18.4 16.4 21 13 21 C10.6 21 8.8 20 7.6 18.2 L7 17 Z" fill="#141416" stroke-width="2.4"/><path d="M7.6 16.4 L4.9 12.4" stroke-width="5.4" fill="none"/></g>)SVG"
+               R"SVG(<g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round"><g stroke-width="3"><path d="M8.5 7.8 V13"/><path d="M11.5 6.2 V13"/><path d="M14.5 6.6 V13"/><path d="M17.5 8.6 V13"/></g>)SVG"
+               R"SVG(<path d="M7 12 H19 V14.6 C19 18.4 16.4 21 13 21 C10.6 21 8.8 20 7.6 18.2 L7 17 Z" fill="#fff" stroke-width="0.01"/><path d="M7.6 16.4 L4.9 12.4" stroke-width="3" fill="none"/></g>)SVG"
+               R"SVG(<path d="M10 9 V11.4 M13 9 V11.4 M16 9.6 V11.4" stroke="#141416" stroke-width="0.9" stroke-linecap="round" fill="none"/>)SVG"
                R"SVG(</svg>)SVG";
     case NUICursorStyle::Grabbing:
+        // The same hand closed: knuckles up, thumb tucked.
         return R"SVG(<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">)SVG"
-               R"SVG(<path d="M5.6 12.2 V9.4 C5.6 8.46 6.36 7.7 7.3 7.7 C8.24 7.7 9 8.46 9 9.4 V8.3 C9 7.36 9.76 6.6 10.7 6.6 C11.64 6.6 12.4 7.36 12.4 8.3 V8 C12.4 7.06 13.16 6.3 14.1 6.3 C15.04 6.3 15.8 7.06 15.8 8 V8.8 C15.8 7.86 16.56 7.1 17.5 7.1 C18.44 7.1 19.2 7.86 19.2 8.8 V14.4 C19.2 18.3 16.3 21.2 12.6 21.2 H11.8 C8.4 21.2 5.6 18.5 5.6 15.2 Z" fill="#000" fill-opacity="0.32" transform="translate(0.7 1)"/>)SVG"
-               R"SVG(<path d="M5.6 12.2 V9.4 C5.6 8.46 6.36 7.7 7.3 7.7 C8.24 7.7 9 8.46 9 9.4 V8.3 C9 7.36 9.76 6.6 10.7 6.6 C11.64 6.6 12.4 7.36 12.4 8.3 V8 C12.4 7.06 13.16 6.3 14.1 6.3 C15.04 6.3 15.8 7.06 15.8 8 V8.8 C15.8 7.86 16.56 7.1 17.5 7.1 C18.44 7.1 19.2 7.86 19.2 8.8 V14.4 C19.2 18.3 16.3 21.2 12.6 21.2 H11.8 C8.4 21.2 5.6 18.5 5.6 15.2 Z" fill="#fff" stroke="#141416" stroke-width="1.35" stroke-linejoin="round"/>)SVG"
-               R"SVG(<path d="M9 9.4 V11.8 M12.4 8.3 V11.6 M15.8 8 V11.8" stroke="#141416" stroke-width="1.05" stroke-linecap="round"/>)SVG"
-               R"SVG(<path d="M5.9 14.6 C7.5 13.1 10 12.8 12.2 13.5" stroke="#141416" stroke-width="1.15" stroke-linecap="round"/>)SVG"
+               R"SVG(<g transform="translate(0.7 1)" opacity="0.32" fill="#000" stroke="#000" stroke-linecap="round" stroke-linejoin="round"><g stroke-width="5.4" fill="none"><path d="M8.5 9.4 V10.4"/><path d="M11.5 8.6 V10.4"/><path d="M14.5 8.8 V10.4"/><path d="M17.5 9.8 V10.4"/></g>)SVG"
+               R"SVG(<path d="M7 11 H19 V14.4 C19 18.4 16.4 21 13 21 H12.4 C9.4 21 7 18.6 7 15.4 Z" stroke-width="2.4"/><path d="M9.2 15 H13.4" stroke-width="5.4" fill="none"/></g>)SVG"
+               R"SVG(<g fill="none" stroke="#141416" stroke-linecap="round" stroke-linejoin="round"><g stroke-width="5.4"><path d="M8.5 9.4 V10.4"/><path d="M11.5 8.6 V10.4"/><path d="M14.5 8.8 V10.4"/><path d="M17.5 9.8 V10.4"/></g>)SVG"
+               R"SVG(<path d="M7 11 H19 V14.4 C19 18.4 16.4 21 13 21 H12.4 C9.4 21 7 18.6 7 15.4 Z" fill="#141416" stroke-width="2.4"/><path d="M9.2 15 H13.4" stroke-width="5.4" fill="none"/></g>)SVG"
+               R"SVG(<g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round"><g stroke-width="3"><path d="M8.5 9.4 V10.4"/><path d="M11.5 8.6 V10.4"/><path d="M14.5 8.8 V10.4"/><path d="M17.5 9.8 V10.4"/></g>)SVG"
+               R"SVG(<path d="M7 11 H19 V14.4 C19 18.4 16.4 21 13 21 H12.4 C9.4 21 7 18.6 7 15.4 Z" fill="#fff" stroke-width="0.01"/><path d="M9.2 15 H13.4" stroke-width="3" fill="none"/></g>)SVG"
+               R"SVG(<path d="M10 9.8 V11.2 M13 9.6 V11.2 M16 10 V11.2" stroke="#141416" stroke-width="0.9" stroke-linecap="round" fill="none"/>)SVG"
                R"SVG(</svg>)SVG";
     case NUICursorStyle::IBeam:
         // Wide white stem with a thin outline: the white has to dominate or the

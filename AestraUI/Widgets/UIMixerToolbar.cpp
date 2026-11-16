@@ -21,6 +21,7 @@ bool UIMixerToolbar::compact() const { return getBounds().width < kCompactBelow;
 float UIMixerToolbar::segW() const { return compact() ? 46.0f : 52.0f; }
 float UIMixerToolbar::toggleW() const { return compact() ? 74.0f : 128.0f; }
 float UIMixerToolbar::resetW() const { return compact() ? 52.0f : 78.0f; }
+float UIMixerToolbar::addW() const { return compact() ? 26.0f : 76.0f; }
 
 NUIRect UIMixerToolbar::resetRect() const {
     const auto b = getBounds();
@@ -36,6 +37,11 @@ NUIRect UIMixerToolbar::densityRect(MixerDensity d) const {
     const auto g = groupRect();
     const float left = g.x - kGap - segW() * 3.0f;
     return NUIRect{left + segW() * static_cast<float>(d), g.y, segW(), kH};
+}
+
+NUIRect UIMixerToolbar::addRect() const {
+    const auto d = densityRect(MixerDensity::Wide);
+    return NUIRect{d.x - kGap - addW(), d.y, addW(), kH};
 }
 
 void UIMixerToolbar::setDensity(MixerDensity density) {
@@ -66,7 +72,7 @@ void UIMixerToolbar::onRender(NUIRenderer& renderer) {
     const NUIColor muted = theme.getColor("textSecondary");
 
     // The title and summary take only the room the controls leave: the summary shortens, then goes, then the title.
-    const float room = densityRect(MixerDensity::Wide).x - 8.0f;
+    const float room = addRect().x - 8.0f;
     const float titleW = renderer.measureText("Mixer", 11.0f).width;
     if (b.x + 8.0f + titleW <= room)
         renderer.drawText("Mixer", {b.x + 8.0f, b.y + (b.height - 11.0f) * 0.5f - 1.0f}, 11.0f, text.withAlpha(0.95f));
@@ -99,9 +105,27 @@ void UIMixerToolbar::onRender(NUIRenderer& renderer) {
     renderer.drawText(compact() ? "Group" : "Group by output", {track.right() + 6.0f, g.y + (g.height - 9.0f) * 0.5f - 1.0f}, 9.0f,
                       m_hover == 3 ? text : muted);
 
-    const auto r = resetRect();
-    renderer.fillRoundedRect(r, r.height * 0.5f, theme.getColor(m_hover == 4 ? "surfaceRaised" : "surfaceTertiary"));
-    renderer.drawTextCentered(compact() ? "Reset" : "Reset peaks", r, kFont, m_hover == 4 ? text : muted);
+    // Two one-off action pills (Action group): colour pops on hover, a dip and one bounce on press.
+    const auto pill = [&](const NUIRect& r, const ButtonMotion& motion, const char* label) {
+        const float s = motion.scale();
+        if (s != 1.0f) renderer.pushTransform((r.x + r.width * 0.5f) * (1.0f - s), (r.y + r.height * 0.5f) * (1.0f - s), s);
+        const float e = motion.hover();
+        renderer.fillRoundedRect(r, r.height * 0.5f,
+                                 NUIColor::lerp(theme.getColor("surfaceTertiary"), theme.getColor("surfaceRaised"), e));
+        renderer.drawTextCentered(label, r, kFont, NUIColor::lerp(muted, text, e));
+        if (s != 1.0f) renderer.popTransform();
+    };
+    pill(resetRect(), m_resetMotion, compact() ? "Reset" : "Reset peaks");
+    pill(addRect(), m_addMotion, compact() ? "+" : "+ Channel");
+}
+
+void UIMixerToolbar::onUpdate(double deltaTime) {
+    NUIComponent::onUpdate(deltaTime);
+    const float dt = static_cast<float>(deltaTime);
+    const bool moving = m_resetMotion.animating() || m_addMotion.animating();
+    m_resetMotion.update(dt, m_hover == 4, m_pressed == 4);
+    m_addMotion.update(dt, m_hover == 5, m_pressed == 5);
+    if (moving || m_resetMotion.animating() || m_addMotion.animating()) repaint();
 }
 
 void UIMixerToolbar::onMouseLeave() {
@@ -116,12 +140,15 @@ bool UIMixerToolbar::onMouseEvent(const NUIMouseEvent& event) {
         if (densityRect(static_cast<MixerDensity>(i)).contains(event.position)) hit = i;
     if (groupRect().contains(event.position)) hit = 3;
     if (resetRect().contains(event.position)) hit = 4;
+    if (addRect().contains(event.position)) hit = 5;
 
     if (event.button == NUIMouseButton::None) {
         if (hit != m_hover) { m_hover = hit; repaint(); }
         return false;
     }
+    if (event.released) m_pressed = -1;
     if (event.pressed && event.button == NUIMouseButton::Left && hit >= 0) {
+        m_pressed = hit;
         if (hit < 3) {
             const auto d = static_cast<MixerDensity>(hit);
             if (d != m_density) {
@@ -133,8 +160,10 @@ bool UIMixerToolbar::onMouseEvent(const NUIMouseEvent& event) {
             m_group = !m_group;
             repaint();
             if (onGroupToggled) onGroupToggled(m_group);
-        } else if (onResetPeaks) {
-            onResetPeaks();
+        } else if (hit == 4) {
+            if (onResetPeaks) onResetPeaks();
+        } else if (onAddChannel) {
+            onAddChannel();
         }
         return true;
     }

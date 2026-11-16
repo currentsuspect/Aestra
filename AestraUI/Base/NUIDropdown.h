@@ -2,6 +2,7 @@
 #pragma once
 
 #include "NUIComponent.h"
+#include "../Core/NUIButtonMotion.h"
 #include "NUITypes.h"
 #include "NUIRenderer.h"
 #include <memory>
@@ -121,6 +122,9 @@ private:
     int selectedIndex_ = -1;
     bool isOpen_ = false;
     float dropdownAnimProgress_ = 0.0f;
+    ButtonMotion headerMotion_{ButtonGroup::Row}; ///< the closed field's hover pop: colour only, it is a well, not a pill
+    ButtonMotion rowMotion_{ButtonGroup::Row};    ///< the hovered list row's colour pop
+    int rowMotionIndex_ = -1;
     float chevronRotation_ = 0.0f;  // Current rotation angle (0 = down, 180 = up)
     std::string placeholderText_ = "Select an item...";
     int maxVisibleItems_ = 5;

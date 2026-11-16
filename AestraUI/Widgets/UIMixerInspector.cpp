@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerInspector.h"
+#include "NUIWheel.h"
 #include "MixerScale.h"
 #include "UIMixerSendList.h"
 
@@ -919,7 +920,7 @@ bool UIMixerInspector::onMouseEvent(const NUIMouseEvent& event)
     }
 
     if (event.wheelDelta != 0.0f && m_viewportRect.contains(event.position)) {
-        m_targetScrollOffset -= event.wheelDelta * 36.0f;
+        m_targetScrollOffset -= event.wheelDelta * kWheelNotchPx;
         clampScrollOffsets();
         repaint();
         return true;

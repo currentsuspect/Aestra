@@ -2737,10 +2737,15 @@ target_include_directories(AutomationLaneEditingTest PRIVATE
 add_test(NAME AutomationLaneEditingTest COMMAND AutomationLaneEditingTest)
 set_tests_properties(AutomationLaneEditingTest PROPERTIES LABELS "automation;ui-model;regression;contract:application")
 
-# V8-C14 ranked gap 4: a toast that arrives while another shows waits its turn (ToastQueue.h).
-add_executable(ToastQueueTest AestraUI/ToastQueueTest.cpp)
-add_test(NAME ToastQueueTest COMMAND ToastQueueTest)
-set_tests_properties(ToastQueueTest PROPERTIES LABELS "ui;toast;regression;contract:application")
+# Button groups: one motion per kind of control (NUIButtonMotion.h).
+add_executable(ButtonMotionTest AestraUI/ButtonMotionTest.cpp)
+add_test(NAME ButtonMotionTest COMMAND ButtonMotionTest)
+set_tests_properties(ButtonMotionTest PROPERTIES LABELS "ui;buttons;regression;contract:application")
+
+# Toasts stack three high, share one wait time, and a fourth pushes the oldest off (ToastStack.h).
+add_executable(ToastStackTest AestraUI/ToastStackTest.cpp)
+add_test(NAME ToastStackTest COMMAND ToastStackTest)
+set_tests_properties(ToastStackTest PROPERTIES LABELS "ui;toast;regression;contract:application")
 
 # V8-X2b phase 5: the file browser's panes and chrome from the layout system
 # (FileBrowserLayout.h); the folder rows are drawn and hit-tested by one rect.
@@ -3134,6 +3139,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Panels/AudioClipEditorPanel.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/SampleEditorPanel.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/ArsenalPanel.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/UISurfaceStore.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/ArsenalPanelScenes.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/ArsenalSceneMenu.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/PatternBrowserPanel.cpp
@@ -3178,6 +3184,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Panels/AudioClipEditorPanel.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/SampleEditorPanel.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/ArsenalPanel.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/UISurfaceStore.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/ArsenalPanelScenes.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/ArsenalSceneMenu.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/PatternBrowserPanel.cpp

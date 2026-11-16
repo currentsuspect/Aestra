@@ -2,19 +2,22 @@
 #pragma once
 
 #include "NUIComponent.h"
-#include "ToastQueue.h"
+#include "ToastStack.h"
 #include <string>
 
 namespace AestraUI {
 
 /**
- * Transient status pill (toast). The owner sets an anchor strip via
- * setBounds; the toast draws a centered pill sized to its text and hides
- * itself after the configured duration (with a short fade). It installs no
- * mouse handlers, so it never steals clicks from components beneath it.
+ * Transient status pills (toasts). The owner sets an anchor strip via setBounds, tall enough for kMaxToasts slots;
+ * the newest pill sits in the bottom slot and older ones stack above it (ToastStack.h has the rules: up to three,
+ * one shared wait time, the oldest pushed off by a fourth). It installs no mouse handlers, so it never steals
+ * clicks from components beneath it.
  */
 class NotificationToast : public NUIComponent {
 public:
+    /// Height of one slot (a 32 px pill and the gap above it); the owner's strip is kMaxToasts slots tall.
+    static constexpr float kSlotHeight = 40.0f;
+
     NotificationToast();
 
     void onRender(NUIRenderer& renderer) override;
@@ -24,20 +27,13 @@ public:
         top-most z-order. */
     bool onMouseEvent(const NUIMouseEvent& event) override;
 
-    void setText(const std::string& text);
-    const std::string& getText() const { return text_; }
+    /** Shows @p text as the newest toast. Every toast stays kToastSeconds. */
+    void show(const std::string& text);
 
-    /** Restarts the visible window; the toast hides itself when it elapses. */
-    void setDuration(double duration);
-
-    /** Shows @p text for @p seconds, or queues it behind the message on screen (ToastQueue.h). */
-    void show(const std::string& text, double seconds);
+    const ToastStack& stack() const { return stack_; }
 
 private:
-    std::string text_;
-    double duration_;
-    double elapsed_;
-    ToastQueue queue_;
+    ToastStack stack_;
 };
 
 } // namespace AestraUI

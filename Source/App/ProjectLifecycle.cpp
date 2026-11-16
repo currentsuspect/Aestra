@@ -177,7 +177,7 @@ void AestraApp::addOpenRecentMenu(AestraUI::NUIContextMenu& menu) {
         recent->addItem(none);
     } else {
         recent->addSeparator();
-        recent->addItem("Clear the list", []() {
+        recent->addItem("Clear the List", []() {
             Preferences::instance().clearRecentFiles();
             Preferences::instance().save();
         });

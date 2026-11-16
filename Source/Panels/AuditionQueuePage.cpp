@@ -1,5 +1,6 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AuditionQueuePage.h"
+#include "../AestraUI/Core/NUIWheel.h"
 
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
@@ -186,7 +187,7 @@ bool AuditionQueuePage::onMouseEvent(const NUIMouseEvent& event) {
         return true;
     }
     if (event.type == NUIMouseEventType::Scroll) {
-        m_scroll = std::clamp(m_scroll - event.wheelDelta * 60.0f, 0.0f, std::max(0.0f, static_cast<float>(count) * kRowH - l.list.height));
+        m_scroll = std::clamp(m_scroll - event.wheelDelta * AestraUI::kWheelNotchPx, 0.0f, std::max(0.0f, static_cast<float>(count) * kRowH - l.list.height));
         setDirty(true);
         return true;
     }

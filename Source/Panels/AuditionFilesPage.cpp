@@ -1,5 +1,6 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AuditionFilesPage.h"
+#include "../AestraUI/Core/NUIWheel.h"
 
 #include "../AestraUI/Core/NUIDragDrop.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
@@ -191,7 +192,7 @@ bool AuditionFilesPage::onMouseEvent(const NUIMouseEvent& event) {
         return true;
     }
     if (event.type == NUIMouseEventType::Scroll) {
-        m_scroll -= event.wheelDelta * 60.0f;
+        m_scroll -= event.wheelDelta * AestraUI::kWheelNotchPx;
         clampScroll();
         setDirty(true);
         return true;

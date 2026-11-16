@@ -111,7 +111,7 @@ void PluginUIController::showEditorMenu(const std::shared_ptr<AestraPanelWindow>
     if (!m_editorModeGetter) {
         // No panel-mode provider: the header's menu is just Reset.
         auto menu = std::make_shared<NUIContextMenu>();
-        menu->addItem("Reset to default", std::move(resetToDefault));
+        menu->addItem("Reset to Default", std::move(resetToDefault));
         menu->setOnHide([this, weak = std::weak_ptr<NUIContextMenu>(menu)]() {
             if (auto shown = weak.lock(); shown && m_popupLayer)
                 m_popupLayer->removeChild(shown);
