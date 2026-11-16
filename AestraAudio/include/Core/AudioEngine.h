@@ -74,7 +74,7 @@ public:
         std::array<Plugins::SamplerPlugin*, kMaxCachedSamplers> samplers{};
         std::array<std::shared_ptr<Plugins::SamplerPlugin>, kMaxCachedSamplers> owners{};
         size_t count = 0;
-        uint64_t generation = 0; ///< unique per publication, never reused (an address can be: see the rate sync)
+        uint64_t generation = 0; // unique per publication, never reused (an address can be)
     };
 
     struct SamplerCacheSnapshot {
@@ -1136,8 +1136,7 @@ private:
 
     // Tracks last sample rate synced to Arsenal units (avoids per-block scans).
     // Replaces static local in processArsenalUnits for RT safety.
-    uint32_t m_lastSyncedArsenalSampleRate{0};
-    uint64_t m_lastSyncedSamplerGeneration{0}; ///< the cache generation that rate reached (see syncCachedSamplerSampleRatesRt)
+    uint32_t m_lastSyncedArsenalSampleRate{0}; uint64_t m_lastSyncedSamplerGeneration{0}; // rate and cache generation last synced
 
     // --- Antigravity Routing Engine (v3.1) ---
     // Moved struct definitions to AudioGraphState.h
@@ -1341,8 +1340,7 @@ private:
     // Using double-buffering with atomic pointer swap for thread safety
     // Audio-thread reads pin a generation, so a refresh never frees a cache a stop is walking.
     RealtimeSharedSlot<SamplerCacheData> m_samplerCache{std::make_shared<SamplerCacheData>()};
-    std::mutex m_samplerCacheMutex; // refreshes: the UI loop and the export worker both run maintenance
-    uint64_t m_samplerCacheGeneration{0}; // guarded by m_samplerCacheMutex
+    std::mutex m_samplerCacheMutex; uint64_t m_samplerCacheGeneration{0}; // refreshes (UI loop, export worker); generation guarded by the mutex
     std::array<Plugins::SamplerPlugin*, kMaxCachedSamplers> m_cachedSamplers{};
     std::array<std::shared_ptr<Plugins::SamplerPlugin>, kMaxCachedSamplers> m_cachedSamplerOwners{};
     std::atomic<size_t> m_cachedSamplerCount{0}; // Kept for compatibility
