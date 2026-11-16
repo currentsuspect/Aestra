@@ -318,6 +318,9 @@ private:
     std::atomic<double> m_positionSeconds{0.0};
     std::atomic<double> m_sampleRate{48000.0};
     std::atomic<double> m_cachedDurationSeconds{0.0};
+    /// How long playback runs: the mix, and only the mix. A reference longer than it is cut where the mix ends, so
+    /// the two are compared over the same stretch (RT-safe).
+    double playableSeconds() const noexcept { return m_cachedDurationSeconds.load(std::memory_order_acquire); }
     std::atomic<bool> m_trackTransitionPending{false};
 
     // RT-safe source pointer (C++17 atomic shared_ptr via std::atomic_load/store)
@@ -340,7 +343,10 @@ private:
     }
 
     // DSP
-    AuditionDSPPreset m_currentPreset{AuditionDSPPreset::Bypass()};
+    AuditionDSPPreset m_currentPreset{AuditionDSPPreset::Bypass()}; // UI thread's copy (names, menus)
+    // What the audio thread reads: an immutable snapshot published by setDSPPreset and pinned for each block, so a
+    // preset chosen mid-playback is never half old and half new (the same slot pattern as the sources).
+    RealtimeSharedSlot<const AuditionDSPPreset> m_rtPreset{std::make_shared<const AuditionDSPPreset>(AuditionDSPPreset::Bypass())};
     std::atomic<bool> m_abWetMode{false}; // Default to DRY (no effects)
 
     // Internal DSP State (for filters/dynamics)
@@ -407,7 +413,7 @@ private:
 
     // Internal helpers
     void loadCurrentTrack();
-    void applyDSPChain(float* buffer, uint32_t numFrames, uint32_t numChannels);
+    void applyDSPChain(float* buffer, uint32_t numFrames, uint32_t numChannels, const AuditionDSPPreset& preset);
     void notifyTrackChanged();
 };
 
