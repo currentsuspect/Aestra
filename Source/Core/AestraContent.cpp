@@ -1411,6 +1411,7 @@ void AestraContent::setupArsenalPanels() {
             }
         }
     });
+    m_sequencerPanel->setOnNotify([this](const std::string& message) { showToast(message); });
     m_sequencerPanel->setOnRequestPatternEditor([this](PatternID patternId, Aestra::Audio::UnitID unitId) { openPatternInPianoRoll(patternId, unitId); });
 
     m_sequencerPanel->setOnRequestLoadSample([this](UnitID id) {

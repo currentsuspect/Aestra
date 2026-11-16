@@ -1783,6 +1783,18 @@ target_include_directories(MusicalRoleProjectTest PRIVATE
 add_test(NAME MusicalRoleProjectTest COMMAND MusicalRoleProjectTest)
 set_tests_properties(MusicalRoleProjectTest PROPERTIES LABELS "audio;roles;roundtrip;undo;contract:durability")
 
+# "Create a Drum Bus": sounds that share a role share a bus, in one undoable step (owner brief 16 Nov 2026).
+add_executable(RoleBusTest AestraAudio/RoleBusTest.cpp)
+target_link_libraries(RoleBusTest PRIVATE AestraAudioCore)
+target_include_directories(RoleBusTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME RoleBusTest COMMAND RoleBusTest)
+set_tests_properties(RoleBusTest PROPERTIES LABELS "audio;roles;routing;undo;contract:application")
+
 # Sample Rate Converter Test
 add_executable(AestraSampleRateConverterTest AestraAudio/SampleRateConverterTest.cpp)
 target_link_libraries(AestraSampleRateConverterTest PRIVATE AestraAudio)

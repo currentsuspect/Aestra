@@ -110,6 +110,8 @@ public:
     void setSoundSetProviders(std::function<std::vector<std::string>()> names, std::function<std::vector<std::string>(const std::string&)> members,
                               std::function<void(UnitID, const std::string&)> chosen) { m_lanes.setSoundSetProviders(std::move(names), std::move(members), std::move(chosen)); }
     void setOnSampleDroppedToUnit(std::function<void(UnitID, const std::string&)> cb) { m_onSampleDroppedToUnit = cb; }
+    /// A short line for the user after an action (a bus created): the app shows it as a toast.
+    void setOnNotify(std::function<void(const std::string&)> cb) { m_onNotify = std::move(cb); }
     /** @brief Set the callback fired when unit selection changes. */
     void setOnSelectedUnitChanged(std::function<void(UnitID)> cb) { m_onSelectedUnitChanged = std::move(cb); }
 
@@ -231,6 +233,7 @@ private:
     std::function<void(UnitID)> m_onRequestSampleEditor;
     std::function<void(const std::string&)> m_onPluginDropped;
     std::function<void(UnitID, const std::string&)> m_onPluginDroppedToUnit;
+    std::function<void(const std::string&)> m_onNotify;
     std::function<void(UnitID, const std::string&)> m_onSampleDroppedToUnit;
     std::function<void(UnitID)> m_onSelectedUnitChanged;
     std::function<void(double beat, bool active)> m_onPositionScrubbed;
