@@ -36,6 +36,8 @@ public:
     bool onMouseEvent(const NUIMouseEvent& event) override;
 
     std::shared_ptr<Aestra::Audio::IPluginInstance> instance() const { return m_instance.lock(); }
+    /// Whether the plugin's editor window is still there (it can close its own editor and leave the panel behind).
+    bool isEditorAlive() const;
     /// The panel size that holds a plugin view of @p width × @p height.
     NUISize panelSizeFor(int width, int height) const;
 

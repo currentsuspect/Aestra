@@ -20,9 +20,16 @@ std::shared_ptr<NativePluginPanel> NativePluginPanel::create(
     const std::uintptr_t child = instance->openEditorEmbedded(parent);
     if (!child)
         return nullptr;
+    // getEditorSize() is the helper's X window size, in device pixels; the panel is laid out in logical units and
+    // place() multiplies them back by the scale.
     const auto [w, h] = instance->getEditorSize();
+    float scale = bridge->getDPIScale();
+    if (scale <= 0.0f)
+        scale = 1.0f;
+    const int logicalW = std::max(static_cast<int>(std::lround(static_cast<float>(w) / scale)), 1);
+    const int logicalH = std::max(static_cast<int>(std::lround(static_cast<float>(h) / scale)), 1);
     return std::shared_ptr<NativePluginPanel>(
-        new NativePluginPanel(instance, bridge, child, std::max(w, 1), std::max(h, 1), instance->canResizeEditor()));
+        new NativePluginPanel(instance, bridge, child, logicalW, logicalH, instance->canResizeEditor()));
 }
 
 NativePluginPanel::NativePluginPanel(const std::shared_ptr<Aestra::Audio::IPluginInstance>& instance,
@@ -60,8 +67,16 @@ NUIRect NativePluginPanel::gripRect() const {
     return {b.right() - 18.0f, b.bottom() - kGripBand, 18.0f, kGripBand};
 }
 
-bool NativePluginPanel::shownInTree() const {
-    for (const NUIComponent* c = this; c; c = c->getParent())
+bool NativePluginPanel::isEditorAlive() const {
+    const auto instance = m_instance.lock();
+    if (!instance || !instance->isEditorOpen() || !m_bridge || !m_child)
+        return false;
+    // The plugin can close its own editor and keep the panel: the child window is what says yes or no.
+    int w = 0, h = 0;
+    return m_bridge->getChildWindowSize(m_child, w, h);
+}
+
+bool NativePluginPanel::shownInTree() const {    for (const NUIComponent* c = this; c; c = c->getParent())
         if (!c->isVisible())
             return false;
     return true;

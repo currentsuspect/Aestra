@@ -54,6 +54,18 @@ static_assert(EffectChainRack::MAX_SLOTS == static_cast<int>(Aestra::Audio::Effe
 PluginUIController::PluginUIController() = default;
 
 PluginUIController::~PluginUIController() {
+    // Embedded plugin panels are held by the popup layer and their close/drag callbacks capture this controller.
+    // Detach both here: a panel that outlives the controller must not call into it, and dropping the panel is what
+    // closes the plugin's embedded editor.
+    for (auto& editor : m_activeEditors) {
+        if (!editor) continue;
+        if (auto panelWindow = std::dynamic_pointer_cast<AestraPanelWindow>(editor)) {
+            panelWindow->setOnClose(nullptr);
+            panelWindow->setOnWindowDragEnd(nullptr);
+        }
+        if (m_popupLayer && editor->getParent() == m_popupLayer) m_popupLayer->removeChild(editor);
+    }
+    m_activeEditors.clear();
     // Close the plugin windows before anything they point at goes away: a sandboxed
     // plugin's window keeps the helper alive, and the helper keeps the plugin loaded.
     for (auto& window : m_nativeEditors) {
@@ -635,18 +647,31 @@ void PluginUIController::openPluginEditor(
     std::shared_ptr<NUIComponent> editorComp;
     const std::string& pluginId = instance->getInfo().id;
     if (instance->ownsEditorWindow()) {
+        std::shared_ptr<NUIComponent> stalePanel;
         for (const auto& open : m_activeEditors) {
             auto panel = std::dynamic_pointer_cast<NativePluginPanel>(open);
             // Membership here, not the parent: an add made during this same event
             // dispatch is not parented yet, and a double-click can ask twice.
-            if (panel && panel->instance() == instance) {
-                if (m_popupLayer && panel->getParent() == m_popupLayer) {
-                    m_popupLayer->removeChild(panel);
-                    m_popupLayer->addChild(panel); // last child draws on top
-                }
-                panel->setVisible(true);
-                return;
+            if (!panel || panel->instance() != instance) continue;
+            if (!panel->isEditorAlive()) {
+                // The plugin closed its own editor. This panel is a dead frame; reopen below.
+                stalePanel = open;
+                break;
             }
+            if (m_popupLayer && panel->getParent() == m_popupLayer) {
+                m_popupLayer->removeChild(panel);
+                m_popupLayer->addChild(panel); // last child draws on top
+            }
+            panel->setVisible(true);
+            return;
+        }
+        if (stalePanel) {
+            // Drop it before opening the replacement: the panel's destructor closes "its" editor, which by the
+            // time create() runs would be the new one.
+            if (m_popupLayer && stalePanel->getParent() == m_popupLayer) m_popupLayer->removeChild(stalePanel);
+            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), stalePanel),
+                                  m_activeEditors.end());
+            stalePanel.reset();
         }
         editorComp = NativePluginPanel::create(instance, m_platformBridge);
         if (editorComp) {

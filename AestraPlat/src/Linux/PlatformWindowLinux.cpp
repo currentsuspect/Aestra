@@ -24,6 +24,28 @@ bool getX11WindowInfo(SDL_Window* window, Display*& display, ::Window& x11Window
     x11Window = info.info.x11.window;
     return (display != nullptr && x11Window != 0);
 }
+
+#if defined(SDL_VIDEO_DRIVER_X11)
+// A child window the plugin helper has already destroyed raises BadWindow, and Xlib's default handler exits the app
+// with unsaved work in it. Requests go out on the app's own connection and errors come back asynchronously, so the
+// handler stays installed until XSync has delivered them.
+class XErrorGuard {
+public:
+    explicit XErrorGuard(Display* display) : m_display(display) { m_previous = XSetErrorHandler(&swallow); }
+    ~XErrorGuard() {
+        XSync(m_display, False);
+        XSetErrorHandler(m_previous);
+    }
+    XErrorGuard(const XErrorGuard&) = delete;
+    XErrorGuard& operator=(const XErrorGuard&) = delete;
+
+private:
+    static int swallow(Display*, XErrorEvent*) { return 0; }
+
+    Display* m_display = nullptr;
+    int (*m_previous)(Display*, XErrorEvent*) = nullptr;
+};
+#endif
 } // namespace
 
 PlatformWindowLinux::PlatformWindowLinux() {
@@ -458,14 +480,15 @@ bool PlatformWindowLinux::placeChildWindow(std::uintptr_t child, int x, int y, i
     // here, on the app's own connection, keeps the plugin glued to its panel while the panel is dragged, with no round
     // trip to the helper. The helper sees the new size (ConfigureNotify) and tells the plugin.
     const auto id = static_cast<::Window>(child);
+    // The helper may already have destroyed the window (force-close, plugin close, helper crash); BadWindow must not
+    // reach Xlib's exiting default handler. Same guard as getChildWindowSize.
+    XErrorGuard guard(display);
     if (!visible) {
         XUnmapWindow(display, id);
-        XFlush(display);
         return true;
     }
     XMoveResizeWindow(display, id, x, y, static_cast<unsigned>(std::max(1, width)), static_cast<unsigned>(std::max(1, height)));
     XMapRaised(display, id);
-    XFlush(display);
     return true;
 #else
     (void)child; (void)x; (void)y; (void)width; (void)height; (void)visible;
@@ -480,18 +503,19 @@ bool PlatformWindowLinux::getChildWindowSize(std::uintptr_t child, int& width, i
     if (!child || !getX11WindowInfo(m_window, display, parent))
         return false;
     // A window the helper has already destroyed would raise BadWindow through Xlib's default handler, which exits.
-    auto* previous = XSetErrorHandler([](Display*, XErrorEvent*) { return 0; });
-    ::Window root = 0;
-    int gx = 0, gy = 0;
-    unsigned w = 0, h = 0, border = 0, depth = 0;
-    const Status ok = XGetGeometry(display, static_cast<::Window>(child), &root, &gx, &gy, &w, &h, &border, &depth);
-    XSync(display, False);
-    XSetErrorHandler(previous);
-    if (!ok)
-        return false;
-    width = static_cast<int>(w);
-    height = static_cast<int>(h);
-    return true;
+    bool ok = false;
+    {
+        XErrorGuard guard(display);
+        ::Window root = 0;
+        int gx = 0, gy = 0;
+        unsigned w = 0, h = 0, border = 0, depth = 0;
+        ok = XGetGeometry(display, static_cast<::Window>(child), &root, &gx, &gy, &w, &h, &border, &depth) != 0;
+        if (ok) {
+            width = static_cast<int>(w);
+            height = static_cast<int>(h);
+        }
+    }
+    return ok;
 #else
     (void)child; (void)width; (void)height;
     return false;
