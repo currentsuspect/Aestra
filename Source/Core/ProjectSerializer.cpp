@@ -1109,6 +1109,13 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
             tjs.set("name", JSON(track->name));
             tjs.set("channelId", JSON(static_cast<double>(track->channelId)));
             tjs.set("armed", JSON(track->armed));
+            // Only a role the user chose is saved; a name-given role is read from the name again on load.
+            if (track->role.source == RoleSource::User && track->role.known()) {
+                JSON role = JSON::object();
+                role.set("category", JSON(std::string(roleCategoryId(track->role.category))));
+                if (track->role.sub != RoleSub::None) role.set("sub", JSON(std::string(roleSubId(track->role.sub))));
+                tjs.set("role", role);
+            }
             tjs.set("activeLaneId", JSON(track->activeLaneId.toString()));
             JSON laneIdsJson = JSON::array();
             for (const auto& laneId : track->laneIds) {
@@ -2670,6 +2677,14 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                         tj[t], "channelId", 0.0, 0.0, static_cast<double>(UINT32_MAX)));
                     track.armed = (tj[t].has("armed") && tj[t]["armed"].isBool()) ? tj[t]["armed"].asBool()
                                                                                   : false;
+                    track.role = roleFromName(track.name);
+                    if (tj[t].has("role") && tj[t]["role"].isObject() && tj[t]["role"].has("category") &&
+                        tj[t]["role"]["category"].isString()) {
+                        const RoleCategory category = roleCategoryFromId(tj[t]["role"]["category"].asString());
+                        const bool hasSub = tj[t]["role"].has("sub") && tj[t]["role"]["sub"].isString();
+                        const RoleSub sub = hasSub ? roleSubFromId(tj[t]["role"]["sub"].asString()) : RoleSub::None;
+                        if (category != RoleCategory::Unknown) track.role = userRole(category, sub); // unknown id: ignored
+                    }
                     if (tj[t].has("activeLaneId") && tj[t]["activeLaneId"].isString()) {
                         AestraUUID parsedActive;
                         if (AestraUUID::tryParse(tj[t]["activeLaneId"].asString(), parsedActive)) {

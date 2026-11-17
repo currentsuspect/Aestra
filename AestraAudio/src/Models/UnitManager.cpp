@@ -335,6 +335,7 @@ UnitID UnitManager::createUnit(const std::string& name, UnitType type) {
     info.name = name;
     info.type = type;
     info.group = unitGroupForSample(type, name);
+    info.role = roleFromName(name); // "Kick 01" arrives as drums; "Audio 17" stays unknown
     if (m_defaultColor) info.color = m_defaultColor(m_unitOrder.size());
     info.bridgeMode = bridgeModeFallbackFromRouteId(info.targetMixerRoute);
 
@@ -374,6 +375,7 @@ UnitID UnitManager::duplicateUnit(UnitID sourceId) {
     dst->isSolo           = src->isSolo;
     dst->isArmed          = src->isArmed;
     dst->group            = src->group;
+    if (src->role.source == RoleSource::User) dst->role = src->role; // a copy keeps what the user said, not just the name
     dst->audioClipPath    = src->audioClipPath;
     dst->soundSet         = src->soundSet;
     dst->audioDurationSeconds  = src->audioDurationSeconds;
@@ -479,7 +481,23 @@ void UnitManager::setUnitSoundSet(UnitID id, const std::string& setName) {
     if (auto* u = getUnit(id)) u->soundSet = setName;
 }
 
-void UnitManager::setUnitName(UnitID id, const std::string& name) { if (auto* u = getUnit(id)) u->name = name; }
+void UnitManager::setUnitName(UnitID id, const std::string& name) {
+    if (auto* u = getUnit(id)) {
+        u->name = name;
+        u->role = roleAfterNaming(u->role, name); // the user's choice stands; a name-given role follows the name
+    }
+}
+
+void UnitManager::setUnitRole(UnitID id, const MusicalRole& role) {
+    auto* u = getUnit(id);
+    if (!u) return;
+    u->role = role.known() ? userRole(role.category, role.sub) : roleFromName(u->name);
+}
+
+MusicalRole UnitManager::unitRole(UnitID id) const {
+    const auto* u = getUnit(id);
+    return u ? u->role : MusicalRole{};
+}
 void UnitManager::setUnitMute(UnitID id, bool muted) { if (auto* u = getUnit(id)) { u->isMuted = muted; publishSnapshot(); } }
 void UnitManager::setUnitSolo(UnitID id, bool solo) { if (auto* u = getUnit(id)) { u->isSolo = solo; publishSnapshot(); } }
 void UnitManager::setUnitArmed(UnitID id, bool armed) { if (auto* u = getUnit(id)) u->isArmed = armed; }
@@ -835,6 +853,14 @@ JSON UnitManager::saveToJSON() const {
         }
         // Only a switch the user set: a unit on its type's default writes nothing (FD-76).
         if (unit->followsKeyOverride) u.set("followsKey", JSON(*unit->followsKeyOverride));
+        // Only a role the user chose is saved: a role read from the name is read again on load, so a renamed
+        // file or an older Aestra cannot disagree with it. Absent means "from the name".
+        if (unit->role.source == RoleSource::User && unit->role.known()) {
+            JSON role = JSON::object();
+            role.set("category", JSON(std::string(roleCategoryId(unit->role.category))));
+            if (unit->role.sub != RoleSub::None) role.set("sub", JSON(std::string(roleSubId(unit->role.sub))));
+            u.set("role", role);
+        }
 
         units.push(u);
     }
@@ -973,6 +999,12 @@ void UnitManager::loadFromJSON(const JSON& json) {
             unit.defaultPatternId = PatternID(static_cast<uint64_t>(ju["defaultPatternId"].asNumber()));
         }
         if (ju.has("followsKey") && ju["followsKey"].isBool()) unit.followsKeyOverride = ju["followsKey"].asBool();
+        unit.role = roleFromName(unit.name); // the name's reading, unless the user chose one below
+        if (ju.has("role") && ju["role"].isObject() && ju["role"].has("category") && ju["role"]["category"].isString()) {
+            const RoleCategory category = roleCategoryFromId(ju["role"]["category"].asString());
+            const RoleSub sub = ju["role"].has("sub") && ju["role"]["sub"].isString() ? roleSubFromId(ju["role"]["sub"].asString()) : RoleSub::None;
+            if (category != RoleCategory::Unknown) unit.role = userRole(category, sub); // an unknown id (a newer file) is ignored
+        }
 
         if (ju.has("group")) {
             unit.group = unitGroupFromJson(ju["group"]);

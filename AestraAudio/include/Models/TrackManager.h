@@ -385,6 +385,7 @@ public:
         Track track;
         track.trackId = m_nextTrackId++;
         track.name = name.empty() ? ("Track " + std::to_string(track.trackId)) : name;
+        track.role = roleFromName(track.name); // "Kick 3" is drums; "Track 3" and "Audio 17" are not anything yet
         track.channelId = channelId;
         track.laneIds.push_back(laneId);
         track.activeLaneId = laneId;

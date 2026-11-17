@@ -2,6 +2,7 @@
 #include "../../AestraCore/include/AestraJSON.h"
 #include "../Plugin/PluginHost.h"
 #include "Models/ArsenalBridgeMode.h"
+#include "Models/MusicalRole.h"
 #include "Models/PatternSource.h"
 #include "Music/ProjectHarmony.h"
 
@@ -143,6 +144,11 @@ struct UnitInfo {
     std::vector<float> audioPreviewWaveform;
     /** @brief High-level group classification used by the Arsenal UI. */
     UnitGroup group;
+    /**
+     * @brief What this sound is in the song (MusicalRole.h): the user's choice, else what its name says, else unknown.
+     * UI thread only; the audio thread never reads it.
+     */
+    MusicalRole role;
     /** @brief Unit content type used to select sequencing and editing behavior. */
     UnitType type{UnitType::Sampler};
     /** @brief Default pattern associated with this unit for Piano Roll editing. */
@@ -348,6 +354,13 @@ public:
     void setDefaultColorProvider(std::function<uint32_t(size_t)> provider) { m_defaultColor = std::move(provider); }
     /** @brief Set the unit group classification. */
     void setUnitGroup(UnitID id, UnitGroup group);
+    /**
+     * @brief Set the unit's role as the user's choice (confirmed: it outranks every name). Passing an unknown role
+     * clears the choice and the role goes back to whatever the name says.
+     */
+    void setUnitRole(UnitID id, const MusicalRole& role);
+    /** @brief The unit's role, or an unknown role for an unknown unit. */
+    MusicalRole unitRole(UnitID id) const;
     /** @brief Set the unit content type and keep its group classification aligned. */
     bool setUnitType(UnitID id, UnitType type);
     /** @brief Get the current content type for a unit. */

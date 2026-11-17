@@ -93,6 +93,14 @@ void UnitNameLabel::onRender(NUIRenderer& renderer) {
                       NUIPoint(bounds.x + 10.0f, bounds.y + 19.0f),
                       10.0f,
                       theme.getColor("textSecondary").withAlpha(0.5f));
+    if (m_role.known()) {
+        // The role follows the type: "Sampler · Drums · Kick". Read from the name it is quiet; chosen by the user it
+        // is a little brighter, so a guess and a decision never look the same.
+        const float typeW = renderer.measureText(typeLabel + "  ", 10.0f).width;
+        renderer.drawText("\xc2\xb7 " + Aestra::Audio::roleLabel(m_role),
+                          NUIPoint(bounds.x + 10.0f + typeW, bounds.y + 19.0f), 10.0f,
+                          theme.getColor("textSecondary").withAlpha(m_role.source == Aestra::Audio::RoleSource::User ? 0.85f : 0.5f));
+    }
     renderer.clearClipRect();
 }
 

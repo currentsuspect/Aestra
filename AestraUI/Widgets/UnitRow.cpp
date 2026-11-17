@@ -5,6 +5,7 @@
 #include "AudioEngine.h"
 #include "Commands/AssignUnitToFirstFreeInsertCommand.h"
 #include "Commands/EditPatternNotesCommand.h"
+#include "Commands/SetRoleCommand.h"
 #include "Commands/SetUnitMixerChannelCommand.h"
 #include "UnitGroupMenu.h"
 #include "NUIRenderer.h"
@@ -179,6 +180,7 @@ void UnitRow::setFitToWidth(bool fit) {
 void UnitRow::onRender(NUIRenderer& renderer) {
     if (m_nameLabel) {
         m_nameLabel->setUnitType(shouldUseNoteRoll() ? Aestra::Audio::UnitType::Instrument : m_type);
+        m_nameLabel->setRole(m_manager.unitRole(m_unitId));
     }
 
     // Invalidate cache if flagged (e.g. state change or hover)
@@ -1811,8 +1813,36 @@ void UnitRow::showRowContextMenu(const NUIPoint& pos) {
             m_nameLabel->beginRename();
     });
 
+    // Category: what this sound is in the song. "Auto" reads it from the name; picking one is the user's own
+    // choice, which outranks any name. One undo step.
+    {
+        using namespace Aestra::Audio;
+        const MusicalRole current = m_manager.unitRole(m_unitId);
+        auto categoryMenu = std::make_shared<NUIContextMenu>();
+        const auto choose = [this](const MusicalRole& role) {
+            if (!m_trackManager || !m_manager.getUnit(m_unitId)) return;
+            m_trackManager->getCommandHistory().pushAndExecute(
+                std::make_shared<SetUnitRoleCommand>(m_trackManager->getUnitManager(), m_unitId, role));
+        };
+        auto autoItem = std::make_shared<NUIContextMenuItem>("Auto (from the name)");
+        autoItem->setChecked(current.source != RoleSource::User);
+        autoItem->setOnClick([choose]() { choose(MusicalRole{}); });
+        categoryMenu->addItem(autoItem);
+        categoryMenu->addSeparator();
+        for (const auto& entry : roleCategoryTable()) {
+            auto item = std::make_shared<NUIContextMenuItem>(entry.label);
+            item->setChecked(current.source == RoleSource::User && current.category == entry.category);
+            const RoleCategory category = entry.category;
+            const RoleSub keepSub = current.category == category ? current.sub : RoleSub::None; // "Kick 01" chosen as Drums stays Kick
+            item->setOnClick([choose, category, keepSub]() { choose(userRole(category, keepSub)); });
+            categoryMenu->addItem(item);
+        }
+        m_rowContextMenu->addSubmenu("Category", categoryMenu);
+    }
+
     m_rowContextMenu->addItem("Duplicate Unit", [this]() { if (m_manager.getUnit(m_unitId) && m_onDuplicateUnit) m_onDuplicateUnit(m_unitId); });
     addUnitGroupMoveItem(*m_rowContextMenu, m_trackManager.get(), m_unitId, m_onGroupChanged); // the first group was a guess
+
 
     m_rowContextMenu->addSeparator();
     m_rowContextMenu->addItem("Delete Unit", [this, pos]() {
