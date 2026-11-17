@@ -228,11 +228,14 @@ void ArsenalPanel::snapGridScrollBy(float deltaPx) {
     const auto now = std::chrono::steady_clock::now();
     if (now - m_lastGridWheel > std::chrono::milliseconds(250)) m_gridWheelAccum = 0.0f;
     m_lastGridWheel = now;
-    m_gridWheelAccum += deltaPx;
-    constexpr float kNotchPx = 20.0f; // half a wheel notch (40 px): a trackpad's small deltas add up to one bar
-    if (std::abs(m_gridWheelAccum) < kNotchPx) return;
-    const int direction = m_gridWheelAccum > 0.0f ? 1 : -1;
-    m_gridWheelAccum = 0.0f;
+    // A wheel notch is 40 px and moves one bar; a trackpad's smaller deltas add up to one. The
+    // accumulator keeps what is left over a whole bar, so equal distance moves equal bars however
+    // the events are split.
+    constexpr float kNotchPx = 40.0f;
+    const int bars = ArsenalGridScroll::wheelBars(m_gridWheelAccum, deltaPx, kNotchPx);
+    if (bars == 0) return;
+    const int direction = bars > 0 ? 1 : -1;
+    int barsLeft = std::abs(bars);
 
     const int stepsPerBar = beatsPerBar() * 4;
     const float barWidth = static_cast<float>(stepsPerBar) * gridStepWidth() +
@@ -241,7 +244,8 @@ void ArsenalPanel::snapGridScrollBy(float deltaPx) {
     // The offset can sit between two bar lines (the clamp stops short of one), so the step comes from
     // ArsenalGridScroll: it leaves the line the offset is on, in the direction of travel, never skipping
     // the bar behind a clamped endpoint.
-    const float target = ArsenalGridScroll::nextBarOffset(m_gridScrollX, barWidth, maxScroll, direction);
+    float target = m_gridScrollX;
+    while (barsLeft-- > 0) target = ArsenalGridScroll::nextBarOffset(target, barWidth, maxScroll, direction);
     scrollGridBy(target - m_gridScrollX);
 }
 

@@ -28,6 +28,19 @@ inline float nextBarOffset(float scrollX, float barWidth, float maxScroll, int d
     return offset > maxScroll ? maxScroll : offset;
 }
 
+// Distance in, bars out. Only whole bars' worth is taken from the accumulator, so the leftover keeps
+// counting: a single 40 px notch and two 20 px trackpad deltas of the same total move the same number
+// of bars, instead of the split arriving as two.
+inline int wheelBars(float& accum, float deltaPx, float barPx) {
+    if (!(barPx > 0.0f)) return 0;
+    accum += deltaPx;
+    const int bars = static_cast<int>(std::floor(std::abs(accum) / barPx));
+    if (bars <= 0) return 0;
+    const int direction = accum > 0.0f ? 1 : -1;
+    accum -= static_cast<float>(direction * bars) * barPx;
+    return direction * bars;
+}
+
 } // namespace ArsenalGridScroll
 } // namespace Audio
 } // namespace Aestra

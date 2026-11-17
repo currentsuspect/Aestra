@@ -7,6 +7,7 @@
 #include "ArsenalRackLayout.h"
 
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <string>
 
@@ -114,6 +115,28 @@ int main() {
         check(Audio::ArsenalGridScroll::nextBarOffset(1.5f * bar, bar, maxScroll, -1) == bar,
               "reverse from half a bar past a line: back to that line");
         check(Audio::ArsenalGridScroll::nextBarOffset(0.0f, bar, maxScroll, -1) == 0.0f, "reverse at the start: nowhere to go");
+    }
+
+    std::cout << "[9] equal wheel distance moves equal bars, however it is split\n";
+    {
+        const float barPx = 40.0f; // one wheel notch
+        float combined = 0.0f;
+        const int once = Audio::ArsenalGridScroll::wheelBars(combined, 40.0f, barPx);
+        float split = 0.0f;
+        const int firstHalf = Audio::ArsenalGridScroll::wheelBars(split, 20.0f, barPx);
+        const int secondHalf = Audio::ArsenalGridScroll::wheelBars(split, 20.0f, barPx);
+        check(once == 1 && firstHalf == 0 && secondHalf == 1,
+              "40 px once and 20 + 20 px both move one bar");
+        check(std::abs(combined - split) < 1e-6f, "and leave the same remainder behind");
+        float leftover = 0.0f;
+        check(Audio::ArsenalGridScroll::wheelBars(leftover, 25.0f, barPx) == 0, "under a bar: nothing moves");
+        check(Audio::ArsenalGridScroll::wheelBars(leftover, 25.0f, barPx) == 1, "the remainder completes the bar");
+        check(std::abs(leftover - 10.0f) < 1e-6f, "past the bar stays in the accumulator");
+        float flick = 0.0f;
+        check(Audio::ArsenalGridScroll::wheelBars(flick, 120.0f, barPx) == 3, "120 px in one event is three bars");
+        check(std::abs(flick) < 1e-6f, "a whole-bar flick leaves nothing over");
+        float back = 0.0f;
+        check(Audio::ArsenalGridScroll::wheelBars(back, -40.0f, barPx) == -1, "reversing moves back a bar");
     }
 
     std::cout << (g_failures == 0 ? "ALL PASS\n" : "FAILURES\n");
