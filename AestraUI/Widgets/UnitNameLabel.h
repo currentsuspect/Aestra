@@ -2,6 +2,7 @@
 #pragma once
 
 #include "NUIComponent.h"
+#include "Models/MusicalRole.h"
 #include "NUITextInput.h"
 #include "NUIContextMenu.h"
 #include "UnitManager.h"
@@ -23,6 +24,8 @@ public:
 
     void setUnitName(const std::string& name);
     void setUnitType(Aestra::Audio::UnitType type);
+    /** @brief What the sound is in the song, shown beside its type: dim when read from the name, brighter when the user chose it. */
+    void setRole(const Aestra::Audio::MusicalRole& role) { if (role != m_role) { m_role = role; repaint(); } }
     /** @brief True while an inline rename is active (row key handling must not steal Delete/Backspace). */
     bool isRenaming() const { return m_isRenaming; }
 
@@ -45,6 +48,7 @@ private:
 
     std::string m_unitName;
     Aestra::Audio::UnitType m_unitType;
+    Aestra::Audio::MusicalRole m_role;
     bool m_isRenaming = false;
     bool m_compact = false;
     long long m_lastClickTimeMs = 0;

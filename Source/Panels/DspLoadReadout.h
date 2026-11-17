@@ -36,6 +36,25 @@ struct DspLoadReadout {
         return shown;
     }
 
+    static constexpr double kRefreshSeconds = 0.5; ///< how often a drifting digit is allowed to redraw the window
+    static constexpr float kJumpPoints = 10.0f;    ///< a rise this big is a spike: shown at once
+
+    /// Whether the transport bar should redraw its DSP number now. Redrawing it repaints the whole window, so a digit
+    /// that only drifts (an idle engine's callback time varies a few percent) waits for the refresh tick; a spike, a
+    /// change of amber/red level, or the first value after the readout was hidden does not wait.
+    static bool refreshDue(float candidate, float lastDrawn, double secondsSinceDrawn) {
+        if (lastDrawn < 0.0f)
+            return candidate >= 0.0f;
+        if (candidate < 0.0f)
+            return true;
+        if (levelFor(candidate) != levelFor(lastDrawn))
+            return true;
+        if (candidate - lastDrawn >= kJumpPoints)
+            return true;
+        return secondsSinceDrawn >= kRefreshSeconds &&
+               static_cast<int>(candidate + 0.5f) != static_cast<int>(lastDrawn + 0.5f);
+    }
+
     static Level levelFor(float percent) {
         return percent >= kOverloadAt ? Level::Overload : percent >= kBusyAt ? Level::Busy : Level::Normal;
     }

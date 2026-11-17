@@ -1173,6 +1173,12 @@ else()
 endif()
 
 # Atomic Save Test (self-contained filesystem atomic-write smoke test)
+# SPEC-capable audio memory: the PulseAudio client pool is 4 MB, not 64 MB per connection.
+add_executable(PulseClientConfigTest AestraAudio/PulseClientConfigTest.cpp)
+target_include_directories(PulseClientConfigTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)
+add_test(NAME PulseClientConfigTest COMMAND PulseClientConfigTest)
+set_tests_properties(PulseClientConfigTest PROPERTIES LABELS "audio;regression;performance;contract:audio")
+
 add_executable(AestraAtomicSaveTest AestraAudio/AtomicSaveTest.cpp)
 target_link_libraries(AestraAtomicSaveTest PRIVATE)
 add_test(NAME AestraAtomicSaveTest COMMAND AestraAtomicSaveTest)
@@ -1544,6 +1550,25 @@ target_link_libraries(AuditionDualPlaybackTest PRIVATE AestraAudio)
 add_test(NAME AuditionDualPlaybackTest COMMAND AuditionDualPlaybackTest)
 set_tests_properties(AuditionDualPlaybackTest PROPERTIES LABELS "audio;audition;contract:audio")
 
+# A reference longer than the mix is cut where the mix ends, with no buzz (owner, 16 Nov 2026).
+add_executable(AuditionReferenceEndTest AestraAudio/AuditionReferenceEndTest.cpp)
+target_link_libraries(AuditionReferenceEndTest PRIVATE AestraAudio)
+add_test(NAME AuditionReferenceEndTest COMMAND AuditionReferenceEndTest)
+set_tests_properties(AuditionReferenceEndTest PROPERTIES LABELS "audio;audition;regression;contract:audio")
+
+# What is measured is what is heard: a longer reference is trimmed to the mix before it is compared.
+add_executable(AuditionCompareTrimTest Integration/AuditionCompareTrimTest.cpp)
+target_link_libraries(AuditionCompareTrimTest PRIVATE AestraAudio)
+target_include_directories(AuditionCompareTrimTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+)
+add_test(NAME AuditionCompareTrimTest COMMAND AuditionCompareTrimTest)
+set_tests_properties(AuditionCompareTrimTest PROPERTIES LABELS "audio;audition;regression;contract:audio")
+
 add_executable(PreviewAuditionGainParityTest AestraAudio/PreviewAuditionGainParityTest.cpp)
 target_link_libraries(PreviewAuditionGainParityTest PRIVATE AestraAudio)
 add_test(NAME PreviewAuditionGainParityTest COMMAND PreviewAuditionGainParityTest)
@@ -1730,6 +1755,32 @@ target_include_directories(ArsenalExportCurrentPolicyTest PRIVATE
 add_test(NAME ArsenalExportCurrentPolicyTest COMMAND ArsenalExportCurrentPolicyTest)
 set_tests_properties(ArsenalExportCurrentPolicyTest PROPERTIES LABELS "arsenal;policy;offline;contract:audio")
 
+# A bounce begins where the timeline begins: the intro is not cut (owner, 16 Nov 2026).
+add_executable(ExportIntroStartTest AestraAudio/ExportIntroStartTest.cpp)
+target_link_libraries(ExportIntroStartTest PRIVATE AestraAudio)
+target_include_directories(ExportIntroStartTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Tests
+)
+add_test(NAME ExportIntroStartTest COMMAND ExportIntroStartTest)
+set_tests_properties(ExportIntroStartTest PROPERTIES LABELS "audio;offline;regression;contract:audio")
+
+# An export at another rate keeps the pitch (owner, 16 Nov 2026).
+add_executable(ExportPitchAcrossRatesTest AestraAudio/ExportPitchAcrossRatesTest.cpp)
+target_link_libraries(ExportPitchAcrossRatesTest PRIVATE AestraAudio)
+target_include_directories(ExportPitchAcrossRatesTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Tests
+)
+add_test(NAME ExportPitchAcrossRatesTest COMMAND ExportPitchAcrossRatesTest)
+set_tests_properties(ExportPitchAcrossRatesTest PROPERTIES LABELS "audio;offline;regression;contract:audio")
+
 # Arsenal live/export parity hardening test (Phase 3)
 add_executable(ArsenalExportLiveParityTest AestraAudio/ArsenalExportLiveParityTest.cpp)
 target_link_libraries(ArsenalExportLiveParityTest PRIVATE AestraAudio)
@@ -1759,6 +1810,23 @@ target_include_directories(ArsenalBridgeModeRoundTripTest PRIVATE
 )
 add_test(NAME ArsenalBridgeModeRoundTripTest COMMAND ArsenalBridgeModeRoundTripTest)
 set_tests_properties(ArsenalBridgeModeRoundTripTest PROPERTIES LABELS "arsenal;policy;roundtrip;contract:durability")
+
+# Roles: what a sound or track is in the song (Connected Understanding, owner brief 16 Nov 2026).
+add_executable(MusicalRoleTest AestraAudio/MusicalRoleTest.cpp)
+target_include_directories(MusicalRoleTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)
+add_test(NAME MusicalRoleTest COMMAND MusicalRoleTest)
+set_tests_properties(MusicalRoleTest PROPERTIES LABELS "audio;roles;policy;contract:application")
+
+add_executable(MusicalRoleProjectTest AestraAudio/MusicalRoleProjectTest.cpp)
+target_link_libraries(MusicalRoleProjectTest PRIVATE AestraAudioCore)
+target_include_directories(MusicalRoleProjectTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MusicalRoleProjectTest COMMAND MusicalRoleProjectTest)
+set_tests_properties(MusicalRoleProjectTest PROPERTIES LABELS "audio;roles;roundtrip;undo;contract:durability")
 
 # Sample Rate Converter Test
 add_executable(AestraSampleRateConverterTest AestraAudio/SampleRateConverterTest.cpp)
@@ -3466,6 +3534,32 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(UIMixerKitTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
 endif()
 
+# SPEC-028 R1: the invalidation region (pure) and how widgets feed it.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(NUIDirtyRegionTest AestraUI_Core AestraUI_Platform)
+    add_executable(NUIDirtyRegionTest AestraUI/NUIDirtyRegionTest.cpp)
+    target_link_libraries(NUIDirtyRegionTest PRIVATE AestraUI_Core AestraUI_Platform)
+    target_include_directories(NUIDirtyRegionTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME NUIDirtyRegionTest COMMAND NUIDirtyRegionTest)
+    set_tests_properties(NUIDirtyRegionTest PROPERTIES LABELS "ui;regression;performance;contract:application")
+
+    aestra_require_ui_targets(NUIComponentInvalidationTest AestraUI_Core AestraUI_Platform)
+    add_executable(NUIComponentInvalidationTest AestraUI/NUIComponentInvalidationTest.cpp)
+    target_link_libraries(NUIComponentInvalidationTest PRIVATE AestraUI_Core AestraUI_Platform)
+    target_include_directories(NUIComponentInvalidationTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME NUIComponentInvalidationTest COMMAND NUIComponentInvalidationTest)
+    set_tests_properties(NUIComponentInvalidationTest PROPERTIES LABELS "ui;regression;performance;contract:application")
+endif()
+
 # The mixer navigator for overflowing sessions: ticks, bracket, group labels (V81-M1, FD-28 point 7).
 if(AESTRA_ENABLE_UI)
     aestra_require_ui_targets(UIMixerNavigatorTest AestraUI_Core AestraUI_Platform)
@@ -4622,6 +4716,8 @@ endif()
 
 if(AESTRA_ENABLE_UI)
     set(AESTRA_REQUIRED_UI_TESTS
+        NUIDirtyRegionTest
+        NUIComponentInvalidationTest
         NUIThemeConsistencyTest
         NUIKitThemesTest
         NUIContextMenuInteractionTest
