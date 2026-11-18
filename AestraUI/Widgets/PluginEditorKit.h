@@ -103,8 +103,14 @@ float drawCaps(NUIRenderer& renderer, const std::string& text, float x, float ce
 
 /// Section header: caps label, then a hairline to the end of the span.
 void drawSectionHeader(NUIRenderer& renderer, float x, float y, float width, const std::string& label);
-/// Pure-black display well with a 1 px border.
+/// Design Spec, Plugin header (locked): a graph sits in a sunk editorWell with no outline. The well is remembered so
+/// the window can lay the display glass over it once the graph is drawn (drawPendingGlass).
 void drawWell(NUIRenderer& renderer, const NUIRect& rect);
+/// Lays Depth::glass over every well drawn since the last call, then forgets them. The editor window calls this
+/// after its content; a display is read-only, so the glass never covers a control.
+void drawPendingGlass(NUIRenderer& renderer);
+/// Forgets wells without drawing glass (a frame that was abandoned).
+void discardPendingGlass();
 
 /// The Ember knob in a cell whose top-left is @p cell. Draws the disc, arcs, needle, label and value.
 void drawEmberKnob(NUIRenderer& renderer, const NUIPoint& cell, KnobSize size, float value, const std::string& label,

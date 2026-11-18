@@ -3,6 +3,7 @@
 
 #include "Models/ClipInstance.h"
 #include "Models/CompRanges.h"
+#include "Models/MusicalRole.h"
 #include "Core/MixerChannel.h"
 
 #include <cstdint>
@@ -30,6 +31,8 @@ struct Track {
     uint32_t channelId{MASTER_MIXER_CHANNEL_ID};
     /** User-facing name. */
     std::string name;
+    /** What this track is in the song (MusicalRole.h): the user's choice, else what its name says, else unknown. */
+    MusicalRole role;
     /** Recording arm state — the authoritative recording arm (FD-14 #6). */
     bool armed{false};
     /** Primary/visible lane when the track is collapsed. */

@@ -1,6 +1,8 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "MixerPanel.h"
 
+#include "Commands/AddChannelCommand.h"
+
 #include "MixerViewModel.h"
 #include "Events/Connection.h"
 #include "../AestraUI/Widgets/UIMixerPanel.h"
@@ -46,6 +48,14 @@ MixerPanel::MixerPanel(std::shared_ptr<TrackManager> trackManager)
     loadUIPreferences();
     m_newMixer->onInspectorPreferenceChanged = [this](bool) { saveUIPreferences(); };
     m_newMixer->onViewPreferencesChanged = [this]() { saveUIPreferences(); };
+    // A new project has one channel; "+ Channel" adds the next, as one undo step.
+    m_newMixer->onAddChannelRequested = [this]() {
+        if (!m_trackManager) return;
+        const std::string name = "Channel " + std::to_string(m_trackManager->getChannelCount() + 1);
+        m_trackManager->getCommandHistory().pushAndExecute(
+            std::make_shared<Aestra::Audio::AddChannelCommand>(*m_trackManager, name));
+        refreshChannels();
+    };
 
     refreshChannels();
 }

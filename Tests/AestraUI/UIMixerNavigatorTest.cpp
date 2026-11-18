@@ -74,6 +74,25 @@ int main() {
     nav.onScrollRequested = [&](float s) { requested = s; };
     nav.onTickClicked = [&](uint32_t id) { clickedId = id; };
 
+    // The mixer panel hands the navigator the same content every frame. An unchanged set must not invalidate the
+    // window: the panel's per-frame call was re-presenting a still screen at the frame rate (idle frame elision
+    // defeated; 100% CPU on software GL with nothing moving).
+    std::cout << "[0] unchanged content does not repaint\n";
+    {
+        nav.setDirty(false);
+        nav.setContent(ticks, groups, contentW);
+        check(!nav.isDirty(), "the same ticks, groups and width leave the window clean");
+        auto louder = ticks;
+        louder[3].level = 0.5f;
+        nav.setContent(louder, groups, contentW);
+        check(nav.isDirty(), "a changed level repaints");
+        nav.setDirty(false);
+        nav.setContent(louder, groups, contentW);
+        check(!nav.isDirty(), "and settles clean again once the level holds");
+        nav.setContent(ticks, groups, contentW); // back to the original set for the cases below
+        nav.setDirty(false);
+    }
+
     std::cout << "[1] ticks keep the strips' order and proportion\n";
     {
         bool ordered = true;

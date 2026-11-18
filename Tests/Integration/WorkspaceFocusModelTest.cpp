@@ -136,9 +136,19 @@ void testNames() {
             "legacy pianoRoll focus must not parse (editor, not workspace)");
 }
 
+void testPreviewAddFollowsTheMode() {
+    using WorkspaceFocusModel::PreviewAddTarget;
+    require(WorkspaceFocusModel::previewAddTarget(ViewFocus::Arsenal) == PreviewAddTarget::Arsenal, "in the Arsenal a sound is added to the Arsenal");
+    require(WorkspaceFocusModel::previewAddTarget(ViewFocus::Timeline) == PreviewAddTarget::Timeline, "in the Timeline it is added to the Timeline");
+    require(WorkspaceFocusModel::previewAddTarget(ViewFocus::RoutingMap) == PreviewAddTarget::Arsenal, "elsewhere the Arsenal is the home");
+    require(std::string(WorkspaceFocusModel::previewAddLabel(PreviewAddTarget::Timeline)) == "Add to Timeline", "the button says where it goes (Timeline)");
+    require(std::string(WorkspaceFocusModel::previewAddLabel(PreviewAddTarget::Arsenal)) == "Add to Arsenal", "the button says where it goes (Arsenal)");
+}
+
 } // namespace
 
 int main() {
+    testPreviewAddFollowsTheMode();
     testSegmentMapping();
     testTransitionClassification();
     testPanelVisibility();

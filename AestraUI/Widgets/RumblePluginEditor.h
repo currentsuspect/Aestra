@@ -74,7 +74,12 @@ private:
     void keep();
     void undoKeep();
     void refreshKept();
-    void moved() { m_editorSaid.clear(); } // a move replaces what Keep or Undo said
+    // A move replaces what Keep or Undo said, and Undo no longer points at that keep.
+    void moved() {
+        m_editorSaid.clear();
+        m_lastKept.reset();
+    }
+
     void soundChanged(); // hand the current sound to the instrument; ask for outlines
     void audition();     // play the current sound once at C3, its home pitch (R6)
     Aestra::Plugins::RumbleSound instrumentSound() const;

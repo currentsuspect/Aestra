@@ -9,6 +9,7 @@
 #include "RealtimeThreadGuard.h"
 #include "Plugin/InternalPluginBase.h"
 #include "Plugin/PluginHost.h"
+#include "Plugin/ParamTextBuiltins.h"
 
 #include <algorithm>
 #include <array>
@@ -363,6 +364,17 @@ public:
     AESTRA_VALIDATE_PARAM_SPECS(kSpecs, kParamCount);
     uint32_t stateMagic() const override { return kStateMagic; }
 
+
+    // "30 ms", "2:1", "85%" -> normalized (#1405). Ranges: ParamTextBuiltins.h.
+    bool describeParameterText(uint32_t id, ParameterTextInfo& out) const override {
+        return ParamTextDetail::describeComp<AestraComp>(id, out);
+    }
+    bool parseParameterText(uint32_t id, const std::string& text, float& normalized,
+                           std::string& error) const override {
+        return ParamTextDetail::parseWith([this](uint32_t paramId, ParameterTextInfo& out) {
+            return describeParameterText(paramId, out);
+        }, id, text, normalized, error);
+    }
 
     std::string getParameterDisplay(uint32_t id) const override {
         if (id >= kParamCount) return "";

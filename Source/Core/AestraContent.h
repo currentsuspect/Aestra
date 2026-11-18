@@ -471,7 +471,9 @@ public:
     void updatePreviewPlayhead();
 
     /** @brief Show a transient status pill (bottom-center overlay). */
-    void showToast(const std::string& message, double seconds = 2.6);
+    /// A project file was opened from the file browser (double-click, Enter). The app asks about unsaved work, then loads it.
+    std::function<void(const std::string&)> onOpenProjectRequested;
+    void showToast(const std::string& message); // one wait time for every toast (ToastStack.h)
 
     /** @brief Load an effect plugin onto the selected track. */
     void loadEffectToSelectedTrack(const std::string& pluginId);
@@ -632,6 +634,8 @@ private:
     void updateFrameServices(double dt);
     double m_midiPortPollSeconds = 0.0;
     Aestra::DspLoadReadout m_dspLoad;
+    float m_dspDrawn = -1.0f;      ///< the DSP percent last handed to the transport bar (-1: none yet)
+    double m_dspSinceDrawn = 0.0;  ///< seconds since then
     Aestra::SamplerEditHistory m_samplerEdits; ///< undo for the Sample Editor's controls
     void enqueueMainThreadTask(std::function<void()> task);
     // AestraContentImport.cpp: the sample decodes on a worker thread, the clip is placed on the main one.

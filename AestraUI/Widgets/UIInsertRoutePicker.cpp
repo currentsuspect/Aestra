@@ -141,6 +141,7 @@ void UIMixerRoutePicker::open() {
     if (m_open)
         return;
     m_open = true;
+    setPopupOpen(this, true);
     m_firstVisible = 0;
     m_hoveredVisibleRow = -1;
     m_searchQuery.clear();
@@ -157,6 +158,7 @@ void UIMixerRoutePicker::close() {
     if (!m_open)
         return;
     m_open = false;
+    setPopupOpen(this, false);
     m_hoveredVisibleRow = -1;
     m_searchInput->setVisible(false);
     m_searchInput->setFocused(false);

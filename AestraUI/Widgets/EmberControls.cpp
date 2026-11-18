@@ -1,5 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "EmberControls.h"
+#include "NUIThemeSystem.h"
+#include "../Graphics/NUIDepth.h"
 
 #include "NUIRenderer.h"
 
@@ -196,8 +198,10 @@ void EmberDropdown::draw(NUIRenderer& renderer, const Aestra::Audio::IPluginInst
                          bool) const {
     const auto c = emberColors();
     const bool hover = enabled && mouse && rect.contains(*mouse);
-    renderer.fillRect(rect, (hover || open) ? c.raised : c.control);
-    renderer.strokeRect(rect, 1.0f, open ? c.primary : enabled ? c.edge : c.border);
+    // Closed, a dropdown is a Field (sunk pill, no outline), sinking deeper while its list is open (as NUIDropdown).
+    const float rad = Depth::Radius::pill(rect.height);
+    Depth::bed(renderer, rect, rad, open ? Depth::Cut::Deep : Depth::Cut::Shallow);
+    if (hover && !open) renderer.fillRoundedRect(rect, rad, NUIThemeManager::getInstance().getColor("hover"));
     const int i = index(plugin);
     drawTextLeft(renderer, labels.empty() ? std::string() : labels[static_cast<size_t>(i)], rect.x + 8.0f,
                  rect.y + rect.height * 0.5f, 12.0f, enabled ? c.ink : c.inkMuted);
@@ -212,16 +216,17 @@ void EmberDropdown::drawMenu(NUIRenderer& renderer, const Aestra::Audio::IPlugin
     if (!open) return;
     const auto c = emberColors();
     const NUIRect m = menuRect(window);
-    renderer.fillRect(m, c.panel);
-    renderer.strokeRect(m, 1.0f, c.edge);
+    // Design Spec, Menu: the one popup card, rows inset and rounded (row geometry is unchanged for hit testing).
+    Depth::floatingCard(renderer, m, 10.0f, NUIThemeManager::getInstance().getColor("surfaceTertiary"));
     const int current = index(plugin);
     for (size_t row = 0; row < labels.size(); ++row) {
         const int li = order.empty() ? static_cast<int>(row) : order[row];
         const NUIRect r(m.x + 1.0f, m.y + 1.0f + static_cast<float>(row) * kMenuRowH, m.width - 2.0f, kMenuRowH);
         const bool on = li == current;
         const bool hot = mouse && r.contains(*mouse);
-        if (on) renderer.fillRect(r, c.selected);
-        else if (hot) renderer.fillRect(r, c.raised);
+        const NUIRect inset(r.x + 3.0f, r.y, r.width - 6.0f, r.height); // never edge to edge
+        if (on) renderer.fillRoundedRect(inset, 6.0f, c.selected);
+        else if (hot) renderer.fillRoundedRect(inset, 6.0f, NUIThemeManager::getInstance().getColor("hover"));
         drawTextLeft(renderer, labels[static_cast<size_t>(li)], r.x + 9.0f, r.y + kMenuRowH * 0.5f, 12.0f,
                      (on || hot) ? c.ink : c.inkSoft);
         if (on) {

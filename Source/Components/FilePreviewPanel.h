@@ -34,8 +34,12 @@ public:
     void setOnPlay(std::function<void(const FileItem&)> callback) { onPlay_ = callback; }
     void setOnStop(std::function<void()> callback) { onStop_ = callback; }
     void setOnSeek(std::function<void(double)> callback) { onSeek_ = callback; }
-    /// FD-47 dock actions: Add to Arsenal (a new sampler row) and the Auto-play switch.
-    void setOnAddToArsenal(std::function<void(const FileItem&)> callback) { onAddToArsenal_ = std::move(callback); }
+    /// FD-47 dock actions: the Add button and the Auto-play switch. The Add button's label is asked for each time it
+    /// is drawn, because where a sound goes follows the mode the user is in (Arsenal row, or the Timeline).
+    void setAddAction(std::function<std::string()> label, std::function<void(const FileItem&)> callback) {
+        addLabel_ = std::move(label);
+        onAdd_ = std::move(callback);
+    }
     void setOnAutoPlayChanged(std::function<void(bool)> callback) { onAutoPlayChanged_ = std::move(callback); }
     void setAutoPlay(bool on) { autoPlay_ = on; setDirty(true); }
     bool isAutoPlay() const { return autoPlay_; }
@@ -76,7 +80,8 @@ private:
     NUIRect autoPlayBounds_;
     NUIRect addBounds_;
     bool autoPlay_ = true;
-    std::function<void(const FileItem&)> onAddToArsenal_;
+    std::function<std::string()> addLabel_;
+    std::function<void(const FileItem&)> onAdd_;
     std::function<void(bool)> onAutoPlayChanged_;
 
     // Callbacks

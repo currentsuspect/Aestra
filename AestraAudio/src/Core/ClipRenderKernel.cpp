@@ -2,6 +2,7 @@
 #include "Core/ClipRenderKernel.h"
 
 #include "Core/MixMath.h"
+#include "Models/ClipInstance.h"
 
 #include <algorithm>
 #include <cmath>
@@ -43,6 +44,8 @@ ClipRenderState makeClipRenderState(const ClipRuntimeInfo& clipInfo, double proj
     clip.pitchSemitones = clipInfo.pitchSemitones;
     clip.fadeInSamples = clipInfo.fadeInSamples;
     clip.fadeOutSamples = clipInfo.fadeOutSamples;
+    clip.fadeInShape = clipInfo.fadeInShape;
+    clip.fadeOutShape = clipInfo.fadeOutShape;
     return clip;
 }
 
@@ -125,15 +128,22 @@ ClipRenderResult renderClipInto(const ClipRenderState& clip, uint64_t blockStart
             std::min(clipLength, std::max<uint64_t>(kClipEdgeFadeSamples, clip.fadeInSamples));
         const uint64_t fadeOutLen =
             std::min(clipLength, std::max<uint64_t>(kClipEdgeFadeSamples, clip.fadeOutSamples));
-        const auto clipFadeAt = [&clip, fadeInLen, fadeOutLen](uint64_t projectSample) {
+        // A ramp is x in [0,1] (0 silent, 1 full). Equal power bends it so two ramps that cross keep their
+        // combined power steady: sin for the rising side, and the falling side is the same curve read backwards.
+        const auto shapeRamp = [](double x, uint8_t shape) {
+            return shape == static_cast<uint8_t>(FadeShape::EqualPower) ? std::sin(x * 1.5707963267948966) : x;
+        };
+        const auto clipFadeAt = [&clip, fadeInLen, fadeOutLen, &shapeRamp](uint64_t projectSample) {
             double fade = 1.0;
             if (fadeInLen > 0 && projectSample < clip.startSample + fadeInLen) {
-                fade = std::min(fade, static_cast<double>(projectSample - clip.startSample) /
-                                          static_cast<double>(fadeInLen));
+                fade = std::min(fade, shapeRamp(static_cast<double>(projectSample - clip.startSample) /
+                                                    static_cast<double>(fadeInLen),
+                                                clip.fadeInShape));
             }
             if (fadeOutLen > 0 && projectSample + fadeOutLen > clip.endSample) {
-                fade = std::min(fade, static_cast<double>(clip.endSample - projectSample) /
-                                          static_cast<double>(fadeOutLen));
+                fade = std::min(fade, shapeRamp(static_cast<double>(clip.endSample - projectSample) /
+                                                    static_cast<double>(fadeOutLen),
+                                                clip.fadeOutShape));
             }
             return fade;
         };

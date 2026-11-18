@@ -75,6 +75,57 @@ std::optional<AestraUUID> parseObjectId(std::string_view s) {
 
 // Reason recorded by the most recent factory refusal (see CommandRegistry::fail).
 thread_local std::string t_lastBuildError;
+
+/**
+ * Read a set_effect_param --value the way it is heard, not the way it is stored.
+ *
+ * A bare number in 0..1 means normalized, which is what it has always meant and
+ * what every existing script sends. Anything else is the parameter's own unit —
+ * "3.5k", "3500 Hz", "-1.0 dB", "2:1", "36" for a stepped slope — and the plugin
+ * that prints those strings parses them, so the mapping has exactly one owner
+ * (#1405). Out of range is refused with the range quoted, never clamped: a
+ * value the parameter cannot hold is a mistake worth reporting.
+ *
+ * "=0.5" is the explicit display-value form, for the parameters whose own range
+ * runs through 0..1 (EQ Q is 0.1..10 with no unit, so a bare 0.5 can only ever
+ * mean normalized). It reads the value after the '=' in the parameter's own unit.
+ */
+bool resolveEffectParamValue(IPluginInstance& plugin, uint32_t paramId, const std::string& text,
+                             float& normalized, std::string& error) {
+    if (text.find_first_not_of(" \t") == std::string::npos) {
+        error = "value is empty";
+        return false;
+    }
+    // "=0.5": the parameter's own 0.5, not the middle of its normalized range.
+    if (text[0] == '=') {
+        const std::string displayValue = text.substr(1);
+        if (displayValue.find_first_not_of(" \t") == std::string::npos) {
+            error = "'=' needs a value after it (remember: '=' means the parameter's own unit)";
+            return false;
+        }
+        std::string pluginError;
+        if (plugin.parseParameterText(paramId, displayValue, normalized, pluginError)) return true;
+        error = (pluginError.empty() ? "this parameter publishes no display units, so '=' has nothing to read: " + displayValue
+                                     : pluginError) +
+                " (a bare 0..1 number means normalized; '=' means the parameter's own unit)";
+        return false;
+    }
+    if (auto plain = safeStof(text); plain && *plain >= 0.0f && *plain <= 1.0f) {
+        normalized = *plain;
+        return true;
+    }
+    std::string pluginError;
+    if (plugin.parseParameterText(paramId, text, normalized, pluginError)) return true;
+    if (pluginError.empty()) {
+        // The plugin does not declare units for this parameter at all, so there is
+        // nothing to read the text as (get_effects says acceptsText: false).
+        error = "value must be a normalized 0..1 number — this parameter publishes no display units, got: " + text;
+        return false;
+    }
+    error = pluginError +
+            " (a plain 0..1 number means normalized; '=0.5' means the parameter's own 0.5; get_effects lists units and ranges)";
+    return false;
+}
 } // namespace
 
 void registerPianoRollVerbs(CommandRegistry& reg); // PianoRollVerbs.cpp (V82-M3)
@@ -1019,8 +1070,6 @@ void CommandRegistry::initialize() {
         if (!paramRaw) return nullptr;
         auto valueRaw = requireFlag(flags, "value");
         if (!valueRaw) return nullptr;
-        auto valueOpt = safeStof(*valueRaw);
-        if (!valueOpt) return nullptr;
 
         // param is a name (case-insensitive) or a numeric id from get_effects.
         const auto params = plugin->getParameters();
@@ -1050,7 +1099,12 @@ void CommandRegistry::initialize() {
         if (target->isReadOnly)
             return CommandRegistry::fail("parameter '" + target->name + "' is read-only");
 
-        return std::make_unique<SetEffectParamCommand>(plugin, target->id, *valueOpt);
+        float value = 0.0f;
+        std::string valueError;
+        if (!resolveEffectParamValue(*plugin, target->id, std::string(*valueRaw), value, valueError))
+            return CommandRegistry::fail("parameter '" + target->name + "': " + valueError);
+
+        return std::make_unique<SetEffectParamCommand>(plugin, target->id, value);
     });
 
     reg.registerCommand("clone_pattern", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {

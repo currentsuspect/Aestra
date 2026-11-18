@@ -79,6 +79,9 @@ public:
         std::string viewFocus;
         bool pianoRollOpen{false};
         bool sequencerOpen{false};
+        // Timeline track heights (TrackHeightsJson.h): the shared height (0 = not saved) and the resized rows.
+        float trackHeight{0.0f};
+        std::vector<std::pair<std::string, float>> trackHeights;
     };
 
     /**

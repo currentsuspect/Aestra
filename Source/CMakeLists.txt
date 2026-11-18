@@ -155,6 +155,7 @@ set(Aestra_SOURCES
 	Components/TrackManagerUIClipOps.cpp
 	Components/TrackManagerUIRender.cpp
 	Components/TrackManagerUIEvents.cpp
+	Components/TrackManagerUIMarkers.cpp
 	Components/TrackManagerUIView.cpp
 	Components/TrackManagerUIFold.cpp
 	Components/TimelineFold.h

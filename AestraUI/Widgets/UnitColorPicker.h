@@ -21,6 +21,7 @@ public:
     
     void onRender(NUIRenderer& renderer) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
+    bool onKeyEvent(const NUIKeyEvent& event) override; ///< Escape closes it, like every other popup
     
     // Show at specific position
     void showAt(NUIPoint position);

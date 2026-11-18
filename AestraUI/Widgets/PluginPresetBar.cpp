@@ -1,5 +1,6 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "PluginPresetBar.h"
+#include "../Graphics/NUIDepth.h"
 
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
@@ -26,6 +27,10 @@ constexpr float kPad = 10.0f;
 constexpr float kSearchH = 28.0f;
 constexpr float kChipH = 22.0f;
 constexpr float kFooterH = 28.0f;
+// Design Spec, Menu (locked): one popup card, 10px round; rows inset 5px and rounded 6px.
+constexpr float kCardRadius = 10.0f;
+constexpr float kCardInset = 5.0f;
+constexpr float kRowRadius = 6.0f;
 constexpr float kSaveW_ = 340.0f;
 constexpr float kSaveH = 196.0f;
 constexpr const char* kFilterNames[] = {"All", "Factory", "Yours", "This project"};
@@ -68,6 +73,38 @@ void chevron(NUIRenderer& r, const NUIRect& box, bool left, const NUIColor& c) {
     const float dir = left ? 1.0f : -1.0f;
     r.drawLine({cx + dir * d * 0.5f, cy - d}, {cx - dir * d * 0.5f, cy}, 1.5f, c);
     r.drawLine({cx - dir * d * 0.5f, cy}, {cx + dir * d * 0.5f, cy + d}, 1.5f, c);
+}
+
+// Design Spec, Plugin header (locked): the preset picker is one pill, "‹ name ⌄ ›", raised at rest and sunk while
+// its fold is open. Hover lightens the part under the pointer.
+void pickerPill(NUIRenderer& r, const NUIRect& prev, const NUIRect& name, const NUIRect& next, bool open, int hover) {
+    const NUIRect pill{prev.x, prev.y, next.right() - prev.x, prev.height};
+    const float rad = Depth::Radius::pill(pill.height);
+    if (open)
+        Depth::bed(r, pill, rad, Depth::Cut::Deep);
+    else
+        Depth::object(r, pill, rad);
+    const NUIRect* parts[] = {&prev, &name, &next};
+    if (!open && hover >= 0 && hover <= 2)
+        r.fillRoundedRect(*parts[hover], rad, NUIThemeManager::getInstance().getColor("hover"));
+}
+
+// Draws @p text with the first case-insensitive match of @p query lit (Design Spec, Menu: matched letters in
+// `secondary`).
+void drawMatched(NUIRenderer& r, const std::string& text, const NUIPoint& at, float size, const NUIColor& ink,
+                 const NUIColor& lit, const std::string& query) {
+    const size_t pos = query.empty() ? std::string::npos : lower(text).find(lower(query));
+    if (pos == std::string::npos) {
+        r.drawText(text, at, size, ink);
+        return;
+    }
+    const std::string head = text.substr(0, pos), hit = text.substr(pos, query.size()), tail = text.substr(pos + hit.size());
+    float x = at.x;
+    r.drawText(head, {x, at.y}, size, ink);
+    x += r.measureText(head, size).width;
+    r.drawText(hit, {x, at.y}, size, lit);
+    x += r.measureText(hit, size).width;
+    r.drawText(tail, {x, at.y}, size, ink);
 }
 
 std::string fit(NUIRenderer& r, const std::string& text, float size, float width) {
@@ -263,12 +300,7 @@ void PluginPresetBar::render(NUIRenderer& r, const NUIRect& titleBar) {
     const Colors c = colors();
     const Layout& l = m_layout;
 
-    // ‹ name › as one framed control
-    const NUIRect frame{l.prev.x, l.prev.y, l.next.right() - l.prev.x, kBarH};
-    r.fillRoundedRect(frame, 4.0f, c.bed);
-    r.strokeRoundedRect(frame, 4.0f, 1.0f, m_popover == Popover::Browse ? c.accent : c.border);
-    r.drawLine({l.name.x, l.name.y + 4.0f}, {l.name.x, l.name.bottom() - 4.0f}, 1.0f, c.border);
-    r.drawLine({l.next.x, l.next.y + 4.0f}, {l.next.x, l.next.bottom() - 4.0f}, 1.0f, c.border);
+    pickerPill(r, l.prev, l.name, l.next, m_popover == Popover::Browse, m_hoverControl);
     chevron(r, l.prev, true, m_hoverControl == 0 ? c.text : c.text2);
     chevron(r, l.next, false, m_hoverControl == 2 ? c.text : c.text2);
 
@@ -301,19 +333,18 @@ void PluginPresetBar::render(NUIRenderer& r, const NUIRect& titleBar) {
     r.drawLine({vx, vy + 1.5f}, {vx + 3.0f, vy - 1.5f}, 1.3f, c.text2);
 
     // Save
-    r.fillRoundedRect(l.save, 4.0f, m_hoverControl == 3 ? c.raised : c.surface);
-    r.strokeRoundedRect(l.save, 4.0f, 1.0f, m_popover == Popover::Save ? c.accent : c.border);
+    // Save: a soft pill that sinks while its card is open (Design Spec, Button); no outline.
+    if (m_popover == Popover::Save)
+        Depth::bed(r, l.save, Depth::Radius::pill(l.save.height), Depth::Cut::Deep);
+    else
+        EditorKit::drawPushButton(r, l.save, std::string(), m_hoverControl == 3);
     r.drawTextCentered("Save", l.save, 11.5f, c.text);
 
-    // A | B
+    // A | B: the Segment switch, as in the two-row header. A reads as chosen until a comparison starts.
     const bool cmp = m_session->comparing();
     const int slot = m_session->activeSlot();
-    r.fillRoundedRect(l.ab, 4.0f, c.surface);
-    if (cmp) r.fillRoundedRect(slot == 0 ? l.a : l.b, 4.0f, c.accent);
-    r.strokeRoundedRect(l.ab, 4.0f, 1.0f, c.border);
-    r.drawLine({l.b.x, l.b.y}, {l.b.x, l.b.bottom()}, 1.0f, c.border);
-    r.drawTextCentered("A", l.a, 11.5f, cmp && slot == 0 ? c.bed : c.text2);
-    r.drawTextCentered("B", l.b, 11.5f, cmp && slot == 1 ? c.bed : c.text2);
+    static const std::string kAB[2] = {"A", "B"};
+    EditorKit::drawSegmented(r, l.ab, kAB, 2, (!cmp || slot == 0) ? 0 : 1, -1, false);
 }
 
 // The FD-73 look: flat, sharp, one edge colour, painted by the shared control kit's colours.
@@ -322,12 +353,15 @@ void PluginPresetBar::renderTwoRow(NUIRenderer& r, const NUIRect&) {
     const Layout& l = m_layout;
     const bool bypassed = m_actions.isBypassed && m_actions.isBypassed();
 
+    // Save and ··· are soft pills (Design Spec, Button); Save sinks while its card is open, like the picker.
     auto button = [&](const NUIRect& rc, bool hover, bool open) {
-        r.fillRect(rc, hover ? k.raised : k.body);
-        r.strokeRect(rc, 1.0f, open ? k.primary : k.edge);
+        if (open)
+            Depth::bed(r, rc, Depth::Radius::pill(rc.height), Depth::Cut::Deep);
+        else
+            EditorKit::drawPushButton(r, rc, std::string(), hover);
     };
+    pickerPill(r, l.prev, l.name, l.next, m_popover == Popover::Browse, m_hoverControl);
     auto arrow = [&](const NUIRect& rc, bool left, bool hover) {
-        button(rc, hover, false);
         const float cx = rc.x + rc.width * 0.5f, cy = rc.y + rc.height * 0.5f;
         const float dir = left ? 1.0f : -1.0f;
         const NUIColor ink = hover ? k.ink : k.inkSoft;
@@ -338,9 +372,6 @@ void PluginPresetBar::renderTwoRow(NUIRenderer& r, const NUIRect&) {
     arrow(l.next, false, m_hoverControl == 2);
 
     // Preset name: a dropdown with the edit count beside the name.
-    const bool nameHot = m_hoverControl == 1 || m_popover == Popover::Browse;
-    button(l.name, false, m_popover == Popover::Browse);
-    r.fillRect({l.name.x + 1.0f, l.name.y + 1.0f, l.name.width - 2.0f, l.name.height - 2.0f}, nameHot ? k.raised : k.control);
     const auto& current = m_session->current();
     const int changes = m_session->changes();
     const std::string name = current ? current->name : "No preset";
@@ -362,21 +393,12 @@ void PluginPresetBar::renderTwoRow(NUIRenderer& r, const NUIRect&) {
     button(l.save, m_hoverControl == 3, m_popover == Popover::Save);
     r.drawTextCentered("Save", l.save, 12.0f, m_hoverControl == 3 ? k.ink : k.inkSoft);
 
-    // A | B
+    // A | B: the 24px Segment switch with letters (Design Spec, Plugin header). A is the sound now until a
+    // comparison starts, so it reads as the chosen side.
     const bool cmp = m_session->comparing();
     const int slot = m_session->activeSlot();
-    r.fillRect(l.ab, k.body);
-    {
-        // A is the sound now until a comparison starts, so it reads as the selected side.
-        const NUIRect on = (!cmp || slot == 0) ? l.a : l.b;
-        r.fillRect(on, k.selected);
-        r.fillRect({on.x, on.bottom() - 2.0f, on.width, 2.0f}, k.primary);
-    }
-    r.fillRect({l.b.x, l.b.y + 1.0f, 1.0f, l.b.height - 2.0f}, k.border);
-    r.strokeRect(l.ab, 1.0f, k.edge);
-    const bool aOn = !cmp || slot == 0;
-    r.drawTextCentered("A", l.a, 12.0f, aOn ? k.ink : k.inkSoft);
-    r.drawTextCentered("B", l.b, 12.0f, !aOn ? k.ink : k.inkSoft);
+    static const std::string kAB[2] = {"A", "B"};
+    EditorKit::drawSegmented(r, l.ab, kAB, 2, (!cmp || slot == 0) ? 0 : 1, -1, false);
 
     // ···
     button(l.more, m_hoverControl == 6, false);
@@ -409,14 +431,12 @@ void PluginPresetBar::renderOverlay(NUIRenderer& r, const NUIRect& window) {
     if (m_popover == Popover::Browse) {
         const NUIRect p = browseRect(window);
         m_popoverRect = p;
-        r.fillRoundedRect({p.x, p.y + 6.0f, p.width, p.height}, 8.0f, NUIColor(0, 0, 0, 0.45f));
-        r.fillRoundedRect(p, 8.0f, c.raised);
-        r.strokeRoundedRect(p, 8.0f, 1.0f, c.border);
+        // Design Spec, Menu: the fold is the one popup card, with a sunk pill search well at the top.
+        Depth::floatingCard(r, p, kCardRadius, NUIThemeManager::getInstance().getColor("surfaceTertiary"));
 
         // search
         const NUIRect search{p.x + kPad, p.y + kPad, p.width - 2.0f * kPad, kSearchH};
-        r.fillRoundedRect(search, 4.0f, c.bed);
-        r.strokeRoundedRect(search, 4.0f, 1.0f, c.accent);
+        Depth::bed(r, search, Depth::Radius::pill(search.height), Depth::Cut::Shallow);
         const float sy = r.calculateTextY(search, 12.0f);
         const auto rows = visibleRows();
         if (m_search.empty())
@@ -431,9 +451,8 @@ void PluginPresetBar::renderOverlay(NUIRenderer& r, const NUIRect& window) {
         for (int i = 0; i < chipCount(); ++i) {
             const NUIRect chip = filterChipRect(p, i);
             const bool on = m_filter == i;
-            r.fillRoundedRect(chip, kChipH * 0.5f, on ? c.accent : c.surface);
-            if (!on) r.strokeRoundedRect(chip, kChipH * 0.5f, 1.0f, c.border);
-            r.drawTextCentered(kFilterNames[i], chip, 11.0f, on ? c.bed : c.text);
+            if (on) r.fillRoundedRect(chip, kChipH * 0.5f, NUIThemeManager::getInstance().getColor("selected"));
+            r.drawTextCentered(kFilterNames[i], chip, 11.0f, on ? c.text : c.text2);
         }
 
         // rows
@@ -447,16 +466,17 @@ void PluginPresetBar::renderOverlay(NUIRenderer& r, const NUIRect& window) {
         for (int i = 0; i < kMaxRows && first + i < static_cast<int>(rows.size()); ++i) {
             const size_t idx = rows[static_cast<size_t>(first + i)];
             const Preset& pr = all[idx];
-            const NUIRect row = browseRowRect(p, i);
+            const NUIRect hit = browseRowRect(p, i);
+            const NUIRect row{hit.x + kCardInset, hit.y, hit.width - kCardInset * 2.0f, hit.height}; // never edge to edge
             const bool isHeard = heard && *heard == idx;
             const auto& cur = m_session->current();
             const bool wasCurrent = !heard && cur && cur->name == pr.name && cur->source == pr.source;
-            if (isHeard) {
-                r.fillRect(row, c.surface);
-                r.fillRect({row.x, row.y, 2.0f, row.height}, c.accent);
-            } else if (wasCurrent || (m_hoverRow && *m_hoverRow == idx)) {
-                r.fillRect(row, c.surface.withAlpha(0.6f));
-            }
+            // The one being heard lays `selected`; hover and the one you came from are quiet.
+            auto& tm = NUIThemeManager::getInstance();
+            if (isHeard)
+                r.fillRoundedRect(row, kRowRadius, tm.getColor("selected"));
+            else if (wasCurrent || (m_hoverRow && *m_hoverRow == idx))
+                r.fillRoundedRect(row, kRowRadius, tm.getColor("hover"));
             const float by = r.calculateTextY(row, 12.0f);
             if (isHeard) {
                 // a small speaker: this is the one on the track now
@@ -466,7 +486,8 @@ void PluginPresetBar::renderOverlay(NUIRenderer& r, const NUIRect& window) {
                 r.drawLine({sx + 3.0f, cy + 2.0f}, {sx + 6.0f, cy + 5.0f}, 1.3f, c.accent);
                 r.drawLine({sx + 6.0f, cy - 5.0f}, {sx + 6.0f, cy + 5.0f}, 1.3f, c.accent);
             }
-            r.drawText(fit(r, pr.name, 12.0f, 150.0f), {row.x + 28.0f, by}, 12.0f, c.text);
+            drawMatched(r, fit(r, pr.name, 12.0f, 150.0f), {row.x + 28.0f, by}, 12.0f, c.text,
+                        NUIThemeManager::getInstance().getColor("secondary"), m_search);
             const std::string desc = !pr.description.empty() ? pr.description : pr.category;
             if (!desc.empty())
                 r.drawText(fit(r, desc, 11.0f, p.width - 28.0f - 160.0f - 90.0f), {row.x + 188.0f, by}, 11.0f, c.text2);
@@ -476,7 +497,8 @@ void PluginPresetBar::renderOverlay(NUIRenderer& r, const NUIRect& window) {
 
         // footer
         const NUIRect foot{p.x, p.bottom() - kFooterH, p.width, kFooterH};
-        r.drawLine({foot.x, foot.y}, {foot.right(), foot.y}, 1.0f, c.border);
+        r.drawLine({foot.x + kPad, foot.y}, {foot.right() - kPad, foot.y}, 1.0f,
+                   NUIThemeManager::getInstance().getColor("borderSubtle")); // a separator inset from the sides
         const float fy = r.calculateTextY(foot, 11.0f);
         std::string left;
         if (heard && *heard < all.size()) left = "Hearing " + all[*heard].name;
@@ -493,13 +515,10 @@ void PluginPresetBar::renderOverlay(NUIRenderer& r, const NUIRect& window) {
     // Save
     const NUIRect p = saveRect(window);
     m_popoverRect = p;
-    r.fillRoundedRect({p.x, p.y + 6.0f, p.width, p.height}, 8.0f, NUIColor(0, 0, 0, 0.45f));
-    r.fillRoundedRect(p, 8.0f, c.raised);
-    r.strokeRoundedRect(p, 8.0f, 1.0f, c.border);
+    Depth::floatingCard(r, p, kCardRadius, NUIThemeManager::getInstance().getColor("surfaceTertiary"));
     r.drawText("NAME", {p.x + kPad, p.y + kPad + 4.0f}, 10.0f, c.text2);
     const NUIRect field{p.x + kPad, p.y + kPad + 20.0f, p.width - 2.0f * kPad, 30.0f};
-    r.fillRoundedRect(field, 4.0f, c.bed);
-    r.strokeRoundedRect(field, 4.0f, 1.0f, c.accent);
+    Depth::bed(r, field, Depth::Radius::pill(field.height), Depth::Cut::Shallow); // a Field: sunk, no outline
     const float fy = r.calculateTextY(field, 13.0f);
     if (m_saveNameFresh && !m_saveName.empty()) {
         const float w = r.measureText(m_saveName, 13.0f).width;

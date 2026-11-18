@@ -156,6 +156,26 @@ void testSubmenuStaysOnLeftOfItsParentAfterMeasuring() {
     check(child2->getBounds().x >= parent2->getBounds().right(), "with room on the right the submenu stays there");
 }
 
+// The window dismisses a menu-bar menu on a press outside it. A submenu sits outside its parent, so the test it asks
+// must cover the open submenus too: asking only the parent's rect closed File > Open Recent before its item could fire.
+void testMenuTreeContainsItsOpenSubmenu() {
+    auto root = std::make_shared<NUIComponent>();
+    root->setBounds({0.0f, 0.0f, 900.0f, 400.0f});
+    auto parent = std::make_shared<NUIContextMenu>();
+    auto child = std::make_shared<NUIContextMenu>();
+    child->addItem("A recent project");
+    parent->addSubmenu("Open Recent", child);
+    root->addChild(parent);
+    parent->showAt(10, 32);
+    parent->onKeyEvent(press(NUIKeyCode::Right));
+    check(child->isVisible(), "the submenu opens");
+    const NUIRect c = child->getBounds();
+    const NUIPoint inChild{c.x + c.width * 0.5f, c.y + c.height * 0.5f};
+    check(!parent->getBounds().contains(inChild), "the submenu lies outside its parent's rect");
+    check(parent->containsPointInMenuTree(inChild), "but the parent's menu tree contains it");
+    check(!parent->containsPointInMenuTree({880.0f, 380.0f}), "a point outside both is outside the tree");
+}
+
 // A context menu is attached to the *root* component so it can draw outside its
 // owner's bounds, which means it outlives the component that built it, while its
 // callbacks capture that component. Destroying the owner with the menu still up
@@ -314,6 +334,7 @@ int main() {
     testSubmenuStaysOnLeftOfItsParentAfterMeasuring();
     testOwnerLifetimeGatesCallbacks();
     testSubmenuOwnerPropagation();
+    testMenuTreeContainsItsOpenSubmenu();
     NUIComponent::clearFocusedComponent();
 
     if (failures == 0) {

@@ -88,8 +88,10 @@ void testSemanticDefaults() {
     check(theme.layout.titleBarHeight == 32.0f && theme.layout.viewToggleWidth == 310.0f &&
               theme.layout.viewToggleHeight == theme.layout.compactControlHeight,
           "application chrome defaults use the shared compact metric");
-    check(theme.layout.standardMenuRowHeight == theme.layout.standardRowHeight,
-          "ordinary menu and list rows share a metric");
+    // Design Spec, Menu (locked): rows are 22px (dense) to 26px, tighter than list rows.
+    check(theme.layout.compactMenuRowHeight >= 22.0f && theme.layout.standardMenuRowHeight <= 26.0f &&
+              theme.layout.compactMenuRowHeight <= theme.layout.standardMenuRowHeight,
+          "menu rows run 22 to 26 px");
 }
 
 void testStatePriorityAndGeometry() {

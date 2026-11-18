@@ -1,7 +1,8 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 //
-// V82-T2 (canvas-2 board 7): a new project has forty numbered tracks, almost all untouched. They fold into one row
-// under the last track, "31 empty tracks · show", and the header counts them. That row is where a drop makes a new
+// V82-T2 (canvas-2 board 7): a project can hold a run of untouched numbered tracks (a new project has one; older
+// saved ones have forty or fifty). All but the first fold into one row under the last track, "31 empty tracks ·
+// show", and the header counts them. That row is where a drop makes a new
 // track (TrackManagerUIDragDrop), so dragging onto it still works. Only tracks nobody has touched fold: no clips, no
 // automation, the default "Track N" name, one lane. A renamed or used track always shows.
 #include "../AestraUI/Core/NUIThemeSystem.h"
@@ -20,7 +21,8 @@ bool TrackManagerUI::isFoldableEmptyLane(const PlaylistLane& lane, size_t laneCo
 }
 
 PlaylistLaneID TrackManagerUI::firstFoldedEmptyLane() const {
-    // Same walk as refreshTracks: playlist order, each owned track once by its first lane.
+    // Same walk as refreshTracks: playlist order, each owned track once by its first lane. The first untouched track
+    // wins whether it is in view (a new project's one track) or folded away, so a drop below the rows fills it.
     if (!m_trackManager)
         return {};
     auto& playlist = m_trackManager->getPlaylistModel();

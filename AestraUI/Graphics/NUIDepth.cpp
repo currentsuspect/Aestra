@@ -5,6 +5,7 @@
 #include "NUIRenderer.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace AestraUI {
 namespace Depth {
@@ -88,6 +89,78 @@ void floatingCard(NUIRenderer& renderer, const NUIRect& rect, float radius, cons
     renderer.fillRoundedRect(rect, radius, fill);
     if (t.neuEdge.a > 0.0f)
         renderer.strokeRoundedRect(rect, radius, 1.0f, t.neuEdge);
+}
+
+void sliderSlot(NUIRenderer& renderer, const NUIRect& track, float t, float origin, bool enabled) {
+    const auto& th = theme();
+    const NUIRect slot{track.x, std::round(track.y + track.height * 0.5f - 3.0f), track.width, 6.0f};
+    bed(renderer, slot, 3.0f, th.meterBackground, Cut::Slot);
+    const float a = slot.x + slot.width * std::clamp(std::min(t, origin), 0.0f, 1.0f);
+    const float b = slot.x + slot.width * std::clamp(std::max(t, origin), 0.0f, 1.0f);
+    if (b - a >= 1.0f)
+        renderer.fillRoundedRect({a, slot.y + 1.0f, b - a, slot.height - 2.0f}, 2.0f, enabled ? th.primary : th.textDisabled);
+    if (origin > 0.0f && origin < 1.0f) {
+        const float x = std::round(slot.x + slot.width * origin) + 0.5f;
+        renderer.drawLine({x, slot.y - 3.0f}, {x, slot.bottom() + 3.0f}, 1.0f, th.textMuted);
+    }
+}
+
+void sliderCap(NUIRenderer& renderer, const NUIPoint& centre, bool held) {
+    const auto& th = theme();
+    const NUIRect cap{std::round(centre.x - 11.0f), std::round(centre.y - 8.0f), 22.0f, 16.0f};
+    object(renderer, cap, 3.0f, held);
+    // Grip ridges either side of the centre line, and the line itself.
+    for (float dx : {-6.0f, -4.0f, 4.0f, 6.0f})
+        renderer.drawLine({cap.x + 11.0f + dx, cap.y + 4.0f}, {cap.x + 11.0f + dx, cap.bottom() - 4.0f}, 1.0f,
+                          NUIColor::black().withAlpha(0.26f));
+    renderer.fillRect({cap.x + 10.0f, cap.y + 2.0f, 2.0f, cap.height - 4.0f}, th.textPrimary);
+}
+
+void faderCap(NUIRenderer& renderer, const NUIRect& cap, bool master, bool held) {
+    const auto& th = theme();
+    ObjectLook look;
+    look.base = master ? NUIColor::lerp(th.backgroundPrimary, th.textPrimary, 0.8f) : th.surfaceRaised;
+    look.held = held;
+    const float radius = master ? 4.0f : 3.0f;
+    object(renderer, cap, radius, look);
+    // Grip ridges above and below the centre line: a dark groove with a lit lip under it.
+    const float inset = std::max(2.0f, cap.width * 0.2f);
+    const float cy = std::round(cap.y + cap.height * 0.5f);
+    for (float dy : {-6.0f, -4.0f, 4.0f, 6.0f}) {
+        if (std::fabs(dy) + 1.0f >= cap.height * 0.5f)
+            continue;
+        renderer.fillRect({cap.x + inset, cy + dy, cap.width - inset * 2.0f, 1.0f}, NUIColor::black().withAlpha(0.26f));
+        renderer.fillRect({cap.x + inset, cy + dy + 1.0f, cap.width - inset * 2.0f, 1.0f},
+                          NUIColor::white().withAlpha(0.10f));
+    }
+    const float lineH = master ? 3.0f : 2.0f;
+    renderer.fillRect({cap.x + 2.0f, cy - lineH * 0.5f, cap.width - 4.0f, lineH}, master ? th.primary : th.textPrimary);
+}
+
+void knobCap(NUIRenderer& renderer, const NUIPoint& centre, float radius, float angle, bool held, bool enabled) {
+    const auto& th = theme();
+    const float r = held ? radius * 1.06f : radius;
+    const NUIRect disc{centre.x - r, centre.y - r, r * 2.0f, r * 2.0f};
+    ObjectLook look;
+    look.base = th.surfaceRaised;
+    look.held = held;
+    object(renderer, disc, r, look);
+    const NUIColor ink = enabled ? th.textPrimary : th.textDisabled;
+    renderer.drawLine({centre.x + std::cos(angle) * r * 0.25f, centre.y + std::sin(angle) * r * 0.25f},
+                      {centre.x + std::cos(angle) * (r - 2.0f), centre.y + std::sin(angle) * (r - 2.0f)}, 2.0f, ink);
+}
+
+void emptyWell(NUIRenderer& renderer, const NUIRect& area) {
+    const NUIRect well{area.x + 8.0f, area.y + 8.0f, std::max(0.0f, area.width - 16.0f),
+                       std::max(0.0f, area.height - 16.0f)};
+    if (!well.isEmpty())
+        bed(renderer, well, Radius::medium, Cut::Shallow);
+}
+
+void restingPanel(NUIRenderer& renderer, const NUIRect& rect, float radius, const NUIColor& fill) {
+    const auto& t = theme();
+    renderer.drawShadow(rect, 0.0f, 2.0f, 4.0f, scaledAlpha(t.neuLo, 0.5f));
+    renderer.fillRoundedRect(rect, radius, fill);
 }
 
 void focusRing(NUIRenderer& renderer, const NUIRect& rect, float radius, float gap) {

@@ -41,6 +41,14 @@ void object(NUIRenderer& renderer, const NUIRect& rect, float radius, const Obje
 /// The default object: surfaceRaised, not held.
 void object(NUIRenderer& renderer, const NUIRect& rect, float radius, bool held = false);
 
+/// A surface resting on a bed (Design Spec, Mixer: a strip on the mixer bed): a flat fill of @p fill, set apart by
+/// a soft shadow under it, never by a line.
+void restingPanel(NUIRenderer& renderer, const NUIRect& rect, float radius, const NUIColor& fill);
+
+/// Design Spec, Empty state (locked): the sunk well (8px round) a panel shows where its content would be, inset
+/// 8px inside @p area.
+void emptyWell(NUIRenderer& renderer, const NUIRect& area);
+
 /// A floating card: menus, folds, tooltips, toasts and dialogs. @p lift scales the shadow (1 for menus,
 /// 2 for a dialog over the dimmed window).
 void floatingCard(NUIRenderer& renderer, const NUIRect& rect, float radius, const NUIColor& fill, float lift = 1.0f);
@@ -51,6 +59,25 @@ void focusRing(NUIRenderer& renderer, const NUIRect& rect, float radius, float g
 /// The fixed pane of glass over a read-only display (graphs, VU faces, scopes). Draw it after the display.
 /// Never over a control, the timeline, clips or the mixer's bar meters.
 void glass(NUIRenderer& renderer, const NUIRect& rect, float radius);
+
+/// Design Spec, Slider (locked): a fader on its side. A 6px sunk slot across @p track (centred vertically), the
+/// travelled part in primary from the left, or from @p origin for a bipolar value (pan, width), with a 1px centre tick.
+/// @p t and @p origin are 0..1 along the slot. @p enabled false draws the travel in textDisabled.
+void sliderSlot(NUIRenderer& renderer, const NUIRect& track, float t, float origin = 0.0f, bool enabled = true);
+/// The slider's cap: the fader cap turned 90 degrees, 22 by 16, lit on top, vertical grip ridges and one
+/// textPrimary centre line; @p held lifts it.
+void sliderCap(NUIRenderer& renderer, const NUIPoint& centre, bool held = false);
+
+/// Design Spec, Mixer (locked): a fader cap you could pick up. Lit on top, grip ridges, one centre line, a shadow cast
+/// down into the slot; @p held lifts it. A channel cap is surfaceRaised with a textPrimary line; the master cap is
+/// mixed from textPrimary (silver on dark themes, graphite on light) with a primary line, so it always reads as the
+/// master.
+void faderCap(NUIRenderer& renderer, const NUIRect& cap, bool master, bool held = false);
+
+/// Design Spec, Knob (locked): the cap is a lit disc of @p radius at @p centre, shaded underneath and casting a soft
+/// shadow, with a textPrimary pointer at @p angle (radians). The pointer turns; the light does not. @p held lifts it.
+void knobCap(NUIRenderer& renderer, const NUIPoint& centre, float radius, float angle, bool held = false,
+             bool enabled = true);
 
 /// The radius scale (Design Spec rule 4). Clips, the timeline and plugin windows are sharp.
 namespace Radius {

@@ -2,6 +2,7 @@
 #pragma once
 
 #include "NUIComponent.h"
+#include "../Core/NUIButtonMotion.h"
 #include "NUITypes.h"
 #include "NUIIcon.h"
 #include <functional>
@@ -109,6 +110,7 @@ public:
 
     // Component interface
     void onRender(NUIRenderer& renderer) override;
+    void onUpdate(double deltaTime) override;
     void onThemeChanged(const NUIThemeProperties& theme) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
     bool onKeyEvent(const NUIKeyEvent& event) override;
@@ -204,6 +206,8 @@ public:
 
     /** @brief False only when an owner was bound and has since been destroyed. */
     bool hasLiveOwner() const;
+    /// True when @p point is on this menu or on any submenu open under it (a submenu lies outside its parent's rect).
+    bool containsPointInMenuTree(const NUIPoint& point) const;
 
     // Utility
     std::vector<std::shared_ptr<NUIContextMenuItem>> getItems() const { return items_; }
@@ -294,6 +298,8 @@ private:
     // Interaction state
     bool isVisible_ = false;
     int hoveredItemIndex_ = -1;
+    ButtonMotion rowMotion_{ButtonGroup::Row}; ///< the hovered row's colour pop (NUIButtonMotion.h)
+    int rowMotionIndex_ = -1;
     int pressedItemIndex_ = -1;
     std::shared_ptr<NUIContextMenu> activeSubmenu_;
     int submenuItemIndex_ = -1;

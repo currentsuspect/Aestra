@@ -26,9 +26,22 @@ float UIMixerNavigator::toContentDelta(float navDx) const {
 }
 
 void UIMixerNavigator::setContent(std::vector<Tick> ticks, std::vector<Group> groups, float contentWidth) {
+    // The mixer panel sends this every frame. Repaint only when something drawn changed: an unconditional repaint
+    // re-presented a still window at the frame rate and defeated idle frame elision.
+    const float width = std::max(1.0f, contentWidth);
+    const auto sameTick = [](const Tick& a, const Tick& b) {
+        return a.channelId == b.channelId && a.x == b.x && a.w == b.w && a.level == b.level && a.clipped == b.clipped &&
+               a.soloed == b.soloed && a.selected == b.selected && a.color.r == b.color.r && a.color.g == b.color.g &&
+               a.color.b == b.color.b && a.color.a == b.color.a;
+    };
+    const auto sameGroup = [](const Group& a, const Group& b) { return a.label == b.label && a.x == b.x && a.w == b.w; };
+    const bool unchanged = width == m_contentW && ticks.size() == m_ticks.size() && groups.size() == m_groups.size() &&
+                           std::equal(ticks.begin(), ticks.end(), m_ticks.begin(), sameTick) &&
+                           std::equal(groups.begin(), groups.end(), m_groups.begin(), sameGroup);
+    if (unchanged) return;
     m_ticks = std::move(ticks);
     m_groups = std::move(groups);
-    m_contentW = std::max(1.0f, contentWidth);
+    m_contentW = width;
     repaint();
 }
 

@@ -63,6 +63,15 @@ public:
      */
     virtual std::string type() const { return {}; }
 
+    /**
+     * @brief What a value-setting command left behind, as the object displays it.
+     *
+     * set_effect_param answers "3.5kHz" here, so a caller that asked for a value
+     * in a unit can confirm what landed without a follow-up query. Empty for
+     * commands that set nothing (the default).
+     */
+    virtual std::string displayValue() const { return {}; }
+
     /// When the command was made (epoch ms): the moment of the user's action, which the Versions steps list shows.
     uint64_t createdAtMs() const { return m_createdAtMs; }
 

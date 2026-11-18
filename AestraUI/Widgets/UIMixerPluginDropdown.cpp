@@ -214,6 +214,7 @@ void UIMixerPluginDropdown::showAt(const NUIRect& triggerRect, float panelBottom
     m_filtered = m_categories;
     m_searchInput->setText("");
     m_open = true;
+    setPopupOpen(this, true);
     setVisible(true);
     m_hoveredRow = -1;
     m_hoveredFooter = -1;
@@ -227,6 +228,7 @@ void UIMixerPluginDropdown::hide()
 {
     if (!m_open) return;
     m_open = false;
+    setPopupOpen(this, false);
     setVisible(false);
     setFocused(false);
     m_hoveredRow = -1;

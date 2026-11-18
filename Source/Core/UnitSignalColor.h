@@ -18,7 +18,8 @@ inline AestraUI::NUIColor unitSignalColor(Audio::TrackManager& trackManager, Aud
     for (size_t i = 0; i < trackManager.getChannelCount(); ++i) {
         const auto* channel = trackManager.getChannel(i);
         if (channel && channel->getChannelId() == unit->targetMixerChannelId)
-            signal = AestraUI::NUIColor::fromARGB(AestraUI::paletteIndexToARGB(channel->getTrackColorIndex()));
+            signal = AestraUI::NUIColor::fromARGB(AestraUI::paletteIndexToARGB(
+                AestraUI::resolveTrackColorIndex(channel->getTrackColorIndex(), channel->getColor(), i)));
     }
     return signal;
 }

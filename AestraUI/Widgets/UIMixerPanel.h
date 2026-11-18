@@ -11,6 +11,7 @@
 #include "NUITypes.h"
 #include "Helpers/MixerPluginListPolicy.h"
 #include "InspectorCollapseState.h"
+#include "InlineRename.h"
 #include "UIMixerInspector.h"
 #include "UIMixerMeter.h"
 #include "UIMixerPluginDropdown.h"
@@ -90,6 +91,8 @@ public:
     void resetPeaks();
     /// Fired when density or grouping changes, so the owner can save the preference.
     std::function<void()> onViewPreferencesChanged;
+    /// "+ Channel" in the toolbar. The owner adds the channel (undoably) and refreshes the strips.
+    std::function<void()> onAddChannelRequested;
     const UIMixerToolbar* toolbar() const { return m_toolbar.get(); }
     const UIMixerNavigator* navigator() const { return m_navigator.get(); }
 
@@ -211,6 +214,8 @@ private:
 
     std::shared_ptr<Aestra::MixerViewModel> m_viewModel;
     std::shared_ptr<Aestra::Audio::TrackManager> m_trackManager;
+    InlineRename m_channelRename; ///< the channel-name field while a strip is being renamed
+    void beginChannelRename(uint32_t channelId, const NUIRect& nameplate);
 
     // Callback for fader undo/redo: channelId, newDb
     std::function<void(uint32_t, float)> m_onFaderChanged;
@@ -281,7 +286,6 @@ private:
 
     // Cached theme colors
     NUIColor m_backgroundColor;
-    NUIColor m_separatorColor;
 
     /**
      * @brief Layout all meter widgets horizontally.
@@ -291,7 +295,7 @@ private:
     /**
      * @brief Render separator lines between strips.
      */
-    void renderSeparators(NUIRenderer& renderer);
+    void renderBed(NUIRenderer& renderer);
 
     /**
      * @brief Cache theme colors.

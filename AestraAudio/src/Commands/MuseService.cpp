@@ -18,6 +18,42 @@
 namespace Aestra {
 namespace Audio {
 
+namespace {
+
+// One host verb, as the manifest describes it. get_capabilities and get_schema
+// both publish this, so a capability registered by the app can never be listed
+// in one manifest and missing from the other.
+JSON hostVerbToJson(const HostVerbSpec& spec) {
+    JSON entry = JSON::object();
+    entry.set("verb", JSON(spec.name));
+    entry.set("domain", JSON(std::string(HostVerbRegistry::domainName(spec.domain))));
+    entry.set("description", JSON(spec.description));
+    entry.set("mutates", JSON(spec.mutates));
+    entry.set("requiresHostUi", JSON(spec.affinity == HostThreadAffinity::HostUiThread));
+    JSON args = JSON::array();
+    for (const auto& arg : spec.args) {
+        JSON a = JSON::object();
+        a.set("name", JSON(arg.name));
+        a.set("type", JSON(std::string(HostVerbRegistry::argTypeName(arg.type))));
+        a.set("required", JSON(arg.required));
+        if (!arg.description.empty()) a.set("description", JSON(arg.description));
+        if (!std::isnan(arg.minValue)) a.set("min", JSON(arg.minValue));
+        if (!std::isnan(arg.maxValue)) a.set("max", JSON(arg.maxValue));
+        args.push(a);
+    }
+    entry.set("args", args);
+    if (!spec.failureCodes.empty()) {
+        // The refusals a handler documents: an agent that knows "save_as_required"
+        // can pass a path instead of retrying the same call.
+        JSON codes = JSON::array();
+        for (const auto& code : spec.failureCodes) codes.push(JSON(code));
+        entry.set("failureCodes", codes);
+    }
+    return entry;
+}
+
+} // namespace
+
 MuseService::MuseService(TrackManager* trackManager, AudioEngine* engine)
     : m_trackManager(trackManager), m_engine(engine) {}
 
@@ -190,26 +226,7 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             // to. A headless session legitimately answers with an empty list.
             JSON verbs = JSON::array();
             for (const auto& spec : m_hostVerbs.capabilities()) {
-                JSON entry = JSON::object();
-                entry.set("verb", JSON(spec.name));
-                entry.set("domain", JSON(std::string(HostVerbRegistry::domainName(spec.domain))));
-                entry.set("description", JSON(spec.description));
-                entry.set("mutates", JSON(spec.mutates));
-                entry.set("requiresHostUi",
-                          JSON(spec.affinity == HostThreadAffinity::HostUiThread));
-                JSON args = JSON::array();
-                for (const auto& arg : spec.args) {
-                    JSON a = JSON::object();
-                    a.set("name", JSON(arg.name));
-                    a.set("type", JSON(std::string(HostVerbRegistry::argTypeName(arg.type))));
-                    a.set("required", JSON(arg.required));
-                    if (!arg.description.empty()) a.set("description", JSON(arg.description));
-                    if (!std::isnan(arg.minValue)) a.set("min", JSON(arg.minValue));
-                    if (!std::isnan(arg.maxValue)) a.set("max", JSON(arg.maxValue));
-                    args.push(a);
-                }
-                entry.set("args", args);
-                verbs.push(entry);
+                verbs.push(hostVerbToJson(spec));
             }
             JSON result = JSON::object();
             result.set("hostVerbs", verbs);
@@ -222,7 +239,20 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
         if (verb == "get_schema") {
             // The tool manifest, over the wire: a socket client can bootstrap
             // without access to the binary's --schema flag.
+            //
+            // Host verbs are registered by the application at startup, so they
+            // cannot live in the grammar's static text — but they are the verbs a
+            // caller most needs to find (project.save is what makes an agent's
+            // work survive the session). A schema without them told an agent the
+            // surface was read-only-ish and hand-editable only; publishing them
+            // here makes the one manifest it trusts complete.
             JSON result = JSON::parse(MuseGrammar::schemaToJsonString());
+            JSON hostVerbs = JSON::array();
+            for (const auto& spec : m_hostVerbs.capabilities()) {
+                hostVerbs.push(hostVerbToJson(spec));
+            }
+            result.set("hostVerbs", hostVerbs);
+            result.set("hostUiAvailable", JSON(m_hostUiThreadAvailable));
             JSON response = makeOk();
             response.set("result", result);
             return finish(response);
@@ -289,6 +319,11 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                 result.set("createdId", JSON(static_cast<double>(cmdResult.createdId)));
             }
             if (!cmdResult.createdKind.empty()) result.set("createdKind", JSON(cmdResult.createdKind));
+            response.set("result", result);
+        } else if (!cmdResult.displayText.empty()) {
+            // A value-setting verb: what the object shows now (#1405).
+            JSON result = JSON::object();
+            result.set("display", JSON(cmdResult.displayText));
             response.set("result", result);
         }
         response.set("executionMs", JSON(cmdResult.executionMs));

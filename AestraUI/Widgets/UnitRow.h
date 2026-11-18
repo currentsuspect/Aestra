@@ -34,6 +34,8 @@ public:
     // Structural 4-step group gap shared by rows and the Arsenal header ruler
     // (ArsenalPanel's kGroupGap is defined as this constant).
     static constexpr float kStepGroupGap = 2.0f;
+    /// The gap between pads: 3px, closing to 1px when pads are narrow so the pads, not the gaps, carry the beat shading.
+    static float padGap(float stepWidth) { return stepWidth < 8.0f ? 1.0f : 3.0f; }
 
     void onRender(NUIRenderer& renderer) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
