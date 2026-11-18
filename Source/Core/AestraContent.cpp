@@ -1486,7 +1486,7 @@ void AestraContent::setupArsenalPanels() {
     m_sequencerPanel->setOnRequestSampleEditor([this](UnitID id) {
         if (!m_trackManager) return;
         const auto* unit = m_trackManager->getUnitManager().getUnit(id);
-        if (unit && !unit->audioClipPath.empty())
+        if (unit)
             openSampleEditorForUnit(id, unit->audioClipPath);
     });
     m_sequencerPanel->setOnPluginDropped([this](const std::string& pluginId) { loadInstrumentToArsenal(pluginId); });

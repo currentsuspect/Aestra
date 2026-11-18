@@ -120,7 +120,8 @@ bool UnitNameLabel::onMouseEvent(const NUIMouseEvent& event) {
         m_lastClickTimeMs = nowMs;
 
         if (isDoubleClick) {
-            beginRename();
+            if (m_onOpenEditor)
+                m_onOpenEditor();
             return true;
         }
     }

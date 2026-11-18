@@ -148,8 +148,12 @@ void UnitRow::updateState() {
         layoutNameLabel();
 
         m_nameLabel->m_onOpenEditor = [this]() {
-            if (m_onEditUnit)
+            if ((m_type == Aestra::Audio::UnitType::Sampler ||
+                 m_type == Aestra::Audio::UnitType::PitchedSampler) && m_onRequestSampleEditor) {
+                m_onRequestSampleEditor(m_unitId);
+            } else if (m_onEditUnit) {
                 m_onEditUnit(m_unitId);
+            }
         };
         m_nameLabel->m_onRename = [this](const std::string& name) {
             if (m_onRenameUnit)
@@ -903,21 +907,12 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
             // We just handle clicks on other elements.
 
             if (bounds.contains(event.position)) {
-                const NUIRect nameBounds = m_nameLabel ? m_nameLabel->getBounds() : NUIRect{};
-                const auto controlPills = controlPillRects(localControlRect);
-                const NUIRect editorGapRect(nameBounds.right(), 0.0f,
-                                            std::max(0.0f, controlPills[1].x - nameBounds.right()), rowH);
                 if (localDragRect.contains(localPoint)) {
                     m_isDragging = true;
                     m_dragStartPos = event.position;
                     if (m_onDragStart)
                         m_onDragStart(m_unitId);
                     invalidateVisuals();
-                    return true;
-                } else if (editorGapRect.width > 0.0f && editorGapRect.contains(localPoint)) {
-                    if (m_editorGapClickTracker.registerPress() || event.doubleClick) {
-                        if (m_onEditUnit) m_onEditUnit(m_unitId);
-                    }
                     return true;
                 } else if (localControlRect.contains(localPoint) || controlPillRects(localControlRect)[0].contains(localPoint)) {
                     handleControlClick(event, localControlRect);
@@ -1697,8 +1692,7 @@ void UnitRow::layoutNameLabel() {
     float labelX = 54.0f; // 42 (control block) + 12 (name indent)
     // The label ends before the pill band; the band width follows the tier.
     const float pillBand = (m_density == Density::Minimal) ? 57.0f : 71.0f; // the M, S and open-lanes keys
-    const float editorGap = (m_density == Density::Minimal) ? 43.0f : 37.0f;
-    float labelWidth = std::max(16.0f, (controlWidth - 48.0f) - pillBand - editorGap);
+    float labelWidth = std::max(16.0f, (controlWidth - 48.0f) - pillBand - 6.0f);
     m_nameLabel->setBounds(NUIRect(labelX, 7.0f, labelWidth, 30.0f));
     m_nameLabel->setCompact(m_density != Density::Full);
 }

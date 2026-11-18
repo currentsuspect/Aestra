@@ -13,7 +13,7 @@ namespace AestraUI {
 /**
  * @brief Editable unit name label used inside Arsenal UnitRow.
  *
- * Renders the unit name + type label. Double-click renames the unit.
+ * Renders the unit name + type label. Double-click opens its editor.
  * Right-click shows a rename menu. Inline editing swaps in a NUITextInput.
  */
 class UnitNameLabel : public NUIComponent {
@@ -29,7 +29,7 @@ public:
     /** @brief True while an inline rename is active (row key handling must not steal Delete/Backspace). */
     bool isRenaming() const { return m_isRenaming; }
 
-    /** @brief Callback fired when the separate editor hit area is activated. */
+    /** @brief Callback fired on double-click to open the unit editor. */
     std::function<void()> m_onOpenEditor;
     /** @brief Callback fired when the name is committed after a rename. */
     std::function<void(const std::string&)> m_onRename;

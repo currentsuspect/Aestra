@@ -7,7 +7,6 @@
 #include "PatternSource.h" // For PatternID (value type, can't forward-declare)
 #include "UnitNameLabel.h"
 #include "NUIContextMenu.h"
-#include "NUIDoubleClick.h"
 #include <functional>
 #include <memory>
 #include <vector>
@@ -65,6 +64,7 @@ public:
     std::function<void()> m_onRequestColorPicker;
     /** @brief Callback used to open the unit editor. */
     std::function<void(Aestra::Audio::UnitID)> m_onEditUnit;
+    std::function<void(Aestra::Audio::UnitID)> m_onRequestSampleEditor;
     /** @brief Callback used to trigger sample loading for the unit. */
     std::function<void(Aestra::Audio::UnitID)> m_onLoadUnitSample;
     /** @brief Callback fired when a sample path is dropped directly onto the unit. */
@@ -90,6 +90,7 @@ public:
     void setOnDrop(std::function<void(Aestra::Audio::UnitID, int)> cb) { m_onDrop = cb; }
     void setOnRequestColorPicker(std::function<void()> cb) { m_onRequestColorPicker = cb; }
     void setOnEditUnit(std::function<void(Aestra::Audio::UnitID)> cb) { m_onEditUnit = cb; }
+    void setOnRequestSampleEditor(std::function<void(Aestra::Audio::UnitID)> cb) { m_onRequestSampleEditor = cb; }
     void setOnLoadUnitSample(std::function<void(Aestra::Audio::UnitID)> cb) { m_onLoadUnitSample = cb; }
     void setOnSampleDropped(std::function<void(Aestra::Audio::UnitID, const std::string&)> cb) { m_onSampleDropped = cb; }
     void setOnPluginDropped(std::function<void(Aestra::Audio::UnitID, const std::string&)> cb) { m_onPluginDropped = cb; }
@@ -255,7 +256,6 @@ private:
     static constexpr float PAD_SPACING = 3.0f;        // Space between pads
     
     float m_controlWidth = CONTROL_WIDTH;
-    NUIDoubleClickTracker m_editorGapClickTracker;
     // Responsive density (0.7.0 triage): derived from row width, never
     // hardcoded per-state. Full keeps the pill band + type line; Compact
     // compresses pills and drops the type line; Minimal collapses to a

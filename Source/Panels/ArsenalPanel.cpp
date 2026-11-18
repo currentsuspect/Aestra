@@ -390,6 +390,9 @@ void ArsenalPanel::refreshUnits() {
                 if (m_onRequestLoadSample) m_onRequestLoadSample(id);
             }
         });
+        row->setOnRequestSampleEditor([this](UnitID id) {
+            if (m_onRequestSampleEditor) m_onRequestSampleEditor(id);
+        });
 
         row->setOnLoadUnitSample([this](UnitID id) {
             if (m_onRequestLoadSample) m_onRequestLoadSample(id);
