@@ -22,8 +22,14 @@ public:
         : m_unitManager(unitManager), m_unitId(unitId), m_path(path) {}
 
     /** Record an asynchronously applied load as one undoable command without decoding the sample twice. */
-    void markExecuted(const std::string& previousPath) {
+    void markExecuted(const std::string& previousPath, const std::string& previousName, bool previousEnabled) {
         m_previousPath = previousPath;
+        m_previousName = previousName;
+        m_previousEnabled = previousEnabled;
+        if (const auto* unit = m_unitManager.getUnit(m_unitId)) {
+            m_newName = unit->name;
+            m_newEnabled = unit->isEnabled || unit->enabled;
+        }
         m_executed = true;
     }
 
@@ -32,13 +38,18 @@ public:
         const UnitInfo* unit = m_unitManager.getUnit(m_unitId);
         if (!unit) return;
         m_previousPath = unit->audioClipPath;
+        m_previousName = unit->name;
+        m_previousEnabled = unit->isEnabled || unit->enabled;
         m_unitManager.setUnitAudioClip(m_unitId, m_path);
+        m_unitManager.setUnitEnabled(m_unitId, true);
         m_executed = true;
     }
 
     void undo() override {
         if (!m_executed) return;
         m_unitManager.setUnitAudioClip(m_unitId, m_previousPath);
+        m_unitManager.setUnitName(m_unitId, m_previousName);
+        m_unitManager.setUnitEnabled(m_unitId, m_previousEnabled);
         m_executed = false;
     }
 
@@ -57,6 +68,10 @@ private:
     UnitID m_unitId;
     std::string m_path;
     std::string m_previousPath;
+    std::string m_previousName;
+    std::string m_newName;
+    bool m_previousEnabled{false};
+    bool m_newEnabled{true};
     bool m_executed = false;
 };
 
