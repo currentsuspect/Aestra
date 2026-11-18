@@ -23,6 +23,7 @@
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraCore/include/AestraLog.h"
 #include <cstdio>
+#include <limits>
 
 using namespace AestraUI;
 
@@ -748,6 +749,8 @@ bool ArsenalPanel::removeSelectedPatterns() {
     if (!m_trackManager || m_selectedPatternIds.empty()) return false;
 
     auto& patterns = m_trackManager->getPatternManager();
+    const auto scenesBeforeDelete = m_scenes.scenes();
+    const uint64_t activeBeforeDelete = m_activePatternID.value;
     const auto allPatterns = patterns.getAllPatterns();
     const size_t midiCount = std::count_if(allPatterns.begin(), allPatterns.end(),
         [](const auto& p) { return p && p->isMidi(); });
@@ -783,17 +786,53 @@ bool ArsenalPanel::removeSelectedPatterns() {
     transaction->markExecuted();
     m_trackManager->getCommandHistory().pushExecuted(transaction);
 
-    m_selectedPatternIds.clear();
-    m_patternSelectionAnchor = 0;
     const auto remaining = patterns.getAllPatterns();
-    PatternID next{};
-    for (const auto& p : remaining) {
-        if (p && p->isMidi()) { next = p->id; break; }
+    const auto isRemainingMidi = [&patterns](uint64_t id) {
+        const auto* pattern = patterns.getPattern(PatternID{id});
+        return pattern && pattern->isMidi();
+    };
+    m_selectedPatternIds.erase(
+        std::remove_if(m_selectedPatternIds.begin(), m_selectedPatternIds.end(),
+                       [&](uint64_t id) { return !isRemainingMidi(id); }),
+        m_selectedPatternIds.end());
+
+    PatternID next = isRemainingMidi(activeBeforeDelete) ? PatternID{activeBeforeDelete} : PatternID{};
+    if (!next.isValid() && !m_selectedPatternIds.empty()) next = PatternID{m_selectedPatternIds.front()};
+    if (!next.isValid()) {
+        const auto oldActive = std::find_if(scenesBeforeDelete.begin(), scenesBeforeDelete.end(),
+                                            [activeBeforeDelete](const auto& scene) {
+                                                return scene.id == activeBeforeDelete;
+                                            });
+        if (oldActive != scenesBeforeDelete.end()) {
+            for (auto it = std::next(oldActive); it != scenesBeforeDelete.end(); ++it) {
+                if (isRemainingMidi(it->id)) { next = PatternID{it->id}; break; }
+            }
+            if (!next.isValid()) {
+                auto it = oldActive;
+                while (it != scenesBeforeDelete.begin()) {
+                    --it;
+                    if (isRemainingMidi(it->id)) { next = PatternID{it->id}; break; }
+                }
+            }
+        }
     }
-    if (!patterns.getPattern(m_activePatternID)) m_activePatternID = next;
+    if (!next.isValid()) {
+        uint64_t lowestId = std::numeric_limits<uint64_t>::max();
+        for (const auto& pattern : remaining)
+            if (pattern && pattern->isMidi()) lowestId = std::min(lowestId, pattern->id.value);
+        if (lowestId != std::numeric_limits<uint64_t>::max()) next = PatternID{lowestId};
+    }
+    m_activePatternID = next;
+    m_patternSelectionAnchor = m_selectedPatternIds.empty() ? 0 : m_selectedPatternIds.back();
+    if (m_selectedPatternIds.empty() && next.isValid()) {
+        m_selectedPatternIds = {next.value};
+        m_patternSelectionAnchor = next.value;
+    }
+    m_scenes.setSelectedPatterns(m_selectedPatternIds);
+    if (next.isValid()) m_trackManager->preparePatternForArsenal(next);
     refreshUnits();
     if (m_patternBrowser) m_patternBrowser->refreshPatterns();
-    if (m_onActivePatternChanged && m_activePatternID.isValid()) m_onActivePatternChanged(m_activePatternID);
+    if (m_onActivePatternChanged && next.isValid()) m_onActivePatternChanged(next);
     repaint();
     return true;
 }

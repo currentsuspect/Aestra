@@ -903,12 +903,21 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
             // We just handle clicks on other elements.
 
             if (bounds.contains(event.position)) {
+                const NUIRect nameBounds = m_nameLabel ? m_nameLabel->getBounds() : NUIRect{};
+                const auto controlPills = controlPillRects(localControlRect);
+                const NUIRect editorGapRect(nameBounds.right(), 0.0f,
+                                            std::max(0.0f, controlPills[1].x - nameBounds.right()), rowH);
                 if (localDragRect.contains(localPoint)) {
                     m_isDragging = true;
                     m_dragStartPos = event.position;
                     if (m_onDragStart)
                         m_onDragStart(m_unitId);
                     invalidateVisuals();
+                    return true;
+                } else if (editorGapRect.width > 0.0f && editorGapRect.contains(localPoint)) {
+                    if (m_editorGapClickTracker.registerPress() || event.doubleClick) {
+                        if (m_onEditUnit) m_onEditUnit(m_unitId);
+                    }
                     return true;
                 } else if (localControlRect.contains(localPoint) || controlPillRects(localControlRect)[0].contains(localPoint)) {
                     handleControlClick(event, localControlRect);
@@ -1688,7 +1697,8 @@ void UnitRow::layoutNameLabel() {
     float labelX = 54.0f; // 42 (control block) + 12 (name indent)
     // The label ends before the pill band; the band width follows the tier.
     const float pillBand = (m_density == Density::Minimal) ? 57.0f : 71.0f; // the M, S and open-lanes keys
-    float labelWidth = std::max(16.0f, (controlWidth - 48.0f) - pillBand - 6.0f);
+    const float editorGap = (m_density == Density::Minimal) ? 43.0f : 37.0f;
+    float labelWidth = std::max(16.0f, (controlWidth - 48.0f) - pillBand - editorGap);
     m_nameLabel->setBounds(NUIRect(labelX, 7.0f, labelWidth, 30.0f));
     m_nameLabel->setCompact(m_density != Density::Full);
 }
@@ -1822,21 +1832,22 @@ void UnitRow::showRowContextMenu(const NUIPoint& pos) {
     m_rowContextMenu->addItem(rename);
 
     auto categoryMenu = std::make_shared<NUIContextMenu>();
-    const auto addGroup = [this, &categoryMenu](const char* label, Aestra::Audio::UnitGroup group) {
+    auto groupMenu = std::make_shared<NUIContextMenu>();
+    const auto addGroup = [this, &groupMenu](const char* label, Aestra::Audio::UnitGroup group) {
         auto item = std::make_shared<NUIContextMenuItem>(label);
         item->setOnClick([this, group]() {
             if (m_onMoveSelectedToGroup) m_onMoveSelectedToGroup(m_unitId, group);
         });
-        categoryMenu->addItem(item);
+        groupMenu->addItem(item);
     };
-    addGroup("Group: Drums", Aestra::Audio::UnitGroup::Drums);
-    addGroup("Group: Synth", Aestra::Audio::UnitGroup::Synth);
-    addGroup("Group: Audio", Aestra::Audio::UnitGroup::Audio);
-    categoryMenu->addSeparator();
+    addGroup("Drums", Aestra::Audio::UnitGroup::Drums);
+    addGroup("Synth", Aestra::Audio::UnitGroup::Synth);
+    addGroup("Audio", Aestra::Audio::UnitGroup::Audio);
     const size_t selectedCount = m_getSelectedUnitIds ? m_getSelectedUnitIds().size() : 1;
 
     // Category: what this sound is in the song. "Auto" reads it from the name; picking one is the user's own
     // choice, which outranks any name. One undo step.
+    auto roleMenu = std::make_shared<NUIContextMenu>();
     {
         using namespace Aestra::Audio;
         const MusicalRole current = m_manager.unitRole(m_unitId);
@@ -1857,20 +1868,33 @@ void UnitRow::showRowContextMenu(const NUIPoint& pos) {
         auto autoItem = std::make_shared<NUIContextMenuItem>("Auto (from the name)");
         autoItem->setChecked(current.source != RoleSource::User);
         autoItem->setOnClick([choose]() { choose(MusicalRole{}); });
-        categoryMenu->addItem(autoItem);
-        categoryMenu->addSeparator();
-        for (const auto& entry : roleCategoryTable()) {
+        roleMenu->addItem(autoItem);
+        roleMenu->addSeparator();
+        static constexpr RoleCategory roleOrder[] = {
+            RoleCategory::Drums, RoleCategory::Percussion, RoleCategory::Bass, RoleCategory::Keys,
+            RoleCategory::Synth, RoleCategory::Guitar, RoleCategory::Strings, RoleCategory::Vocals,
+            RoleCategory::Fx};
+        for (const RoleCategory orderedCategory : roleOrder) {
+            const auto entryIt = std::find_if(roleCategoryTable().begin(), roleCategoryTable().end(),
+                                              [orderedCategory](const RoleNameEntry& entry) {
+                                                  return entry.category == orderedCategory;
+                                              });
+            if (entryIt == roleCategoryTable().end()) continue;
+            const auto& entry = *entryIt;
             auto item = std::make_shared<NUIContextMenuItem>(entry.label);
             item->setChecked(selectedCount <= 1 && current.source == RoleSource::User && current.category == entry.category);
             const RoleCategory category = entry.category;
             const RoleSub keepSub = current.category == category ? current.sub : RoleSub::None; // "Kick 01" chosen as Drums stays Kick
             item->setOnClick([choose, category, keepSub]() { choose(userRole(category, keepSub)); });
-            categoryMenu->addItem(item);
+            roleMenu->addItem(item);
         }
     }
+    categoryMenu->addSubmenu("Move to group", groupMenu);
+    categoryMenu->addSeparator();
+    categoryMenu->addSubmenu("Musical role", roleMenu);
     m_rowContextMenu->addSubmenu(selectedCount > 1
-        ? "Category for " + std::to_string(selectedCount) + " selected units"
-        : "Category", categoryMenu);
+        ? "Organize " + std::to_string(selectedCount) + " units"
+        : "Organize unit", categoryMenu);
 
     m_rowContextMenu->addItem(m_hasMultipleSelection && m_hasMultipleSelection()
                                   ? "Duplicate Selected Units"

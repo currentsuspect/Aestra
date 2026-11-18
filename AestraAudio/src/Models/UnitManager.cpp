@@ -366,10 +366,17 @@ UnitID UnitManager::duplicateUnit(UnitID sourceId) {
     dst->pluginId         = src->pluginId;
     dst->pluginState      = src->pluginState;
 
-    // Duplicate pattern if source has one
+    // createUnit() minted an empty default pattern for the new unit. Replace
+    // that temporary pattern with the source's cloned pad pattern so a unit
+    // duplicate does not leave an orphan pattern behind.
     if (src->defaultPatternId.isValid() && m_patternManager) {
+        const PatternID generatedPatternId = dst->defaultPatternId;
         PatternID newPatternId = m_patternManager->clonePattern(src->defaultPatternId);
-        dst->defaultPatternId = newPatternId;
+        if (newPatternId.isValid()) {
+            dst->defaultPatternId = newPatternId;
+            if (generatedPatternId.isValid() && generatedPatternId != newPatternId)
+                m_patternManager->removePattern(generatedPatternId);
+        }
     }
 
     // Re-instantiate plugin if source has one
