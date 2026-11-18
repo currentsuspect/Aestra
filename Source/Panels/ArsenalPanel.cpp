@@ -8,6 +8,11 @@
 #include "../Core/UISurfaceStore.h"
 
 #include "Commands/AssignUnitToFirstFreeInsertCommand.h"
+#include "Commands/AddUnitCommand.h"
+#include "Commands/CommandTransaction.h"
+#include "Commands/DeleteUnitCommand.h"
+#include "Commands/PatternMenuCommands.h"
+#include "Commands/SetPatternSwingCommand.h"
 #include "Commands/EditPatternNotesCommand.h"
 #include "Commands/SetPatternLengthCommand.h"
 #include "PatternBrowserPanel.h" // For m_patternBrowser
