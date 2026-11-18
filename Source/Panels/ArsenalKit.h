@@ -85,12 +85,12 @@ public:
         renderer.fillRoundedRect(c, tp.radiusM, theme.getColor("backgroundSecondary").withAlpha(0.97f));
         renderer.strokeRoundedRect(c, tp.radiusM, 1.0f, theme.getColor("borderSubtle").withAlpha(0.5f));
         renderer.drawText("Start with a kit", {c.x + 20.0f, c.y + 14.0f}, tp.fontSizeL, theme.getColor("textPrimary").withAlpha(0.96f));
-        renderer.drawText("Pick a folder of sounds. Each file becomes a unit,", {c.x + 20.0f, c.y + 42.0f}, tp.fontSizeXS, theme.getColor("textSecondary").withAlpha(0.85f));
+        renderer.drawText("Browse a folder of sounds without changing your Arsenal.", {c.x + 20.0f, c.y + 42.0f}, tp.fontSizeXS, theme.getColor("textSecondary").withAlpha(0.85f));
         renderer.drawText("named after it, ready to play.", {c.x + 20.0f, c.y + 58.0f}, tp.fontSizeXS, theme.getColor("textSecondary").withAlpha(0.85f));
         const auto b = buttonRect();
         renderer.fillRoundedRect(b, tp.radiusS, theme.getColor("accentPrimary").withAlpha(0.22f));
         renderer.strokeRoundedRect(b, tp.radiusS, 1.0f, theme.getColor("accentPrimary").withAlpha(0.8f));
-        renderer.drawTextCentered("Choose a folder", b, tp.fontSizeS, theme.getColor("accentPrimary"));
+        renderer.drawTextCentered("Browse a folder", b, tp.fontSizeS, theme.getColor("accentPrimary"));
     }
 
 private:
