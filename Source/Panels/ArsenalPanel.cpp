@@ -1407,23 +1407,20 @@ AestraUI::DropResult ArsenalPanel::onDrop(const AestraUI::DragData& data, const 
             }
         }
         if (targetUnit == 0) {
-            targetUnit = unitMgr.createUnit(filename, UnitType::Sampler);
+            // Dropping onto empty Arsenal is still an explicit unit creation, so it
+            // must use the same undoable creation path as "+ Add unit".
+            createUnitOfType(UnitType::Sampler, filename);
+            targetUnit = m_selectedUnitId;
             if (targetUnit == 0) {
                 result.accepted = false;
                 result.message = "Could not create an Arsenal unit";
                 return result;
             }
-            unitMgr.setUnitEnabled(targetUnit, true);
-            // Route the fresh unit like every other creation path — otherwise
-            // the dropped sample loads into a unit with no mixer destination.
-            if (const auto* unit = unitMgr.getUnit(targetUnit)) {
-                const std::string destinationName = unit->name.empty() ? "Mixer Channel" : unit->name;
-                routeUnitToFirstFreeMixerChannel(*m_trackManager, targetUnit, destinationName, unit->color);
-            }
+        } else {
+            m_selectedUnitId = targetUnit;
+            m_selectedUnitIds = {targetUnit};
+            m_unitSelectionAnchor = targetUnit;
         }
-
-        unitMgr.setUnitName(targetUnit, filename);
-        unitMgr.setUnitEnabled(targetUnit, true);
         if (m_onSampleDroppedToUnit) {
             m_onSampleDroppedToUnit(targetUnit, data.filePath);
         }
