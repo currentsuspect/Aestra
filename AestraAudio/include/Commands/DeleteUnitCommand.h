@@ -91,25 +91,29 @@ private:
     void removeOwnedNotes() {
         auto& patterns = m_manager.getPatternManager();
         for (const auto& snapshot : m_notes) {
-            if (auto* pattern = patterns.getPattern(snapshot.patternId)) {
-                auto& notes = std::get<MidiPayload>(pattern->payload).notes;
+            if (!patterns.getPattern(snapshot.patternId)) continue;
+            patterns.applyPatch(snapshot.patternId, [this](PatternSource& pattern) {
+                if (!pattern.isMidi()) return;
+                auto& notes = std::get<MidiPayload>(pattern.payload).notes;
                 notes.erase(std::remove_if(notes.begin(), notes.end(), [this](const MidiNote& n) {
                     return n.unitId == m_unitId;
                 }), notes.end());
-            }
+            });
         }
     }
 
     void restoreOwnedNotes() {
         auto& patterns = m_manager.getPatternManager();
         for (const auto& snapshot : m_notes) {
-            if (auto* pattern = patterns.getPattern(snapshot.patternId)) {
-                auto& notes = std::get<MidiPayload>(pattern->payload).notes;
+            if (!patterns.getPattern(snapshot.patternId)) continue;
+            patterns.applyPatch(snapshot.patternId, [this, &snapshot](PatternSource& pattern) {
+                if (!pattern.isMidi()) return;
+                auto& notes = std::get<MidiPayload>(pattern.payload).notes;
                 notes.erase(std::remove_if(notes.begin(), notes.end(), [this](const MidiNote& n) {
                     return n.unitId == m_unitId;
                 }), notes.end());
                 notes.insert(notes.end(), snapshot.notes.begin(), snapshot.notes.end());
-            }
+            });
         }
     }
 
