@@ -16,6 +16,7 @@
 #include "NUIComponent.h"
 #include "../AestraUI/Core/NUIDragDrop.h"
 #include <optional>
+#include <set>
 #include <utility>
 
 namespace Aestra {
@@ -110,6 +111,8 @@ public:
     void setSoundSetProviders(std::function<std::vector<std::string>()> names, std::function<std::vector<std::string>(const std::string&)> members,
                               std::function<void(UnitID, const std::string&)> chosen) { m_lanes.setSoundSetProviders(std::move(names), std::move(members), std::move(chosen)); }
     void setOnSampleDroppedToUnit(std::function<void(UnitID, const std::string&)> cb) { m_onSampleDroppedToUnit = cb; }
+    /** @brief Open a selected kit folder in the File Browser without creating Arsenal state. */
+    void setOnKitFolderSelected(std::function<void(const std::string&)> cb) { m_onKitFolderSelected = std::move(cb); }
     /** @brief Set the callback fired when unit selection changes. */
     void setOnSelectedUnitChanged(std::function<void(UnitID)> cb) { m_onSelectedUnitChanged = std::move(cb); }
 
@@ -213,13 +216,22 @@ private:
         UnitID sourceUnitId;
     };
     std::optional<PatternClipboard> m_clipboard;
-    UnitID m_selectedUnitId = 0; // Currently selected unit for copy/paste
+    UnitID m_selectedUnitId = 0; // Primary selected unit for editing/copy/paste
+    std::vector<UnitID> m_selectedUnitIds; // Desktop-style multi-selection
+    UnitID m_unitSelectionAnchor = 0;
+    std::vector<uint64_t> m_selectedPatternIds; // Desktop-style pattern multi-selection
+    uint64_t m_patternSelectionAnchor = 0;
     UnitID m_selectionUnitId = 0; // Unit owning the current step selection (survives row rebuilds)
     std::vector<int> m_selectedSteps; // Selected step indices for m_selectionUnitId
 
     void onAddUnit();
     bool removeSelectedUnit();
+    bool removeSelectedUnits();
+    bool removeSelectedPatterns();
+    void handleUnitSelection(UnitID unitId, AestraUI::NUIModifiers modifiers);
+    void handlePatternSelection(uint64_t patternId, AestraUI::NUIModifiers modifiers);
     void syncRowSelection();
+
     void removeUnitNotes(UnitID unitId);
     
     // Drag-drop callbacks
@@ -236,6 +248,7 @@ private:
     std::function<void(const std::string&)> m_onPluginDropped;
     std::function<void(UnitID, const std::string&)> m_onPluginDroppedToUnit;
     std::function<void(UnitID, const std::string&)> m_onSampleDroppedToUnit;
+    std::function<void(const std::string&)> m_onKitFolderSelected;
     std::function<void(UnitID)> m_onSelectedUnitChanged;
     std::function<void(double beat, bool active)> m_onPositionScrubbed;
     std::shared_ptr<AestraUI::PianoRollRuler> m_ruler; ///< the bar ruler the piano roll uses (numbers, ticks, playhead marker, scrub)
