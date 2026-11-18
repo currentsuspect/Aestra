@@ -36,6 +36,10 @@ void ArsenalPanel::reconcilePatterns() {
         signature += std::hash<std::string>{}(p.name) * 31u + static_cast<size_t>(p.id.value); // order-free: the store is unordered
         if (p.isMidi()) midi.push_back({p.id.value, std::get<MidiPayload>(p.payload).notes.size()});
     });
+    m_selectedPatternIds.erase(std::remove_if(m_selectedPatternIds.begin(), m_selectedPatternIds.end(),
+        [&](uint64_t id) { return !patterns.getPattern(PatternID{id}); }), m_selectedPatternIds.end());
+    if (m_selectedPatternIds.empty()) m_patternSelectionAnchor = 0;
+
     const uint64_t toShow = ArsenalPatternPick::patternToShow(midi);
     if (!patterns.getPattern(m_activePatternID) && toShow != 0) {
         // Nothing on show (a project just opened, undoing a duplicate, a delete elsewhere): show a pattern with notes
