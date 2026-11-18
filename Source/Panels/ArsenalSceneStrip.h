@@ -178,7 +178,7 @@ public:
     AestraUI::NUIRect swingRect() const { return {m_rect.right() - kRightW, m_rect.y, kSwingW, m_rect.height}; }
     AestraUI::NUIRect swingTrackRect() const {
         const auto sw = swingRect();
-        return {sw.x + 42.0f, sw.y + 9.0f, std::max(1.0f, sw.width - 78.0f), 18.0f};
+        return {sw.x + 5.0f, sw.y + 15.0f, std::max(1.0f, sw.width - 10.0f), 20.0f};
     }
     AestraUI::NUIRect placeRect() const { return {m_rect.right() - kPlaceW, m_rect.y + (m_rect.height - 34.0f) * 0.5f, kPlaceW, 34.0f}; }
     float swing() const { return m_swing; }
@@ -242,20 +242,17 @@ public:
         // A bounded slider makes the full 0–100% range visible and the current value easy to place.
         const auto sw = swingRect();
         const auto track = swingTrackRect();
-        const float cy = track.y + track.height * 0.5f;
-        const float valueX = track.x + track.width * m_swing;
+        const float fillWidth = track.width * std::clamp(m_swing, 0.0f, 1.0f);
         renderer.fillRoundedRect(track, track.height * 0.5f, theme.getColor("backgroundPrimary"));
+        if (fillWidth > 0.0f) {
+            renderer.fillRoundedRect({track.x, track.y, fillWidth, track.height}, track.height * 0.5f,
+                                     theme.getColor("accentPrimary"));
+        }
         renderer.strokeRoundedRect(track, track.height * 0.5f, 1.0f, theme.getColor("borderSubtle"));
         renderer.drawTextCentered("SWING", {sw.x, sw.y + 1.0f, sw.width, 12.0f}, tp.fontSizeMicro,
                                   theme.getColor("textMuted"));
-        renderer.drawLine({track.x, cy}, {track.right(), cy}, 3.0f, theme.getColor("borderSubtle"));
-        renderer.drawLine({track.x, cy}, {valueX, cy}, 3.0f, theme.getColor("accentPrimary"));
-        renderer.fillCircle({valueX, cy}, 6.0f, theme.getColor("accentPrimary"));
         renderer.drawTextCentered(m_swingMixed ? "MIX" : (std::to_string(swingPercent(m_swing)) + "%"),
-                                  {sw.x, sw.y + 13.0f, sw.width, 12.0f}, tp.fontSizeXS,
-                                  theme.getColor("textPrimary"));
-        renderer.drawText("0", {track.x, track.bottom() + 1.0f}, tp.fontSizeMicro, theme.getColor("textMuted"));
-        renderer.drawText("100", {track.right() - 17.0f, track.bottom() + 1.0f}, tp.fontSizeMicro, theme.getColor("textMuted"));
+                                  track, tp.fontSizeXS, theme.getColor("textPrimary"));
         const auto pl = placeRect(); // the one primary action of the header (the mock's purple button)
         renderer.fillRoundedRect(pl, tp.radiusXS, theme.getColor("accentPrimary"));
         const AestraUI::NUIColor white(1.0f, 1.0f, 1.0f, 1.0f);
