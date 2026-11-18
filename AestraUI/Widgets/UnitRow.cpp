@@ -895,6 +895,9 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
         }
 
         if (event.button == NUIMouseButton::Left) {
+            if (bounds.contains(event.position) && m_onSelectUnit) {
+                m_onSelectUnit(m_unitId, event.modifiers);
+            }
             // Note: NUITextInput handles its own focus loss/commit.
             // We just handle clicks on other elements.
 
