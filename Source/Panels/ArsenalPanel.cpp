@@ -1384,7 +1384,6 @@ AestraUI::DropResult ArsenalPanel::onDrop(const AestraUI::DragData& data, const 
             return result;
         }
 
-        auto& unitMgr = m_trackManager->getUnitManager();
         std::string filename = data.filePath.substr(data.filePath.find_last_of("/\\") + 1);
         const auto lastDot = filename.find_last_of('.');
         if (lastDot != std::string::npos) {
