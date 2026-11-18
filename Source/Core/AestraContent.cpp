@@ -4594,6 +4594,27 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     if (m_takesPanel && m_takesPanel->isVisible() && m_takesPanel->handleKeyEvent(event))
         return true;
 
+    const bool ctrlA = (event.modifiers & AestraUI::NUIModifiers::Ctrl) &&
+                       event.keyCode == AestraUI::NUIKeyCode::A;
+    if (ctrlA) {
+        auto* focused = AestraUI::NUIComponent::getFocusedComponent();
+        const auto isWithin = [](AestraUI::NUIComponent* child, const AestraUI::NUIComponent* ancestor) {
+            for (auto* current = child; current; current = current->getParent())
+                if (current == ancestor) return true;
+            return false;
+        };
+        if (focused && !isWithin(focused, m_sequencerPanel.get())) {
+            if (m_pianoRollPanel && m_pianoRollPanel->isVisible() &&
+                isWithin(focused, m_pianoRollPanel.get()) && m_pianoRollPanel->handleKeyEvent(event)) {
+                return true;
+            }
+            // The root routes Ctrl shortcuts here before the focused widget.
+            // Yield when another editor or unit owns focus so its own Ctrl+A
+            // handler gets the key on the root's focused-component pass.
+            return false;
+        }
+    }
+
     // Arsenal owns selection-level shortcuts even when a child row did not
     // acquire widget focus. Let active text inputs keep Delete/Escape while
     // editing; the pattern rename input is then handled by its own callback.
