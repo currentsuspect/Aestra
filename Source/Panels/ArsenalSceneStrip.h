@@ -250,8 +250,8 @@ public:
         const float fillWidth = fillTrackWidth * std::clamp(m_swing, 0.0f, 1.0f);
         renderer.fillRoundedRect(track, track.height * 0.5f, theme.getColor("backgroundPrimary"));
         if (fillWidth > 0.0f) {
-            const NUIRect fillRect(track.x + fillInset, track.y + fillInset, fillWidth,
-                                   std::max(1.0f, track.height - fillInset * 2.0f));
+            const AestraUI::NUIRect fillRect(track.x + fillInset, track.y + fillInset, fillWidth,
+                                             std::max(1.0f, track.height - fillInset * 2.0f));
             renderer.fillRoundedRect(fillRect, std::min(fillRect.height * 0.5f, fillRect.width * 0.5f),
                                      theme.getColor("accentPrimary"));
         }
