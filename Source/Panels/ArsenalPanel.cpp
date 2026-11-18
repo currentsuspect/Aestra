@@ -546,6 +546,12 @@ bool ArsenalPanel::removeSelectedUnits() {
         return std::find(unitIDs.begin(), unitIDs.end(), a) < std::find(unitIDs.begin(), unitIDs.end(), b);
     });
 
+    size_t preferredIndex = unitIDs.size();
+    for (const UnitID id : targets) {
+        const auto it = std::find(unitIDs.begin(), unitIDs.end(), id);
+        if (it != unitIDs.end()) preferredIndex = std::min(preferredIndex, static_cast<size_t>(std::distance(unitIDs.begin(), it)));
+    }
+
     auto transaction = std::make_shared<CommandTransaction>("Delete Arsenal Unit(s)");
     std::vector<std::shared_ptr<DeleteUnitCommand>> commands;
     commands.reserve(targets.size());
@@ -574,10 +580,8 @@ bool ArsenalPanel::removeSelectedUnits() {
         m_selectedUnitId = 0;
         m_unitSelectionAnchor = 0;
     } else {
-        auto next = std::find_if(remaining.begin(), remaining.end(), [&](UnitID id) {
-            return id > 0 && std::find(unitIDs.begin(), unitIDs.end(), id) != unitIDs.end();
-        });
-        m_selectedUnitId = next != remaining.end() ? *next : remaining.front();
+        const size_t index = std::min(preferredIndex, remaining.size() - 1);
+        m_selectedUnitId = remaining[index];
         m_selectedUnitIds = {m_selectedUnitId};
         m_unitSelectionAnchor = m_selectedUnitId;
     }
