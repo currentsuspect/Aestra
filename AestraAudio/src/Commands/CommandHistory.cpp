@@ -28,6 +28,7 @@ void CommandHistory::notifyStateChanged() {
     std::vector<StateChangedCallback> listeners;
     {
         std::lock_guard<std::mutex> lock(m_mutex);
+        ++m_mutations;
         listeners = m_onStateChangedCallbacks;
     }
     for (const auto& cb : listeners) {

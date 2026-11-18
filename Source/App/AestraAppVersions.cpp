@@ -21,7 +21,12 @@ void AestraApp::wireVersionsPanel(Aestra::Audio::TakesPanel& panel) {
     const auto path = [this]() { return m_documentState.canonicalPath(); };
     wireVersionsDock(panel, [this]() -> Audio::CommandHistory& { return m_content->getTrackManager()->getCommandHistory(); },
                      [this]() { return m_documentState.displayName(); }, [this]() { m_content->refreshAfterHistoryChange(); });
-    panel.setUnsavedProvider([this]() { return currentVersionEdits().steps; });
+    panel.setUnsavedProvider([this]() {
+        const auto edits = currentVersionEdits();
+        // A number only when it is exact; "Edited" when steps were taken back and no count is honest. A project
+        // still on its version reports a clean, counted zero, and the dock draws no tail for it.
+        return Audio::TakesPanel::UnsavedInfo{edits.steps, edits.counted || (!edits.diverged && edits.steps == 0)};
+    });
     wireVersionBounces(panel, path, [this](const std::string& p) { return m_content->togglePreviewFile(p); },
                        [this](const std::string& p) { return m_content->isPreviewFilePlaying(p); },
                        [this, path](const std::string& id) {
@@ -47,19 +52,31 @@ void AestraApp::refreshVersionChip() {
     m_windowManager->setVersionChip(chip.branch, AestraUI::NUIColor::fromHex(VersionsTimeline::laneHex(chip.lane)), chip.version);
 }
 
+VersionEdits::Baseline AestraApp::versionBaseline() const {
+    VersionEdits::Baseline baseline;
+    baseline.recorded = m_openVersionSteps;
+    baseline.chronicled = m_versionHistoryChronicled;
+    return baseline;
+}
+
 VersionEdits::State AestraApp::currentVersionEdits() {
     auto* tm = m_content ? m_content->getTrackManager().get() : nullptr;
     if (!tm) return {};
     const auto& history = tm->getCommandHistory();
-    // Reading the stacks is O(1); measuring is O(steps). The frame loop asks every frame, so measure only
-    // when the cursor moved — undo or redo always changes one of these two depths.
-    const size_t undo = history.getUndoStack().size();
-    const size_t redo = history.getRedoStack().size();
-    if (m_versionEditsStale || undo != m_versionEditsUndoDepth || redo != m_versionEditsRedoDepth) {
-        m_versionEdits = VersionEdits::measure(history, m_openVersionSteps);
-        m_versionEditsUndoDepth = undo;
-        m_versionEditsRedoDepth = redo;
+    // Reading one counter is O(1); measuring walks the steps. The frame loop asks every frame, so measure only
+    // when the history moved — the mutation count, not the stack depths: a command at the history limit replaces
+    // the oldest and leaves both depths unchanged, which a cached answer must not survive.
+    const uint64_t mutations = history.mutationCount();
+    if (m_versionEditsStale || mutations != m_versionEditsMutation) {
+        m_versionEdits = VersionEdits::measure(history, versionBaseline());
+        m_versionEditsMutation = mutations;
         m_versionEditsStale = false;
+    }
+    // A restored snapshot clears the history and marks the project modified: the steps cannot say what changed,
+    // but the project is not the version, and a switch must ask before writing over it.
+    if (!m_versionEdits.diverged && tm->isModified()) {
+        m_versionEdits.diverged = true;
+        m_versionEdits.counted = false;
     }
     return m_versionEdits;
 }
@@ -92,8 +109,7 @@ void AestraApp::showVersionPicker(float x) {
         item->setChecked(e.current);
         if (!e.current) {
             item->setOnClick([this, id = e.versionId]() {
-                requestSwitchToTake(id);
-                if (auto panel = m_content->getTakesPanel()) panel->refreshTakes();
+                requestSwitchToTake(id); // the prompt, when one is needed, refreshes the dock when it answers
             });
         }
         menu->addItem(item);
@@ -104,17 +120,22 @@ void AestraApp::showVersionPicker(float x) {
     m_windowManager->showDropdownMenu(menu, x);
 }
 
-void AestraApp::requestSwitchToTake(const std::string& takeId) {
+VersionEdits::OpenOutcome AestraApp::requestSwitchToTake(const std::string& takeId) {
     if (takeId.empty() || m_documentState.canonicalPath().empty()) {
-        switchToTake(takeId);
-        return;
+        return reportSwitch(switchToTake(takeId));
     }
     const auto edits = currentVersionEdits();
     if (!edits.diverged) { // the project is still the version: nothing to ask about
-        switchToTake(takeId);
-        return;
+        return reportSwitch(switchToTake(takeId));
     }
     showVersionSwitchPrompt(takeId, edits);
+    return VersionEdits::OpenOutcome::Declined; // the dialog answers later; nothing has moved yet
+}
+
+VersionEdits::OpenOutcome AestraApp::reportSwitch(const ProjectSerializer::LoadResult& result) {
+    if (result.ok) return VersionEdits::OpenOutcome::Opened;
+    Log::error("[Versions] Could not open the version: " + result.errorMessage);
+    return VersionEdits::OpenOutcome::Failed;
 }
 
 void AestraApp::showVersionSwitchPrompt(const std::string& takeId, const VersionEdits::State& edits) {
@@ -151,10 +172,11 @@ void AestraApp::showVersionSwitchPrompt(const std::string& takeId, const Version
         if (!plan.proceed) return; // Cancel or a dismissed dialog: nothing moves
         if (plan.saveAsNewBranch && !createTakeFromCurrentProject(true)) {
             Log::warning("[Versions] Could not save the working state as an alt; not switching");
+            reportSwitch({});  // the alt failed: the panel says the version was not opened
+            if (auto panel = m_content->getTakesPanel()) panel->refreshTakes();
             return;
         }
-        const auto result = switchToTake(takeId, plan.saveCurrent);
-        if (!result.ok) Log::error("[Versions] Could not open the version: " + result.errorMessage);
+        reportSwitch(switchToTake(takeId, plan.saveCurrent));
         if (auto panel = m_content->getTakesPanel()) panel->refreshTakes();
     });
 }

@@ -2,28 +2,46 @@
 #pragma once
 
 #include "TakeManager.h"
+#include "VersionSteps.h"
 
 #include "Commands/CommandHistory.h"
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace Aestra {
 
 /**
  * @brief How far the open project has moved from the version it was opened on (SPEC-017).
  *
+ * A version's step log lives in the manifest, not in the command history: opening a version clears the
+ * history, so the stack holds only what was done since, and a save in the same session leaves the whole
+ * log on the stack. `Baseline` says which of the two is true by counting how many of the stack's leading
+ * commands are already in the log, so one rule answers both.
+ *
  * "How many commands are on the stack now, minus how many the version recorded" is only true while the
  * recorded steps are still the leading commands: undo past the save point and make a new step and the
- * subtraction reads zero while the project differs from the version. This walks the recorded steps
- * against the undo stack instead, so the answer stays true after undo. Pure: reads, changes nothing.
- *
- * Two states are indistinguishable from the history alone — a version just opened, and a version whose
- * every step was taken back. Both leave an empty stack, and both are treated as "the version": prompting
- * on every switch after opening a version would be worse than the case it would catch.
+ * subtraction reads zero while the project differs from the version. Measuring from the save point's
+ * depth instead keeps the answer true after undo, after reopening, and when the history is truncated at
+ * its limit. Pure: reads, changes nothing.
  */
 namespace VersionEdits {
+
+struct Baseline {
+    /// @brief The log the open version saved, oldest first.
+    std::vector<TakeManager::TakeEntry::Step> recorded;
+    /**
+     * @brief How many of the undo stack's leading commands are already in `recorded`.
+     *
+     * Zero when the version was opened (its log is on disk, the history was cleared); the stack depth at
+     * the save when the version was saved in this session. Undoing below it means the version's own steps
+     * were taken back.
+     */
+    size_t chronicled{0};
+};
 
 struct State {
     /** @brief Steps made since the version was saved. Exact only when `counted` is true. */
@@ -40,65 +58,73 @@ inline std::string stepLabel(const Audio::ICommand& command) {
     return name.empty() ? std::string("(unnamed)") : name;
 }
 
-/// How many of the version's recorded steps are still the leading commands on the undo stack, oldest first.
-inline size_t stepsStillInPlace(const Audio::CommandHistory& history, const std::vector<TakeManager::TakeEntry::Step>& recordedSteps) {
+/// How many of the stack's leading commands are still the rows the version recorded.
+inline size_t stepsStillInPlace(const Audio::CommandHistory& history, const Baseline& baseline) {
     const auto& undo = history.getUndoStack();
-    const size_t limit = std::min(undo.size(), recordedSteps.size());
+    const size_t limit = std::min({undo.size(), baseline.recorded.size(), baseline.chronicled});
     size_t i = 0;
     for (; i < limit; ++i) {
         const auto& command = undo[i];
         if (!command) break;
-        const auto& step = recordedSteps[i];
+        const auto& step = baseline.recorded[i];
         if (command->createdAtMs() != step.atMs || stepLabel(*command) != step.label) break;
     }
     return i;
 }
 
-inline size_t stepsStillInPlace(const Audio::CommandHistory& history, const TakeManager::TakeEntry& version) {
-    return stepsStillInPlace(history, version.steps);
-}
-
 /// What the title bar and the switch prompt need: the step count, and whether the project is still the version.
-inline State measureSteps(const Audio::CommandHistory& history, const std::vector<TakeManager::TakeEntry::Step>& recordedSteps) {
+inline State measure(const Audio::CommandHistory& history, const Baseline& baseline) {
     State state;
     const int depth = static_cast<int>(history.getUndoStack().size());
-    if (depth == 0) { // opened, or every step taken back: nothing has been done since
-        state.counted = true;
-        return state;
-    }
-    if (recordedSteps.empty()) { // a version saved before any step: every step on the stack is new
-        state.steps = depth;
-        state.counted = true;
+    const int saved = static_cast<int>(baseline.chronicled);
+    const int inPlace = static_cast<int>(stepsStillInPlace(history, baseline));
+    // The save point's own commands are the version's: once they stop, a new step at the same depth is a
+    // re-trunked history, which a depth-to-depth subtraction reads as untouched.
+    const int expected = static_cast<int>(std::min(baseline.recorded.size(), baseline.chronicled));
+    if (depth < saved || inPlace < expected) {
+        state.steps = std::max(0, depth - inPlace);
         state.diverged = true;
         return state;
     }
-
-    const int recorded = static_cast<int>(recordedSteps.size());
-    const int inPlace = static_cast<int>(stepsStillInPlace(history, recordedSteps));
-    if (inPlace == depth) { // every live command is one of the version's own steps
-        state.counted = depth == recorded;
-        state.diverged = !state.counted;
-        return state;
-    }
-    if (inPlace == recorded) { // the version's steps are all still in place, plus new ones
-        state.steps = depth - recorded;
-        state.counted = true;
-        state.diverged = true;
-        return state;
-    }
-    // The history was re-trunked: steps were taken back past the save point, then new ones made.
-    state.steps = std::max(0, depth - inPlace);
-    state.diverged = true;
+    state.steps = depth - saved;
+    // A step taken back leaves the count describing work that is no longer applied, so it is not claimed.
+    state.counted = history.getRedoStack().empty();
+    state.diverged = state.steps > 0;
     return state;
 }
 
-inline State measure(const Audio::CommandHistory& history, const std::vector<TakeManager::TakeEntry::Step>& recordedSteps) {
-    return measureSteps(history, recordedSteps);
+/// The same, for a version entry (or none: every command on the stack is then unsaved work).
+inline State measure(const Audio::CommandHistory& history, const TakeManager::TakeEntry* version, size_t chronicled = 0) {
+    Baseline baseline;
+    if (version) baseline.recorded = version->steps;
+    baseline.chronicled = chronicled;
+    return measure(history, baseline);
 }
 
-inline State measure(const Audio::CommandHistory& history, const TakeManager::TakeEntry* version) {
-    return measureSteps(history, version ? version->steps : std::vector<TakeManager::TakeEntry::Step>{});
+/**
+ * @brief The step log a save should write: the version's own rows, then the commands made since the save point.
+ *
+ * Never the raw stack: after reopening a version the stack holds only the new commands, and writing it
+ * alone would erase the version's recorded steps. A re-trunked history (steps taken back past the save
+ * point) keeps the stored log rather than trading it for a shorter one.
+ */
+inline std::vector<TakeManager::TakeEntry::Step> stepsToRecord(const Audio::CommandHistory& history,
+                                                              const Baseline& baseline) {
+    std::vector<TakeManager::TakeEntry::Step> steps = baseline.recorded;
+    const auto& undo = history.getUndoStack();
+    for (size_t i = std::min(baseline.chronicled, undo.size()); i < undo.size(); ++i) {
+        if (!undo[i]) continue;
+        steps.push_back(stepFor(*undo[i]));
+    }
+    return steps;
 }
+
+/**
+ * @brief What asking for a version came to: opened, the user declined the prompt, or the switch failed.
+ *
+ * Declining is not a failure: the Versions dock reports "Could not open the version" for a failure only.
+ */
+enum class OpenOutcome { Opened, Declined, Failed };
 
 /**
  * @brief The three answers a version switch can take (SPEC-017 scope 5), and what each one does.

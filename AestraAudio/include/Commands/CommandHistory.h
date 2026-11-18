@@ -4,6 +4,7 @@
 #include "ICommand.h"
 #include "CommandTransaction.h"
 
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -109,6 +110,18 @@ public:
     void clear();
 
     /**
+     * @brief Bumped by every change to either stack (push, undo, redo, clear, truncation).
+     *
+     * Truer than the two depths, which a new command at the history limit leaves unchanged: the
+     * oldest command goes and the newest arrives. Callers that cache an answer computed from the
+     * history compare this instead of the sizes.
+     */
+    uint64_t mutationCount() const {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        return m_mutations;
+    }
+
+    /**
      * @brief Set maximum number of commands in history
      * @param size Maximum number of commands (0 = unlimited)
      */
@@ -147,6 +160,7 @@ private:
     std::shared_ptr<CommandTransaction> m_activeTransaction;
     int m_transactionNestingLevel = 0;
 
+    uint64_t m_mutations = 0;
     size_t m_maxHistorySize = 100;
     size_t m_maxHistoryMemory = 100 * 1024 * 1024; // 100MB default
 

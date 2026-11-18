@@ -1997,6 +1997,10 @@ ProjectSerializer::LoadResult AestraApp::applyLoadedProject(const std::string& p
             trackManager->setPosition(result.playhead);
             trackManager->setPlayStartPosition(result.playhead);
             trackManager->getCommandHistory().clear();
+            // The stack no longer holds the version's own commands: everything made from here on is new, and
+            // nothing on it is chronicled.
+            m_versionHistoryChronicled = 0;
+            m_versionEditsStale = true;
             // Only an in-memory transformation requires a save. Merely
             // advancing an older no-op schema stamp must not create a false
             // dirty prompt (#662).
@@ -2188,11 +2192,16 @@ bool AestraApp::saveActiveTakeSnapshot(const ProjectSerializer::UIState* uiState
         Log::warning("[Takes] Could not save active Take: " + result.errorMessage);
         return false;
     }
+    // The version's own rows, then the commands made since: opening a version clears the history, so writing the
+    // stack alone would erase the log the Versions dock shows (and a save one step after a reopen would leave it
+    // holding that single step).
     const auto& history = m_content->getTrackManager()->getCommandHistory();
-    if (historyCanRecordSteps(history, result.take.steps)) {
-        TakeManager::setVersionSteps(m_documentState.canonicalPath(), result.take.id, collectVersionSteps(history));
-    }
+    TakeManager::setVersionSteps(m_documentState.canonicalPath(), result.take.id,
+                                 VersionEdits::stepsToRecord(history, versionBaseline()));
     refreshVersionChip(); // this version just wrote the steps the unsaved count measures against
+    // The save point moved to the top of the stack: everything applied is now part of the version.
+    m_versionHistoryChronicled = history.getUndoStack().size();
+    m_versionEditsStale = true;
     return true;
 }
 
@@ -2201,10 +2210,9 @@ bool AestraApp::createTakeFromCurrentProject(bool newBranch) {
         return false;
     }
 
-    if (!saveProject()) {
-        return false;
-    }
-
+    // No save-into-the-open-version first: "Save as an alt" (and the switch prompt's answer of the same name)
+    // keeps the working state in the new version only. Writing it into the source take first changed that take
+    // even when creating the alt then failed.
     const auto uiState = captureUIState();
     auto ser = serializeCurrentProject(2, &uiState);
     if (!ser.ok || ser.contents.empty()) {
@@ -2215,9 +2223,14 @@ bool AestraApp::createTakeFromCurrentProject(bool newBranch) {
     const auto manifest = TakeManager::loadManifest(m_documentState.canonicalPath());
     const std::string takeName = "Version " + std::to_string(manifest.ok ? manifest.takes.size() + 1 : 2);
     const std::string branchName = newBranch ? "Alt " + std::to_string(manifest.ok ? manifest.branches().size() : 1) : ""; // empty continues the open branch
-    auto result = TakeManager::createVersion(m_documentState.canonicalPath(), ser.contents, takeName, "", branchName, TakeManager::TakeEntry::Kind::Saved, collectVersionSteps(m_content->getTrackManager()->getCommandHistory()));
+    const auto& history = m_content->getTrackManager()->getCommandHistory();
+    auto result = TakeManager::createVersion(m_documentState.canonicalPath(), ser.contents, takeName, "", branchName,
+                                             TakeManager::TakeEntry::Kind::Saved,
+                                             VersionEdits::stepsToRecord(history, versionBaseline()));
     if (!result.ok) { Log::warning("[Takes] Could not create version: " + result.errorMessage); return false; }
     refreshVersionChip(); // the new version is open, and its steps are the ones the unsaved count measures against
+    m_versionHistoryChronicled = history.getUndoStack().size();
+    m_versionEditsStale = true;
 
     Log::info("[Takes] Active version: " + result.take.name); return true;
 }
@@ -2264,6 +2277,9 @@ ProjectSerializer::LoadResult AestraApp::switchToTake(const std::string& takeId,
     }
 
     auto activeResult = TakeManager::setActiveTake(m_documentState.canonicalPath(), takeId);
+    // The loaded snapshot is now the open version: read its own log before the mirror save below writes it back,
+    // or the mirror would append this version's new steps onto the previous version's log.
+    refreshVersionChip();
     if (!activeResult.ok) {
         auto rollback = loadProjectFromPath(m_documentState.canonicalPath());
         if (!rollback.ok) {
@@ -2355,10 +2371,7 @@ void AestraApp::wireTakesPanel() {
     takesPanel->setOnSaveToNewBranch([this]() { return createTakeFromCurrentProject(true); });
     wireVersionsPanel(*takesPanel); wireAudition();
     takesPanel->setOnSaveActiveTake([this]() { return saveProject(); });
-    takesPanel->setOnOpenTake([this](const std::string& takeId) {
-        requestSwitchToTake(takeId);
-        return true;
-    });
+    takesPanel->setOnOpenTake([this](const std::string& takeId) { return requestSwitchToTake(takeId); });
 
     takesPanel->setOnRenameTake([this](const std::string& takeId, const std::string& name) {
         if (m_documentState.canonicalPath().empty()) return false;

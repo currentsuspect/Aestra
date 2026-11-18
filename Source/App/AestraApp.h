@@ -188,8 +188,13 @@ private:
      * @param saveCurrent When false the working state is left behind (the user chose Discard in the switch prompt).
      */
     ProjectSerializer::LoadResult switchToTake(const std::string& takeId, bool saveCurrent = true);
-    /** @brief A user asked to open a version: asks first when the project has moved on from it (SPEC-017 scope 5). */
-    void requestSwitchToTake(const std::string& takeId);
+    /**
+     * @brief A user asked to open a version: asks first when the project has moved on from it (SPEC-017 scope 5).
+     * @return whether the version was opened, the user declined, or the switch failed — the panel says which.
+     */
+    Aestra::VersionEdits::OpenOutcome requestSwitchToTake(const std::string& takeId);
+    /** @brief The panel's word for a switch that was attempted: opened, or failed with its reason logged. */
+    Aestra::VersionEdits::OpenOutcome reportSwitch(const ProjectSerializer::LoadResult& result);
     bool branchFromTake(const std::string& takeId);
     void wireTakesPanel();
     void reinitAutosaveManager();
@@ -223,10 +228,13 @@ private:
     /** @brief Steps the open version recorded, and whether the project has moved on from it. Cheap between changes. */
     Aestra::VersionEdits::State currentVersionEdits();
     std::vector<TakeManager::TakeEntry::Step> m_openVersionSteps; ///< the open version's recorded steps, cached
+    /** How many leading commands of the history `m_openVersionSteps` already covers: the save point. */
+    size_t m_versionHistoryChronicled{0};
     Aestra::VersionEdits::State m_versionEdits;
-    size_t m_versionEditsUndoDepth{0};
-    size_t m_versionEditsRedoDepth{0};
+    uint64_t m_versionEditsMutation{0}; ///< the history's mutation count the cached answer was measured at
     bool m_versionEditsStale{true};
+    /** The open version's log and the save point, as VersionEdits measures against them. */
+    Aestra::VersionEdits::Baseline versionBaseline() const;
     static std::string getRecoveryMarkerPath(const std::string& autosavePath);
     static std::string readCrashFlagToken();
     static std::string readRecoveryOriginalProjectPath(const std::string& recoveryMarkerPath,
