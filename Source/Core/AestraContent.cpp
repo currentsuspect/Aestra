@@ -4020,8 +4020,12 @@ void AestraContent::loadSampleIntoUnitAsync(UnitID unitId, const std::string& sa
     auto weakSelf = weak_from_this();
 
     std::string previousSamplePath;
+    std::string previousUnitName;
+    bool previousUnitEnabled = false;
     if (const auto* currentUnit = m_trackManager->getUnitManager().getUnit(unitId)) {
         previousSamplePath = currentUnit->audioClipPath;
+        previousUnitName = currentUnit->name;
+        previousUnitEnabled = currentUnit->isEnabled || currentUnit->enabled;
     }
     if (m_trackManager->getUnitManager().getUnit(unitId)) {
         std::string filename = std::filesystem::path(samplePath).stem().string();
@@ -4069,7 +4073,7 @@ void AestraContent::loadSampleIntoUnitAsync(UnitID unitId, const std::string& sa
             return;
         }
 
-        self->enqueueMainThreadTask([weakSelf, generation, unitId, samplePath, previousSamplePath, openEditorWhenReady, decoded,
+        self->enqueueMainThreadTask([weakSelf, generation, unitId, samplePath, previousSamplePath, previousUnitName, previousUnitEnabled, openEditorWhenReady, decoded,
                                      decodedData = std::move(decodedData), sampleRate, numChannels,
                                      sampleLength, editorWaveform = std::move(editorWaveform),
                                      previewWaveform = std::move(previewWaveform), durationSeconds]() mutable {
@@ -4098,7 +4102,7 @@ void AestraContent::loadSampleIntoUnitAsync(UnitID unitId, const std::string& sa
 
             auto sampleCommand = std::make_shared<Audio::LoadSampleCommand>(
                 unitManager, unitId, samplePath);
-            sampleCommand->markExecuted(previousSamplePath);
+            sampleCommand->markExecuted(previousSamplePath, previousUnitName, previousUnitEnabled);
             self->m_trackManager->getCommandHistory().pushExecuted(sampleCommand);
 
             if (self->m_sequencerPanel) {
