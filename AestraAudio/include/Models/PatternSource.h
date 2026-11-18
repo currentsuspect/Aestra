@@ -118,10 +118,12 @@ public:
             if (id == unitId) { value = amount; return; }
         }
         unitSwing.emplace_back(unitId, amount);
+        std::sort(unitSwing.begin(), unitSwing.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
     }
     void restoreUnitSwingOverride(uint64_t unitId, std::optional<float> amount) {
         unitSwing.erase(std::remove_if(unitSwing.begin(), unitSwing.end(), [unitId](const auto& v) { return v.first == unitId; }), unitSwing.end());
         if (amount.has_value()) unitSwing.emplace_back(unitId, std::clamp(*amount, 0.0f, 1.0f));
+        std::sort(unitSwing.begin(), unitSwing.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
     }
 
     uint32_t getMixerChannelId() const { return m_mixerChannelId; }
