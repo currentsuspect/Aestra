@@ -705,7 +705,8 @@ bool ArsenalPanel::removeSelectedPatterns() {
     if (!m_trackManager || m_selectedPatternIds.empty()) return false;
 
     auto& patterns = m_trackManager->getPatternManager();
-    const size_t midiCount = std::count_if(patterns.getAllPatterns().begin(), patterns.getAllPatterns().end(),
+    const auto allPatterns = patterns.getAllPatterns();
+    const size_t midiCount = std::count_if(allPatterns.begin(), allPatterns.end(),
         [](const auto& p) { return p && p->isMidi(); });
 
     std::vector<uint64_t> targets;
@@ -872,6 +873,8 @@ void ArsenalPanel::onRender(NUIRenderer& renderer) {
     drawCommandHeader(renderer);
     if (m_trackManager && m_listContainer && isVisible()) {
         if (m_trackManager->getUnitManager().getAllUnitIDs().size() != m_unitRows.size()) refreshUnits(); // units added or removed elsewhere (Muse, undo)
+        m_scenes.setSelectedPatterns(m_selectedPatternIds);
+        m_scenes.setSwingTargets(m_selectedUnitIds);
         m_scenes.refresh(m_trackManager->getPatternManager(), m_activePatternID.value, m_sceneRect, ArsenalSceneStrip::quietDefaults(*m_trackManager));
         m_scenes.draw(renderer); m_sceneMenu.draw(renderer);
     }
@@ -1614,9 +1617,25 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
     using SceneKind = Aestra::ArsenalSceneStrip::Action::Kind;
     Aestra::ArsenalSceneStrip::Action scene;
     if (m_trackManager && m_scenes.onMouse(event, m_trackManager->getPatternManager(), m_activePatternID.value, scene)) {
-        if (scene.kind == SceneKind::Select || scene.kind == SceneKind::PatternAdded) { setActivePattern(PatternID{scene.id}); if (scene.kind == SceneKind::PatternAdded && m_patternBrowser) m_patternBrowser->refreshPatterns(); }
-        if (scene.kind == SceneKind::SwingEdited && m_onPatternEdited) m_onPatternEdited(m_activePatternID);
-        if (scene.kind == SceneKind::PlaceInTimeline && m_onPlaceInTimeline) m_onPlaceInTimeline(m_activePatternID); if (scene.kind == SceneKind::Menu) showSceneMenu(scene.id, scene.at);
+        if (scene.kind == SceneKind::Select) {
+            handlePatternSelection(scene.id, scene.modifiers);
+        } else if (scene.kind == SceneKind::PatternAdded) {
+            m_selectedPatternIds = {scene.id};
+            m_patternSelectionAnchor = scene.id;
+            setActivePattern(PatternID{scene.id});
+            if (m_patternBrowser) m_patternBrowser->refreshPatterns();
+        }
+        if (scene.kind == SceneKind::SwingEdited) {
+            if (scene.swingCommit) {
+                auto command = std::make_shared<SetPatternSwingCommand>(
+                    m_trackManager->getPatternManager(), m_activePatternID, m_selectedUnitIds, scene.newSwing);
+                command->markExecuted(scene.oldSwing, scene.oldUnitSwing);
+                m_trackManager->getCommandHistory().pushExecuted(command);
+            }
+            if (m_onPatternEdited) m_onPatternEdited(m_activePatternID);
+        }
+        if (scene.kind == SceneKind::PlaceInTimeline && m_onPlaceInTimeline) m_onPlaceInTimeline(m_activePatternID);
+        if (scene.kind == SceneKind::Menu) showSceneMenu(scene.id, scene.at);
         repaint();
         return true;
     }
@@ -1773,7 +1792,8 @@ bool ArsenalPanel::onKeyEvent(const NUIKeyEvent& event) {
     }
 
     if (event.keyCode == NUIKeyCode::Delete || event.keyCode == NUIKeyCode::Backspace) {
-        return removeSelectedUnit();
+        if (!m_selectedPatternIds.empty()) return removeSelectedPatterns();
+        return removeSelectedUnits();
     }
 
     return false;
