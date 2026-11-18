@@ -105,6 +105,19 @@ int main() {
     std::vector<MidiNote> plain{stepNote(0, 1), stepNote(1, 1)};
     check(!needsExpression(plain, 0.0f), "plain notes need no expansion");
     check(needsExpression(plain, 0.3f), "swing needs expansion");
+    PatternSource scoped;
+    scoped.type = PatternSource::Type::Midi;
+    scoped.payload = MidiPayload{};
+    scoped.swing = 0.2f;
+    scoped.setUnitSwing(2, 0.8f);
+    auto scopedNotes = std::vector<MidiNote>{stepNote(1, 1), stepNote(1, 2)};
+    const auto scopedExpanded = expandForPlayback(scopedNotes, scoped, 1, 1, 0);
+    check(scopedExpanded.size() == 2, "per-unit swing keeps both notes");
+    check(std::abs(scopedExpanded[0].startBeat - (0.25 + 0.2 * kMaxSwingDelayBeats)) < 1e-9,
+          "unit 1 inherits the pattern swing");
+    check(std::abs(scopedExpanded[1].startBeat - (0.25 + 0.8 * kMaxSwingDelayBeats)) < 1e-9,
+          "unit 2 uses its own swing override");
+
     plain[1].ratchet = 3;
     const auto expanded = expandForPlayback(plain, 0.0f, 1, 1, 0);
     check(expanded.size() == 4, "a 3-ratchet makes three hits");
