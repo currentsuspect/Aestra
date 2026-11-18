@@ -1271,6 +1271,11 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
 
     const int bars = std::clamp(static_cast<int>(std::round(lengthBeats / static_cast<double>(beatsPerBar()))),
                                 kArsenalMinPatternBars, kArsenalMaxPatternBars);
+    // Read the pattern length for the stepper itself. m_stepCount is also the
+    // grid's layout cache, and can lag when a length edit happens before rows
+    // have been rebuilt (for example while the list is not mounted).
+    const int displayedSteps = std::clamp(static_cast<int>(std::lround(std::max(0.25, lengthBeats) / 0.25)),
+                                          kArsenalMinPatternSteps, kArsenalMaxPatternSteps);
     const bool decEnabled = bars > kArsenalMinPatternBars;
     const bool incEnabled = bars < kArsenalMaxPatternBars;
 
@@ -1295,9 +1300,9 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
         m_stepsIncrementRect = NUIRect(m_stepsValueRect.right() + 4.0f, leftCard.y + 4.0f, compactHitArea,
                                        leftCard.height - 8.0f);
         Aestra::drawArsenalStepper(renderer, m_stepsDecrementRect, m_stepsValueRect, m_stepsIncrementRect,
-                                   (m_stepCount % bars == 0 ? std::to_string(m_stepCount / bars) + " per bar" : std::to_string(m_stepCount) + " steps"),
-                                   m_stepCount > kArsenalMinPatternSteps,
-                                   m_stepCount < kArsenalMaxPatternSteps);
+                                   (displayedSteps % bars == 0 ? std::to_string(displayedSteps / bars) + " per bar" : std::to_string(displayedSteps) + " steps"),
+                                   displayedSteps > kArsenalMinPatternSteps,
+                                   displayedSteps < kArsenalMaxPatternSteps);
     } else {
         // Clear the step hit rects: the mouse handler gates on width > 0, so
         // stale rects from a previously selected step unit would stay

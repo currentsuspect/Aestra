@@ -4,6 +4,7 @@
 #include "Models/PatternManager.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
+#include "NUIDoubleClick.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -243,12 +244,16 @@ public:
         const auto track = swingTrackRect();
         const float cy = track.y + track.height * 0.5f;
         const float valueX = track.x + track.width * m_swing;
-        renderer.drawText("SWING", {sw.x, sw.y + 3.0f}, tp.fontSizeMicro, theme.getColor("textMuted"));
+        renderer.fillRoundedRect(track, track.height * 0.5f, theme.getColor("backgroundPrimary"));
+        renderer.strokeRoundedRect(track, track.height * 0.5f, 1.0f, theme.getColor("borderSubtle"));
+        renderer.drawTextCentered("SWING", {sw.x, sw.y + 1.0f, sw.width, 12.0f}, tp.fontSizeMicro,
+                                  theme.getColor("textMuted"));
         renderer.drawLine({track.x, cy}, {track.right(), cy}, 3.0f, theme.getColor("borderSubtle"));
         renderer.drawLine({track.x, cy}, {valueX, cy}, 3.0f, theme.getColor("accentPrimary"));
         renderer.fillCircle({valueX, cy}, 6.0f, theme.getColor("accentPrimary"));
-        renderer.drawText(m_swingMixed ? "MIX" : (std::to_string(swingPercent(m_swing)) + "%"),
-                          {sw.right() - 32.0f, sw.y + 3.0f}, tp.fontSizeXS, theme.getColor("textPrimary"));
+        renderer.drawTextCentered(m_swingMixed ? "MIX" : (std::to_string(swingPercent(m_swing)) + "%"),
+                                  {sw.x, sw.y + 13.0f, sw.width, 12.0f}, tp.fontSizeXS,
+                                  theme.getColor("textPrimary"));
         renderer.drawText("0", {track.x, track.bottom() + 1.0f}, tp.fontSizeMicro, theme.getColor("textMuted"));
         renderer.drawText("100", {track.right() - 17.0f, track.bottom() + 1.0f}, tp.fontSizeMicro, theme.getColor("textMuted"));
         const auto pl = placeRect(); // the one primary action of the header (the mock's purple button)
@@ -300,7 +305,7 @@ public:
         if (hit.kind == Hit::Kind::Place) out = {Action::Kind::PlaceInTimeline, activeId};
         if (hit.kind == Hit::Kind::Swing) {
             captureSwingState(pm, activeId);
-            if (e.doubleClick) {
+            if (m_swingClickTracker.registerPress() || e.doubleClick) {
                 setSwingValue(pm, activeId, 0.0f);
                 out = {Action::Kind::SwingEdited, activeId};
                 out.newSwing = 0.0f;
@@ -355,6 +360,7 @@ private:
     }
 
     bool m_swingDrag{false};
+    AestraUI::NUIDoubleClickTracker m_swingClickTracker;
     float m_swing{0.0f};
     uint64_t m_activeId{0};
     uint64_t m_lastActive{0};
