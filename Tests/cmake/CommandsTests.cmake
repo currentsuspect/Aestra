@@ -76,7 +76,7 @@ target_include_directories(ArsenalUnitCommandsTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraAudio/include
     ${CMAKE_SOURCE_DIR}/AestraCore/include)
 add_test(NAME ArsenalUnitCommandsTest COMMAND ArsenalUnitCommandsTest)
-set_tests_properties(ArsenalUnitCommandsTest PROPERTIES LABELS "commands;arsenal;regression")
+set_tests_properties(ArsenalUnitCommandsTest PROPERTIES LABELS "commands;arsenal;regression;contract:ownership")
 
 # Arsenal pattern menu (V82-AR1, FD-52): Rename, Duplicate and Delete are one undo step each.
 add_executable(PatternMenuCommandsTest Commands/PatternMenuCommandsTest.cpp)
