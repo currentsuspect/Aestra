@@ -142,6 +142,13 @@ public:
     size_t getSizeInBytes() const override { return sizeof(*this); }
     bool changesProjectState() const override { return true; }
 
+    /// The value the plugin now holds, printed the way it prints it — the answer
+    /// to "did my 3.5 kHz land where I meant?" (#1405).
+    std::string displayValue() const override {
+        if (!m_executed || !m_plugin) return {};
+        return m_plugin->getParameterDisplay(m_paramId);
+    }
+
 private:
     PluginInstancePtr m_plugin;
     uint32_t m_paramId;

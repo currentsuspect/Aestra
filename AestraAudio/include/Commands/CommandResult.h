@@ -36,6 +36,12 @@ struct CommandResult {
     std::string createdIdText;
     /** What kind of object createdId names: "unit", "track", "lane", "clip", "pattern", "slot". */
     std::string createdKind;
+    /**
+     * What a value-setting verb left behind, as the plugin displays it — e.g.
+     * set_effect_param's "3.5kHz". Lets a caller confirm the value that landed
+     * (after unit conversion, rounding or a clamp) without a follow-up query.
+     */
+    std::string displayText;
 };
 
 } // namespace Audio
