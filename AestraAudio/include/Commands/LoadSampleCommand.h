@@ -21,6 +21,12 @@ public:
     LoadSampleCommand(UnitManager& unitManager, UnitID unitId, const std::string& path)
         : m_unitManager(unitManager), m_unitId(unitId), m_path(path) {}
 
+    /** Record an asynchronously applied load as one undoable command without decoding the sample twice. */
+    void markExecuted(const std::string& previousPath) {
+        m_previousPath = previousPath;
+        m_executed = true;
+    }
+
     void execute() override {
         if (m_executed) return;
         const UnitInfo* unit = m_unitManager.getUnit(m_unitId);
@@ -44,6 +50,7 @@ public:
     std::string getName() const override { return "Load Sample"; }
     size_t getSizeInBytes() const override { return sizeof(*this); }
     bool changesProjectState() const override { return true; }
+    bool isUndoable() const override { return m_executed; }
 
 private:
     UnitManager& m_unitManager;
