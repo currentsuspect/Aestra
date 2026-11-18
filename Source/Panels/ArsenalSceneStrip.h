@@ -216,7 +216,7 @@ public:
             const auto r = chipRect(p);
             const float tileRadius = 8.0f; // the board's pattern tile
             const auto& scene = m_scenes[p.index];
-            const bool selected = std::find(m_selectedPatterns.begin(), m_selectedPatterns.end(), scene.id) != m_selectedPatterns.end();
+            const bool selected = m_selectedPatterns.empty() ? scene.id == m_activeId : std::find(m_selectedPatterns.begin(), m_selectedPatterns.end(), scene.id) != m_selectedPatterns.end();
             renderer.fillRoundedRect(r, tileRadius, selected ? AestraUI::NUIColor::lerp(theme.getColor("backgroundSecondary"), theme.getColor("accentPrimary"), 0.32f) : theme.getColor("backgroundSecondary"));
             renderer.strokeRoundedRect(r, tileRadius, 1.0f, selected ? theme.getColor("accentPrimary").withAlpha(0.55f) : theme.getColor("borderSubtle").withAlpha(0.7f));
             renderer.setClipRect(AestraUI::intersectRects(view, r));
