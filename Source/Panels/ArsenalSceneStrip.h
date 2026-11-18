@@ -7,7 +7,10 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <functional>
+#include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace Aestra {
@@ -49,7 +52,12 @@ public:
     struct Action {
         enum class Kind { None, Select, PatternAdded, SwingEdited, PlaceInTimeline, Menu } kind{Kind::None};
         uint64_t id{0};
-        AestraUI::NUIPoint at{}; ///< Menu: where the right-click landed
+        AestraUI::NUIPoint at{};
+        AestraUI::NUIModifiers modifiers{AestraUI::NUIModifiers::None};
+        float newSwing{0.0f};
+        float oldSwing{0.0f};
+        std::vector<std::pair<uint64_t, std::optional<float>>> oldUnitSwing;
+        bool swingCommit{false}; ///< Menu: where the right-click landed
     };
 
     /// Every scene card is the same width, so a row of scenes reads as a row of cards, whatever they are called.
@@ -140,12 +148,25 @@ public:
         m_lastActive = activeId;
         m_placed = place(widths, active, rect.width - kRightW - kGap, m_offset, m_followActive, m_offset);
         const auto* ap = pm.getPattern(Audio::PatternID{activeId});
+        m_swingMixed = false;
         m_swing = ap ? ap->swing : 0.0f;
+        if (ap && !m_swingTargets.empty()) {
+            bool first = true;
+            float firstValue = 0.0f;
+            for (const uint64_t unitId : m_swingTargets) {
+                const float value = ap->swingForUnit(unitId);
+                if (first) { firstValue = value; first = false; }
+                else if (std::abs(value - firstValue) > 0.001f) m_swingMixed = true;
+            }
+            if (!first) m_swing = firstValue;
+        }
         m_followActive = false;
         m_activeId = activeId;
     }
 
     const std::vector<Scene>& scenes() const { return m_scenes; }
+    void setSelectedPatterns(const std::vector<uint64_t>& ids) { m_selectedPatterns = ids; }
+    void setSwingTargets(const std::vector<uint64_t>& ids) { m_swingTargets = ids; }
     const std::vector<Placed>& placed() const { return m_placed; }
     /// The "+" slot follows the last card (the mock), and stops at the swing zone when the cards run out of room.
     AestraUI::NUIRect addRect() const {
@@ -195,17 +216,16 @@ public:
             const auto r = chipRect(p);
             const float tileRadius = 8.0f; // the board's pattern tile
             const auto& scene = m_scenes[p.index];
-            const bool on = scene.id == m_activeId;
-            // The open pattern wears the selection wash (the locked board): the accent tinted into the tile, no bright outline.
-            renderer.fillRoundedRect(r, tileRadius, on ? AestraUI::NUIColor::lerp(theme.getColor("backgroundSecondary"), theme.getColor("accentPrimary"), 0.32f) : theme.getColor("backgroundSecondary"));
-            renderer.strokeRoundedRect(r, tileRadius, 1.0f, on ? theme.getColor("accentPrimary").withAlpha(0.55f) : theme.getColor("borderSubtle").withAlpha(0.7f));
+            const bool selected = std::find(m_selectedPatterns.begin(), m_selectedPatterns.end(), scene.id) != m_selectedPatterns.end();
+            renderer.fillRoundedRect(r, tileRadius, selected ? AestraUI::NUIColor::lerp(theme.getColor("backgroundSecondary"), theme.getColor("accentPrimary"), 0.32f) : theme.getColor("backgroundSecondary"));
+            renderer.strokeRoundedRect(r, tileRadius, 1.0f, selected ? theme.getColor("accentPrimary").withAlpha(0.55f) : theme.getColor("borderSubtle").withAlpha(0.7f));
             renderer.setClipRect(AestraUI::intersectRects(view, r));
-            renderer.drawText(fitName(renderer, scene.name, tp.fontSizeXS + 1.0f, r.width - 24.0f), {r.x + 12.0f, r.y + 8.0f}, tp.fontSizeXS + 1.0f, theme.getColor("textPrimary").withAlpha(on ? 1.0f : 0.9f));
+            renderer.drawText(fitName(renderer, scene.name, tp.fontSizeXS + 1.0f, r.width - 24.0f), {r.x + 12.0f, r.y + 8.0f}, tp.fontSizeXS + 1.0f, theme.getColor("textPrimary").withAlpha(selected ? 1.0f : 0.9f));
             const float tw = r.width - 24.0f, bw = tw / static_cast<float>(kThumbBars), maxH = 8.0f;
             for (size_t i = 0; i < scene.thumb.size(); ++i) {
                 const float h = scene.thumb[i] > 0.0f ? std::max(1.0f, maxH * scene.thumb[i]) : 1.0f;
                 renderer.fillRect({r.x + 12.0f + static_cast<float>(i) * bw, r.bottom() - 9.0f - h, std::max(1.0f, bw - 1.0f), h},
-                                  theme.getColor(on ? "textSecondary" : "textDisabled").withAlpha(scene.thumb[i] > 0.0f ? 0.9f : 0.35f));
+                                  theme.getColor(selected ? "textSecondary" : "textDisabled").withAlpha(scene.thumb[i] > 0.0f ? 0.9f : 0.35f));
             }
             renderer.setClipRect(view);
         }
@@ -221,7 +241,7 @@ public:
         const AestraUI::NUIRect well{sw.x + swingLabelW, sw.y + (sw.height - wellH) * 0.5f, std::max(0.0f, sw.width - swingLabelW), wellH};
         renderer.drawText("SWING", {sw.x, well.y + (wellH - tp.fontSizeMicro) * 0.5f - 1.0f}, tp.fontSizeMicro, theme.getColor("textMuted"));
         renderer.fillRoundedRect(well, wellH * 0.5f, theme.getColor("backgroundPrimary"));
-        renderer.drawTextCentered(std::to_string(swingPercent(m_swing)) + " %", well, fs, theme.getColor("textPrimary"));
+        renderer.drawTextCentered(m_swingMixed ? "MIX" : (std::to_string(swingPercent(m_swing)) + " %"), well, fs, theme.getColor("textPrimary"));
         const auto pl = placeRect(); // the one primary action of the header (the mock's purple button)
         renderer.fillRoundedRect(pl, tp.radiusXS, theme.getColor("accentPrimary"));
         const AestraUI::NUIColor white(1.0f, 1.0f, 1.0f, 1.0f);
@@ -243,7 +263,13 @@ public:
         if (m_swingDrag) {
             setSwing(pm, activeId, e.position.x);
             out = {Action::Kind::SwingEdited, activeId};
-            if (!e.pressed && left) m_swingDrag = false;
+            out.newSwing = m_swing;
+            out.oldSwing = m_dragOldSwing;
+            out.oldUnitSwing = m_dragOldUnitSwing;
+            if (!e.pressed && left) {
+                m_swingDrag = false;
+                out.swingCommit = true;
+            }
             return true;
         }
         if (!m_rect.contains(e.position)) return false;
@@ -254,10 +280,30 @@ public:
         }
         if (!e.pressed || !left) return true;
         const Hit hit = hitTest(e.position);
-        if (hit.kind == Hit::Kind::Scene) out = {Action::Kind::Select, hit.id};
+        if (hit.kind == Hit::Kind::Scene) {
+            out = {Action::Kind::Select, hit.id};
+            out.modifiers = e.modifiers;
+        }
         if (hit.kind == Hit::Kind::Add) out = {Action::Kind::PatternAdded, pm.createMidiPattern(nextName(m_scenes), 8.0, {}).value};
         if (hit.kind == Hit::Kind::Place) out = {Action::Kind::PlaceInTimeline, activeId};
-        if (hit.kind == Hit::Kind::Swing) { m_swingDrag = true; setSwing(pm, activeId, e.position.x); out = {Action::Kind::SwingEdited, activeId}; }
+        if (hit.kind == Hit::Kind::Swing) {
+            captureSwingState(pm, activeId);
+            if (e.doubleClick) {
+                setSwingValue(pm, activeId, 0.0f);
+                out = {Action::Kind::SwingEdited, activeId};
+                out.newSwing = 0.0f;
+                out.oldSwing = m_dragOldSwing;
+                out.oldUnitSwing = m_dragOldUnitSwing;
+                out.swingCommit = true;
+            } else {
+                m_swingDrag = true;
+                setSwing(pm, activeId, e.position.x);
+                out = {Action::Kind::SwingEdited, activeId};
+                out.newSwing = m_swing;
+                out.oldSwing = m_dragOldSwing;
+                out.oldUnitSwing = m_dragOldUnitSwing;
+            }
+        }
         return true;
     }
 
@@ -265,12 +311,37 @@ private:
     AestraUI::NUIRect m_rect{};
     std::vector<Scene> m_scenes;
     std::vector<Placed> m_placed;
+    std::vector<uint64_t> m_selectedPatterns;
+    std::vector<uint64_t> m_swingTargets;
+    float m_dragOldSwing{0.0f};
+    std::vector<std::pair<uint64_t, std::optional<float>>> m_dragOldUnitSwing;
+    bool m_swingMixed{false};
+
+    void captureSwingState(Audio::PatternManager& pm, uint64_t id) {
+        m_dragOldSwing = 0.0f;
+        m_dragOldUnitSwing.clear();
+        if (const auto* pattern = pm.getPattern(Audio::PatternID{id})) {
+            m_dragOldSwing = pattern->swing;
+            m_dragOldUnitSwing.reserve(m_swingTargets.size());
+            for (const uint64_t unitId : m_swingTargets)
+                m_dragOldUnitSwing.emplace_back(unitId, pattern->unitSwingOverride(unitId));
+        }
+    }
+
+    void setSwingValue(Audio::PatternManager& pm, uint64_t id, float value) {
+        m_swing = std::round(std::clamp(value, 0.0f, 1.0f) * 100.0f) / 100.0f;
+        pm.applyPatch(Audio::PatternID{id}, [this](Audio::PatternSource& p) {
+            if (m_swingTargets.empty()) p.swing = m_swing;
+            else for (const uint64_t unitId : m_swingTargets) p.setUnitSwing(unitId, m_swing);
+        });
+        m_swingMixed = false;
+    }
+
     void setSwing(Audio::PatternManager& pm, uint64_t id, float x) {
         const auto r = swingRect();
-        m_swing = std::clamp((x - r.x) / r.width, 0.0f, 1.0f);
-        m_swing = std::round(m_swing * 100.0f) / 100.0f;
-        pm.applyPatch(Audio::PatternID{id}, [this](Audio::PatternSource& p) { p.swing = m_swing; });
+        setSwingValue(pm, id, (x - r.x) / r.width);
     }
+
     bool m_swingDrag{false};
     float m_swing{0.0f};
     uint64_t m_activeId{0};
