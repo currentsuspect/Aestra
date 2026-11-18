@@ -4,6 +4,7 @@
 #include "NUIDepth.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
+#include "Presets/PresetLibrary.h"
 #include "RumbleFindSession.h"
 #include "RumbleInstance.h"
 #include "RumbleOutline.h"
@@ -116,6 +117,8 @@ RumblePluginEditor::RumblePluginEditor(std::shared_ptr<Aestra::Audio::IPluginIns
     setSize(kWindowWidth, kWindowHeight);
     setEnforceParentBounds(true);
 
+    m_keptStore = std::make_unique<Aestra::Plugins::RumbleKept>(Aestra::Audio::Presets::PresetLibrary::defaultUserRoot());
+    refreshKept();
     startFromInstrument();
     layout();
 }
@@ -139,6 +142,14 @@ void RumblePluginEditor::startFromInstrument() {
         if (sameSound(Aestra::Plugins::rumbleSoundOf(Aestra::Plugins::kRumbleFactoryPresets[i]), start)) {
             name = std::string(Aestra::Plugins::kRumbleFactoryPresets[i].name);
             m_startPreset = i;
+            break;
+        }
+    }
+    m_startKept = -1; // or one of Your 808s, loaded from the preset bar
+    for (size_t i = 0; i < m_kept.size() && m_startPreset == kPresetSlots; ++i) {
+        if (sameSound(m_kept[i].sound, start)) {
+            name = m_kept[i].name;
+            m_startKept = static_cast<int>(i);
             break;
         }
     }
@@ -183,11 +194,52 @@ void RumblePluginEditor::soundChanged() {
 void RumblePluginEditor::startFrom(size_t presetIndex) {
     const auto& preset = Aestra::Plugins::kRumbleFactoryPresets[presetIndex % Aestra::Plugins::kRumbleFactoryPresets.size()];
     m_startPreset = presetIndex;
+    m_startKept = -1;
     m_outlines->forgetPending();
     m_session = std::make_unique<RumbleFindSession>(Aestra::Plugins::rumbleSoundOf(preset), std::string(preset.name),
                                                     static_cast<uint64_t>(nowMs()));
     m_lastPicture.reset();
     soundChanged();
+}
+
+void RumblePluginEditor::refreshKept() {
+    m_kept = m_keptStore->list(); // a folder listing of small files: only on open, keep and undo
+    setDirty(true);
+}
+
+void RumblePluginEditor::startFromKept(size_t index) {
+    if (index >= m_kept.size()) return;
+    m_startKept = static_cast<int>(index);
+    m_outlines->forgetPending();
+    m_session = std::make_unique<RumbleFindSession>(m_kept[index].sound, m_kept[index].name, static_cast<uint64_t>(nowMs()));
+    m_lastPicture.reset();
+    soundChanged();
+}
+
+void RumblePluginEditor::keep() {
+    const auto kept = m_keptStore->keep(m_session->current(), m_session->currentName());
+    if (!kept) {
+        m_lastKept.reset(); // Undo must never reach back to an earlier keep
+        m_editorSaid = "Could not keep it: the presets folder could not be written.";
+    } else {
+        m_lastKept = kept;
+        m_editorSaid = "Kept " + kept->name + " in Your 808s. It opens in any project.";
+        refreshKept();
+    }
+    setDirty(true);
+}
+
+void RumblePluginEditor::undoKeep() {
+    if (!m_lastKept) return;
+    if (!m_keptStore->unkeep(*m_lastKept)) {
+        // Still kept: say so and leave Undo there to try again.
+        m_editorSaid = "Could not take " + m_lastKept->name + " out of Your 808s. Try Undo again.";
+        setDirty(true);
+        return;
+    }
+    m_editorSaid = "Took " + m_lastKept->name + " back out of Your 808s.";
+    m_lastKept.reset();
+    refreshKept();
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -218,16 +270,17 @@ void RumblePluginEditor::layout() {
     }
 
     const float ay = m_cards[0].bottom() + 10.0f;
-    m_more = {mx, ay, 118.0f, 28.0f};
-    float dx = m_more.right() + 12.0f;
-    for (size_t i = 0; i < m_distance.size(); ++i) m_distance[i] = {dx + 3.0f + static_cast<float>(i) * 62.0f, ay + 3.0f, 62.0f, 22.0f};
-    dx = m_distance.back().right() + 3.0f + 46.0f; // room for the HOLD label
-    const float holdWidths[5] = {60.0f, 50.0f, 66.0f, 54.0f, 50.0f};
+    m_more = {mx, ay, 110.0f, 28.0f};
+    float dx = m_more.right() + 10.0f;
+    for (size_t i = 0; i < m_distance.size(); ++i) m_distance[i] = {dx + 3.0f + static_cast<float>(i) * 56.0f, ay + 3.0f, 56.0f, 22.0f};
+    dx = m_distance.back().right() + 3.0f + 42.0f; // room for the HOLD label
+    const float holdWidths[5] = {56.0f, 46.0f, 62.0f, 50.0f, 46.0f};
     for (size_t i = 0; i < m_holds.size(); ++i) {
         m_holds[i] = {dx, ay + 2.0f, holdWidths[i], 24.0f};
-        dx += holdWidths[i] + 4.0f;
+        dx += holdWidths[i] + 3.0f;
     }
-    m_back = {b.right() - kPad - 64.0f, ay, 64.0f, 28.0f};
+    m_keep = {b.right() - kPad - 54.0f, ay, 54.0f, 28.0f};
+    m_back = {m_keep.x - 54.0f, ay, 52.0f, 28.0f};
 
     m_picture = {mx, ay + 38.0f, mw, 176.0f};
     const float ky = m_picture.bottom() + 10.0f;
@@ -235,6 +288,9 @@ void RumblePluginEditor::layout() {
     for (size_t i = 0; i < m_controls.size(); ++i) m_controls[i] = {mx + colW * static_cast<float>(i), ky, colW, 92.0f};
     m_said = {mx, m_controls[0].bottom() + 4.0f, mw, 20.0f};
     m_everythingToggle = {b.right() - kPad - 92.0f, m_said.y - 2.0f, 92.0f, 24.0f};
+    m_undo = {m_everythingToggle.x - 64.0f, m_said.y - 2.0f, 58.0f, 24.0f};
+    const float keptTop = m_shelfRows.back().bottom() + 40.0f;
+    for (size_t i = 0; i < m_keptRows.size(); ++i) m_keptRows[i] = {x0, keptTop + static_cast<float>(i) * 28.0f, kShelfWidth, 26.0f};
     const float ew = (m_picture.width - 16.0f) / 5.0f;
     for (size_t i = 0; i < m_everything.size(); ++i) {
         const float ex = m_picture.x + 8.0f + ew * static_cast<float>(i % 5);
@@ -285,7 +341,8 @@ void RumblePluginEditor::drawShelf(NUIRenderer& r) {
     label(r, "START FROM", {m_shelf.x + 2.0f, m_shelf.y, m_shelf.width, 16.0f});
     for (size_t i = 0; i < m_shelfRows.size(); ++i) {
         const NUIRect& row = m_shelfRows[i];
-        const bool on = i == m_startPreset && m_session->stepCount() == 1 && m_session->selected() == RumbleFindSession::kParent;
+        const bool on = m_startKept < 0 && i == m_startPreset && m_session->stepCount() == 1 &&
+                        m_session->selected() == RumbleFindSession::kParent;
         const bool hovered = row.contains(m_hover);
         if (on) {
             r.fillRoundedRect(row, Depth::Radius::medium, token("surfaceTertiary"));
@@ -298,10 +355,30 @@ void RumblePluginEditor::drawShelf(NUIRenderer& r) {
     }
     const float y = m_shelfRows.back().bottom() + 18.0f;
     label(r, "YOUR 808S", {m_shelf.x + 2.0f, y, m_shelf.width, 16.0f});
-    const NUIRect well{m_shelf.x, y + 22.0f, m_shelf.width, 64.0f};
-    Depth::bed(r, well, Depth::Radius::medium);
-    r.drawTextCentered("Keep a sound to find", {well.x, well.y + 16.0f, well.width, 14.0f}, 11.0f, token("textMuted"));
-    r.drawTextCentered("it here in any project.", {well.x, well.y + 32.0f, well.width, 14.0f}, 11.0f, token("textMuted"));
+    if (m_kept.empty()) {
+        const NUIRect well{m_shelf.x, y + 22.0f, m_shelf.width, 64.0f};
+        Depth::bed(r, well, Depth::Radius::medium);
+        r.drawTextCentered("Keep a sound to find", {well.x, well.y + 16.0f, well.width, 14.0f}, 11.0f, token("textMuted"));
+        r.drawTextCentered("it here in any project.", {well.x, well.y + 32.0f, well.width, 14.0f}, 11.0f, token("textMuted"));
+        return;
+    }
+    for (size_t i = 0; i < m_keptRows.size() && i < m_kept.size(); ++i) {
+        const NUIRect& row = m_keptRows[i];
+        const bool on = static_cast<int>(i) == m_startKept && m_session->stepCount() == 1 && m_session->selected() == RumbleFindSession::kParent;
+        const bool hovered = row.contains(m_hover);
+        if (on) {
+            r.fillRoundedRect(row, Depth::Radius::medium, token("surfaceTertiary"));
+            r.fillRoundedRect(row, Depth::Radius::medium, token("selected"));
+        } else if (hovered) {
+            r.fillRoundedRect(row, Depth::Radius::medium, token("hover"));
+        }
+        textLeft(r, m_kept[i].name, {row.x + 10.0f, row.y, row.width - 12.0f, row.height}, 12.0f,
+                 token(on || hovered ? "textPrimary" : "textSecondary"));
+    }
+    if (m_kept.size() > m_keptRows.size()) {
+        const std::string more = std::to_string(m_kept.size() - m_keptRows.size()) + " more in the preset bar";
+        textLeft(r, more, {m_shelf.x + 10.0f, m_keptRows.back().bottom() + 4.0f, m_shelf.width, 16.0f}, 10.0f, token("textMuted"));
+    }
 }
 
 void RumblePluginEditor::drawTrail(NUIRenderer& r) {
@@ -440,7 +517,7 @@ void RumblePluginEditor::drawActions(NUIRenderer& r) {
                            token(on || m_distance[i].contains(m_hover) ? "textPrimary" : "textMuted"));
     }
 
-    label(r, "HOLD", {m_holds[0].x - 40.0f, m_holds[0].y, 36.0f, m_holds[0].height});
+    label(r, "HOLD", {m_holds[0].x - 37.0f, m_holds[0].y, 34.0f, m_holds[0].height});
     for (size_t i = 0; i < m_holds.size(); ++i) {
         const bool held = m_session->held(static_cast<Variation::Quality>(i));
         const NUIRect& chip = m_holds[i];
@@ -453,6 +530,7 @@ void RumblePluginEditor::drawActions(NUIRenderer& r) {
         }
     }
     pill(r, m_back, "Back", m_back.contains(m_hover), false, true);
+    pill(r, m_keep, "Keep", m_keep.contains(m_hover), false);
 }
 
 void RumblePluginEditor::drawPicture(NUIRenderer& r) {
@@ -528,7 +606,8 @@ void RumblePluginEditor::drawControls(NUIRenderer& r) {
 }
 
 void RumblePluginEditor::drawSaid(NUIRenderer& r) {
-    textLeft(r, m_session->said(), m_said, 12.0f, token("textSecondary"));
+    textLeft(r, m_editorSaid.empty() ? m_session->said() : m_editorSaid, m_said, 12.0f, token("textSecondary"));
+    if (m_lastKept && !m_editorSaid.empty()) pill(r, m_undo, "Undo", m_undo.contains(m_hover), false);
     pill(r, m_everythingToggle, "Everything", m_everythingToggle.contains(m_hover), m_showEverything);
 }
 
@@ -568,6 +647,26 @@ void RumblePluginEditor::drawEverything(NUIRenderer& r) {
 // ---------------------------------------------------------------------------------------------------------------
 
 bool RumblePluginEditor::handlePress(const NUIPoint& p) {
+    if (m_keep.contains(p)) {
+        keep();
+        return true;
+    }
+    if (m_lastKept && !m_editorSaid.empty() && m_undo.contains(p)) {
+        undoKeep();
+        return true;
+    }
+    if (m_everythingToggle.contains(p)) {
+        m_showEverything = !m_showEverything;
+        setDirty(true);
+        return true;
+    }
+    moved();
+    for (size_t i = 0; i < m_keptRows.size() && i < m_kept.size(); ++i) {
+        if (m_keptRows[i].contains(p)) {
+            startFromKept(i);
+            return true;
+        }
+    }
     for (size_t i = 0; i < m_shelfRows.size(); ++i) {
         if (m_shelfRows[i].contains(p)) {
             startFrom(i);
@@ -608,11 +707,6 @@ bool RumblePluginEditor::handlePress(const NUIPoint& p) {
             return true;
         }
     }
-    if (m_everythingToggle.contains(p)) {
-        m_showEverything = !m_showEverything;
-        setDirty(true);
-        return true;
-    }
     if (m_back.contains(p)) {
         m_session->back();
         soundChanged();
@@ -643,6 +737,7 @@ void RumblePluginEditor::dragHandle(const NUIPoint& p) {
         const float span = m_picture.height - kPicTop - kPicBottom - 8.0f;
         m_session->shape(RumbleSound::Punch, (bottom - p.y) / span);
     }
+    moved();
     soundChanged();
 }
 
@@ -670,9 +765,13 @@ bool RumblePluginEditor::onKeyEvent(const NUIKeyEvent& event) {
     case NUIKeyCode::Up:
         m_session->back();
         break;
+    case NUIKeyCode::Enter:
+        keep();
+        return true;
     default:
         return AestraPanelWindow::onKeyEvent(event);
     }
+    moved();
     soundChanged();
     return true;
 }
@@ -711,6 +810,7 @@ bool RumblePluginEditor::onMouseEvent(const NUIMouseEvent& event) {
             m_lastClickPos = event.position;
             if (twice) {
                 m_session->putBack(id);
+                moved();
                 soundChanged();
                 return true;
             }
@@ -739,6 +839,7 @@ bool RumblePluginEditor::onMouseEvent(const NUIMouseEvent& event) {
                                return;
                            }
                            m_session->shape(id, v);
+                           moved(); // the kept sound is not this one any more
                            soundChanged();
                        })) {
         return true;
