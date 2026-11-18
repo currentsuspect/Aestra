@@ -452,6 +452,19 @@ void UnitManager::setUnitFollowsKey(UnitID id, std::optional<bool> follows) {
     publishSnapshot();
 }
 
+bool UnitManager::restoreUnit(const UnitInfo& info, size_t index) {
+    if (info.id == 0 || m_units.find(info.id) != m_units.end()) {
+        return false;
+    }
+    UnitInfo restored = info;
+    m_units[restored.id] = std::move(restored);
+    index = std::min(index, m_unitOrder.size());
+    m_unitOrder.insert(m_unitOrder.begin() + static_cast<std::ptrdiff_t>(index), info.id);
+    nextId = std::max(nextId, info.id + 1);
+    publishSnapshot();
+    return true;
+}
+
 void UnitManager::clear() {
     m_units.clear();
     m_unitOrder.clear();
