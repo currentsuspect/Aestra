@@ -16,7 +16,7 @@ namespace Audio {
  *
  * Pure rules the pattern scheduler applies before it turns notes into events, so they can be tested without
  * an audio device:
- *  - swing delays every odd 16th step by up to half a step (pattern-wide);
+ *  - swing delays every odd 16th step by up to half a step; a per-unit override may replace the pattern-wide value;
  *  - chance decides, per note and per pass, whether the step plays. The decision is a hash of the note's
  *    identity and the pass, never a random draw, so a re-queue after an edit while playing lands on the
  *    same answer and a bounce matches playback;
@@ -64,20 +64,21 @@ inline bool chancePasses(uint64_t patternId, uint32_t instanceId, uint64_t unitI
     return static_cast<double>(h >> 11) * (1.0 / 9007199254740992.0) < static_cast<double>(chance);
 }
 
-/// True when any note, or the pattern's swing, needs the expansion; otherwise the scheduler uses the notes as they are.
-inline bool needsExpression(const std::vector<MidiNote>& notes, float swing) {
-    if (swing > 0.0f) return true;
-    return std::any_of(notes.begin(), notes.end(), [](const MidiNote& n) { return n.chance < 1.0f || n.ratchet > 1; });
+/// True when any note, or any effective unit swing, needs the expansion.
+inline bool needsExpression(const std::vector<MidiNote>& notes, const PatternSource& pattern) {
+    return std::any_of(notes.begin(), notes.end(), [&pattern](const MidiNote& n) {
+        return pattern.swingForUnit(n.unitId) > 0.0f || n.chance < 1.0f || n.ratchet > 1;
+    });
 }
 
-/// The notes as they play on this pass: swung, thinned by chance, ratchets split into hits.
-inline std::vector<MidiNote> expandForPlayback(const std::vector<MidiNote>& notes, float swing, uint64_t patternId,
-                                               uint32_t instanceId, uint64_t pass) {
+/// The notes as they play on this pass: per-unit swing, chance and ratchets expanded.
+inline std::vector<MidiNote> expandForPlayback(const std::vector<MidiNote>& notes, const PatternSource& pattern,
+                                               uint64_t patternId, uint32_t instanceId, uint64_t pass) {
     std::vector<MidiNote> out;
     out.reserve(notes.size());
     for (const auto& n : notes) {
         if (!chancePasses(patternId, instanceId, n.unitId, n.startBeat, n.pitch, pass, n.chance)) continue;
-        const double start = n.startBeat + swingDelayBeats(n.startBeat, swing);
+        const double start = n.startBeat + swingDelayBeats(n.startBeat, pattern.swingForUnit(n.unitId));
         const int hits = std::clamp<int>(n.ratchet, 1, kMaxRatchet);
         if (hits == 1) {
             MidiNote m = n;
@@ -98,6 +99,5 @@ inline std::vector<MidiNote> expandForPlayback(const std::vector<MidiNote>& note
     }
     return out;
 }
-
 } // namespace Audio
 } // namespace Aestra
