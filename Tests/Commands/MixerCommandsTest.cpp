@@ -14,6 +14,8 @@
 #include <cassert>
 #include <iostream>
 #include <cmath>
+#include <algorithm>
+#include <vector>
 
 using namespace Aestra::Audio;
 
@@ -361,28 +363,32 @@ void testSetSoloRedoCycle() {
 void testSetMonitoringCommand() {
     std::cout << "TEST: SetMonitoringCommand... ";
 
+    // The strip's IN key is input monitoring (FD-14 #6): it switches monitoring and leaves record arm alone.
     MixerChannel channel("Test Channel", 0);
     TrackManager trackManager;
     channel.setArmed(false);
+    channel.setMonitoringEnabled(false);
 
     SetMonitoringCommand cmd(trackManager, channel, true);
     cmd.execute();
 
-    assert(channel.isArmed() == true);
+    assert(channel.isMonitoringEnabled() == true);
+    assert(channel.isArmed() == false);
     assert(cmd.getName() == "Enable Input Monitoring");
     assert(trackManager.consumePendingGraphRebuild() == true);
 
     cmd.undo();
-    assert(channel.isArmed() == false);
+    assert(channel.isMonitoringEnabled() == false);
     assert(trackManager.consumePendingGraphRebuild() == true);
 
     cmd.redo();
-    assert(channel.isArmed() == true);
+    assert(channel.isMonitoringEnabled() == true);
     assert(trackManager.consumePendingGraphRebuild() == true);
 
     SetMonitoringCommand disableCmd(trackManager, channel, false);
     disableCmd.execute();
     assert(disableCmd.getName() == "Disable Input Monitoring");
+    assert(channel.isMonitoringEnabled() == false);
     assert(channel.isArmed() == false);
 
     std::cout << "✅ PASS\n";
@@ -393,7 +399,7 @@ void testMonitoringToggleMarksProjectModified() {
 
     MixerChannel channel("Test Channel", 0);
     TrackManager trackManager;
-    channel.setArmed(false);
+    channel.setMonitoringEnabled(false);
     trackManager.setModified(false);
     assert(trackManager.isModified() == false);
 
@@ -402,12 +408,42 @@ void testMonitoringToggleMarksProjectModified() {
     trackManager.getCommandHistory().pushAndExecute(
         std::make_shared<SetMonitoringCommand>(trackManager, channel, true));
 
-    assert(channel.isArmed() == true);
+    assert(channel.isMonitoringEnabled() == true);
     assert(trackManager.isModified() == true);
 
     trackManager.getCommandHistory().undo();
-    assert(channel.isArmed() == false);
+    assert(channel.isMonitoringEnabled() == false);
     assert(trackManager.isModified() == true);
+
+    std::cout << "✅ PASS\n";
+}
+
+void testMonitoringIsHeardWithoutArm() {
+    std::cout << "TEST: a monitored channel is heard without being armed... ";
+
+    // As in other DAWs, IN means "hear the input" on its own; arming is for recording.
+    TrackManager tracks;
+    tracks.setInputChannelCount(1);
+    auto* channel = tracks.addChannel("Mic");
+    assert(channel != nullptr);
+    channel->setArmed(false);
+    channel->setInputChannelIndex(0);
+    tracks.getCommandHistory().pushAndExecute(std::make_shared<SetMonitoringCommand>(tracks, *channel, true));
+
+    constexpr uint32_t kFrames = 64;
+    std::vector<float> input(kFrames, 0.5f);
+    std::vector<float> out(static_cast<size_t>(kFrames) * 2, 0.0f);
+    tracks.mixInputMonitoring(input.data(), out.data(), kFrames, 2);
+    float peak = 0.0f;
+    for (float v : out) peak = std::max(peak, std::fabs(v));
+    assert(peak > 0.01f);
+
+    tracks.getCommandHistory().undo();
+    std::fill(out.begin(), out.end(), 0.0f);
+    tracks.mixInputMonitoring(input.data(), out.data(), kFrames, 2);
+    peak = 0.0f;
+    for (float v : out) peak = std::max(peak, std::fabs(v));
+    assert(peak == 0.0f);
 
     std::cout << "✅ PASS\n";
 }
@@ -486,6 +522,7 @@ int main() {
 
     testSetMonitoringCommand();
     testMonitoringToggleMarksProjectModified();
+    testMonitoringIsHeardWithoutArm();
 
     testMixerCommandsWithHistory();
 

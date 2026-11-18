@@ -2,6 +2,7 @@
 #pragma once
 
 #include "NUIComponent.h"
+#include "../Core/NUIButtonMotion.h"
 #include "NUIRenderer.h"
 #include <string>
 #include <functional>
@@ -45,6 +46,19 @@ public:
 
     void setStyle(Style style);
     Style getStyle() const { return style_; }
+
+    /// Design Spec looks (FD-79), all pills. Legacy keeps the older drawing for call sites not yet moved.
+    enum class Look { Legacy, Solid, Soft, Outline, Quiet };
+    enum class Tone { Neutral, Accent, Danger };
+    /// Full: the tone grows out from where the pointer entered and the button lifts (standalone buttons: dialog
+    /// actions, Export, empty-state actions). Quiet: one step lighter, no growth, no lift (anything in a dense row).
+    /// The test: could the pointer cross this on its way to something else? Then it is Quiet.
+    enum class HoverStrength { Full, Quiet };
+    void setLook(Look look, Tone tone = Tone::Neutral, HoverStrength hover = HoverStrength::Full);
+    Look getLook() const { return look_; }
+    Tone getTone() const { return tone_; }
+    /// A trailing arrow that nudges forward on hover ("Open the library ->").
+    void setTrailingArrow(bool on) { trailingArrow_ = on; setDirty(); }
 
     /**
      * Set the click callback.
@@ -111,6 +125,13 @@ public:
     bool isBorderEnabled() const { return borderEnabled_; }
     
     /**
+     * The button's motion group (NUIButtonMotion.h). Pills are Action; glyph-only buttons should be Icon.
+     * A toggleable button is a Toggle unless a group was set.
+     */
+    void setButtonGroup(ButtonGroup group) { motion_.setGroup(group); groupSet_ = true; }
+    ButtonGroup buttonGroup() const { return motion_.group(); }
+
+    /**
      * Enable/disable glow effect on hover.
      */
     void setGlowEnabled(bool enabled) { glowEnabled_ = enabled; setDirty(); }
@@ -159,6 +180,8 @@ private:
     
     // State
     bool pressed_ = false;
+    bool groupSet_ = false;
+    bool latchedForMotion_ = false;
     float hoverAlpha_ = 0.0f; // Animated hover state (0.0 to 1.0)
     bool toggleable_ = false;
     bool toggled_ = false;
@@ -172,6 +195,15 @@ private:
     std::function<void()> onClick_;
     std::function<void(bool)> onToggle_;
     
+    // Design Spec look
+    Look look_ = Look::Legacy;
+    Tone tone_ = Tone::Neutral;
+    HoverStrength hoverStrength_ = HoverStrength::Full;
+    bool trailingArrow_ = false;
+    ButtonMotion motion_{ButtonGroup::Action}; ///< hover colour pop and the press bounce (NUIButtonMotion.h)
+    void renderSpecLook(NUIRenderer& renderer);
+    void renderContents(NUIRenderer& renderer);
+
     // Helpers
     NUIColor getCurrentBackgroundColor() const;
     NUIColor getCurrentTextColor() const;

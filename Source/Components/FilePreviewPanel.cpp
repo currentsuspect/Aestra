@@ -427,8 +427,8 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
         renderer.drawText(t, NUIPoint(autoPlayBounds_.x + 16.0f, std::round(renderer.calculateTextY(autoPlayBounds_, xs))),
                           xs, autoPlay_ ? live : muted);
     }
-    if (onAddToArsenal_) {
-        const std::string t = "Add to Arsenal";
+    if (onAdd_) {
+        const std::string t = addLabel_ ? addLabel_() : "Add to Arsenal";
         const float w = renderer.measureText(t, xs).width + 18.0f;
         addBounds_ = NUIRect(bounds.right() - padX - w, rowY, w, 22.0f);
         if (addBounds_.x > autoPlayBounds_.right() + 6.0f) {
@@ -494,7 +494,7 @@ bool FilePreviewPanel::onMouseEvent(const NUIMouseEvent& event) {
             return true;
         }
         if (!addBounds_.isEmpty() && addBounds_.contains(event.position)) {
-            if (onAddToArsenal_) onAddToArsenal_(currentFile_);
+            if (onAdd_) onAdd_(currentFile_);
             return true;
         }
         if (playButtonBounds_.contains(event.position)) {

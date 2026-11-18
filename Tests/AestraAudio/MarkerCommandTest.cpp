@@ -12,6 +12,8 @@
 
 #include <cstdio>
 #include <memory>
+#include <string>
+#include <vector>
 
 using namespace Aestra::Audio;
 
@@ -92,6 +94,69 @@ void testMarkersMarkTheProjectModified() {
     check(tm->isModified(), "AddingAMarkerMarksTheProjectModified");
 }
 
+struct Snap {
+    uint64_t id;
+    std::string name;
+    double beat;
+    bool operator==(const Snap& o) const { return id == o.id && name == o.name && beat == o.beat; }
+};
+
+std::vector<Snap> snapshot(TrackManager& tm) {
+    std::vector<Snap> out;
+    for (const auto& m : tm.markers().markers()) out.push_back({m.id, m.name, m.beat});
+    return out;
+}
+
+// A mixed session undoes step by step back to empty, then redoes forward, and
+// every intermediate state (ids, names, beats, order) matches the first pass.
+void testAMixedSessionUndoesAndRedoesStepForStep() {
+    auto tm = std::make_shared<TrackManager>();
+    auto& history = tm->getCommandHistory();
+    std::vector<std::vector<Snap>> states;
+    states.push_back(snapshot(*tm));
+
+    auto a = std::make_shared<AddMarkerCommand>(*tm, 4.0, "A");
+    history.pushAndExecute(a);
+    states.push_back(snapshot(*tm));
+    auto b = std::make_shared<AddMarkerCommand>(*tm, 8.0, "B");
+    history.pushAndExecute(b);
+    states.push_back(snapshot(*tm));
+    history.pushAndExecute(std::make_shared<RenameMarkerCommand>(*tm, a->markerId(), "A2"));
+    states.push_back(snapshot(*tm));
+    history.pushAndExecute(std::make_shared<MoveMarkerCommand>(*tm, b->markerId(), 2.0)); // crosses A: re-sorts
+    states.push_back(snapshot(*tm));
+    history.pushAndExecute(std::make_shared<DeleteMarkerCommand>(*tm, a->markerId()));
+    states.push_back(snapshot(*tm));
+
+    bool undoOk = true;
+    for (size_t i = states.size() - 1; i > 0; --i) {
+        history.undo();
+        undoOk = undoOk && snapshot(*tm) == states[i - 1];
+    }
+    check(undoOk, "EveryUndoStepRestoresTheExactPreviousState");
+    check(!history.undo(), "NothingLeftToUndoAfterTheFirstStep");
+
+    bool redoOk = true;
+    for (size_t i = 1; i < states.size(); ++i) {
+        history.redo();
+        redoOk = redoOk && snapshot(*tm) == states[i];
+    }
+    check(redoOk, "EveryRedoStepReproducesTheState");
+}
+
+// A rename that changes nothing, or that is only whitespace, is not an undo
+// step: otherwise Ctrl+Z "does nothing" once and the user thinks it is broken.
+void testNoOpRenamesAreNotUndoSteps() {
+    auto tm = std::make_shared<TrackManager>();
+    auto& history = tm->getCommandHistory();
+    auto a = std::make_shared<AddMarkerCommand>(*tm, 4.0, "Verse");
+    history.pushAndExecute(a);
+    history.pushAndExecute(std::make_shared<RenameMarkerCommand>(*tm, a->markerId(), "Verse"));
+    history.pushAndExecute(std::make_shared<RenameMarkerCommand>(*tm, a->markerId(), "   "));
+    history.undo();
+    check(tm->markers().empty(), "NoOpAndBlankRenamesLeaveNoUndoStep");
+}
+
 } // namespace
 
 int main() {
@@ -100,6 +165,8 @@ int main() {
     testRenameUndoRestoresTheOldName();
     testCommandsOnAMissingMarkerDoNothing();
     testMarkersMarkTheProjectModified();
+    testAMixedSessionUndoesAndRedoesStepForStep();
+    testNoOpRenamesAreNotUndoSteps();
 
     if (g_failures) {
         std::printf("%d MarkerCommand test(s) FAILED\n", g_failures);

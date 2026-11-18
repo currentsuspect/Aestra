@@ -339,6 +339,10 @@ public:
     // a protocol change, deliberately not bundled with this fix.
     bool framingLost() const { return m_framingLost; }
 
+    /// How many times the reply pipe was read. A reply costs a read or two however long it is; the test that
+    /// pins this is ClapSandboxParamsTest (one read per byte made a hex block reply cost about 4,100).
+    uint64_t readCalls() const { return m_readCalls.load(std::memory_order_relaxed); }
+
 private:
     // Matches the POSIX and Windows runaway-line caps; a line this long means the
     // child is malfunctioning, not that a reply is merely large.
@@ -346,13 +350,14 @@ private:
 
     std::string m_executablePath;
     bool m_framingLost = false;
+    // Bytes read past the current line. A bulk read can cross a response boundary,
+    // so the remainder is kept here rather than thrown away. Both platforms read in bulk.
+    std::string m_readCarry;
+    std::atomic<uint64_t> m_readCalls{0};
 #ifdef _WIN32
     ScopedHandle m_process;     // child process
     ScopedHandle m_stdinWrite;  // our end of the child's stdin
     ScopedHandle m_stdoutRead;  // our end of the child's stdout
-    // Bytes read past the current line. A bulk read can cross a response boundary,
-    // so the remainder is kept here rather than thrown away.
-    std::string m_readCarry;
 #else
     pid_t m_pid = -1;
     int m_stdinFd = -1;
@@ -361,6 +366,7 @@ private:
 };
 
 bool PluginHostProcess::start() {
+    m_readCarry.clear(); // a new child: nothing an earlier one left unread is its reply
 #ifdef _WIN32
     // Windows previously returned false here, which meant plugins were never
     // sandboxed on Windows at all: the caller fell back to in-process hosting, so
@@ -744,6 +750,7 @@ bool PluginHostProcess::readLine(std::string& line, std::chrono::milliseconds ti
         if (!ReadFile(m_stdoutRead.get(), buffer, wanted, &read, nullptr) || read == 0) {
             break;
         }
+        m_readCalls.fetch_add(1, std::memory_order_relaxed);
         m_readCarry.append(buffer, read);
     }
 
@@ -761,34 +768,49 @@ bool PluginHostProcess::readLine(std::string& line, std::chrono::milliseconds ti
     }
     line.clear();
     const auto deadline = std::chrono::steady_clock::now() + timeout;
-    while (std::chrono::steady_clock::now() < deadline) {
-        char ch = '\0';
-        const ssize_t n = read(m_stdoutFd, &ch, 1);
-        if (n == 1) {
-            if (ch == '\n') {
-                stripTrailingCR(line);
-                return true;
-            }
-            line.push_back(ch);
-            if (line.size() > kMaxLineBytes) {
-                m_framingLost = true;
-                return false;
-            }
-        } else {
-            if (!isRunning()) {
-                break;
-            }
-            // Sleep until the reply's next byte is there rather than a fixed 1 ms: a block's "OK" back from the
-            // helper used to wait out the rest of a nap every time (V82-H7 follow-up). Capped so a dead child is still noticed.
-            const auto left = std::chrono::duration_cast<std::chrono::milliseconds>(
-                deadline - std::chrono::steady_clock::now());
-            pollfd pfd{m_stdoutFd, POLLIN, 0};
-            ::poll(&pfd, 1, static_cast<int>(std::clamp<long long>(left.count() + 1, 1, 50)));
+    for (;;) {
+        // Drained before touching the pipe: a bulk read can cross a response boundary, so the newline this call
+        // needs may already be in hand.
+        const size_t newline = m_readCarry.find('\n');
+        if (newline != std::string::npos) {
+            line.assign(m_readCarry, 0, newline);
+            m_readCarry.erase(0, newline + 1);
+            stripTrailingCR(line);
+            return true;
         }
+        if (m_readCarry.size() > kMaxLineBytes) {
+            m_framingLost = true;
+            return false;
+        }
+        if (std::chrono::steady_clock::now() >= deadline) {
+            break;
+        }
+        // Everything the pipe holds, in one call. This read a byte at a time, so a block's reply on the hex
+        // transport (about 4,100 characters) cost about 4,100 system calls: close to a whole block's time under
+        // ThreadSanitizer, where a busy runner then made every reply late and the block played dry (#1285).
+        char buffer[8192];
+        const ssize_t n = read(m_stdoutFd, buffer, sizeof(buffer));
+        if (n > 0) {
+            m_readCalls.fetch_add(1, std::memory_order_relaxed);
+            m_readCarry.append(buffer, static_cast<size_t>(n));
+            continue;
+        }
+        if (n < 0 && errno == EINTR) {
+            continue;
+        }
+        if (!isRunning()) {
+            break;
+        }
+        // Nothing yet (the pipe is non-blocking): sleep until the reply's next bytes are there rather than a
+        // fixed 1 ms (V82-H7 follow-up). Capped so a dead child is still noticed.
+        const auto left =
+            std::chrono::duration_cast<std::chrono::milliseconds>(deadline - std::chrono::steady_clock::now());
+        pollfd pfd{m_stdoutFd, POLLIN, 0};
+        ::poll(&pfd, 1, static_cast<int>(std::clamp<long long>(left.count() + 1, 1, 50)));
     }
-    // Bytes already taken from the pipe are gone and the rest of this response is
-    // still queued — see the Windows branch for why that cannot be recovered from.
-    if (!line.empty()) {
+    // A clean timeout consumed nothing, so the channel stays usable. Bytes taken without a newline mean this
+    // response was abandoned part-way: see the Windows branch for why that cannot be recovered from.
+    if (!m_readCarry.empty()) {
         m_framingLost = true;
     }
     return false;
@@ -1174,6 +1196,35 @@ void OutOfProcessPluginInstance::closeEditor() {
     sendCommand("EDITOR CLOSE", nullptr, std::chrono::seconds(5));
 }
 
+std::uintptr_t OutOfProcessPluginInstance::openEditorEmbedded(std::uintptr_t parentWindow) {
+    if (!parentWindow || !hasEditor()) return 0;
+    std::string response;
+    if (!sendCommand("EDITOR EMBED " + hexEncode(m_info.name) + " " +
+                         std::to_string(static_cast<unsigned long long>(parentWindow)),
+                     &response, std::chrono::seconds(15)))
+        return 0;
+    int width = 0, height = 0, resizable = 0;
+    unsigned long long window = 0;
+    if (std::sscanf(response.c_str(), "OK EDITOR %d %d %llu %d", &width, &height, &window, &resizable) != 4 || !window)
+        return 0;
+    m_editorWidth.store(width, std::memory_order_relaxed);
+    m_editorHeight.store(height, std::memory_order_relaxed);
+    m_editorResizable.store(resizable != 0, std::memory_order_relaxed);
+    m_editorOpen.store(true, std::memory_order_release);
+    return static_cast<std::uintptr_t>(window);
+}
+
+bool OutOfProcessPluginInstance::raiseEditor() {
+    if (!m_editorOpen.load(std::memory_order_acquire)) return false;
+    std::string response;
+    if (!sendCommand("EDITOR RAISE", &response, std::chrono::seconds(5))) return false;
+    if (response.find("OK") == 0) return true;
+    // The helper no longer has a window (the user closed it with its own button).
+    // Record that, so the caller reopens instead of raising nothing.
+    m_editorOpen.store(false, std::memory_order_release);
+    return false;
+}
+
 std::pair<int, int> OutOfProcessPluginInstance::getEditorSize() const {
     return {m_editorWidth.load(std::memory_order_relaxed), m_editorHeight.load(std::memory_order_relaxed)};
 }
@@ -1392,6 +1443,8 @@ bool OutOfProcessPluginInstance::processBlockInHelper(const std::vector<float>& 
     }
     return hexDecodeBytes(response.substr(3), output) && output.size() >= sampleCount;
 }
+
+uint64_t OutOfProcessPluginInstance::helperPipeReadCount() const { return m_process ? m_process->readCalls() : 0; }
 
 void OutOfProcessPluginInstance::markCrashed() {
     m_crashed.store(true, std::memory_order_release);

@@ -13,6 +13,7 @@
 #include "CompJson.h"
 #include "MarkerJson.h"
 #include "ProjectPresetsJson.h"
+#include "TrackHeightsJson.h"
 #include <array>
 #include <atomic>
 #include <algorithm>
@@ -906,6 +907,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
         mjs.set("width", JSON(static_cast<double>(channel->getWidth())));
         mjs.set("trim", JSON(static_cast<double>(channel->getTrimDb())));
         mjs.set("trackColorIndex", JSON(static_cast<double>(channel->getTrackColorIndex())));
+        if (channel->frozenTrack().active()) mjs.set("frozen", JSON(channel->frozenTrack().toText()));
 
         JSON routingJson = JSON::object();
         const uint32_t mainOutputId = channel->getMainOutputId();
@@ -1078,6 +1080,10 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                 ejs.set("pitchSemitones", JSON(static_cast<double>(persistedPitch)));
                 ejs.set("fadeIn", JSON(clip.edits.fadeInBeats));
                 ejs.set("fadeOut", JSON(clip.edits.fadeOutBeats));
+                if (clip.edits.crossfadeFrom.isValid()) { // FD-94: absent = no crossfade, so old builds and files agree
+                    ejs.set("crossfadeFrom", JSON(clip.edits.crossfadeFrom.toString()));
+                    ejs.set("crossfadeShape", JSON(static_cast<double>(clip.edits.crossfadeShape)));
+                }
                 ejs.set("sourceStart", JSON(static_cast<double>(clip.edits.sourceStart)));
                 cjs.set("edits", ejs);
 
@@ -1103,6 +1109,13 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
             tjs.set("name", JSON(track->name));
             tjs.set("channelId", JSON(static_cast<double>(track->channelId)));
             tjs.set("armed", JSON(track->armed));
+            // Only a role the user chose is saved; a name-given role is read from the name again on load.
+            if (track->role.source == RoleSource::User && track->role.known()) {
+                JSON role = JSON::object();
+                role.set("category", JSON(std::string(roleCategoryId(track->role.category))));
+                if (track->role.sub != RoleSub::None) role.set("sub", JSON(std::string(roleSubId(track->role.sub))));
+                tjs.set("role", role);
+            }
             tjs.set("activeLaneId", JSON(track->activeLaneId.toString()));
             JSON laneIdsJson = JSON::array();
             for (const auto& laneId : track->laneIds) {
@@ -1135,6 +1148,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
         }
         ui.set("pianoRollOpen", JSON(uiState->pianoRollOpen));
         ui.set("sequencerOpen", JSON(uiState->sequencerOpen));
+        trackHeightsToJson(ui, uiState->trackHeight, uiState->trackHeights);
 
         ui.set("panels", uiPanelsToJson(uiState->panels)); // ProjectPresetsJson.h
 
@@ -1569,12 +1583,9 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 }
             }
         }
-        if (ui.has("pianoRollOpen") && ui["pianoRollOpen"].isBool()) {
-            uiState.pianoRollOpen = ui["pianoRollOpen"].asBool();
-        }
-        if (ui.has("sequencerOpen") && ui["sequencerOpen"].isBool()) {
-            uiState.sequencerOpen = ui["sequencerOpen"].asBool();
-        }
+        if (ui.has("pianoRollOpen") && ui["pianoRollOpen"].isBool()) uiState.pianoRollOpen = ui["pianoRollOpen"].asBool();
+        if (ui.has("sequencerOpen") && ui["sequencerOpen"].isBool()) uiState.sequencerOpen = ui["sequencerOpen"].asBool();
+        trackHeightsFromJson(ui, uiState.trackHeight, uiState.trackHeights);
 
         if (ui.has("panels") && ui["panels"].isArray()) {
             const JSON& panels = ui["panels"];
@@ -1927,6 +1938,8 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                     static_cast<float>(finiteNumberOr(channels[i], "trim", 0.0, -24.0, 24.0)));
                 channel->setTrackColorIndex(
                     static_cast<int>(finiteNumberOr(channels[i], "trackColorIndex", -1.0, -1.0, 1024.0)));
+                if (channels[i].has("frozen") && channels[i]["frozen"].isString())
+                    channel->frozenTrack() = FrozenTrackState::fromText(channels[i]["frozen"].asString());
 
                 if (channels[i].has("routing") && channels[i]["routing"].isObject()) {
                     const JSON& routing = channels[i]["routing"];
@@ -2507,6 +2520,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                         finiteNumberOr(ej, "pitchSemitones", 0.0, -24.0, 24.0));
                                     clip.edits.fadeInBeats = finiteNumberOr(ej, "fadeIn", 0.0, 0.0, 1000000.0);
                                     clip.edits.fadeOutBeats = finiteNumberOr(ej, "fadeOut", 0.0, 0.0, 1000000.0);
+                                    if (ej.has("crossfadeFrom") && ej["crossfadeFrom"].isString()) {
+                                        clip.edits.crossfadeFrom = ClipInstanceID::fromString(ej["crossfadeFrom"].asString());
+                                        clip.edits.crossfadeShape = finiteNumberOr(ej, "crossfadeShape", 1.0, 0.0, 1.0) < 0.5
+                                                                        ? FadeShape::Linear : FadeShape::EqualPower;
+                                    }
                                     clip.edits.sourceStart = finiteNumberOr(ej, "sourceStart", 0.0, 0.0, 1.0e15);
                                 }
                                 if (isAudioClip) {
@@ -2659,6 +2677,14 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                         tj[t], "channelId", 0.0, 0.0, static_cast<double>(UINT32_MAX)));
                     track.armed = (tj[t].has("armed") && tj[t]["armed"].isBool()) ? tj[t]["armed"].asBool()
                                                                                   : false;
+                    track.role = roleFromName(track.name);
+                    if (tj[t].has("role") && tj[t]["role"].isObject() && tj[t]["role"].has("category") &&
+                        tj[t]["role"]["category"].isString()) {
+                        const RoleCategory category = roleCategoryFromId(tj[t]["role"]["category"].asString());
+                        const bool hasSub = tj[t]["role"].has("sub") && tj[t]["role"]["sub"].isString();
+                        const RoleSub sub = hasSub ? roleSubFromId(tj[t]["role"]["sub"].asString()) : RoleSub::None;
+                        if (category != RoleCategory::Unknown) track.role = userRole(category, sub); // unknown id: ignored
+                    }
                     if (tj[t].has("activeLaneId") && tj[t]["activeLaneId"].isString()) {
                         AestraUUID parsedActive;
                         if (AestraUUID::tryParse(tj[t]["activeLaneId"].asString(), parsedActive)) {

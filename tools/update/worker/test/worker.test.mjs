@@ -26,6 +26,7 @@ class FakeR2 {
 class FakeKV {
   constructor() { this.map = new Map(); }
   async get(key) { return this.map.get(key) ?? null; }
+  async put(key, value) { this.puts = (this.puts ?? 0) + 1; this.map.set(key, value); }
 }
 
 const FOUNDER = 'aef_0123456789abcdef0123456789abcdef';
@@ -113,4 +114,47 @@ test('upload with no key configured is refused, odd methods are refused', async 
   assert.equal((await worker.fetch(req('PUT', '/stable/windows-x64/a.zip', { authorization: 'Bearer ' }, 'x'), env)).status, 401);
   assert.equal((await worker.fetch(req('DELETE', '/stable/windows-x64/a.zip', up), setup())).status, 405);
   assert.equal((await worker.fetch(req('GET', '/robots.txt'), env)).status, 404);
+});
+
+test('a founder read is noted once a day: day, platform, last package; nobody else is noted', async () => {
+  const env = setup();
+  const auth = { authorization: `Bearer ${FOUNDER}` };
+  await env.RELEASES.put('early/linux-x64/Aestra-9.tar.gz', 'pkg');
+  await env.RELEASES.put('early/linux-x64/latest.json', feed('early', 'linux-x64', 'Aestra-9.tar.gz', 3));
+  const today = new Date().toISOString().slice(0, 10);
+  const seen = () => JSON.parse(env.FOUNDERS.map.get(`seen:${hash(FOUNDER)}`) ?? 'null');
+
+  // No key, a wrong key and the public channel leave no record.
+  await worker.fetch(req('GET', '/early/linux-x64/latest.json'), env);
+  await worker.fetch(req('GET', '/early/linux-x64/latest.json', { authorization: 'Bearer wrong-wrong-wrong-wrong' }), env);
+  await env.RELEASES.put('stable/linux-x64/Aestra-1.tar.gz', 'pkg');
+  await worker.fetch(req('GET', '/stable/linux-x64/Aestra-1.tar.gz', auth), env);
+  assert.equal(seen(), null);
+  assert.equal(env.FOUNDERS.puts ?? 0, 0);
+
+  // The update check is noted, and checking again the same day writes nothing.
+  assert.equal((await worker.fetch(req('GET', '/early/linux-x64/latest.json', auth), env)).status, 200);
+  assert.deepEqual(seen(), { first: today, last: today, platform: 'linux-x64', package: '' });
+  await worker.fetch(req('GET', '/early/linux-x64/latest.json', auth), env);
+  assert.equal(env.FOUNDERS.puts, 1);
+
+  // Fetching a package records which one; a later update check keeps it.
+  await worker.fetch(req('GET', '/early/linux-x64/Aestra-9.tar.gz', auth), env);
+  assert.equal(seen().package, 'Aestra-9.tar.gz');
+  await worker.fetch(req('GET', '/early/linux-x64/latest.json', auth), env);
+  assert.equal(seen().package, 'Aestra-9.tar.gz');
+  assert.equal(env.FOUNDERS.puts, 2);
+
+  // A revoked founder is refused and not noted again.
+  env.FOUNDERS.map.set(hash(FOUNDER), JSON.stringify({ name: 'test', revoked: true }));
+  assert.equal((await worker.fetch(req('GET', '/early/linux-x64/latest.json', auth), env)).status, 401);
+  assert.equal(env.FOUNDERS.puts, 2);
+});
+
+test('counting never fails the request', async () => {
+  const env = setup();
+  env.FOUNDERS.put = async () => { throw new Error('kv down'); };
+  await env.RELEASES.put('early/linux-x64/Aestra-9.tar.gz', 'pkg');
+  const res = await worker.fetch(req('GET', '/early/linux-x64/Aestra-9.tar.gz', { authorization: `Bearer ${FOUNDER}` }), env);
+  assert.equal(res.status, 200);
 });

@@ -274,6 +274,16 @@ void UnitManager::publishSnapshot() {
         snapshot->units.push_back(state);
     }
 
+    // What playback needs of the project key: the transpose and who follows it (FD-76).
+    auto playbackHarmony = std::make_shared<PlaybackHarmony>();
+    playbackHarmony->transposeSemitones = m_harmony.transposeSemitones;
+    for (UnitID id : m_unitOrder) {
+        const auto* unit = getUnit(id);
+        if (unit && unit->followsKey()) playbackHarmony->followingUnits.push_back(id);
+    }
+    std::sort(playbackHarmony->followingUnits.begin(), playbackHarmony->followingUnits.end());
+    m_playbackHarmony.store(std::move(playbackHarmony));
+
     m_realtimeSnapshot.publish(snapshot);
     // Retire old snapshot through GC so the audio thread never dereferences freed memory.
     auto old = m_publishedSnapshot.exchange(snapshot, std::memory_order_acq_rel);
@@ -308,6 +318,7 @@ UnitID UnitManager::createUnit(const std::string& name, UnitType type) {
     info.name = name;
     info.type = type;
     info.group = unitGroupForType(type);
+    info.role = roleFromName(name); // "Kick 01" arrives as drums; "Audio 17" stays unknown
     if (m_defaultColor) info.color = m_defaultColor(m_unitOrder.size());
     info.bridgeMode = bridgeModeFallbackFromRouteId(info.targetMixerRoute);
 
@@ -347,6 +358,7 @@ UnitID UnitManager::duplicateUnit(UnitID sourceId) {
     dst->isSolo           = src->isSolo;
     dst->isArmed          = src->isArmed;
     dst->group            = src->group;
+    if (src->role.source == RoleSource::User) dst->role = src->role; // a copy keeps what the user said, not just the name
     dst->audioClipPath    = src->audioClipPath;
     dst->soundSet         = src->soundSet;
     dst->audioDurationSeconds  = src->audioDurationSeconds;
@@ -425,9 +437,25 @@ bool UnitManager::removeUnit(UnitID id) {
     return erased;
 }
 
+void UnitManager::setHarmony(ProjectHarmony harmony) {
+    harmony.transposeSemitones = clampTranspose(harmony.transposeSemitones);
+    if (harmony.writtenTonic < 0 || harmony.writtenTonic > 11) harmony.writtenTonic = -1;
+    if (harmony == m_harmony) return;
+    m_harmony = harmony;
+    publishSnapshot();
+}
+
+void UnitManager::setUnitFollowsKey(UnitID id, std::optional<bool> follows) {
+    auto* unit = getUnit(id);
+    if (!unit || unit->followsKeyOverride == follows) return;
+    unit->followsKeyOverride = follows;
+    publishSnapshot();
+}
+
 void UnitManager::clear() {
     m_units.clear();
     m_unitOrder.clear();
+    m_harmony = ProjectHarmony{};
     nextId = 1;
     publishSnapshot();
 }
@@ -436,7 +464,23 @@ void UnitManager::setUnitSoundSet(UnitID id, const std::string& setName) {
     if (auto* u = getUnit(id)) u->soundSet = setName;
 }
 
-void UnitManager::setUnitName(UnitID id, const std::string& name) { if (auto* u = getUnit(id)) u->name = name; }
+void UnitManager::setUnitName(UnitID id, const std::string& name) {
+    if (auto* u = getUnit(id)) {
+        u->name = name;
+        u->role = roleAfterNaming(u->role, name); // the user's choice stands; a name-given role follows the name
+    }
+}
+
+void UnitManager::setUnitRole(UnitID id, const MusicalRole& role) {
+    auto* u = getUnit(id);
+    if (!u) return;
+    u->role = role.known() ? userRole(role.category, role.sub) : roleFromName(u->name);
+}
+
+MusicalRole UnitManager::unitRole(UnitID id) const {
+    const auto* u = getUnit(id);
+    return u ? u->role : MusicalRole{};
+}
 void UnitManager::setUnitMute(UnitID id, bool muted) { if (auto* u = getUnit(id)) { u->isMuted = muted; publishSnapshot(); } }
 void UnitManager::setUnitSolo(UnitID id, bool solo) { if (auto* u = getUnit(id)) { u->isSolo = solo; publishSnapshot(); } }
 void UnitManager::setUnitArmed(UnitID id, bool armed) { if (auto* u = getUnit(id)) u->isArmed = armed; }
@@ -790,11 +834,29 @@ JSON UnitManager::saveToJSON() const {
         if (!state.empty()) {
             u.set("pluginStateHex", JSON(bytesToHex(state)));
         }
+        // Only a switch the user set: a unit on its type's default writes nothing (FD-76).
+        if (unit->followsKeyOverride) u.set("followsKey", JSON(*unit->followsKeyOverride));
+        // Only a role the user chose is saved: a role read from the name is read again on load, so a renamed
+        // file or an older Aestra cannot disagree with it. Absent means "from the name".
+        if (unit->role.source == RoleSource::User && unit->role.known()) {
+            JSON role = JSON::object();
+            role.set("category", JSON(std::string(roleCategoryId(unit->role.category))));
+            if (unit->role.sub != RoleSub::None) role.set("sub", JSON(std::string(roleSubId(unit->role.sub))));
+            u.set("role", role);
+        }
 
         units.push(u);
     }
 
     root.set("units", units);
+    // The project key and global transpose (FD-76); absent for a project that never set either.
+    if (m_harmony != ProjectHarmony{}) {
+        JSON harmony = JSON::object();
+        harmony.set("writtenTonic", JSON(static_cast<double>(m_harmony.writtenTonic)));
+        harmony.set("minor", JSON(m_harmony.minor));
+        harmony.set("transpose", JSON(static_cast<double>(m_harmony.transposeSemitones)));
+        root.set("harmony", harmony);
+    }
     return root;
 }
 
@@ -807,6 +869,20 @@ void UnitManager::loadFromJSON(const JSON& json) {
     if (json.has("nextId")) {
         nextId = static_cast<UnitID>(json["nextId"].asNumber());
         if (nextId == 0) nextId = 1;
+    }
+
+    // The project key and global transpose (FD-76). A damaged section loads as "no key, no transpose".
+    if (json.has("harmony") && json["harmony"].isObject()) {
+        const JSON& jh = json["harmony"];
+        const auto wholeNumber = [&jh](const char* key, double low, double high, int fallback) {
+            if (!jh.has(key) || !jh[key].isNumber()) return fallback;
+            const double v = jh[key].asNumber();
+            return std::isfinite(v) && v >= low && v <= high ? static_cast<int>(std::lround(v)) : fallback;
+        };
+        m_harmony.writtenTonic = wholeNumber("writtenTonic", -1.0, 11.0, -1);
+        m_harmony.minor = jh.has("minor") && jh["minor"].isBool() && jh["minor"].asBool();
+        m_harmony.transposeSemitones =
+            wholeNumber("transpose", ProjectHarmony::kMinTranspose, ProjectHarmony::kMaxTranspose, 0);
     }
 
     if (!json.has("units") || !json["units"].isArray()) {
@@ -904,6 +980,13 @@ void UnitManager::loadFromJSON(const JSON& json) {
         unit.audioDurationSeconds = ju.has("audioDurationSeconds") ? ju["audioDurationSeconds"].asNumber() : 0.0;
         if (ju.has("defaultPatternId")) {
             unit.defaultPatternId = PatternID(static_cast<uint64_t>(ju["defaultPatternId"].asNumber()));
+        }
+        if (ju.has("followsKey") && ju["followsKey"].isBool()) unit.followsKeyOverride = ju["followsKey"].asBool();
+        unit.role = roleFromName(unit.name); // the name's reading, unless the user chose one below
+        if (ju.has("role") && ju["role"].isObject() && ju["role"].has("category") && ju["role"]["category"].isString()) {
+            const RoleCategory category = roleCategoryFromId(ju["role"]["category"].asString());
+            const RoleSub sub = ju["role"].has("sub") && ju["role"]["sub"].isString() ? roleSubFromId(ju["role"]["sub"].asString()) : RoleSub::None;
+            if (category != RoleCategory::Unknown) unit.role = userRole(category, sub); // an unknown id (a newer file) is ignored
         }
 
         if (ju.has("group")) {

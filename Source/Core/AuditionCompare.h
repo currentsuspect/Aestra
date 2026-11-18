@@ -73,8 +73,21 @@ inline Side measure(const std::string& path, std::vector<float> samples, uint32_
     return s;
 }
 
+/// @p side measured again over only its first @p seconds. A side already that short comes back untouched.
+inline Side trimmedTo(const Side& side, double seconds) {
+    if (!side.buffer || side.buffer->numChannels == 0 || side.buffer->sampleRate == 0 || seconds <= 0.0) return side;
+    const uint64_t keep = static_cast<uint64_t>(seconds * static_cast<double>(side.buffer->sampleRate));
+    if (keep >= side.buffer->numFrames) return side;
+    const auto& all = side.buffer->interleavedData;
+    std::vector<float> head(all.begin(), all.begin() + static_cast<std::ptrdiff_t>(keep * side.buffer->numChannels));
+    return measure(side.path, std::move(head), side.buffer->numChannels, side.buffer->sampleRate);
+}
+
 /// Compare two decoded signals. The reference is turned to the mix's integrated loudness; nothing is changed in either.
+/// A reference longer than the mix is cut where the mix ends, so the two are compared over the same stretch: its
+/// loudness, balance, sections and waveform are those of the part that is heard, not of a tail nobody plays.
 inline Result compare(Side mix, Side ref) {
+    if (mix.seconds > 0.0 && ref.seconds > mix.seconds + 0.001) ref = trimmedTo(ref, mix.seconds);
     Result r;
     r.mix = std::move(mix);
     r.ref = std::move(ref);

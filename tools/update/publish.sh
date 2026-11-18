@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
-# Publish one build to update.aestra.studio: sign the feed, upload the package, then the feed (the Worker refuses a feed
+# Publish one build to update.aestra.studio: check its size, sign the feed, upload the package, then the feed (the Worker refuses a feed
 # whose package is not there yet, so the order matters and a half-finished upload never goes live).
 #
 #   publish.sh <channel: stable|early> <platform> <version> <package file> [notes file]
@@ -13,6 +13,9 @@ channel=${1:?channel}; platform=${2:?platform}; version=${3:?version}; package=$
 base=${AESTRA_UPDATE_BASE:-https://update.aestra.studio}
 here=$(cd "$(dirname "$0")" && pwd)
 : "${AESTRA_UPDATE_UPLOAD_KEY:?}" "${AESTRA_UPDATE_SIGNING_KEY:?}" "${AESTRA_UPDATE_PUBLIC_KEY:?}"
+
+# FD-77: Aestra stays small. A package over its download budget is not published, on any channel.
+python3 "$here/check_package_size.py" "$platform" "$package"
 
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT

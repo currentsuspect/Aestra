@@ -8,6 +8,7 @@
 #include "AudioCommandQueue.h"
 #include "AudioGraph.h"
 #include "MixerBus.h"
+#include "../Models/FrozenTrackState.h"
 
 #include <atomic>
 #include <functional>
@@ -189,6 +190,10 @@ public:
     /** @brief Get the monitored input channel index (-2 = Auto, -1 = None, >=0 = explicit input). */
     int getInputChannelIndex() const { return m_inputChannelIndex.load(); }
 
+    /** @brief What freeze did to this track, saved with the project so thaw works after a reopen (V83-E11). Control thread only. */
+    FrozenTrackState& frozenTrack() { return m_frozenTrack; }
+    const FrozenTrackState& frozenTrack() const { return m_frozenTrack; }
+
     // processAudio() and its prepareProcessingBuffers() companion were removed
     // in the v0.7.1 dead-code pass. A channel does not render itself: the graph
     // does. AudioGraphBuilder reads getEffectChainSnapshot() into the track
@@ -303,6 +308,7 @@ private:
     std::atomic<bool> m_isArmed{false};
     std::atomic<bool> m_monitorInput{false};
     std::atomic<int> m_inputChannelIndex{-2}; // -2 = Auto mono, -1 = None, 0 = Input 1, 1 = Input 2, ...
+    FrozenTrackState m_frozenTrack;
 
     // Mixer integration
     std::unique_ptr<MixerBus> m_mixerBus;

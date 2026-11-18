@@ -270,6 +270,33 @@ public:
     virtual bool ownsEditorWindow() const { return false; }
 
     /**
+     * @brief Raise an already-open editor to the front.
+     * @return true when the host could do it. False is not an error: an in-process
+     * editor is a widget the app itself raises.
+     *
+     * Needed because a sandboxed plugin's window belongs to another process, so the
+     * app cannot raise it directly: asking the host beats doing nothing when someone
+     * clicks Edit on an editor that is already open behind the main window.
+     */
+    virtual bool raiseEditor() { return false; }
+
+    /**
+     * @brief Open the editor inside the app's window, as a child the app places itself.
+     * @param parentWindow the app's native window (an X11 Window id).
+     * @return the editor's own window id, or 0 when the host cannot embed (then use openEditor()).
+     *
+     * A sandboxed plugin's window belongs to the helper process, but on X11 it can still be a child of the app's
+     * window: the app then keeps it inside a plugin panel, moves it with the panel and resizes it from the panel's
+     * grip. canResizeEditor() says whether the plugin accepts other sizes.
+     */
+    virtual std::uintptr_t openEditorEmbedded(std::uintptr_t parentWindow) {
+        (void)parentWindow;
+        return 0;
+    }
+    /// Whether the open editor accepts a size other than the one it asked for.
+    virtual bool canResizeEditor() const { return false; }
+
+    /**
      * @brief Close the plugin editor window
      */
     virtual void closeEditor() = 0;

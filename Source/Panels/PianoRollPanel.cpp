@@ -693,7 +693,12 @@ void PianoRollPanel::onUpdate(double deltaTime) {
                         // zone's start (SPEC 3 §5.2); the editor shows pattern beats.
                         double loopStart = 0.0;
                         double loopLength = patternLength;
-                        const auto zone = m_trackManager->scheduledArsenalLoopZone();
+                        // While playing, the zone this playback was scheduled with; stopped, the zone
+                        // the next play would use. The scheduled one only resets on the next play, so
+                        // reading it while stopped pinned the playhead to a range the user had cleared.
+                        const auto zone = m_trackManager->isPlaying()
+                                              ? m_trackManager->scheduledArsenalLoopZone()
+                                              : m_trackManager->activeArsenalLoopZone(m_currentPatternId);
                         if (zone && zone->pattern == m_currentPatternId) {
                             loopStart = zone->startBeat;
                             loopLength = std::max(0.25, zone->endBeat - zone->startBeat);

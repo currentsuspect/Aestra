@@ -252,6 +252,9 @@ void FileBrowser::renderListHeader(NUIRenderer& renderer, const BrowserLayout& l
     const NUIColor accent = themeManager.getColor("accentPrimary");
     const auto& themeProps = themeManager.getCurrentTheme();
 
+    // Opaque: the rows are drawn first and scroll under this band.
+    renderer.fillRect(layout.listHeader, themeManager.getColor("backgroundPrimary"));
+
     // FD-47: spaced caps with a count, as the mixer and Arsenal label their lists.
     int sounds = 0, folders = 0;
     for (const auto* item : getActiveView()) {

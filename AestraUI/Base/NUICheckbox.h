@@ -158,6 +158,8 @@ private:
 
     // Visual properties
     float checkboxSize_ = 16.0f;
+    static constexpr float kToggleW = 36.0f; ///< Design Spec toggle track
+    static constexpr float kToggleH = 20.0f;
     float checkboxRadius_ = 2.0f;
     NUIColor textColor_ = NUIColor::fromHex(0xffffffff);
     NUIColor backgroundColor_ = NUIColor::fromHex(0xff2a2d32);

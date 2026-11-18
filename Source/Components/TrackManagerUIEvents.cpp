@@ -7,6 +7,7 @@
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include "../AestraUI/Core/NUIDragDrop.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
+#include "../AestraUI/Base/NUITextInput.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
 #include "../AestraUI/Platform/NUIPlatformBridge.h"
 #include "AudioFileValidator.h"
@@ -54,6 +55,29 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (m_marquee.active()) {
         return handleSelectionBoxMouse(event, localPos);
     }
+    // An open track rename takes its own clicks; a press elsewhere commits it and goes on as usual.
+    if (m_trackRename.onMouseEvent(event)) {
+        repaint();
+        return true;
+    }
+    // One double-click detector for the header: the platform's flag is not always set.
+    const bool headerDoubleClick = event.pressed && event.button == AestraUI::NUIMouseButton::Left &&
+                                   event.position.x <= getBounds().x + AestraUI::NUIThemeManager::getInstance().getLayoutDimensions().trackControlsWidth &&
+                                   m_headerDoubleClick.press(event.position, event.doubleClick);
+    // Drag a header's bottom edge to resize that track (double-click the edge: back to the shared height).
+    if (handleTrackResizeMouse(event, headerDoubleClick)) {
+        repaint();
+        return true;
+    }
+    // Double-click a track's name in its header: rename it in place.
+    if (headerDoubleClick) {
+        for (auto& row : m_trackUIComponents) {
+            if (row && row->isVisible() && row->getNameBounds().contains(event.position)) {
+                beginTrackRename(row.get());
+                return true;
+            }
+        }
+    }
     if (handleFoldedRowMouse(event))
         return true; // V82-T2: "show" / "hide" on the folded empty tracks
 
@@ -72,10 +96,27 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     }
 
     // Claim keyboard focus on click so keyboard routing moves off the file browser.
-    if (event.pressed &&
+    // A press inside the marker rename box is the box's: stealing focus here
+    // would blur it mid-edit (focus loss commits), so the click that places the
+    // caret would also end the rename.
+    const bool pressInMarkerRenameBox =
+        m_markerRenameInput && m_markerRenameInput->getBounds().contains(event.position);
+    if (event.pressed && !pressInMarkerRenameBox &&
         (event.button == AestraUI::NUIMouseButton::Left || event.button == AestraUI::NUIMouseButton::Right) &&
         bounds.contains(event.position)) {
         setFocused(true);
+    }
+
+    // A press anywhere but the inline box commits it, the way every other
+    // rename box in the app behaves. It runs before the press is interpreted, so
+    // the click that ends a rename is one gesture, not two.
+    if (m_markerRenameInput && event.pressed && !pressInMarkerRenameBox) {
+        finishMarkerRename(true);
+    }
+    // The box sits over the ruler, which would otherwise treat a click on it as a
+    // scrub or a marker press and never let the caret be placed.
+    if (pressInMarkerRenameBox && m_markerRenameInput->onMouseEvent(event)) {
+        return true;
     }
 
     // Update toolbar bounds before checking hover (critical!)
@@ -172,7 +213,15 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (handleTimelineWheel(event, localPos, isInRuler, isInTrackArea)) {
         return true;
     }
+    // A marker chip is a target of its own: it wins over ruler scrub, ruler
+    // selection and the loop handles, all of which sit in the same row.
+    if (handleMarkerPress(event, localPos, isInRuler)) {
+        return true;
+    }
     if (handleRulerPress(event, localPos, isInRuler)) {
+        return true;
+    }
+    if (handleMarkerDrag(event, localPos)) {
         return true;
     }
     if (handleRulerSelectionDrag(event, localPos)) {
@@ -221,8 +270,8 @@ bool TrackManagerUI::handleTrackSeamSelect(const AestraUI::NUIMouseEvent& event,
         return false; // ruler / minimap band
     }
 
-    const int idx = timelineRowSlotAt(layout, static_cast<float>(m_trackHeight), static_cast<float>(m_trackSpacing),
-                                      m_scrollOffset, localPos.y);
+    const int idx = timelineRowSlotAt(layout, rowHeights(), static_cast<float>(m_trackSpacing), m_scrollOffset,
+                                      localPos.y);
     if (idx < 0 || idx >= static_cast<int>(m_trackUIComponents.size())) {
         return false;
     }
@@ -555,6 +604,7 @@ bool TrackManagerUI::beginGridMarquee(const AestraUI::NUIMouseEvent& event) {
         clearClipSelection();
         selectClip(ClipInstanceID{});
         clearRulerSelection();
+        selectMarker(0); // clicking the grid is the marker selection's exit, like the clip selection's
     }
     const auto leftButton = static_cast<Aestra::Components::MarqueeButton>(AestraUI::NUIMouseButton::Left);
     if (!m_marquee.begin(true, leftButton, event.position.x, event.position.y, true)) {
@@ -571,6 +621,11 @@ bool TrackManagerUI::handleTimelineWheel(const AestraUI::NUIMouseEvent& event, c
         const bool shiftHeld = (event.modifiers & AestraUI::NUIModifiers::Shift);
         const bool ctrlHeld = (event.modifiers & AestraUI::NUIModifiers::Ctrl);
 
+        // Alt+wheel over the tracks: vertical zoom (every track taller or shorter together).
+        if (isInTrackArea && !isInRuler && (event.modifiers & AestraUI::NUIModifiers::Alt)) {
+            zoomTrackHeights(event.wheelDelta > 0 ? 1.12f : 1.0f / 1.12f);
+            return true;
+        }
         if (isInRuler || ctrlHeld) {
             // ZOOM: ruler wheel or Ctrl+wheel.
             m_lastMouseZoomX = localPos.x;
@@ -643,8 +698,7 @@ bool TrackManagerUI::handleTimelineWheel(const AestraUI::NUIMouseEvent& event, c
             // Clamp scroll offset
             const TimelineLayout layout = currentTimelineLayout();
             const float viewportHeight = layout.rows.height;
-            const float maxScroll = timelineMaxVerticalScroll(layout, static_cast<float>(m_trackHeight),
-                                                              static_cast<float>(m_trackSpacing),
+            const float maxScroll = timelineMaxVerticalScroll(layout, rowHeights(), static_cast<float>(m_trackSpacing),
                                                               m_trackUIComponents.size());
             m_targetScrollOffset = std::max(0.0f, std::min(m_targetScrollOffset, maxScroll));
 
@@ -723,6 +777,7 @@ bool TrackManagerUI::handleRulerPress(const AestraUI::NUIMouseEvent& event, cons
             // Start dragging playhead (existing behavior)
             // Don't start if we're already doing a ruler selection!
             m_isDraggingPlayhead = true;
+            selectMarker(0); // a scrub is not a marker gesture; nothing stays selected
             if (m_trackManager) {
                 m_trackManager->setUserScrubbing(true);
 
@@ -969,7 +1024,7 @@ bool TrackManagerUI::handleSplitToolClick(const AestraUI::NUIMouseEvent& event, 
 
         if (gridBounds.contains(event.position)) {
             // Find which track was clicked
-            int trackIndex = timelineRowSlotAt(currentTimelineLayout(), static_cast<float>(m_trackHeight),
+            int trackIndex = timelineRowSlotAt(currentTimelineLayout(), rowHeights(),
                                                static_cast<float>(m_trackSpacing), m_scrollOffset, localPos.y);
 
             if (trackIndex >= 0 && trackIndex < static_cast<int>(m_trackUIComponents.size())) {
@@ -996,6 +1051,36 @@ bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
         // Hotkey 'A' opens or closes the selected tracks' automation rows (V82-T1)
         if (event.keyCode == AestraUI::NUIKeyCode::A && !(event.modifiers & AestraUI::NUIModifiers::Ctrl)) {
             toggleAutomationForSelectedTracks();
+            return true;
+        }
+
+        // M: a marker at the playhead. The marker model, its undo steps and the
+        // project-file section shipped in slice 1 (#1337); until now nothing
+        // could make one.
+        if (event.keyCode == AestraUI::NUIKeyCode::M &&
+            !(event.modifiers & (AestraUI::NUIModifiers::Ctrl | AestraUI::NUIModifiers::Alt))) {
+            addMarkerAtPlayhead();
+            return true;
+        }
+
+        // Alt+Left/Right: previous / next marker, which is how a section is
+        // navigated while the transport keeps its place. Wraps at both ends.
+        if (event.modifiers & AestraUI::NUIModifiers::Alt) {
+            if (event.keyCode == AestraUI::NUIKeyCode::Left) {
+                jumpToAdjacentMarker(-1);
+                return true;
+            }
+            if (event.keyCode == AestraUI::NUIKeyCode::Right) {
+                jumpToAdjacentMarker(1);
+                return true;
+            }
+        }
+
+        // Delete on a selected marker: only when no clip owns the key, so the
+        // clip delete stays the one that fires on a normal selection.
+        if ((event.keyCode == AestraUI::NUIKeyCode::Delete || event.keyCode == AestraUI::NUIKeyCode::Backspace) &&
+            m_selectedMarkerId != 0 && !m_selectedClipId.isValid() && m_clipSelection.empty()) {
+            deleteMarker(m_selectedMarkerId);
             return true;
         }
 
@@ -1032,14 +1117,24 @@ bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
             return true;
         }
 
+        // Esc mid-drag cancels the marker's move: the chip goes back and nothing is committed.
+        if (event.keyCode == AestraUI::NUIKeyCode::Escape && m_isDraggingMarker) {
+            m_isDraggingMarker = false;
+            m_draggingMarkerId = 0;
+            m_markerDragMoved = false;
+            invalidateCache();
+            return true;
+        }
+
         // Esc is the selection exit, and that includes the ruler zone (SPEC 3 §1.2).
         if (event.keyCode == AestraUI::NUIKeyCode::Escape &&
             (m_selectedClipId.isValid() || !m_selectedTracks.empty() || !m_clipSelection.empty() ||
-             m_hasRulerSelection)) {
+             m_hasRulerSelection || m_selectedMarkerId != 0)) {
             clearClipSelection();
             selectClip(ClipInstanceID{});
             clearSelection();
             clearRulerSelection();
+            selectMarker(0);
             return true;
         }
 

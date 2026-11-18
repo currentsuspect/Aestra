@@ -1,5 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AuditionHub.h"
+#include "../AestraUI/Core/NUIWheel.h"
+#include "AuditionFit.h"
 #include "AuditionCover.h"
 
 #include "../AestraUI/Core/NUIThemeSystem.h"
@@ -379,7 +381,7 @@ void AuditionHub::renderPage(NUIRenderer& r, const AuditionHubLayout::Frame& f) 
                         r.fillRect({c.x - 3.0f + static_cast<float>(col), c.y - half, 1.0f, half * 2.0f}, NUIColor::white());
                     }
                 }
-                r.drawText(tile.item.title, {cover.x, cover.bottom() + 10.0f}, 13.0f, text);
+                r.drawText(fitText(r, tile.item.title, 13.0f, cover.width), {cover.x, cover.bottom() + 10.0f}, 13.0f, text);
                 float x = cover.x;
                 if (!tile.item.badge.empty()) {
                     const bool ref = tile.item.kind == AuditionLibrary::Item::Kind::Reference;
@@ -388,7 +390,7 @@ void AuditionHub::renderPage(NUIRenderer& r, const AuditionHubLayout::Frame& f) 
                     r.drawText(tile.item.badge, {x + 6.0f, cover.bottom() + 32.0f}, 9.5f, ref ? NUIColor(0.1f, 0.07f, 0.02f, 1.0f) : NUIColor::white());
                     x += bw + 8.0f;
                 }
-                r.drawText(tile.item.subtitle, {x, cover.bottom() + 31.0f}, 11.0f, muted);
+                r.drawText(fitText(r, tile.item.subtitle, 11.0f, cover.right() - x), {x, cover.bottom() + 31.0f}, 11.0f, muted);
             } else {
                 r.fillRect(cover, hot ? theme.getColor("surfaceTertiary") : NUIColor(0, 0, 0, 0));
                 // A dashed outline: this is a place to put something, not something.
@@ -467,7 +469,7 @@ void AuditionHub::renderPlayer(NUIRenderer& r, const AuditionHubLayout::Frame& f
         if (const auto item = m_engine->getCurrentItem()) { title = item->title.empty() ? std::filesystem::path(item->filePath).stem().string() : item->title; sub = item->artist; seed = AuditionLibrary::seedOf(title); fallbackSeconds = item->durationSeconds; }
     }
     drawCover(r, f.cover, seed);
-    r.drawText(title, {f.cover.right() + 14.0f, f.cover.y + 8.0f}, 13.0f, text);
+    r.drawText(fitText(r, title, 13.0f, f.transportPrev.x - 20.0f - (f.cover.right() + 14.0f)), {f.cover.right() + 14.0f, f.cover.y + 8.0f}, 13.0f, text);
     float x = f.cover.right() + 14.0f;
     if (!badge.empty()) {
         const std::string label = ref ? badge : "MIX " + badge;
@@ -530,7 +532,8 @@ void AuditionHub::renderPlayer(NUIRenderer& r, const AuditionHubLayout::Frame& f
     segment(f.toggleB, "B", "Ref", onRef, hasRef, true);
     r.fillRect(f.listenOn, m_hoverControl == "listen" ? theme.getColor("surfaceRaised") : theme.getColor("surfaceTertiary"));
     const std::string preset = m_engine ? m_engine->getDSPPreset().name : "Studio";
-    r.drawText(preset, {f.listenOn.x + 14.0f, std::round(r.calculateTextY(f.listenOn, 12.0f))}, 12.0f, text);
+    r.drawText(fitText(r, preset, 12.0f, f.listenOn.width - 14.0f - 30.0f), // room for the arrow on the right
+               {f.listenOn.x + 14.0f, std::round(r.calculateTextY(f.listenOn, 12.0f))}, 12.0f, text);
     const float cx = f.listenOn.right() - 16.0f, cy = f.listenOn.y + f.listenOn.height * 0.5f;
     r.drawLine({cx - 3.5f, cy - 1.5f}, {cx, cy + 2.0f}, 1.3f, muted);
     r.drawLine({cx, cy + 2.0f}, {cx + 3.5f, cy - 1.5f}, 1.3f, muted);
@@ -631,7 +634,7 @@ bool AuditionHub::onMouseEvent(const NUIMouseEvent& event) {
     if (event.type == NUIMouseEventType::Scroll && f.content.contains(p)) {
         const float top = f.content.y + shelvesTop();
         const float contentH = AuditionHubLayout::contentHeight(layoutShelves(), top - m_scroll) + shelvesTop();
-        m_scroll = std::clamp(m_scroll - event.wheelDelta * 60.0f, 0.0f, std::max(0.0f, contentH - f.content.height));
+        m_scroll = std::clamp(m_scroll - event.wheelDelta * AestraUI::kWheelNotchPx, 0.0f, std::max(0.0f, contentH - f.content.height));
         setDirty(true);
         return true;
     }

@@ -7,6 +7,7 @@
 #include "AestraPlatform.h"
 #include "Plugin/BuiltInPlugins.h"
 #include "Plugin/InternalPluginRegistry.h"
+#include "Plugin/PluginScanProtocol.h"
 
 #include <algorithm>
 #include <cerrno>
@@ -267,6 +268,71 @@ void reapChildAfterKill(pid_t pid, int& status) {
     }
 }
 #endif
+
+/// Ask the helper process to scan one VST3 bundle. Loading a bundle keeps it mapped in whoever loaded it, so the
+/// helper does it and exits (the app was holding 40 MB of Surge XT it never used). `helperRan` is false only when
+/// there is no helper to ask; a helper that ran and found nothing, timed out or died means the plugin is skipped, never
+/// that the app loads it itself: that is the point of scanning out of process.
+std::vector<PluginInfo> scanVst3MetadataOutOfProcess(const std::filesystem::path& path, bool& helperRan) {
+    helperRan = false;
+#ifdef _WIN32
+    (void)path;
+    return {};
+#else
+    const std::string hostPath = defaultPluginHostPath();
+    if (access(hostPath.c_str(), X_OK) != 0) {
+        return {};
+    }
+    int inPipe[2] = {-1, -1};
+    int outPipe[2] = {-1, -1};
+    if (pipe(inPipe) != 0 || pipe(outPipe) != 0) {
+        return {};
+    }
+    const pid_t pid = fork();
+    if (pid < 0) {
+        close(inPipe[0]);
+        close(inPipe[1]);
+        close(outPipe[0]);
+        close(outPipe[1]);
+        return {};
+    }
+    if (pid == 0) {
+        dup2(inPipe[0], STDIN_FILENO);
+        dup2(outPipe[1], STDOUT_FILENO);
+        close(inPipe[0]);
+        close(inPipe[1]);
+        close(outPipe[0]);
+        close(outPipe[1]);
+        execl(hostPath.c_str(), hostPath.c_str(), "--stdio", static_cast<char*>(nullptr));
+        _exit(127);
+    }
+    close(inPipe[0]);
+    close(outPipe[1]);
+    fcntl(outPipe[0], F_SETFL, fcntl(outPipe[0], F_GETFL, 0) | O_NONBLOCK);
+    helperRan = true;
+
+    std::vector<PluginInfo> result;
+    std::string response;
+    bool childReaped = false;
+    // A first load can be slow (big sample libraries); the budget is longer than the CLAP scan's.
+    if (sendAll(inPipe[1], "SCANALL vst3 " + ScanProtocol::hexEncode(path.string())) &&
+        readLineWithTimeout(outPipe[0], pid, response, std::chrono::milliseconds(15000), childReaped) &&
+        response.compare(0, 3, "OK ") == 0) {
+        result = ScanProtocol::decodeRecords(response.substr(3), path);
+    }
+    sendAll(inPipe[1], "EXIT");
+    close(inPipe[1]);
+    close(outPipe[0]);
+    int status = 0;
+    if (!childReaped && !waitForChildExit(pid, status, 10, std::chrono::milliseconds(10))) {
+        if (!(kill(pid, SIGTERM) == 0 && waitForChildExit(pid, status, 10, std::chrono::milliseconds(10)))) {
+            kill(pid, SIGKILL);
+            reapChildAfterKill(pid, status);
+        }
+    }
+    return result;
+#endif
+}
 
 std::vector<PluginInfo> scanClapMetadataOutOfProcess(const std::filesystem::path& path) {
 #ifdef _WIN32
@@ -912,7 +978,13 @@ void PluginScanner::scanDirectory(const std::filesystem::path& dir, std::vector<
 
 std::vector<PluginInfo> PluginScanner::scanVST3Plugin(const std::filesystem::path& path) {
 #ifdef AESTRA_HAS_VST3
-    // Use VST3 SDK to properly scan the plugin
+    // The helper process loads the bundle and exits, so the plugin never stays mapped in the app.
+    bool helperRan = false;
+    auto isolated = scanVst3MetadataOutOfProcess(path, helperRan);
+    if (helperRan) {
+        return isolated; // empty means the helper found, or survived, nothing: skip it rather than load it here
+    }
+    // No helper to ask (a build without it): scan in this process, as before.
     return VST3PluginFactory::scanPlugin(path);
 #else
     // Fallback: create a placeholder entry based on filename

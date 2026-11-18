@@ -64,6 +64,9 @@ public:
     bool hasEditor() const override;
     bool openEditor(void* parentWindow) override;
     bool ownsEditorWindow() const override { return true; } // the helper makes the window (V82-H3 / H8)
+    bool raiseEditor() override;
+    std::uintptr_t openEditorEmbedded(std::uintptr_t parentWindow) override;
+    bool canResizeEditor() const override { return m_editorResizable.load(std::memory_order_relaxed); }
     void closeEditor() override;
     bool isEditorOpen() const override { return m_editorOpen.load(std::memory_order_acquire); }
     std::pair<int, int> getEditorSize() const override;
@@ -94,6 +97,9 @@ public:
     // the compatibility run reports it per plugin (V82-H7).
     uint64_t helperBlockCount() const { return m_helperBlocks.load(std::memory_order_relaxed); }
     uint64_t dryBlockCount() const { return m_dryBlocks.load(std::memory_order_relaxed); }
+    /// How many times the helper's reply pipe has been read (0 with no helper). A reply is a read or two
+    /// whatever its length; ClapSandboxParamsTest holds the hex transport to that.
+    uint64_t helperPipeReadCount() const;
 
     // Blocks whose input and MIDI never reached the helper because the previous
     // block was still with it. A note-on in such a block is lost (V82-H7).
@@ -189,6 +195,7 @@ private:
     std::atomic<uint64_t> m_watchdogViolationCount{0};
     std::atomic<bool> m_watchdogBypassed{false};
     std::atomic<bool> m_editorOpen{false};
+    std::atomic<bool> m_editorResizable{false};
     std::atomic<int> m_editorWidth{0};
     std::atomic<int> m_editorHeight{0};
     std::atomic<uint32_t> m_pluginLatency{0}; ///< the plugin's own latency in samples, from the helper

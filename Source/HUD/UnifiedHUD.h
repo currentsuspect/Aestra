@@ -49,6 +49,7 @@ public:
         m_fpsSparkline.fill(0.0f);
         m_audioLoadSparkline.fill(0.0f);
         setBounds(AestraUI::NUIRect(0, 0, HUD_WIDTH, HUD_HEIGHT));
+        setDropPassThrough(true); // own m_visible shadows isVisible(): never let the hidden HUD swallow drops
     }
 
     void setAudioEngine(Aestra::Audio::AudioEngine* engine) {

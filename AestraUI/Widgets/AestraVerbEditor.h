@@ -101,7 +101,6 @@ private:
     void loadUserPresets();
     void saveUserPreset(const std::string& name);
     void deleteUserPreset(const std::string& name);
-    std::string getUserPresetDir() const;
     float getParamValue(uint32_t paramId) const;
     std::string formatParameterValue(uint32_t paramId) const;
     std::string parameterTooltip(uint32_t paramId) const;

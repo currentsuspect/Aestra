@@ -9,6 +9,10 @@
 // Channels: `stable` is public. `early` is for founders: every read needs `Authorization: Bearer <founder key>`; the key
 // is hashed here and looked up in the FOUNDERS KV namespace (only hashes are stored, so reading the namespace does not
 // reveal anyone's key). A founder who is removed loses access on the next request; nothing is cached for `early`.
+//
+// Counting testers: each founder read of `early` notes, once a day at most, the day, the platform and the last package
+// that key fetched, under `seen:<key hash>` in the same namespace. That is the only usage record: no IP address, no
+// machine id, nothing the app did not already send. `founders.py list` reads it back.
 
 const CHANNELS = new Set(['stable', 'early']);
 const PLATFORMS = new Set(['windows-x64', 'linux-x64', 'macos-arm64']);
@@ -43,15 +47,44 @@ async function sha256Hex(text) {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-export async function isFounder(req, env) {
+/** The hash of the caller's founder key, or '' when the key is missing, unknown or revoked. */
+export async function founderHash(req, env) {
   const token = bearer(req);
-  if (token.length < 16 || token.length > 128 || !env.FOUNDERS) return false;
-  const record = await env.FOUNDERS.get(await sha256Hex(token));
-  if (!record) return false;
+  if (token.length < 16 || token.length > 128 || !env.FOUNDERS) return '';
+  const hash = await sha256Hex(token);
+  const record = await env.FOUNDERS.get(hash);
+  if (!record) return '';
   try {
-    return JSON.parse(record).revoked !== true;
+    return JSON.parse(record).revoked !== true ? hash : '';
   } catch {
-    return false;
+    return '';
+  }
+}
+
+export async function isFounder(req, env) {
+  return (await founderHash(req, env)) !== '';
+}
+
+/**
+ * Notes that this founder key was used today. Writes only when something changed (a new day, another platform, a new
+ * package), so a tester who checks ten times a day costs one write. A failure here never fails the request.
+ */
+export async function noteSeen(env, hash, route, now = new Date()) {
+  try {
+    const key = `seen:${hash}`;
+    const day = now.toISOString().slice(0, 10);
+    let seen = {};
+    try {
+      seen = JSON.parse((await env.FOUNDERS.get(key)) ?? '{}') ?? {};
+    } catch {
+      seen = {};
+    }
+    const next = { first: seen.first ?? day, last: day, platform: route.platform, package: seen.package ?? '' };
+    if (route.file !== 'latest.json') next.package = route.file;
+    if (seen.last === next.last && seen.platform === next.platform && seen.package === next.package) return;
+    await env.FOUNDERS.put(key, JSON.stringify(next));
+  } catch {
+    // counting is best effort
   }
 }
 
@@ -86,12 +119,18 @@ async function serve(req, env, route) {
 }
 
 export default {
-  async fetch(req, env) {
+  async fetch(req, env, ctx) {
     const route = parseRoute(new URL(req.url).pathname);
     if (!route) return json({ error: 'none' }, 404);
 
     if (req.method === 'GET' || req.method === 'HEAD') {
-      if (route.channel === 'early' && !(await isFounder(req, env))) return json({ error: 'founders only' }, 401);
+      if (route.channel === 'early') {
+        const hash = await founderHash(req, env);
+        if (!hash) return json({ error: 'founders only' }, 401);
+        const noted = noteSeen(env, hash, route);
+        if (ctx?.waitUntil) ctx.waitUntil(noted);
+        else await noted;
+      }
       return serve(req, env, route);
     }
 

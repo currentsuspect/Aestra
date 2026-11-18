@@ -41,6 +41,7 @@ class TrackManager;
 
 namespace AestraUI {
 class UIMixerPluginDropdown;
+class PluginEditorWindow;
 
 /**
  * @brief Controller that bridges plugin UI widgets to AestraAudio backend
@@ -129,6 +130,8 @@ public:
     /// undo steps go, and the project's own presets. Nothing returned = no bar for that plugin.
     struct PresetContext {
         std::string trackName;
+        /// Where it sits, for the header's context text: "Channel 1 · Insert 2". Empty shows nothing.
+        std::string where;
         std::function<void(std::shared_ptr<Aestra::Audio::ICommand>)> record;
         Aestra::Audio::Presets::PresetSession::ProjectPresets projectPresets;
         Aestra::Audio::Presets::PresetSession::SaveToProject saveToProject;
@@ -322,6 +325,14 @@ private:
     NUIComponent* m_popupLayer = nullptr;
     std::shared_ptr<UIMixerPluginDropdown> m_activeMenu;
     std::vector<std::shared_ptr<NUIComponent>> m_activeEditors;
+
+    // Sandboxed plugins draw their GUI in a window the helper process owns
+    // (OutOfProcessPluginInstance::ownsEditorWindow). Those windows are not NUI
+    // components: they never enter m_activeEditors, and this vector is their only
+    // owner. Closing one is the app's job even though the drawing is not.
+    std::vector<std::shared_ptr<PluginEditorWindow>> m_nativeEditors;
+    bool openNativeEditorWindow(const std::shared_ptr<Aestra::Audio::IPluginInstance>& instance);
+    void closeNativeEditorsFor(const std::shared_ptr<Aestra::Audio::IPluginInstance>& instance);
     PresetContextProvider m_presetContext;
     std::unique_ptr<Aestra::Audio::Presets::PresetLibrary> m_presetLibrary;
     void attachPresetBar(const std::shared_ptr<AestraPanelWindow>& editor,
@@ -338,7 +349,7 @@ private:
     std::vector<std::pair<std::weak_ptr<NUIComponent>, std::string>> m_editorKeys; ///< editor -> its anchor key
     void applyEditorMode(const std::shared_ptr<AestraPanelWindow>& editor, const std::string& anchorKey);
     void showEditorMenu(const std::shared_ptr<AestraPanelWindow>& editor, const std::string& anchorKey,
-                        const NUIPoint& at);
+                        const NUIPoint& at, std::function<void()> resetToDefault = {});
     void placeEditorComp(const std::shared_ptr<NUIComponent>& editorComp, double anchorX, double anchorY);
     void centreEditor(const std::shared_ptr<NUIComponent>& editorComp, const std::string& anchorKey);
 };
@@ -391,8 +402,11 @@ public:
     
     /**
      * @brief Bring window to front
+     * @return True when the window is still on screen and was raised. False means the
+     * window is gone (the user closed it with its own button, where the host owns it)
+     * and the caller should open a new one.
      */
-    void bringToFront();
+    bool bringToFront();
     
     /**
      * @brief Set window position
@@ -417,7 +431,11 @@ private:
     struct Impl;
     std::unique_ptr<Impl> m_impl;
     
-    std::shared_ptr<Aestra::Audio::IPluginInstance> m_instance;
+    // Weak on purpose. The chain owns the plugin; a window that owned it too would
+    // keep a deleted channel's plugin (and, for a sandboxed plugin, its helper
+    // process) alive for as long as the window exists — which is until the app
+    // quits, since nothing else would ever close it.
+    std::weak_ptr<Aestra::Audio::IPluginInstance> m_instance;
     std::function<void()> m_onClose;
     bool m_isOpen = false;
 };

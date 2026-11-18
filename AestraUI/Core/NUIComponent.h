@@ -2,6 +2,7 @@
 #pragma once
 
 #include "NUITypes.h"
+#include "NUIDirtyRegion.h"
 #include <vector>
 #include <memory>
 #include <string>
@@ -145,6 +146,11 @@ public:
     void setHitTestVisible(bool visible) { hitTestVisible_ = visible; }
     bool isHitTestVisible() const { return hitTestVisible_; }
 
+    // Drag-and-drop occlusion only: a layer that paints nothing of its own (OverlayLayer, the status toast).
+    // NUIDragDropManager picks the drop target under the topmost thing at the pointer and looks through these.
+    void setDropPassThrough(bool passThrough) { dropPassThrough_ = passThrough; }
+    bool isDropPassThrough() const { return dropPassThrough_; }
+
     static NUIComponent* getFocusedComponent();
     static void clearFocusedComponent();
     
@@ -161,6 +167,16 @@ public:
     void setDirty(bool dirty = true);
     bool isDirty() const { return dirty_; }
     void repaint() { setDirty(true); }
+    /// Invalidate only a region inside this widget (widget-local coordinates): the renderer redraws that rectangle,
+    /// not the whole widget (SPEC-028). Also sets the dirty bit, like repaint().
+    void repaint(const NUIRect& localRegion);
+    /// Pixels this widget paints outside its bounds (a shadow, a glow, a stroke): every invalidation widens by this.
+    void setInvalidationMargin(float pixels) { invalidationMargin_ = pixels > 0.0f ? pixels : 0.0f; }
+    float getInvalidationMargin() const { return invalidationMargin_; }
+    /// What changed on screen since the frame last consumed it (window space; this thread). The run loop clears it
+    /// when it starts a frame; an invalidation made off the UI thread cannot be located and shows up as a dirty root
+    /// with an empty region, which the renderer must read as "the whole window".
+    static NUIDirtyRegion& frameDirtyRegion();
     
     void setOpacity(float opacity);
     float getOpacity() const { return opacity_; }
@@ -195,9 +211,11 @@ private:
     bool enabled_ = true;
     bool focused_ = false;
     bool hovered_ = false;
+    float invalidationMargin_ = 0.0f;
     bool dirty_ = true;
     float opacity_ = 1.0f;
     bool hitTestVisible_ = true;
+    bool dropPassThrough_ = false;
     NUILayer layer_ = NUILayer::Content;
     
     std::string tooltipText_;
@@ -208,6 +226,7 @@ private:
     
     // Static Global Tooltip State
     static TooltipState s_tooltipState;
+    static std::vector<const void*> s_openPopups; ///< Dropdowns, menus and pickers open now (setPopupOpen).
     static bool s_cursorCaptureActive;
     static unsigned s_pointerButtonsHeld; ///< One bit per NUIMouseButton currently down.
     // Press ownership (2026-11-08): who took the press hears its release, wherever it lands. See dispatchMouseEvent.
@@ -242,7 +261,22 @@ public:
                                   bool force = false);
     static void showRemoteTooltip(const std::string& text, const NUIPoint& position, const void* owner = nullptr, bool force = false);
     static void hideRemoteTooltip(const void* owner = nullptr);
+    /**
+     * @brief A dropdown, menu or picker tells the tooltip system it is open (or closed).
+     *
+     * While any popup is open, hover tooltips stay down: the controls under or beside a popup are not what the
+     * user is looking at, and a tooltip drawn from them landed on top of the popup. Opening one dismisses the
+     * tooltip on screen. Forced readouts (a drag's live value) still show. A destroyed popup is forgotten.
+     */
+    static void setPopupOpen(const void* popup, bool open);
+    static bool isAnyPopupOpen();
     static void renderGlobalTooltip(NUIRenderer& renderer, const NUIRect& viewport = {});
+    /// A tooltip's label and its trailing shortcut, split from "Name (F6)". The key is empty when there is none.
+    struct TooltipParts {
+        std::string label;
+        std::string key;
+    };
+    static TooltipParts splitTooltipShortcut(const std::string& text);
     static void updateGlobalTooltip(double deltaTime);
     static NUIRect calculateTooltipBounds(const NUIRect& anchor, const NUISize& tooltipSize,
                                           const NUIRect& viewport);

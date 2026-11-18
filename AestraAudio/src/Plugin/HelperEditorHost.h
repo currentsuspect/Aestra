@@ -44,6 +44,7 @@ struct EditorBackend {
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
 #include <X11/Xlib.h>
+#include <dlfcn.h>
 #include <poll.h>
 
 #include <atomic>
@@ -65,6 +66,32 @@ inline int ignoreXError(Display*, XErrorEvent* e) {
     return 0;
 }
 
+/// Set when the X server drops the editor's connection: a window manager force-closing the plugin window
+/// (XKillClient, as Hyprland and xkill do) or the server going away. Xlib calls that fatal and exits the process,
+/// which took the plugin, its sound and the app's chance to reopen it down with the window. The helper runs one
+/// editor at a time, on one thread, so one flag is enough.
+inline std::atomic<bool>& editorConnectionLost() {
+    static std::atomic<bool> lost{false};
+    return lost;
+}
+
+inline int noteLostConnection(Display*) {
+    editorConnectionLost().store(true);
+    return 0; // returning is what lets the exit handler below keep the process alive
+}
+
+/// XSetIOErrorExitHandler (libX11 1.7+) lets a lost connection return to the caller instead of exiting. It is looked
+/// up at run time so a helper built against an older libX11 still loads; there it keeps the old behaviour.
+inline void surviveLostConnection(Display* display) {
+    using ExitHandler = void (*)(Display*, void*);
+    using SetExitHandler = void (*)(Display*, ExitHandler, void*);
+    static const auto setExitHandler =
+        reinterpret_cast<SetExitHandler>(dlsym(RTLD_DEFAULT, "XSetIOErrorExitHandler"));
+    if (!setExitHandler) return;
+    XSetIOErrorHandler(noteLostConnection);
+    setExitHandler(display, [](Display*, void*) { editorConnectionLost().store(true); }, nullptr);
+}
+
 class EditorHost {
 public:
     ~EditorHost() { close(); }
@@ -73,12 +100,14 @@ public:
     /// helper's command thread, which is also the thread that loaded the plugin: a plugin that insists its window code
     /// runs on "the main thread" (CLAP's thread-check, Surge's included) finds it is. The same thread must then call
     /// pollFds() and service() while the editor is open; the command loop does.
-    bool open(EditorBackend backend, const std::string& title, int& width, int& height) {
+    bool open(EditorBackend backend, const std::string& title, int& width, int& height, std::uintptr_t parent = 0) {
         close();
         if (!backend.open) return false;
         m_display = XOpenDisplay(nullptr);
         if (!m_display) return false;
         XSetErrorHandler(ignoreXError);
+        editorConnectionLost().store(false);
+        surviveLostConnection(m_display);
         m_screen = DefaultScreen(m_display);
         m_wmDelete = XInternAtom(m_display, "WM_DELETE_WINDOW", False);
         m_backend = std::move(backend);
@@ -90,10 +119,22 @@ public:
             m_width = w;
             m_height = h;
         };
-        auto makeWindow = [this, &title](int w, int h, bool resizable) -> std::uintptr_t {
-            m_window = XCreateSimpleWindow(m_display, RootWindow(m_display, m_screen), 0, 0, static_cast<unsigned>(w),
-                                           static_cast<unsigned>(h), 0, 0, BlackPixel(m_display, m_screen));
+        m_embedded = parent != 0;
+        auto makeWindow = [this, &title, parent](int w, int h, bool resizable) -> std::uintptr_t {
+            // Embedded: a child of the app's window, which the app places inside its plugin panel and maps itself.
+            // No title, no size hints, no close protocol: the panel is the window the user sees.
+            const ::Window owner = parent ? static_cast<::Window>(parent) : RootWindow(m_display, m_screen);
+            m_window = XCreateSimpleWindow(m_display, owner, 0, 0, static_cast<unsigned>(w), static_cast<unsigned>(h), 0, 0,
+                                           BlackPixel(m_display, m_screen));
             if (!m_window) return 0;
+            m_resizable = resizable;
+            if (parent) {
+                XSelectInput(m_display, m_window, StructureNotifyMask | KeyPressMask | KeyReleaseMask | FocusChangeMask);
+                XFlush(m_display);
+                m_width = w;
+                m_height = h;
+                return static_cast<std::uintptr_t>(m_window);
+            }
             XStoreName(m_display, m_window, title.c_str());
             XSetWMProtocols(m_display, m_window, &m_wmDelete, 1);
             XSelectInput(m_display, m_window, StructureNotifyMask | KeyPressMask | KeyReleaseMask | FocusChangeMask);
@@ -121,11 +162,31 @@ public:
     }
 
     /// Whether the window is still on screen (false after the user closes it, or before open).
-    bool isOpen() const { return m_display != nullptr; }
+    bool isOpen() const { return m_display != nullptr && !editorConnectionLost().load(); }
+    /// The editor's window id: the app places an embedded one itself.
+    std::uintptr_t windowId() const { return static_cast<std::uintptr_t>(m_window); }
+    /// Whether the plugin lets its view be resized (the app then offers a resize grip).
+    bool resizable() const { return m_resizable; }
+    bool embedded() const { return m_embedded; }
+    /// Embedding is X11 only for now.
+    static constexpr bool windowIdUnsupported() { return false; }
     int width() const { return m_width; }
     int height() const { return m_height; }
 
-    void close() { teardown(true); }
+    /// Bring the window to the front. The app cannot raise it itself: another process owns it.
+    void raise() {
+        if (!isOpen() || !m_window) return;
+        XRaiseWindow(m_display, m_window);
+        XFlush(m_display);
+    }
+
+    void close() {
+        if (m_display && editorConnectionLost().load()) {
+            dropLostConnection();
+            return;
+        }
+        teardown(true);
+    }
 
     /// What the command loop should wait on besides its own input: the X connection, and the plugin's descriptors.
     /// @p timeoutMs is lowered to when the plugin's next timer is due (never raised).
@@ -141,7 +202,15 @@ public:
     /// Run whatever is ready: window events, the plugin's descriptors and due timers. Never blocks.
     void service() {
         if (!m_display) return;
+        if (editorConnectionLost().load()) {
+            dropLostConnection();
+            return;
+        }
         while (m_display && XPending(m_display) > 0) {
+            if (editorConnectionLost().load()) {
+                dropLostConnection();
+                return;
+            }
             XEvent event;
             XNextEvent(m_display, &event);
             if (event.type == ClientMessage && static_cast<Atom>(event.xclient.data.l[0]) == m_wmDelete) {
@@ -166,6 +235,19 @@ public:
     }
 
 private:
+    /// The window was force-closed: the connection is dead, so no X call may touch it again. Detach the plugin's view
+    /// (the plugin talks to the server on its own connection) and forget the display. Leaking the dead Display is
+    /// deliberate: XCloseDisplay on it would write to a closed socket. The plugin, its state and its sound stay; the
+    /// app's next EDITOR OPEN makes a new window.
+    void dropLostConnection() {
+        std::fprintf(stderr, "AestraPluginHost: the editor window was force-closed; the plugin keeps running\n");
+        if (m_backend.close) m_backend.close();
+        m_display = nullptr;
+        m_window = 0;
+        m_backend = {};
+        editorConnectionLost().store(false);
+    }
+
     void teardown(bool closeBackend) {
         if (!m_display) return;
         if (closeBackend && m_backend.close) m_backend.close();
@@ -180,6 +262,8 @@ private:
     Aestra::Audio::EditorLoopPump m_pump;
     Display* m_display = nullptr;
     Window m_window = 0;
+    bool m_resizable = false;
+    bool m_embedded = false;
     Atom m_wmDelete = 0;
     int m_screen = 0;
     int m_width = 0;
@@ -209,7 +293,7 @@ class EditorHost {
 public:
     ~EditorHost() { close(); }
 
-    bool open(EditorBackend backend, const std::string& title, int& width, int& height) {
+    bool open(EditorBackend backend, const std::string& title, int& width, int& height, std::uintptr_t parent = 0) {
         close();
         if (!backend.open || !registerClass()) return false;
         m_backend = std::move(backend);
@@ -257,6 +341,18 @@ public:
     bool isOpen() const { return m_window != nullptr; }
     int width() const { return m_width; }
     int height() const { return m_height; }
+
+    /// Bring the window to the front. The app cannot raise it itself: another process owns it.
+    void raise() {
+        if (!m_window) return;
+        SetForegroundWindow(m_window);
+    }
+
+    /// Windows does not embed yet: the editor stays a top-level window the helper owns.
+    std::uintptr_t windowId() const { return 0; }
+    bool resizable() const { return false; }
+    bool embedded() const { return false; }
+    static constexpr bool windowIdUnsupported() { return true; }
 
     void close() { teardown(true); }
 

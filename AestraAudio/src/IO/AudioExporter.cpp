@@ -5,6 +5,7 @@
 #include "AudioGraphBuilder.h"
 #include "AestraFile.h"
 #include "AestraLog.h"
+#include "Analysis/AudioAnalysis.h"
 
 #include <fstream>
 #include <algorithm>
@@ -82,7 +83,79 @@ AudioExporter::Result AudioExporter::bounceToWav(AudioEngine& engine, TrackManag
     return exporter.render(config);
 }
 
+double AudioExporter::loudnessGainDb(double measuredLufs, double truePeakDbtp, double targetLufs, double ceilingDbtp,
+                                     bool& limited) {
+    limited = false;
+    if (!std::isfinite(measuredLufs) || measuredLufs <= AudioAnalysis::kSilenceDb + 1.0) return 0.0; // nothing to measure
+    double gain = targetLufs - measuredLufs;
+    if (std::isfinite(truePeakDbtp) && truePeakDbtp > AudioAnalysis::kSilenceDb + 1.0 && truePeakDbtp + gain > ceilingDbtp) {
+        gain = ceilingDbtp - truePeakDbtp;
+        limited = true;
+    }
+    return gain;
+}
+
 AudioExporter::Result AudioExporter::render(const Config& config) {
+    if (config.targetLoudness) {
+        // Loudness target: render the range to memory, measure it, apply one gain, then deliver it as the
+        // plain render would have (file or block sink). The render itself is the same render.
+        Config inner = config;
+        inner.targetLoudness = false;
+        RenderedAudio audio;
+        Result result = renderToBuffer(inner, audio);
+        result.outputPath = config.outputPath;
+        if (!result.success) return result;
+        const auto analysis = analyzeAudio(audio.interleaved, audio.numChannels, audio.sampleRate);
+        bool limited = false;
+        const double gainDb = loudnessGainDb(analysis.integratedLufs, analysis.truePeakDbtp, config.loudnessTargetLufs,
+                                             config.truePeakCeilingdBTP, limited);
+        const float gain = static_cast<float>(std::pow(10.0, gainDb / 20.0));
+        if (gain != 1.0f)
+            for (float& s : audio.interleaved) s *= gain;
+        result.loudnessApplied = true;
+        result.measuredLufs = analysis.integratedLufs;
+        result.loudnessGainDb = gainDb;
+        result.loudnessLimitedByPeak = limited;
+        result.finalLufs = analysis.integratedLufs > AudioAnalysis::kSilenceDb + 1.0 ? analysis.integratedLufs + gainDb
+                                                                                  : analysis.integratedLufs;
+        result.peakDb += gainDb;
+        result.maxTruePeakdBTP = static_cast<float>(analysis.truePeakDbtp + gainDb);
+        Log::info("[Export] Loudness: measured " + std::to_string(analysis.integratedLufs) + " LUFS, gain " +
+                  std::to_string(gainDb) + " dB" + (limited ? " (held by the true-peak ceiling)" : ""));
+
+        const uint32_t channels = std::max(1u, audio.numChannels);
+        bool ok = true;
+        if (config.blockSink) {
+            for (uint64_t f = 0; ok && f < audio.frames; f += RENDER_BLOCK_FRAMES) {
+                const auto n = static_cast<uint32_t>(std::min<uint64_t>(RENDER_BLOCK_FRAMES, audio.frames - f));
+                ok = config.blockSink(audio.interleaved.data() + f * channels, n, channels);
+            }
+        } else {
+            std::ofstream file(config.outputPath, std::ios::binary);
+            ok = file && writeWavHeader(file, config, audio.frames);
+            for (uint64_t f = 0; ok && f < audio.frames; f += RENDER_BLOCK_FRAMES) {
+                const size_t n = static_cast<size_t>(std::min<uint64_t>(RENDER_BLOCK_FRAMES, audio.frames - f));
+                const float* block = audio.interleaved.data() + f * channels;
+                switch (config.bitDepth) {
+                    case BitDepth::PCM_16: ok = writeSamples<int16_t>(file, block, n, channels); break;
+                    case BitDepth::PCM_24: ok = writeSamples<int32_t>(file, block, n, channels); break;
+                    case BitDepth::Float_32: ok = writeSamples<float>(file, block, n, channels); break;
+                }
+            }
+            if (ok) {
+                file.flush();
+                ok = file && Aestra::fsyncPath(config.outputPath);
+            }
+            file.close();
+            if (!ok) std::remove(config.outputPath.c_str());
+        }
+        if (!ok) {
+            result.success = false;
+            result.errorMessage = config.blockSink ? "Render stopped by the block sink" : "Failed to write audio data";
+        }
+        return result;
+    }
+
     // The render below drives processBlock by hand: a live device callback stands down for it.
     ManualRenderLease lease(m_engine);
     Result result;
@@ -244,12 +317,17 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
         bool savedMetronomeEnabled;
         bool savedAuditionEnabled;
         bool wasPlaying;
+        bool clearPatternSchedule = false; // the render scheduled the timeline (Config::scheduleTimelinePatterns)
         ~EngineStateGuard() {
             self.m_engine.trackOutputTap().disarm();
             self.m_engine.setOfflineRenderActive(false);
             // A note still releasing at the range end must not ring into whatever plays next.
             self.m_engine.resetCachedSamplerVoicesRt();
             self.m_engine.setTransportPlaying(false);
+            if (clearPatternSchedule) {
+                // Take the timeline out again so the next Play starts clean (#1397).
+                self.m_trackManager.getPatternPlaybackEngine().clearScheduledInstances();
+            }
             self.m_engine.setSampleRate(savedSampleRate);
             self.m_trackManager.setOutputSampleRate(static_cast<double>(savedSampleRate));
             self.m_engine.setGraph(AudioGraphBuilder::buildFromTrackManager(self.m_trackManager));
@@ -294,6 +372,14 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     m_engine.setGlobalSamplePos(startSample);
     // Sampler voices ringing from live playback or an earlier render would be mixed into this one.
     m_engine.resetCachedSamplerVoicesRt();
+    // Pattern clips reach their instruments through the pattern scheduler, which only Play fills (#1397): put the
+    // timeline in for the range this render covers. Not while playing: the live schedule is the one playback
+    // resumes with when the guard restores the transport.
+    if (config.scheduleTimelinePatterns && !wasPlaying) {
+        m_trackManager.getPatternPlaybackEngine().clearScheduledInstances();
+        m_trackManager.scheduleTimelineForOfflineRender(startBeat * 60.0 / bpm);
+        engineStateGuard.clearPatternSchedule = true;
+    }
     m_engine.setTransportPlaying(true);
 
     // Offline render: track/send gains render snapped to target from frame 0
@@ -338,6 +424,16 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
             m_engine.setGraph(AudioGraphBuilder::buildFromTrackManager(m_trackManager, /*includeClips=*/false));
             sourcesSilenced = true;
         }
+        // The first block is short: about 3 ms. Starting the transport makes the engine's first block rewind the note
+        // scheduler, which throws away every note queued before it, so nothing could be queued for that block: a
+        // note on the first beat sounded only when the next refill came round, a whole block (4096 frames, about
+        // 90 ms) later. Live playback holds its first block until the notes are queued; an offline render has no
+        // clock to wait on, so it takes a short step, lets the scheduler plan from the new start, and goes on. The
+        // step is longer than the master limiter's 2 ms lookahead, so the limiter has warmed up before the first
+        // transient reaches it (a single-frame step let a first-beat hit through it, 1.7 dB over the ceiling).
+        // The beat-one note comes in about 3 ms late, not 90 (owner, 16 Nov 2026: Audition "cuts the intro off").
+        if (result.framesRendered == 0)
+            blockLimit = std::min<uint64_t>(blockLimit, std::max<uint64_t>(64, config.sampleRate * 3ull / 1000ull));
         uint32_t framesThisBlock = static_cast<uint32_t>(blockLimit);
 
         // Master bounce: use full live engine path with master stage

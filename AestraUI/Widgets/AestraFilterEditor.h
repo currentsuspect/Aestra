@@ -2,10 +2,10 @@
 #pragma once
 
 #include "AestraPanelWindow.h"
+#include "EmberControls.h"
 #include "NUITypes.h"
 #include "PluginHost.h"
 
-#include <array>
 #include <memory>
 #include <string>
 
@@ -24,39 +24,19 @@ public:
 
 private:
     void layoutControls();
-    void drawResponseDisplay(NUIRenderer& renderer);
-    void drawSectionLabel(NUIRenderer& renderer, const char* label, const NUIRect& bounds);
-    void drawKnob(NUIRenderer& renderer, const NUIRect& rect, uint32_t paramId, const char* label, bool large,
-                  bool bipolar);
-    void drawTypeSelector(NUIRenderer& renderer);
-    void drawBypassPill(NUIRenderer& renderer);
-    void drawMixSlider(NUIRenderer& renderer);
-    // Shared mix-slider hit area, so the drawn track and the drag hit-test
-    // cannot drift apart. drawMixSlider renders a thinner visual bar inside it.
-    NUIRect mixTrackRect() const;
+    void drawResponse(NUIRenderer& renderer, bool bypassed);
 
     std::shared_ptr<Aestra::Audio::IPluginInstance> m_instance;
+    EditorKit::EmberKnobBoard m_board;
+    EditorKit::EmberSegments m_type;
 
-    NUIRect m_cutoffRect;
-    NUIRect m_responseRect;
-    NUIRect m_resoRect;
-    NUIRect m_driveRect;
-    NUIRect m_envRect;
-    NUIRect m_attackRect;
-    NUIRect m_releaseRect;
-    std::array<NUIRect, 3> m_typeRects{};
-    NUIRect m_mixRect;
-    NUIRect m_bypassRect;
+    NUIRect m_well;
+    float m_envLevel = 0.0f; // 0..1, the envelope follower
+    double m_meterTimer = 0.0;
 
-    // Vertical-drag knob state: which param is being dragged, and the value
-    // at drag start so movement is relative, not absolute.
-    float m_dragStartY = 0.0f;
-    bool m_draggingMix = false;
-    bool m_bypassHovered = false;
-    double m_visualRefreshTimer = 0.0;
-
-    static constexpr float kWinW = 700.0f;
-    static constexpr float kWinH = 420.0f;
+    static constexpr float kWinW = 600.0f;
+    static constexpr float kContentH = 334.0f;
+    static constexpr float kWinH = kContentH + 2.0f * AestraPanelWindow::TITLE_BAR_H; // two-row header
 };
 
 } // namespace AestraUI

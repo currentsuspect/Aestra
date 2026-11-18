@@ -3,12 +3,30 @@
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../Core/Preferences.h"
 
-#include <array>
+#include <string>
+#include <vector>
 
 namespace Aestra {
 
 namespace {
-constexpr std::array<const char*, 3> kThemeNames{"Aestra-dark", "Aestra-light", "high-contrast-dark"};
+/// The twelve Aestra Kit variants (FD-79), in the kit's order: Ember first, as the default.
+const std::vector<AestraUI::NUIThemePresets::KitTheme>& themeList() { return AestraUI::NUIThemePresets::kitThemes(); }
+
+/// Older preference values name Ember by its earlier keys.
+std::string canonicalTheme(const std::string& name) {
+    if (name == "Aestra-dark" || name == "aestra-dark") return "ember-dark";
+    if (name == "Aestra-light") return "ember-light";
+    if (name == "high-contrast-dark") return "ember-hc";
+    return name;
+}
+
+std::string themeLabel(const AestraUI::NUIThemePresets::KitTheme& kit) {
+    std::string mode = kit.modeName;
+    if (!mode.empty()) mode[0] = static_cast<char>(mode[0] - 'A' + 'a');
+    std::string label = std::string(kit.name) + " " + mode;
+    if (std::string(kit.key) == "ember-dark") label += " (default)";
+    return label;
+}
 }
 
 AppearanceSettingsPage::AppearanceSettingsPage() {
@@ -22,12 +40,13 @@ void AppearanceSettingsPage::createUI() {
     addChild(m_themeLabel);
 
     m_themeDropdown = std::make_shared<AestraUI::NUIDropdown>();
-    m_themeDropdown->addItem("Aestra Dark (Default)", 0);
-    m_themeDropdown->addItem("Aestra Light", 1);
-    m_themeDropdown->addItem("High Contrast Dark", 2);
+    const auto& themes = themeList();
+    for (size_t i = 0; i < themes.size(); ++i)
+        m_themeDropdown->addItem(themeLabel(themes[i]), static_cast<int>(i));
     m_themeDropdown->setOnSelectionChanged([this](int index) {
-        if (!m_syncingSelection && index >= 0 && index < static_cast<int>(kThemeNames.size()))
-            selectTheme(kThemeNames[static_cast<size_t>(index)]);
+        const auto& list = themeList();
+        if (!m_syncingSelection && index >= 0 && index < static_cast<int>(list.size()))
+            selectTheme(list[static_cast<size_t>(index)].key);
     });
     addChild(m_themeDropdown);
 
@@ -70,8 +89,10 @@ void AppearanceSettingsPage::cancelChanges() {
 }
 
 int AppearanceSettingsPage::indexForTheme(const std::string& themeName) const {
-    for (size_t i = 0; i < kThemeNames.size(); ++i) {
-        if (themeName == kThemeNames[i])
+    const std::string key = canonicalTheme(themeName);
+    const auto& list = themeList();
+    for (size_t i = 0; i < list.size(); ++i) {
+        if (key == list[i].key)
             return static_cast<int>(i);
     }
     return 0;

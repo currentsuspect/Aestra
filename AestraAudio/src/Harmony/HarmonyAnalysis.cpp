@@ -10,6 +10,7 @@
 #include "Harmony/HarmonyAnalysis.h"
 
 #include <algorithm>
+#include <bitset>
 #include <array>
 #include <cmath>
 #include <cstdint>
@@ -97,7 +98,13 @@ double correlation(const double* a, const double* b) {
 
 const char* kSharpNames[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 const char* kFlatNames[12] = {"C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"};
-const char* noteName(int pc, bool flats) { return (flats ? kFlatNames : kSharpNames)[((pc % 12) + 12) % 12]; }
+const char* noteName(int pc, bool flats) {
+    // Wrap first, then pick the table. Indexing the ?: of the two arrays directly drew "index -4 out of bounds for
+    // type 'char *[12]'" from the CI sanitizer build (GCC, -O0), though the wrapped index is always 0..11; it did not
+    // reproduce with GCC 16 or clang locally. Splitting the two steps leaves nothing for the bounds check to misread.
+    const int i = ((pc % 12) + 12) % 12;
+    return flats ? kFlatNames[i] : kSharpNames[i];
+}
 
 bool inScale(const Key& key, int pc) {
     static const bool major[12] = {1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1};
@@ -121,6 +128,7 @@ constexpr double kBassIsRootBonus = 0.06; // a chord rooted on the bass note is 
 constexpr double kDiatonicBonus = 0.02;   // every chord tone is in the detected key
 constexpr double kBarChangePenalty = 0.12;
 constexpr double kMidBarChangePenalty = 0.30;
+constexpr double kPassingChordMinScore = 0.80; // a beat must read this clearly as its own chord to split a half-bar
 constexpr double kBassMinShare = 0.30;    // a bass note must sound for this share of the window to count
 constexpr double kStruckBonus = 0.08;     // what is struck together is the chord: its notes are all chord tones
 constexpr double kThinChangePenalty = 0.25; // a window of one or two pitch classes (a melody fragment) rarely
@@ -197,7 +205,9 @@ std::array<double, 12> pitchClassHistogram(const std::vector<HarmonyNote>& notes
     return h;
 }
 
-Key keyFromHistogram(const std::array<double, 12>& h) {
+} // namespace
+
+Key keyFromPitchClassWeights(const std::array<double, 12>& h) {
     double total = 0;
     for (double v : h)
         total += v;
@@ -231,9 +241,8 @@ Key keyFromHistogram(const std::array<double, 12>& h) {
         k.confidence = 1e-3; // a key was chosen; "no key" is tonic -1
     return k;
 }
-} // namespace
 
-Key detectKey(const std::vector<HarmonyNote>& notes) { return keyFromHistogram(pitchClassHistogram(notes)); }
+Key detectKey(const std::vector<HarmonyNote>& notes) { return keyFromPitchClassWeights(pitchClassHistogram(notes)); }
 
 // ---- Names -------------------------------------------------------------------------------------------------
 
@@ -515,7 +524,7 @@ HarmonyTimeline analyzeHarmony(const std::vector<HarmonyNote>& notes, double bea
             break;
         }
     }
-    out.key = keyFromHistogram(hist);
+    out.key = keyFromPitchClassWeights(hist);
     const bool flats = keyUsesFlats(out.key);
 
     // Viterbi over the non-empty windows.
@@ -579,20 +588,89 @@ HarmonyTimeline analyzeHarmony(const std::vector<HarmonyNote>& notes, double bea
             int n;
             std::array<double, 12> bassVotes;
         };
-        std::vector<Raw> raws;
+        // Passing chords: a half-bar window is the unit the smoothing works in, but a chord can last one beat.
+        // When BOTH beats of a window carry a full voicing that reads clearly as a chord of its own, and they
+        // are different chords, the window splits into two slots. A beat with one or two pitch classes (a
+        // melody fragment) never splits it, so a tune over a held chord is not chopped up.
+        struct Slot {
+            const Window* win;
+            double start, end;
+            int state;
+            double cos;
+        };
+        const double quarter = windowBeats / 2.0;
+        size_t quarterFirst = 0;
+        const std::vector<Window> beats = buildWindows(notes, quarter, quarterFirst);
+        const auto beatAt = [&](double start) -> const Window* {
+            if (beats.empty())
+                return nullptr;
+            const long k = std::lround(start / quarter) - std::lround(beats.front().start / quarter);
+            return k >= 0 && k < static_cast<long>(beats.size()) ? &beats[static_cast<size_t>(k)] : nullptr;
+        };
+        const auto bestChord = [&](const Window& w, double& score) {
+            int best = 0;
+            score = -1.0;
+            for (int s2 = 0; s2 < S; ++s2) {
+                const double v = scoreChord(w, s2 / kQualityCount, s2 % kQualityCount, out.key);
+                if (v > score) {
+                    score = v;
+                    best = s2;
+                }
+            }
+            return best;
+        };
+        // A chord ARRIVING in the beat at `start`: 3+ pitch classes whose notes begin in it and last a real share
+        // of it. Read from the notes, not from Window::struck, which carries a bar's chord into its second half.
+        const auto arrives = [&](double start) {
+            uint16_t mask = 0;
+            for (const auto& n : notes) {
+                if (n.pitch < 0 || n.pitch > 127 || n.durationBeats < kBassMinShare * quarter)
+                    continue;
+                if (n.startBeat >= start - 1e-3 && n.startBeat < start + quarter - 1e-3)
+                    mask |= static_cast<uint16_t>(1u << (n.pitch % 12));
+            }
+            return std::bitset<16>(mask).count() >= 3;
+        };
+        std::vector<Slot> slots;
         for (size_t t = 0; t < T; ++t) {
             const Window& w = windows[live[t]];
             const double cos = std::min(1.0, std::max(0.0, static_cast<double>(emission[t * S + path[t]])));
-            const double winEnd = w.start + windowBeats;
-            if (raws.empty() || raws.back().state != path[t]) {
+            const Window* b0 = beatAt(w.start);
+            const Window* b1 = beatAt(w.start + quarter);
+            bool split = false;
+            int s0 = path[t], s1 = path[t];
+            double sc0 = 0, sc1 = 0;
+            // The second beat must be a chord ARRIVING (3+ pitch classes struck together): a melody over a
+            // held chord reads as other chords on single beats, and that is not a chord change.
+            if (b0 && b1 && !b0->empty && !b1->empty && b0->pitchClasses >= 3 && b1->pitchClasses >= 3 &&
+                arrives(w.start + quarter)) {
+                s0 = bestChord(*b0, sc0);
+                s1 = bestChord(*b1, sc1);
+                // Different ROOTS: a Bb that turns into a Bb6, or an F into an Fmaj7, is one chord with a
+                // coloured beat, not a passing chord.
+                split = s0 / kQualityCount != s1 / kQualityCount && sc0 >= kPassingChordMinScore &&
+                        sc1 >= kPassingChordMinScore;
+            }
+            if (split) {
+                slots.push_back({b0, w.start, w.start + quarter, s0, std::min(1.0, sc0)});
+                slots.push_back({b1, w.start + quarter, w.start + windowBeats, s1, std::min(1.0, sc1)});
+            } else {
+                slots.push_back({&w, w.start, w.start + windowBeats, path[t], cos});
+            }
+        }
+
+        std::vector<Raw> raws;
+        for (const Slot& sl : slots) {
+            const Window& w = *sl.win;
+            if (raws.empty() || raws.back().state != sl.state) {
                 if (!raws.empty())
-                    raws.back().end = w.start; // silence in between belongs to the previous chord
-                Raw r{path[t], w.start, winEnd, 0.0, 0, {}};
+                    raws.back().end = sl.start; // silence in between belongs to the previous chord
+                Raw r{sl.state, sl.start, sl.end, 0.0, 0, {}};
                 raws.push_back(r);
             }
             Raw& r = raws.back();
-            r.end = winEnd;
-            r.confSum += cos;
+            r.end = sl.end;
+            r.confSum += sl.cos;
             r.n += 1;
             // The bass at the chord's start counts a little more, so a tie between two half-bars goes to the
             // onset's bass (what sounds lowest when the chord arrives), not to the lower pitch-class number.

@@ -8,6 +8,8 @@ namespace Plugins {
 
 const Aestra::Audio::PluginInfo& rumblePluginInfo();
 void registerRumblePlugin();
+/// Ten of Rumble's presets in the shared preset system (FD-72). Called by registerRumblePlugin().
+void registerRumbleFactoryPresets();
 
 } // namespace Plugins
 } // namespace Aestra

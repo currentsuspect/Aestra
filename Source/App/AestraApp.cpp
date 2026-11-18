@@ -510,6 +510,9 @@ bool AestraApp::initializeAudio() {
 void AestraApp::initializeContent() {
     m_content = std::make_shared<AestraContent>();
     m_content->setPlatformBridge(m_windowManager->getWindow());
+    m_content->onOpenProjectRequested = [this](const std::string& path) {
+        confirmLeaveProject("opening another project", [this, path]() { openProjectFromPath(path); });
+    };
     m_content->setAudioStatus(m_audioController->isInitialized());
     if (m_audioController->getEngine()) {
         m_content->setAudioEngine(m_audioController->getEngine());
@@ -529,6 +532,7 @@ void AestraApp::initializeContent() {
     }
 
     wireTakesPanel();
+    wireTimelineConfirmations(); // ProjectLifecycle.cpp
 
     // Performance HUD is created eagerly: it must exist independently of the
     // lazily built settings dialogs, or F12 / View → Performance Stats are
@@ -816,32 +820,6 @@ void AestraApp::buildSettingsAndDialogs() {
     m_windowManager->setSettingsDialog(settingsDialog);
     m_windowManager->setConfirmationDialog(std::make_shared<ConfirmationDialog>());
 
-    // Route destructive UI confirmations (e.g. Delete Lane on a lane with
-    // clips) through the app-owned dialog, mirroring requestClose's parenting.
-    if (auto tmUI = m_content ? m_content->getTrackManagerUI() : nullptr) {
-        tmUI->setOnConfirmDialogRequest([this](const std::string& title, const std::string& message,
-                                               const std::string& confirmLabel,
-                                               std::function<void(bool)> onResult) {
-            auto dialog = m_windowManager ? m_windowManager->getConfirmationDialog() : nullptr;
-            if (!dialog || !onResult) {
-                if (onResult) {
-                    // Fail closed: a destructive action must not run without
-                    // its confirmation surface.
-                    onResult(false);
-                }
-                return;
-            }
-            if (auto* root = m_windowManager->getRootComponent()) {
-                dialog->setBounds(root->getBounds());
-                root->removeChild(dialog);
-                root->addChild(dialog);
-            }
-            dialog->showConfirm(title, message, confirmLabel, [onResult](DialogResponse response) {
-                onResult(response == DialogResponse::Confirm);
-            });
-        });
-    }
-
     auto exportDialog = std::make_shared<ExportDialog>();
     m_windowManager->setExportDialog(exportDialog);
 
@@ -877,7 +855,6 @@ void AestraApp::buildMenuBar() {
         auto menu = std::make_shared<AestraUI::NUIContextMenu>();
 
         menu->addItem("New Project", [this]() { confirmLeaveProject("starting a new project", [this]() { createNewProject(); }); });
-
         menu->addItem("Open Project...", [this]() { confirmLeaveProject("opening another project", [this]() {
             const std::string filter = std::string("Aestra Project\0*.aes\0All Files\0*.*\0",
                                                    sizeof("Aestra Project\0*.aes\0All Files\0*.*\0") - 1);
@@ -889,7 +866,7 @@ void AestraApp::buildMenuBar() {
                 }
             });
         }); });
-
+        addOpenRecentMenu(*menu); // ProjectLifecycle.cpp
         menu->addSeparator();
 
         auto saveItem = std::make_shared<AestraUI::NUIContextMenuItem>("Save");
@@ -1467,7 +1444,7 @@ void AestraApp::run() {
             // (Clearing after present would eat mid-render invalidations; the
             // skip path never clears.)
             if (auto* root = m_windowManager->getRootComponent()) {
-                root->setDirty(false);
+                AestraUI::PerfProbe::consumeFrameRegion(root->getBounds()); root->setDirty(false); // SPEC-028 R0
             }
             m_windowManager->render();
         }
@@ -2150,6 +2127,7 @@ bool AestraApp::saveProjectToPath(const std::string& path, bool establishCanonic
 
     if (ok && path == m_documentState.canonicalPath()) {
         m_documentState.adoptCanonical(path);
+        rememberRecentProject(path);
         if (saveActiveTakeSnapshot(&uiState)) {
             m_content->getTrackManager()->setModified(false);
             m_autoSaveManager.markClean();
@@ -2456,7 +2434,7 @@ ProjectSerializer::UIState AestraApp::captureUIState() const {
         state.pianoRollOpen = m_content->isPianoRollOpen();
         state.sequencerOpen = m_content->isSequencerOpen();
     }
-
+    captureTimelineView(state); // ProjectLifecycle.cpp
     return state;
 }
 
@@ -2464,7 +2442,6 @@ void AestraApp::applyUIState(const ProjectSerializer::UIState& state) {
     if (!m_windowManager) {
         return;
     }
-
     if (auto settingsDialog = m_windowManager->getSettingsDialog()) {
         if (!state.settingsDialogActivePage.empty()) {
             settingsDialog->setActivePage(state.settingsDialogActivePage);
@@ -2483,6 +2460,7 @@ void AestraApp::applyUIState(const ProjectSerializer::UIState& state) {
         ViewFocus focus = ViewFocus::Timeline;
         WorkspaceFocusModel::parseWorkspaceFocus(state.viewFocus, focus);
         m_content->restoreWorkspaceState(focus, state.pianoRollOpen, state.sequencerOpen);
+        applyTimelineView(state); // ProjectLifecycle.cpp
     }
 }
 

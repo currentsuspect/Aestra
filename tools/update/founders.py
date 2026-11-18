@@ -4,7 +4,7 @@
 
     founders.py add "Name"     make a key, store its hash, print the key ONCE (hand it over privately)
     founders.py revoke "Name"  that founder's key stops working at once
-    founders.py list           names and dates, never keys
+    founders.py list           names, dates and when each key was last used; never keys
 
 Needs CLOUDFLARE_EMAIL, CLOUDFLARE_API_KEY (global key), CLOUDFLARE_ACCOUNT_ID in the environment, and the namespace id
 from worker/wrangler.toml.
@@ -59,7 +59,13 @@ def main():
             by_name = json.loads(call("GET", "/values/" + urllib.parse.quote(k["name"], safe=""), raw=True))
             record = json.loads(call("GET", "/values/" + by_name["hash"], raw=True))
             when = time.strftime("%Y-%m-%d", time.gmtime(record.get("created", 0)))
-            print(f"{k['name'][5:]}\t{when}\t{'REVOKED' if record.get('revoked') else 'active'}")
+            # The Worker notes each key's last use (day, platform, last package fetched) under seen:<hash>.
+            try:
+                seen = json.loads(call("GET", "/values/seen:" + by_name["hash"], raw=True))
+                used = f"last seen {seen.get('last', '?')} on {seen.get('platform', '?')}, has {seen.get('package') or 'no package yet'}"
+            except Exception:
+                used = "never seen"
+            print(f"{k['name'][5:]}\t{when}\t{'REVOKED' if record.get('revoked') else 'active'}\t{used}")
     else:
         sys.exit(__doc__)
 

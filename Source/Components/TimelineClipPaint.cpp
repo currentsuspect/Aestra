@@ -12,8 +12,11 @@ namespace Audio {
 namespace ClipPaint {
 
 namespace {
-// The bed the clips sit on (#0c0b0a). A muted clip is the clip seen through 60 % of it.
-const AestraUI::NUIColor kCanvas(12.0f / 255.0f, 11.0f / 255.0f, 10.0f / 255.0f, 1.0f);
+// Design Spec, Clip (locked): the name and the waveform are drawn dark on a clip in every theme, because track
+// colours do not change with the theme (the kit's textOnTrack, #12100e).
+const AestraUI::NUIColor kTextOnTrack(18.0f / 255.0f, 16.0f / 255.0f, 14.0f / 255.0f, 1.0f);
+
+AestraUI::NUIColor timelineBed() { return AestraUI::NUIThemeManager::getInstance().getCurrentTheme().timelineBed; }
 } // namespace
 
 AestraUI::NUIColor identityFromARGB(uint32_t argb) {
@@ -33,14 +36,14 @@ AestraUI::NUIColor headerBandColor(const AestraUI::NUIColor& identity) {
 }
 
 AestraUI::NUIColor headerLabelInk(float alpha) {
-    return kCanvas.withAlpha(alpha);
+    return kTextOnTrack.withAlpha(alpha);
 }
 
 void paintBody(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& visible, const AestraUI::NUIColor& identity,
                bool selected) {
     renderer.fillRect(visible, AestraUI::clipBodyTone(identity, selected));
-    // A hairline of the canvas on the left keeps butted clips from merging into one slab.
-    renderer.fillRect({visible.x, visible.y, 1.0f, visible.height}, kCanvas.withAlpha(0.55f));
+    // Split clips meet at a 1px seam of the bed, so butted clips never merge into one slab.
+    renderer.fillRect({visible.x, visible.y, 1.0f, visible.height}, timelineBed());
 }
 
 AestraUI::NUIRect menuSlot(const AestraUI::NUIRect& visible) {
@@ -63,7 +66,7 @@ void paintHeaderBand(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& v
 
 void paintMenuGlyph(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& slot, bool hot, bool pointed) {
     if (slot.width <= 0.0f) return;
-    if (pointed) renderer.fillRect(slot, kCanvas.withAlpha(0.18f));
+    if (pointed) renderer.fillRect(slot, kTextOnTrack.withAlpha(0.18f));
     // Three 1 px lines, 7 px wide, 3 px apart, snapped to whole pixels and centred in the slot: crisp at every
     // band height, never touching the band's edges.
     const float cx = std::round(slot.x + slot.width * 0.5f);
@@ -141,11 +144,15 @@ void paintMiniPianoRoll(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect
 }
 
 void paintSelection(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& visible) {
-    renderer.strokeRect(visible, 1.0f, AestraUI::NUIColor::white().withAlpha(0.92f));
+    // Selected: a 1px textPrimary outline inside the clip's edge (a stroke is centred on its path, hence the 0.5).
+    const AestraUI::NUIRect inside{visible.x + 0.5f, visible.y + 0.5f, std::max(0.0f, visible.width - 1.0f),
+                                   std::max(0.0f, visible.height - 1.0f)};
+    renderer.strokeRect(inside, 1.0f, AestraUI::NUIThemeManager::getInstance().getCurrentTheme().textPrimary);
 }
 
 void paintMuted(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& visible) {
-    renderer.fillRect(visible, kCanvas.withAlpha(0.6f));
+    // Muted: the clip drops to 38% opacity, i.e. seen through 62% of the bed it sits on.
+    renderer.fillRect(visible, timelineBed().withAlpha(0.62f));
 }
 
 } // namespace ClipPaint

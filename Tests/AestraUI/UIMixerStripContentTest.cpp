@@ -98,7 +98,7 @@ int main() {
     {
         auto strip = makeStrip(lone->getChannelId());
         const auto* list = strip->insertList();
-        check(list && list->rows().empty(), "a channel with no inserts lists none (it shows the + insert invitation)");
+        check(list && list->rows().empty(), "a channel with no inserts lists none (it shows the quiet + Add an effect row)");
     }
 
     std::cout << "[4] the master has no output chip\n";

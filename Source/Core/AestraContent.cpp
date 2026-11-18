@@ -459,7 +459,7 @@ AestraContent::AestraContent()
     addDemoTracks();
 
     // Building the default project is not an edit (#653). addDemoTracks() calls
-    // TrackManager::addChannel() fifty times, and addChannel legitimately marks
+    // TrackManager::addChannel(), and addChannel legitimately marks
     // the project modified — so construction left every fresh launch dirty, and
     // closing without touching anything prompted "Unsaved Changes".
     //
@@ -748,9 +748,9 @@ void AestraContent::setupTransportBar() {
         }
     });
     m_transportBar->setOnMetronomeToggle([this](bool enabled) {
-        if (m_trackManager)
-            m_trackManager->enableMetronome(enabled);
+        if (m_trackManager) m_trackManager->enableMetronome(enabled);
     });
+    m_transportBar->setOnLoopRecordToggle([this](bool on) { if (m_trackManager) m_trackManager->setLoopRecordEnabled(on); });
     m_transportBar->setOnCountInToggle([this](bool enabled) {
         m_countInEnabled = enabled;
         if (!enabled) {
@@ -796,6 +796,10 @@ void AestraContent::setupBrowserPanels() {
     m_fileBrowser = std::make_shared<AestraUI::FileBrowser>();
     m_fileBrowser->setOnFileOpened([this](const AestraUI::FileItem& file) {
         AESTRA_LOG_DEBUG("File opened: " + file.path);
+        if (file.type == AestraUI::FileType::ProjectFile) { // a project opens as a project, never as a sample
+            if (onOpenProjectRequested) onOpenProjectRequested(file.path);
+            return;
+        }
         loadSampleIntoSelectedTrack(file.path);
     });
     m_fileBrowser->setOnSoundPreview([this](const AestraUI::FileItem& file) {
@@ -909,7 +913,15 @@ void AestraContent::setupBrowserPanels() {
     m_previewPanel->setOnPlay([this](const AestraUI::FileItem& file) { playSoundPreview(file); });
     m_previewPanel->setOnStop([this]() { stopSoundPreview(); });
     m_previewPanel->setOnSeek([this](double seconds) { seekSoundPreview(seconds); });
-    m_previewPanel->setOnAddToArsenal([this](const AestraUI::FileItem& f) { addSampleToArsenal(f.path); });
+    // The Add button follows the mode: a sampler row in the Arsenal, a placement on the arrangement in the Timeline.
+    m_previewPanel->setAddAction(
+        [this]() { return std::string(WorkspaceFocusModel::previewAddLabel(WorkspaceFocusModel::previewAddTarget(m_viewFocus))); },
+        [this](const AestraUI::FileItem& f) {
+            if (WorkspaceFocusModel::previewAddTarget(m_viewFocus) == WorkspaceFocusModel::PreviewAddTarget::Timeline)
+                loadSampleIntoSelectedTrack(f.path);
+            else
+                addSampleToArsenal(f.path);
+        });
     m_previewPanel->setOnAutoPlayChanged([this](bool on) { if (m_fileBrowser) m_fileBrowser->setAutoPreviewEnabled(on); });
     m_workspaceLayer->addChild(m_previewPanel);
 
@@ -917,7 +929,7 @@ void AestraContent::setupBrowserPanels() {
     m_fileBrowser->setOnFileSelected([this](const AestraUI::FileItem& file) {
         stopSoundPreview();
         if (m_previewPanel) {
-            m_previewPanel->setFile(&file);
+            m_previewPanel->setFile(file.type == AestraUI::FileType::ProjectFile ? nullptr : &file); // nothing to audition in a project
             const bool filesTabActive = !m_browserToggle || m_browserToggle->getSelectedIndex() == 0;
             m_previewPanel->setVisible(filesTabActive && m_previewPanel->hasFileSelection());
         }
@@ -1437,8 +1449,7 @@ void AestraContent::setupArsenalPanels() {
             }
         }
         showToast(unitName.empty() ? "Click a sample in the browser to load it"
-                                   : "Click a sample in the browser to load it into " + unitName,
-                  4.0);
+                                   : "Click a sample in the browser to load it into " + unitName);
 
         // Set one-shot selection callback
         m_fileBrowser->setOnFileSelected([this, id](const AestraUI::FileItem& file) {
@@ -1969,10 +1980,12 @@ void AestraContent::onRender(AestraUI::NUIRenderer& renderer) {
     }
 }
 
-// The toast's place, in one spot for onResize() and showToast(): 40 tall, 32 above the bottom.
+// The toasts' place, in one spot for onResize() and showToast(): room for kMaxToasts slots, the bottom one 32 above
+// the bottom edge, so a lone toast sits where it always did and more stack upward.
 static AestraUI::NUIRect toastRect(const AestraUI::NUIRect& b) {
     using namespace AestraUI::Layout;
-    return localToWindow(NUILocalRect(0.0f, b.height - 72.0f, b.width, 40.0f), NUIWindowPoint(b.x, b.y)).raw();
+    const float strip = AestraUI::NotificationToast::kSlotHeight * static_cast<float>(AestraUI::kMaxToasts);
+    return localToWindow(NUILocalRect(0.0f, b.height - 32.0f - strip, b.width, strip), NUIWindowPoint(b.x, b.y)).raw();
 }
 
 void AestraContent::onResize(int width, int height) {
@@ -3771,8 +3784,8 @@ void AestraContent::resetToDefaultProject() {
     // (which must go before the channels it refers to, #611).
     Aestra::Audio::clearProjectContent(*m_trackManager);
 
-    // Recreate the defaults a fresh launch has: fifty tracks, then the Arsenal's
-    // Pattern 1 and empty Sampler 1.
+    // Recreate the defaults a fresh launch has: one track and its mixer channel, then the Arsenal's
+    // Pattern 1 and empty Sampler 1. More are added when the user asks (+ Track, + Channel).
     addDemoTracks();
     if (m_sequencerPanel) m_sequencerPanel->resetToDefault();
 
@@ -3789,7 +3802,8 @@ void AestraContent::addDemoTracks() {
         return;
     auto& playlist = m_trackManager->getPlaylistModel();
 
-    const int DEFAULT_TRACK_COUNT = 50;
+    // One track and one channel: the project grows when the user adds to it, in the timeline and in the mixer alike.
+    const int DEFAULT_TRACK_COUNT = 1;
 
     for (int i = 1; i <= DEFAULT_TRACK_COUNT; ++i) {
         const std::string laneName = "Track " + std::to_string(i);
@@ -3976,11 +3990,11 @@ void AestraContent::drainMainThreadTasks() {
     }
 }
 
-void AestraContent::showToast(const std::string& message, double seconds) {
+void AestraContent::showToast(const std::string& message) {
     if (!m_notificationToast) {
         return;
     }
-    m_notificationToast->show(message, seconds); // queues behind a toast already showing
+    m_notificationToast->show(message); // stacks above the ones showing; the oldest of four is pushed off
     m_notificationToast->setBounds(toastRect(getBounds()));
     m_notificationToast->bringToFront();
 }
@@ -4064,7 +4078,7 @@ void AestraContent::loadSampleIntoUnitAsync(UnitID unitId, const std::string& sa
                 !unitManager.setUnitAudioClipFromDecoded(unitId, samplePath, std::move(decodedData), sampleRate,
                                                          numChannels, std::move(previewWaveform), durationSeconds)) {
                 AESTRA_LOG_ERROR("Failed to load sample into Unit " + std::to_string(unitId) + ": " + samplePath);
-                self->showToast("Couldn't load " + std::filesystem::path(samplePath).filename().string());
+                self->showToast("Could not load " + std::filesystem::path(samplePath).filename().string());
                 return;
             }
             // A new sample invalidates keep-length renders: re-render the notes already written.

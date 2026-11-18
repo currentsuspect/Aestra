@@ -1,4 +1,5 @@
 #include "NUIButton.h"
+#include "../Graphics/NUIDepth.h"
 #include "NUITheme.h"
 #include "NUIThemeSystem.h"
 #include <algorithm>
@@ -50,8 +51,114 @@ void NUIButton::setText(const std::string& text) {
 // Component Overrides
 // ============================================================================
 
+void NUIButton::setLook(Look look, Tone tone, HoverStrength hover) {
+    look_ = look;
+    tone_ = tone;
+    hoverStrength_ = hover;
+    if (look != Look::Legacy)
+        cornerRadius_ = -1.0f;
+    setDirty();
+}
+
+void NUIButton::renderSpecLook(NUIRenderer& renderer) {
+    // Design Spec, Buttons (locked 12 Nov 2026). Values from the spec's .ak-btn.
+    const auto& t = NUIThemeManager::getInstance().getCurrentTheme();
+    const auto b = getBounds();
+    NUIRect r{std::floor(b.x), std::floor(b.y), std::floor(b.width), std::floor(b.height)};
+    const float radius = r.height * 0.5f;
+    const float fontSize = fontSize_ > 0.0f ? fontSize_ : (r.height <= 26.0f ? t.fontSizeS : t.fontSizeM);
+
+    // tc: the tone; ton: what reads on it; tt: the tone as text.
+    NUIColor tc = t.textPrimary, ton = t.backgroundPrimary, tt = t.textPrimary;
+    if (tone_ == Tone::Accent) {
+        tc = t.primary;
+        ton = t.textOnPrimary;
+        tt = t.secondary;
+    } else if (tone_ == Tone::Danger) {
+        tc = t.error;
+        ton = t.textOnStatus;
+        tt = t.error;
+    }
+    if (look_ == Look::Quiet && tone_ == Tone::Neutral)
+        tt = t.textSecondary;
+
+    if (!isEnabled()) {
+        if (look_ != Look::Quiet)
+            renderer.fillRoundedRect(r, radius, t.surfaceTertiary);
+        renderer.drawTextCentered(text_, r, fontSize, t.textDisabled);
+        renderChildren(renderer);
+        return;
+    }
+
+    const bool full = hoverStrength_ == HoverStrength::Full;
+    const float e = motion_.hover();
+    const bool latched = toggleable_ && toggled_;
+
+    NUIColor text = look_ == Look::Solid ? ton : tt;
+
+    if (!full && latched) {
+        // In a dense row an engaged button is pushed into the surface (Design Spec rule 1).
+        Depth::bed(renderer, r, radius, Depth::Cut::Shallow);
+        text = tone_ == Tone::Neutral ? t.textPrimary : tt;
+    } else {
+        const NUIColor fill = look_ == Look::Solid ? NUIColor::lerp(tc, ton, 0.18f) : tc;
+        switch (look_) {
+        case Look::Solid:
+            renderer.fillRoundedRect(r, radius, tc);
+            break;
+        case Look::Soft:
+            renderer.fillRoundedRect(r, radius, (!full && e > 0.0f) ? NUIColor::lerp(t.surfaceTertiary, t.surfaceRaised, e)
+                                                                    : t.surfaceTertiary);
+            break;
+        case Look::Outline:
+            renderer.strokeRoundedRect(r, radius, 1.0f, tt.withAlpha(0.55f));
+            break;
+        default:
+            break;
+        }
+        if (full && e > 0.0f) {
+            // Hover fills the pill in its tone: a plain, quick colour change (owner 13 Nov: no glow, no grow).
+            renderer.fillRoundedRect(r, radius, fill.withAlpha(fill.a * e));
+            text = NUIColor::lerp(text, ton, e);
+        } else if (!full && e > 0.0f && look_ == Look::Quiet) {
+            renderer.fillRoundedRect(r, radius, t.hover.withAlpha(t.hover.a * e));
+            text = NUIColor::lerp(text, tone_ == Tone::Neutral ? t.textPrimary : tt, e);
+        }
+        if (pressed_)
+            renderer.fillRoundedRect(r, radius, t.pressed);
+    }
+
+    NUIRect textRect = r;
+    if (trailingArrow_) {
+        textRect.width -= 14.0f;
+        const float ax = textRect.right() + 2.0f, ay = r.y + r.height * 0.5f;
+        renderer.drawLine({ax - 4.0f, ay}, {ax + 4.0f, ay}, 1.5f, text);
+        renderer.drawLine({ax + 1.0f, ay - 3.0f}, {ax + 4.0f, ay}, 1.5f, text);
+        renderer.drawLine({ax + 1.0f, ay + 3.0f}, {ax + 4.0f, ay}, 1.5f, text);
+    }
+    renderer.drawTextCentered(text_, textRect, fontSize, text);
+    renderChildren(renderer);
+}
+
 void NUIButton::onRender(NUIRenderer& renderer) {
     if (!isVisible()) return;
+    // The press dip and bounce scale the whole button about its centre (children and text included).
+    const float s = motion_.scale();
+    if (s != 1.0f) {
+        const auto b = getBounds();
+        renderer.pushTransform((b.x + b.width * 0.5f) * (1.0f - s), (b.y + b.height * 0.5f) * (1.0f - s), s);
+        renderContents(renderer);
+        renderer.popTransform();
+        return;
+    }
+    renderContents(renderer);
+}
+
+void NUIButton::renderContents(NUIRenderer& renderer) {
+    if (look_ != Look::Legacy) {
+        renderSpecLook(renderer);
+        return;
+    }
 
     auto theme = getTheme();
     auto& themeManager = NUIThemeManager::getInstance();
@@ -83,16 +190,18 @@ void NUIButton::onRender(NUIRenderer& renderer) {
     
     // Create render rect for background
     // If background relies on flat design logic, we should be careful.
-    bool shouldDrawBackground = hovered || active || hasCustomBg_ || style_ == Style::Primary;
+    const float pop = motion_.hover(); // colour pop: eased in and out, the same for every group
+    const bool themeHover = !hasCustomBg_ && !active && !hasCustomHover_ && style_ != Style::Primary;
+    bool shouldDrawBackground = hovered || active || hasCustomBg_ || style_ == Style::Primary || (themeHover && pop > 0.0f);
     
     if (shouldDrawBackground) {
         NUIColor drawColor = backgroundColor;
         
-        // Refined hover style for default buttons (not custom)
-        // FIX: Only apply the 0.15f alpha reduction if we are using the THEME hover color.
-        // If the user set a custom hover color (like in TrackUIComponent or WindowPanel), utilize it as is.
-        if (!hasCustomBg_ && hovered && !active && !hasCustomHover_) {
-            drawColor = drawColor.withAlpha(std::max(0.18f, drawColor.a));
+        if (themeHover) {
+            // The theme's hover fill eases in and out instead of switching, so a button fading out is not
+            // cut off. (A button with its own colours keeps them exactly, as before.)
+            const NUIColor hover = hovered ? backgroundColor : themeProps.hover;
+            drawColor = hover.withAlpha(std::max(0.18f, hover.a) * pop);
         }
         
         renderer.fillRoundedRect(visualRect, radius, drawColor);
@@ -142,6 +251,14 @@ void NUIButton::onRender(NUIRenderer& renderer) {
 
 void NUIButton::onUpdate(double deltaTime) {
     NUIComponent::onUpdate(deltaTime);
+    if (!groupSet_) motion_.setGroup(toggleable_ ? ButtonGroup::Toggle : ButtonGroup::Action);
+    const bool hovered = isEnabled() && isHovered();
+    const bool wasLatched = latchedForMotion_;
+    latchedForMotion_ = toggleable_ && toggled_;
+    if (latchedForMotion_ != wasLatched) motion_.kick(); // a latch flipping bounces once
+    const bool wasMoving = motion_.animating();
+    motion_.update(static_cast<float>(deltaTime), hovered, isEnabled() && pressed_);
+    if (wasMoving || motion_.animating()) setDirty();
 }
 
 bool NUIButton::onMouseEvent(const NUIMouseEvent& event) {

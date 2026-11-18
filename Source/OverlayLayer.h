@@ -16,6 +16,7 @@ class OverlayLayer : public AestraUI::NUIComponent {
 public:
     OverlayLayer() {
         setId("OverlayLayer");
+        setDropPassThrough(true); // paints nothing itself: drops reach the timeline where no panel covers it
     }
 
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override {

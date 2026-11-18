@@ -175,6 +175,10 @@ private:
     void layoutUnits();
     void scrollGridBy(float deltaPx, bool userScroll = true); // Clamp + broadcast the shared grid scroll
     float computeGridMaxScrollX() const;
+    float gridStepWidth() const; // One step's width in the grid: fit-to-width, or the readable 20 px minimum
+    void snapGridScrollBy(float deltaPx); // Wheel in scroll mode: one bar per notch, landing on bar lines
+    float m_gridWheelAccum = 0.0f;
+    std::chrono::steady_clock::time_point m_lastGridWheel{};
     void followGridPlayhead(); // Keep the playing bar in view unless the user scrolled away
     
     // Pattern Progress Visualization
@@ -241,19 +245,6 @@ private:
     std::function<void(PatternID)> m_onActivePatternChanged;
     std::function<void(PatternID)> m_onPlaceInTimeline;
     bool m_dropTargetRegistered = false;
-    // The drop manager checks the last-registered target first, and the timeline under this panel registers on its
-    // first frame: after this panel when a project opens in Arsenal, so sample drops fell through to the timeline and
-    // were rejected (owner, 4 Nov 2026). Claim the front once per drag while shown, as the mixer does (#395).
-    bool m_dropOrderClaimedForDrag = false;
-    void claimDropOrderForDrag() {
-        if (!AestraUI::NUIDragDropManager::getInstance().isDragging()) {
-            m_dropOrderClaimedForDrag = false;
-            return;
-        }
-        if (m_dropOrderClaimedForDrag || !isVisible()) return;
-        registerDropTargets(true);
-        m_dropOrderClaimedForDrag = true;
-    }
     bool m_showUnitTypePicker = false;
     AestraUI::NUIRect m_addUnitButtonRect{};
     AestraUI::NUIRect m_fitToggleRect{};

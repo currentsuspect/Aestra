@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerPanel.h"
+#include "../Graphics/NUIDepth.h"
 #include "UIMixerStrip.h"
 #include "MixerScale.h"
 #include "TrackColorPalette.h"
@@ -14,6 +15,7 @@
 #include "Commands/SetPanCommand.h"
 #include "Commands/SetTrimCommand.h"
 #include "Commands/SetMonitoringCommand.h"
+#include "Commands/RenameCommand.h"
 #include "TrackManager.h"
 #include "PluginManager.h"
 #include "Commands/PluginCommands.h"
@@ -74,6 +76,14 @@ UIMixerPanel::UIMixerPanel(std::shared_ptr<Aestra::MixerViewModel> viewModel,
         vm->width = width;
         if (vm->channel) vm->channel->setWidth(width);
     };
+    // Input monitoring from the inspector: the same undoable command as the strip's IN key.
+    m_inspector->onMonitorEdited = [this](uint32_t channelId, bool monitored) {
+        if (!m_trackManager) return;
+        auto* mixerChannel = m_trackManager->getChannelById(channelId);
+        if (!mixerChannel) return;
+        m_trackManager->getCommandHistory().pushAndExecute(
+            std::make_shared<Aestra::Audio::SetMonitoringCommand>(*m_trackManager, *mixerChannel, monitored));
+    };
     addChild(m_inspector);
 
     m_navigator = std::make_shared<UIMixerNavigator>();
@@ -90,6 +100,7 @@ UIMixerPanel::UIMixerPanel(std::shared_ptr<Aestra::MixerViewModel> viewModel,
     m_toolbar->onDensityChanged = [this](MixerDensity d) { setDensity(d); };
     m_toolbar->onGroupToggled = [this](bool on) { setGroupByOutput(on); };
     m_toolbar->onResetPeaks = [this]() { resetPeaks(); };
+    m_toolbar->onAddChannel = [this]() { if (onAddChannelRequested) onAddChannelRequested(); };
     addChild(m_toolbar);
 
     // Create master strip (pinned on right, does not scroll with channels).
@@ -137,7 +148,6 @@ void UIMixerPanel::cacheThemeColors()
     // Deep Void Background from Theme
     m_backgroundColor = theme.getColor("backgroundPrimary");
     // Subtle Glass Separator
-    m_separatorColor = theme.getColor("divider");
 }
 
 bool UIMixerPanel::channelLayoutMatchesViewModel() const
@@ -242,6 +252,8 @@ void UIMixerPanel::refreshChannels()
             m_trackManager->getCommandHistory().pushAndExecute(
                 std::make_shared<Aestra::Audio::SetPanCommand>(*m_trackManager, *mixerChannel, pan));
         };
+
+        strip->onRenameRequested = [this](uint32_t channelId, const NUIRect& plate) { beginChannelRename(channelId, plate); };
 
         // Wire input monitoring to CommandHistory for undo/redo + dirty parity
         strip->onMonitorToggled = [this, chId](bool monitored) {
@@ -579,7 +591,7 @@ void UIMixerPanel::renderDbScale(NUIRenderer& renderer)
     float lastY = 1e9f;
     for (const float db : MixerScale::kTicks) {
         const float y = bars.bottom() - MixerScale::norm(db) * bars.height;
-        if (lastY - y < 11.0f && lastY < 1e8f) continue; // never print two labels on top of each other
+        if (std::fabs(y - lastY) < 11.0f) continue; // never print two labels on top of each other
         lastY = y;
         char buf[8];
         std::snprintf(buf, sizeof(buf), "%s%d", db > 0.0f ? "+" : (db < 0.0f ? "\xE2\x88\x92" : ""), static_cast<int>(std::fabs(db)));
@@ -678,6 +690,7 @@ void UIMixerPanel::onResize(int width, int height)
 void UIMixerPanel::onUpdate(double deltaTime)
 {
     ensureDropTargetRegistration();
+    m_channelRename.onUpdate(deltaTime);
 
     const float maxScroll = getChannelMaxScroll();
     m_targetScrollX = safeClampMixerScroll(m_targetScrollX, maxScroll);
@@ -727,49 +740,21 @@ void UIMixerPanel::ensureDropTargetRegistration() {
         }
     }
 
-    // The drop manager scans targets in reverse registration order and the
-    // mixer overlays the timeline, so re-register once per drag to move this
-    // panel to the back of the list — it must be checked before TrackManagerUI
-    // or plugin drops fall through to the lane geometry behind it (#395).
-    // onUpdate only runs while the mixer is shown; when hidden, the manager's
-    // visibility eligibility check skips this target entirely.
-    if (dnd.isDragging()) {
-        if (!m_dropOrderClaimedForDrag) {
-            try {
-                if (auto sharedThis = std::dynamic_pointer_cast<IDropTarget>(shared_from_this())) {
-                    dnd.unregisterDropTarget(this);
-                    dnd.registerDropTarget(sharedThis);
-                    m_dropOrderClaimedForDrag = true;
-                }
-            } catch (const std::bad_weak_ptr&) {}
-        }
-    } else {
-        m_dropOrderClaimedForDrag = false;
-        m_dropHoverChannelId = -1; // clear highlight if a drag ended without onDragLeave
+    // A drag that ended without onDragLeave would leave its strip highlighted.
+    if (!dnd.isDragging()) {
+        m_dropHoverChannelId = -1;
     }
 }
 
-void UIMixerPanel::renderSeparators(NUIRenderer& renderer)
+void UIMixerPanel::renderBed(NUIRenderer& renderer)
 {
-    auto bounds = getBounds();
-    const NUIRect minimapRect = getMinimapRect();
-    float y1 = minimapRect.bottom() + MINIMAP_GAP;
-    float y2 = bounds.y + bounds.height;
-
-    const TrailingLayout trailing = trailingLayout();
-    const float inspectorX = trailing.inspectorRect.x;
-    const NUIColor boundaryColor = m_separatorColor.withAlpha(0.62f);
-
-    // Draw separator before inspector
-    if (m_inspector && m_inspector->isVisible()) {
-        renderer.drawLine({inspectorX - STRIP_SPACING, y1}, {inspectorX - STRIP_SPACING, y2}, 1.0f, boundaryColor);
-    }
-
-    // Draw separator before master strip
-    if (m_masterStrip && m_masterStrip->isVisible()) {
-        const float masterX = trailing.masterRect.x;
-        renderer.drawLine({masterX - STRIP_SPACING, y1}, {masterX - STRIP_SPACING, y2}, 1.0f, boundaryColor);
-    }
+    // Design Spec, Mixer (locked): the mixer is a sunk bed. Strips, the inspector and the master rest on it,
+    // set apart by gaps and their own soft shadows, so no divider lines are drawn between them.
+    const auto bounds = getBounds();
+    const float y = getMinimapRect().bottom() + MINIMAP_GAP * 0.5f;
+    const NUIRect bed{bounds.x, y, bounds.width, std::max(0.0f, bounds.bottom() - y)};
+    if (!bed.isEmpty())
+        Depth::bed(renderer, bed, 0.0f, m_backgroundColor, Depth::Cut::Deep);
 }
 
 void UIMixerPanel::onRender(NUIRenderer& renderer)
@@ -784,8 +769,7 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
 
     if (m_navigator && m_navigator->isVisible()) m_navigator->onRender(renderer);
 
-    // Separators
-    renderSeparators(renderer);
+    renderBed(renderer);
 
     // Render channel strips with a clip so they never draw into the inspector/master area.
     const TrailingLayout trailing = trailingLayout();
@@ -874,14 +858,37 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
         renderer.strokeRoundedRect(m_masterStrip->getBounds(), 6.0f, 2.0f, accent);
     }
 
+    m_channelRename.render(renderer); // the rename field sits over a strip's nameplate
+
     // Plugin dropdown renders as a floating overlay on top of everything.
     if (m_pluginDropdown && m_pluginDropdown->isVisible()) {
         m_pluginDropdown->onRender(renderer);
     }
 }
 
+void UIMixerPanel::beginChannelRename(uint32_t channelId, const NUIRect& nameplate)
+{
+    if (!m_viewModel || !m_trackManager || channelId == 0) return;
+    const auto* channel = m_viewModel->getChannelById(channelId);
+    if (!channel) return;
+    NUIRect field = nameplate;
+    field.width = std::max(field.width, 120.0f); // a narrow strip still gets room to type
+    m_channelRename.begin(field, channel->name, [this, channelId](const std::string& name) {
+        auto cmd = Aestra::Audio::RenameCommand::forChannel(*m_trackManager, channelId, name);
+        if (cmd->empty()) return;
+        m_trackManager->getCommandHistory().pushAndExecute(cmd);
+        if (auto* vm = m_viewModel->getChannelById(channelId)) vm->name = Aestra::Audio::RenameCommand::cleaned(name);
+        repaint();
+    }, [this]() { repaint(); });
+}
+
 bool UIMixerPanel::onMouseEvent(const NUIMouseEvent& event)
 {
+    // An open strip rename takes its own clicks; a press elsewhere commits it and goes on as usual.
+    if (m_channelRename.onMouseEvent(event)) {
+        repaint();
+        return true;
+    }
     const NUIRect minimapRect = getMinimapRect();
     const float maxScroll = getChannelMaxScroll();
 
@@ -1205,7 +1212,7 @@ DropResult UIMixerPanel::onDrop(const DragData& data, const NUIPoint& position) 
 
     if (!loadPluginToChannel(vmChannel, pluginId)) {
         result.accepted = false;
-        result.message = "Failed to load plugin (see log)";
+        result.message = "Could not load that plugin";
         return result;
     }
 

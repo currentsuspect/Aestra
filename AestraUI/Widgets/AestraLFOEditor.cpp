@@ -8,23 +8,38 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <iterator>
 
 namespace AestraUI {
 
 namespace {
-using Aestra::Audio::Plugins::AestraLFO;
+using LFO = Aestra::Audio::Plugins::AestraLFO;
 
-constexpr float kDragRangePx = 160.0f;    // full param range per drag distance
+constexpr float kDragRangePx = 160.0f;
+constexpr float kPi = 3.14159265358979323846f;
 
-NUIColor accent() {
-    return NUIColor(0.36f, 0.62f, 0.92f, 1.0f);
-} // LFO blue
-NUIColor panelSurface() {
-    return editorNeutral(0.027f, 0.96f);
+// One cycle of each wave at phase p in 0..1, -1..+1 (S&H is four held steps).
+float waveAt(int wave, float p) {
+    p = p - std::floor(p);
+    switch (wave) {
+    case 0: return std::cos(2.0f * kPi * p);
+    case 1: return 1.0f - 4.0f * std::min(p, 1.0f - p);
+    case 2: return 1.0f - 2.0f * p;
+    case 3: return -1.0f + 2.0f * p;
+    case 4: return p < 0.5f ? 1.0f : -1.0f;
+    default: {
+        static const float kSteps[4] = {0.6f, -0.4f, 0.9f, -0.8f};
+        return kSteps[std::min(3, static_cast<int>(p * 4.0f))];
+    }
+    }
 }
-NUIColor insetSurface() {
-    return editorNeutral(0.038f, 0.96f);
+
+// Divisions in beats, in the plugins' index order (AestraDelay / AestraLFO share the table).
+float divisionBeats(int index) {
+    static const float kBeats[13] = {4.0f, 2.0f, 1.0f, 0.25f, 0.5f, 0.125f, 3.0f, 1.5f, 0.75f, 0.375f,
+                                     2.0f / 3.0f, 1.0f / 3.0f, 1.0f / 6.0f};
+    return kBeats[std::clamp(index, 0, 12)];
 }
 
 } // namespace
@@ -32,10 +47,29 @@ NUIColor insetSurface() {
 AestraLFOEditor::AestraLFOEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance)
     : m_instance(std::move(instance)) {
     setId("AestraLFOEditor");
-    setPanelTitle("Aestra LFO");
-    setBadgeText("Modulation");
+    setPanelTitle("LFO");
+    setTwoRowHeader(true);
     setSize(kWinW, kWinH);
     setEnforceParentBounds(true);
+    m_target.param = LFO::kTarget;
+    m_target.labels = {"Volume", "Pan", "Cutoff"};
+    m_sync.param = LFO::kSyncMode;
+    m_sync.labels = {"Free", "Sync"};
+    m_wave.param = LFO::kWave;
+    m_wave.labels = {"Sine", "Triangle", "Saw Down", "Saw Up", "Square", "S&H"};
+    m_wave.glyph = [](NUIRenderer& r, int wave, float x, float cy, NUIColor col) {
+        NUIPoint pts[17];
+        // The sine mark is one full sine cycle, so it reads differently from the Triangle's V.
+        for (int k = 0; k <= 16; ++k) {
+            const float p = static_cast<float>(k) / 16.0f;
+            const float v = wave == 0 ? std::sin(2.0f * kPi * p) : waveAt(wave, p);
+            pts[k] = {x + static_cast<float>(k), cy - v * 4.0f};
+        }
+        r.drawPolyline(pts, 17, 1.5f, col);
+    };
+    m_division.param = LFO::kNoteDivision;
+    m_division.labels = EditorKit::noteDivisionLabels();
+    m_division.order = EditorKit::noteDivisionMenuOrder();
     layoutControls();
 }
 
@@ -45,201 +79,147 @@ void AestraLFOEditor::setPlatformBridge(NUIPlatformBridge* bridge) {
 
 void AestraLFOEditor::layoutControls() {
     const auto b = getBounds();
-    const float contentTop = b.y + AestraPanelWindow::TITLE_BAR_H;
+    const float ox = b.x, oy = b.y + headerHeight();
+    m_target.rect = NUIRect(ox + 12.0f, oy + 12.0f, 240.0f, 24.0f);
+    m_sync.rect = NUIRect(ox + 420.0f, oy + 12.0f, 128.0f, 24.0f);
+    m_wave.rect = NUIRect(ox + 12.0f, oy + 44.0f, 536.0f, 24.0f);
+    m_well = NUIRect(ox + 12.0f, oy + 76.0f, 536.0f, 100.0f);
 
-    // Target selector: three segments across the top-left
-    constexpr float kSegW = 62.0f;
-    constexpr float kSegH = 26.0f;
-    for (size_t i = 0; i < m_targetRects.size(); ++i) {
-        m_targetRects[i] =
-            NUIRect(b.x + 28.0f + static_cast<float>(i) * (kSegW + 6.0f), contentTop + 14.0f, kSegW, kSegH);
+    using K = EditorKit::EmberKnobBoard;
+    m_board.clear();
+    m_board.layoutRow({ox + 12.0f, oy + 188.0f}, 536.0f,
+                      {K::Group{"Rate", {{LFO::kRateHz, "Rate"}, K::slot(96.0f)}},
+                       K::Group{"Shape", {{LFO::kDepth, "Depth"}, {LFO::kPhase, "Phase"}, {LFO::kSmooth, "Smooth"}}}});
+    // The Division menu sits in the slot after the Rate knob: a caption, then the control.
+    const NUIRect slot = m_board.rectOf(EditorKit::kNoParam);
+    m_division.rect = NUIRect(slot.x, slot.y + 16.0f, slot.width, 24.0f);
+}
+
+void AestraLFOEditor::onUpdate(double deltaTime) {
+    AestraPanelWindow::onUpdate(deltaTime);
+    m_meterTimer += deltaTime;
+    if (m_meterTimer < 1.0 / 30.0) return;
+    m_meterTimer = 0.0;
+    if (auto lfo = std::dynamic_pointer_cast<LFO>(m_instance))
+        m_level += (std::clamp(lfo->getLfoLevel(), 0.0f, 1.0f) - m_level) * 0.5f;
+    repaint();
+}
+
+void AestraLFOEditor::drawShape(NUIRenderer& renderer, bool bypassed) {
+    const auto c = EditorKit::emberColors();
+    const NUIRect& w = m_well;
+    EditorKit::drawWell(renderer, w);
+
+    const bool synced = m_instance->getParameter(LFO::kSyncMode) > 0.5f;
+    const int target = std::clamp(static_cast<int>(std::lround(m_instance->getParameter(LFO::kTarget) * 2.0f)), 0, 2);
+    const int wave = std::clamp(static_cast<int>(std::lround(m_instance->getParameter(LFO::kWave) * 5.0f)), 0, 5);
+    const int div = LFO::noteDivisionIndexFromParam(m_instance->getParameter(LFO::kNoteDivision));
+    // The tempo the plugin itself is running at (the host sets it). With no plugin to ask, no tempo is shown and the
+    // synced shape is drawn at one cycle per beat.
+    const auto lfo = std::dynamic_pointer_cast<LFO>(m_instance);
+    const bool haveBpm = static_cast<bool>(lfo);
+    const float bpm = lfo ? lfo->getBPM() : 120.0f;
+    const float hz = synced ? 1.0f / (divisionBeats(div) * 60.0f / bpm)
+                            : LFO::rateHzFromNorm(m_instance->getParameter(LFO::kRateHz));
+    const float period = 1.0f / hz;
+    const float depth = m_instance->getParameter(LFO::kDepth);
+    const float phase = m_instance->getParameter(LFO::kPhase);
+    const float tau = LFO::smoothMsFromNorm(m_instance->getParameter(LFO::kSmooth)) * 0.001f;
+
+    const float gx0 = w.x + 44.0f, gw = w.width - 56.0f, gy0 = w.y + 10.0f, gh = w.height - 28.0f;
+    const char* top[3] = {"100%", "L", "20 kHz"};
+    const char* bottom[3] = {"0%", "R", "-6 oct"};
+    EditorKit::drawTextRight(renderer, top[target], w.x + 38.0f, gy0 + 2.0f, 9.0f, c.inkMuted);
+    EditorKit::drawTextRight(renderer, bottom[target], w.x + 38.0f, gy0 + gh - 2.0f, 9.0f, c.inkMuted);
+    renderer.fillRect(NUIRect(gx0, std::round(gy0 + gh * 0.5f), gw, 1.0f), c.gridMinor);
+    renderer.fillRect(NUIRect(std::round(gx0 + gw * 0.5f), gy0, 1.0f, gh), c.gridMinor);
+
+    // Two cycles: the wave offset by Phase, slewed by Smooth, scaled by Depth. Volume and Cutoff hang down from the
+    // top by (1 - u) x Depth; Pan swings about the middle.
+    constexpr int kSteps = 400;
+    static NUIPoint pts[kSteps + 1];
+    float y = waveAt(wave, phase);
+    for (int i = 0; i <= kSteps; ++i) {
+        const float p = static_cast<float>(i) / kSteps * 2.0f + phase;
+        const float t = waveAt(wave, p);
+        const float dt = period * 2.0f / kSteps;
+        const float a = tau > 0.0f ? 1.0f - std::exp(-dt / tau) : 1.0f;
+        y += (t - y) * a;
+        float out;
+        if (target == 1) out = 0.5f - 0.5f * y * depth;
+        else out = 1.0f - depth * (1.0f - (0.5f + 0.5f * y));
+        pts[i] = {gx0 + static_cast<float>(i) / kSteps * gw, target == 1 ? gy0 + out * gh : gy0 + (1.0f - out) * gh};
     }
+    renderer.drawPolyline(pts, kSteps + 1, 2.0f, bypassed ? c.inkOff : c.secondary);
+    // The live position: a square on the curve, where its height matches the LFO's current level.
+    const float liveOut = target == 1 ? 0.5f - 0.5f * (2.0f * m_level - 1.0f) * depth : 1.0f - depth * (1.0f - m_level);
+    const float liveY = target == 1 ? gy0 + liveOut * gh : gy0 + (1.0f - liveOut) * gh;
+    int best = 0;
+    for (int i = 0; i <= kSteps / 2; ++i)
+        if (std::fabs(pts[i].y - liveY) < std::fabs(pts[best].y - liveY)) best = i;
+    renderer.fillRect(NUIRect(pts[best].x - 3.0f, pts[best].y - 3.0f, 6.0f, 6.0f), bypassed ? c.inkOff : c.meter);
 
-    constexpr float kBypassW = 88.0f;
-    constexpr float kBypassH = 26.0f;
-    m_bypassRect = NUIRect(b.right() - 44.0f - kBypassW, contentTop + 14.0f, kBypassW, kBypassH);
-    m_syncRect = NUIRect(m_bypassRect.x - 70.0f - 12.0f, contentTop + 14.0f, 70.0f, kBypassH);
-
-    // Wave selector: six segments on the second row
-    constexpr float kWaveW = 52.0f;
-    constexpr float kWaveH = 24.0f;
-    for (size_t i = 0; i < m_waveRects.size(); ++i) {
-        m_waveRects[i] =
-            NUIRect(b.x + 28.0f + static_cast<float>(i) * (kWaveW + 6.0f), contentTop + 52.0f, kWaveW, kWaveH);
-    }
-
-    // Large rate knob on the left; small knobs to its right
-    const float knobTop = contentTop + 96.0f;
-    m_rateRect = NUIRect(b.x + 44.0f, knobTop, 104.0f, 104.0f);
-    m_depthRect = NUIRect(b.x + 216.0f, knobTop + 16.0f, 64.0f, 64.0f);
-    m_phaseRect = NUIRect(b.x + 330.0f, knobTop + 16.0f, 64.0f, 64.0f);
-    m_smoothRect = NUIRect(b.x + 444.0f, knobTop + 16.0f, 64.0f, 64.0f);
+    char buf[64];
+    const std::string& divName = EditorKit::noteDivisionLabels()[static_cast<size_t>(div)];
+    if (synced && haveBpm)
+        std::snprintf(buf, sizeof(buf), "%s - %.2f s at %d BPM", divName.c_str(), static_cast<double>(period),
+                      static_cast<int>(std::lround(bpm)));
+    else if (synced) std::snprintf(buf, sizeof(buf), "%s", divName.c_str());
+    else std::snprintf(buf, sizeof(buf), "%.2f Hz - %.2f s", static_cast<double>(hz), static_cast<double>(period));
+    EditorKit::drawTextRight(renderer, buf, w.right() - 10.0f, w.bottom() - 9.0f, 11.0f, c.inkMuted);
+    EditorKit::drawTextLeft(renderer, "2 cycles", gx0, w.bottom() - 9.0f, 11.0f, c.inkMuted);
 }
 
 void AestraLFOEditor::drawContent(NUIRenderer& renderer, const NUIRect& contentRect) {
-    if (!m_instance)
-        return;
+    (void)contentRect;
+    if (!m_instance) return;
+    layoutControls();
+    const auto c = EditorKit::emberColors();
+    const bool bypassed = EditorKit::isBypassed(*m_instance, LFO::kBypass);
+    const bool synced = m_instance->getParameter(LFO::kSyncMode) > 0.5f;
+    m_target.draw(renderer, *m_instance, hoverPoint(), bypassed);
+    m_sync.draw(renderer, *m_instance, hoverPoint(), bypassed);
+    m_wave.draw(renderer, *m_instance, hoverPoint(), bypassed);
+    drawShape(renderer, bypassed);
 
-    const NUIRect workArea{contentRect.x + 12.0f, contentRect.y + 10.0f, contentRect.width - 24.0f,
-                           contentRect.height - 18.0f};
-    renderer.fillRoundedRect(workArea, 14.0f, panelSurface());
-    renderer.strokeRoundedRect(workArea, 14.0f, 1.0f, editorInk(0.055f));
-
-    drawTargetSelector(renderer);
-    drawWaveSelector(renderer);
-    drawSyncPill(renderer);
-    drawBypassPill(renderer);
-    drawRateKnob(renderer);
-    drawKnob(renderer, m_depthRect, AestraLFO::kDepth, "Depth", false);
-    drawKnob(renderer, m_phaseRect, AestraLFO::kPhase, "Phase", false);
-    drawKnob(renderer, m_smoothRect, AestraLFO::kSmooth, "Smooth", false);
+    m_board.setEnabled(LFO::kRateHz, !synced);
+    m_board.setValueText(LFO::kRateHz, synced ? "Sync" : "");
+    m_division.enabled = synced;
+    m_board.draw(renderer, *m_instance, hoverPoint(), knobDragParam(), bypassed);
+    EditorKit::drawTextLeft(renderer, "Division", m_division.rect.x, m_division.rect.y - 10.0f, 11.0f,
+                            c.inkSoft);
+    m_division.draw(renderer, *m_instance, hoverPoint(), bypassed);
 }
 
-void AestraLFOEditor::drawKnob(NUIRenderer& renderer, const NUIRect& rect, uint32_t paramId, const char* label,
-                               bool large) {
-    const float value = m_instance ? m_instance->getParameter(paramId) : 0.0f;
-    const std::string valueText = m_instance ? m_instance->getParameterDisplay(paramId) : "";
-    EditorKit::drawKnob(renderer, rect, value, label, valueText, accent(), insetSurface(), EditorKit::KnobLook{large});
-}
-
-void AestraLFOEditor::drawRateKnob(NUIRenderer& renderer) {
-    // The rate knob edits Hz in free mode and the note division when synced.
-    const bool sync = m_instance && m_instance->getParameter(AestraLFO::kSyncMode) > 0.5f;
-    drawKnob(renderer, m_rateRect, sync ? AestraLFO::kNoteDivision : AestraLFO::kRateHz, sync ? "Rate (Sync)" : "Rate",
-             true);
-}
-
-void AestraLFOEditor::drawTargetSelector(NUIRenderer& renderer) {
-    auto& theme = NUIThemeManager::getInstance();
-    const auto target =
-        m_instance ? AestraLFO::targetFromNorm(m_instance->getParameter(AestraLFO::kTarget)) : AestraLFO::kTargetVolume;
-    static constexpr const char* kLabels[] = {"VOL", "PAN", "CUT"};
-    for (size_t i = 0; i < m_targetRects.size(); ++i) {
-        const bool selected = static_cast<uint32_t>(target) == i;
-        if (selected) {
-            renderer.fillRoundedRect(m_targetRects[i], 7.0f, accent().withAlpha(0.26f));
-            renderer.strokeRoundedRect(m_targetRects[i], 7.0f, 1.0f, accent().withAlpha(0.62f));
-            renderer.drawTextCentered(kLabels[i], m_targetRects[i], 10.5f, accent().withAlpha(0.98f));
-        } else {
-            renderer.fillRoundedRect(m_targetRects[i], 7.0f, insetSurface());
-            renderer.strokeRoundedRect(m_targetRects[i], 7.0f, 1.0f, editorInk(0.08f));
-            renderer.drawTextCentered(kLabels[i], m_targetRects[i], 10.5f,
-                                      theme.getColor("textPrimary").withAlpha(0.62f));
-        }
-    }
-}
-
-void AestraLFOEditor::drawWaveSelector(NUIRenderer& renderer) {
-    auto& theme = NUIThemeManager::getInstance();
-    const auto wave =
-        m_instance ? AestraLFO::waveFromNorm(m_instance->getParameter(AestraLFO::kWave)) : AestraLFO::kWaveSine;
-    static constexpr const char* kLabels[] = {"SIN", "TRI", "SAW", "RMP", "SQR", "S&H"};
-    for (size_t i = 0; i < m_waveRects.size(); ++i) {
-        const bool selected = static_cast<uint32_t>(wave) == i;
-        if (selected) {
-            renderer.fillRoundedRect(m_waveRects[i], 7.0f, accent().withAlpha(0.26f));
-            renderer.strokeRoundedRect(m_waveRects[i], 7.0f, 1.0f, accent().withAlpha(0.62f));
-            renderer.drawTextCentered(kLabels[i], m_waveRects[i], 10.0f, accent().withAlpha(0.98f));
-        } else {
-            renderer.fillRoundedRect(m_waveRects[i], 7.0f, insetSurface());
-            renderer.strokeRoundedRect(m_waveRects[i], 7.0f, 1.0f, editorInk(0.08f));
-            renderer.drawTextCentered(kLabels[i], m_waveRects[i], 10.0f,
-                                      theme.getColor("textPrimary").withAlpha(0.62f));
-        }
-    }
-}
-
-void AestraLFOEditor::drawSyncPill(NUIRenderer& renderer) {
-    auto& theme = NUIThemeManager::getInstance();
-    const bool sync = m_instance && m_instance->getParameter(AestraLFO::kSyncMode) > 0.5f;
-    constexpr float kRadius = 7.0f;
-    if (sync) {
-        renderer.fillRoundedRect(m_syncRect, kRadius, accent().withAlpha(0.26f));
-        renderer.strokeRoundedRect(m_syncRect, kRadius, 1.0f, accent().withAlpha(0.62f));
-        renderer.drawTextCentered("SYNC", m_syncRect, 10.0f, accent().withAlpha(0.98f));
-    } else {
-        renderer.fillRoundedRect(m_syncRect, kRadius, insetSurface());
-        renderer.strokeRoundedRect(m_syncRect, kRadius, 1.0f, editorInk(0.08f));
-        renderer.drawTextCentered("FREE", m_syncRect, 10.0f, theme.getColor("textPrimary").withAlpha(0.62f));
-    }
-}
-
-void AestraLFOEditor::drawBypassPill(NUIRenderer& renderer) {
-    auto& theme = NUIThemeManager::getInstance();
-    const bool bypassed = m_instance && m_instance->getParameter(AestraLFO::kBypass) > 0.5f;
-    constexpr float kRadius = 7.0f;
-    constexpr float kFont = 10.0f;
-    if (bypassed) {
-        renderer.fillRoundedRect(m_bypassRect, kRadius,
-                                 NUIColor(0.92f, 0.28f, 0.22f).withAlpha(m_bypassHovered ? 0.94f : 0.78f));
-        renderer.strokeRoundedRect(m_bypassRect, kRadius, 1.0f, NUIColor(0.92f, 0.28f, 0.22f).withAlpha(0.50f));
-        renderer.drawTextCentered("BYPASSED", m_bypassRect, kFont, theme.getColor("textPrimary"));
-    } else {
-        renderer.fillRoundedRect(m_bypassRect, kRadius,
-                                 theme.getColor("success").withAlpha(m_bypassHovered ? 0.30f : 0.18f));
-        renderer.strokeRoundedRect(m_bypassRect, kRadius, 1.0f, theme.getColor("success").withAlpha(0.40f));
-        renderer.drawTextCentered("ACTIVE", m_bypassRect, kFont, theme.getColor("success"));
-    }
+void AestraLFOEditor::drawOverlay(NUIRenderer& renderer) {
+    if (m_instance) m_division.drawMenu(renderer, *m_instance, hoverPoint(), getBounds());
 }
 
 bool AestraLFOEditor::onMouseEvent(const NUIMouseEvent& event) {
-    if (!isVisible())
-        return false;
-    if (AestraPanelWindow::onMouseEvent(event))
-        return true;
-    if (!m_instance)
-        return false;
+    if (!isVisible()) return false;
+    if (AestraPanelWindow::onMouseEvent(event)) return true;
+    if (!m_instance) return false;
+    layoutControls();
 
-
-    // Bypass pill
-    if (m_bypassRect.contains(event.position) && event.pressed && event.button == NUIMouseButton::Left) {
-        const float cur = m_instance->getParameter(AestraLFO::kBypass);
-        m_instance->setParameter(AestraLFO::kBypass, cur > 0.5f ? 0.0f : 1.0f);
+    if (m_division.onMouse(event, *m_instance, getBounds())) {
         setDirty();
         return true;
     }
-    m_bypassHovered = m_bypassRect.contains(event.position);
-
-    // Sync pill
-    if (m_syncRect.contains(event.position) && event.pressed && event.button == NUIMouseButton::Left) {
-        const float cur = m_instance->getParameter(AestraLFO::kSyncMode);
-        m_instance->setParameter(AestraLFO::kSyncMode, cur > 0.5f ? 0.0f : 1.0f);
+    if (event.pressed && event.button == NUIMouseButton::Left &&
+        (m_target.onPress(*m_instance, event.position) || m_sync.onPress(*m_instance, event.position) ||
+         m_wave.onPress(*m_instance, event.position))) {
         setDirty();
         return true;
     }
 
-    // Target / wave segments
-    if (event.pressed && event.button == NUIMouseButton::Left) {
-        for (size_t i = 0; i < m_targetRects.size(); ++i) {
-            if (m_targetRects[i].contains(event.position)) {
-                m_instance->setParameter(AestraLFO::kTarget,
-                                         AestraLFO::normFromTarget(static_cast<AestraLFO::Target>(i)));
-                setDirty();
-                return true;
-            }
-        }
-        for (size_t i = 0; i < m_waveRects.size(); ++i) {
-            if (m_waveRects[i].contains(event.position)) {
-                m_instance->setParameter(AestraLFO::kWave, AestraLFO::normFromWave(static_cast<AestraLFO::Wave>(i)));
-                setDirty();
-                return true;
-            }
-        }
-    }
-
-    // Knob vertical drag (rotary -> cursor capture): AestraPanelWindow::handleKnobDrag.
-    const bool sync = m_instance->getParameter(AestraLFO::kSyncMode) > 0.5f;
-    const uint32_t rateParam = sync ? AestraLFO::kNoteDivision : AestraLFO::kRateHz;
-    const KnobTarget knobs[] = {
-        {m_rateRect, rateParam},
-        {m_depthRect, AestraLFO::kDepth},
-        {m_phaseRect, AestraLFO::kPhase},
-        {m_smoothRect, AestraLFO::kSmooth},
-    };
+    const bool synced = m_instance->getParameter(LFO::kSyncMode) > 0.5f;
+    std::vector<KnobTarget> knobs;
+    for (const auto& cell : m_board.cells())
+        if (cell.spec.param != EditorKit::kNoParam && (cell.spec.param != LFO::kRateHz || !synced))
+            knobs.push_back({cell.rect, cell.spec.param});
     const auto get = [this](uint32_t id) { return m_instance->getParameter(id); };
     const auto set = [this](uint32_t id, float v) { m_instance->setParameter(id, v); };
-    if (handleKnobDrag(event, knobs, std::size(knobs), kDragRangePx, get, set))
-        return true;
+    if (handleKnobDrag(event, knobs.data(), knobs.size(), kDragRangePx, get, set)) return true;
 
     return consumeInsideBounds(event);
 }

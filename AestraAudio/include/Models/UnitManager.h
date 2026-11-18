@@ -2,12 +2,16 @@
 #include "../../AestraCore/include/AestraJSON.h"
 #include "../Plugin/PluginHost.h"
 #include "Models/ArsenalBridgeMode.h"
+#include "Models/MusicalRole.h"
 #include "Models/PatternSource.h"
+#include "Music/ProjectHarmony.h"
 
+#include <algorithm>
 #include <atomic>
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <optional>
 #include "AestraAtomicSharedPtr.h"
 #include "Core/RealtimeSharedSlot.h"
 #include <string>
@@ -140,10 +144,42 @@ struct UnitInfo {
     std::vector<float> audioPreviewWaveform;
     /** @brief High-level group classification used by the Arsenal UI. */
     UnitGroup group;
+    /**
+     * @brief What this sound is in the song (MusicalRole.h): the user's choice, else what its name says, else unknown.
+     * UI thread only; the audio thread never reads it.
+     */
+    MusicalRole role;
     /** @brief Unit content type used to select sequencing and editing behavior. */
     UnitType type{UnitType::Sampler};
     /** @brief Default pattern associated with this unit for Piano Roll editing. */
     PatternID defaultPatternId;
+    /**
+     * @brief The user's "follows key" switch (FD-76); unset = the default for the unit's type.
+     *
+     * UI thread only. Playback reads the published PlaybackHarmony instead (UnitManager::playbackHarmony).
+     */
+    std::optional<bool> followsKeyOverride;
+    /** @brief Does this unit move with the global transpose and key changes? Drum and audio units do not by default. */
+    bool followsKey() const noexcept {
+        return followsKeyOverride.value_or(type == UnitType::PitchedSampler || type == UnitType::Instrument);
+    }
+};
+
+/**
+ * @brief What playback needs of the project key (FD-76): the transpose, and the units it applies to.
+ *
+ * Immutable once published; read from the scheduler thread through UnitManager::playbackHarmony().
+ */
+struct PlaybackHarmony {
+    int transposeSemitones{0};
+    std::vector<UnitID> followingUnits; // sorted
+
+    bool follows(UnitID id) const { return std::binary_search(followingUnits.begin(), followingUnits.end(), id); }
+    /** @brief Semitones to move this unit's notes by: the transpose, or 0 for a unit that does not follow. */
+    int transposeFor(UnitID id) const { return transposeSemitones != 0 && follows(id) ? transposeSemitones : 0; }
+    bool operator==(const PlaybackHarmony& o) const {
+        return transposeSemitones == o.transposeSemitones && followingUnits == o.followingUnits;
+    }
 };
 
 /**
@@ -315,10 +351,26 @@ public:
     void setDefaultColorProvider(std::function<uint32_t(size_t)> provider) { m_defaultColor = std::move(provider); }
     /** @brief Set the unit group classification. */
     void setUnitGroup(UnitID id, UnitGroup group);
+    /**
+     * @brief Set the unit's role as the user's choice (confirmed: it outranks every name). Passing an unknown role
+     * clears the choice and the role goes back to whatever the name says.
+     */
+    void setUnitRole(UnitID id, const MusicalRole& role);
+    /** @brief The unit's role, or an unknown role for an unknown unit. */
+    MusicalRole unitRole(UnitID id) const;
     /** @brief Set the unit content type and keep its group classification aligned. */
     bool setUnitType(UnitID id, UnitType type);
     /** @brief Get the current content type for a unit. */
     UnitType getUnitType(UnitID id) const;
+
+    /** @brief The project key and global transpose (FD-76). UI thread. */
+    const ProjectHarmony& harmony() const noexcept { return m_harmony; }
+    /** @brief Set the project key and global transpose; the transpose is brought into range. Heard on the next refill. */
+    void setHarmony(ProjectHarmony harmony);
+    /** @brief Set a unit's "follows key" switch; std::nullopt returns it to the default for its type. */
+    void setUnitFollowsKey(UnitID id, std::optional<bool> follows);
+    /** @brief The transpose and the units that follow it, for playback. Any non-realtime thread. Never null. */
+    std::shared_ptr<const PlaybackHarmony> playbackHarmony() const { return m_playbackHarmony.load(); }
 
     /**
      * @brief Attach a plugin instance to a unit.
@@ -364,6 +416,9 @@ private:
     std::atomic<double> m_sampleRate{48000.0};
     std::atomic<uint32_t> m_blockSize{512};
     PatternManager* m_patternManager{nullptr};
+    ProjectHarmony m_harmony; // UI thread
+    // Republished by publishSnapshot(), so it follows unit adds, removes and type changes too.
+    mutable AtomicSharedPtr<const PlaybackHarmony> m_playbackHarmony{std::make_shared<const PlaybackHarmony>()};
 
     /**
      * @brief Published immutable snapshot for the audio thread.
