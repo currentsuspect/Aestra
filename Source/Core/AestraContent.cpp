@@ -4095,7 +4095,7 @@ void AestraContent::loadSampleIntoUnitAsync(UnitID unitId, const std::string& sa
                                                          numChannels, std::move(previewWaveform), durationSeconds)) {
                 unitManager.setUnitName(unitId, previousUnitName);
                 unitManager.setUnitEnabled(unitId, previousUnitEnabled);
-                self->refreshArsenalUnits();
+                if (self->m_sequencerPanel) self->m_sequencerPanel->refreshUnits();
                 AESTRA_LOG_ERROR("Failed to load sample into Unit " + std::to_string(unitId) + ": " + samplePath);
                 self->showToast("Could not load " + std::filesystem::path(samplePath).filename().string());
                 return;
