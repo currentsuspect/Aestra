@@ -15,9 +15,9 @@ namespace Aestra {
 
 /**
  * @brief Kits and the empty state (V81-AR1, FD-27 point 6): an Arsenal with no sounds offers to start from a
- * folder of them. Each audio file in the folder becomes a unit named after the file, ready to play.
+ * folder of them. Selecting the folder opens it in the File Browser; no units, samples or patterns are created by selection.
  *
- * `plan` is pure: which files, in what order, under which names. `ArsenalKitCard` is the empty-state card.
+ * `plan` remains available as a pure import planner for future explicit kit-building workflows. `ArsenalKitCard` is the empty-state card.
  */
 struct KitSlot {
     std::string name;
