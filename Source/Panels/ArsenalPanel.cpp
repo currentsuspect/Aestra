@@ -854,18 +854,12 @@ void ArsenalPanel::ensureDefaultPattern() {
 }
 
 void ArsenalPanel::loadKitFromFolder(const std::string& folder) {
-    if (!m_trackManager || folder.empty()) return; // empty = the picker was cancelled
-    auto& units = m_trackManager->getUnitManager();
-    const auto ids = units.getAllUnitIDs();
-    const UnitID reuse = ids.size() == 1 ? ids[0] : 0; // the empty starter unit takes the first sound
-    bool first = true;
-    for (const auto& slot : Aestra::ArsenalKit::plan(Aestra::ArsenalKit::filesIn(folder))) {
-        if (first && reuse) { units.setUnitName(reuse, slot.name); m_selectedUnitId = reuse; }
-        else createUnitOfType(UnitType::Sampler, slot.name);
-        first = false;
-        if (m_onSampleDroppedToUnit) m_onSampleDroppedToUnit(m_selectedUnitId, slot.path);
+    if (folder.empty()) return; // picker cancelled
+    // Choosing a kit is a browsing action, not a musical edit. Never manufacture units,
+    // samples or patterns merely because a folder was selected.
+    if (m_onKitFolderSelected) {
+        m_onKitFolderSelected(folder);
     }
-    refreshUnits();
 }
 
 void ArsenalPanel::onRender(NUIRenderer& renderer) {
