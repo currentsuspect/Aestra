@@ -533,6 +533,7 @@ void AestraApp::initializeContent() {
 
     wireTakesPanel();
     wireTimelineConfirmations(); // ProjectLifecycle.cpp
+    wireArsenalConfirmations(); // ProjectLifecycle.cpp
 
     // Performance HUD is created eagerly: it must exist independently of the
     // lazily built settings dialogs, or F12 / View → Performance Stats are

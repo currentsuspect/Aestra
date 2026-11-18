@@ -82,6 +82,7 @@ public:
     /** @brief Callback fired when the unit is duplicated via context menu. */
     std::function<void(Aestra::Audio::UnitID)> m_onDuplicateUnit;
     std::function<bool()> m_hasMultipleSelection;
+    std::function<std::vector<Aestra::Audio::UnitID>()> m_getSelectedUnitIds;
     std::function<void(Aestra::Audio::UnitID, Aestra::Audio::UnitGroup)> m_onMoveSelectedToGroup;
 
     void setOnDragStart(std::function<void(Aestra::Audio::UnitID)> cb) { m_onDragStart = cb; }
@@ -98,6 +99,9 @@ public:
     void setOnDeleteUnit(std::function<void(Aestra::Audio::UnitID)> cb) { m_onDeleteUnit = cb; }
     void setOnDuplicateUnit(std::function<void(Aestra::Audio::UnitID)> cb) { m_onDuplicateUnit = cb; }
     void setHasMultipleSelection(std::function<bool()> cb) { m_hasMultipleSelection = std::move(cb); }
+    void setGetSelectedUnitIds(std::function<std::vector<Aestra::Audio::UnitID>()> cb) {
+        m_getSelectedUnitIds = std::move(cb);
+    }
     void setOnMoveSelectedToGroup(std::function<void(Aestra::Audio::UnitID, Aestra::Audio::UnitGroup)> cb) {
         m_onMoveSelectedToGroup = std::move(cb);
     }
@@ -168,6 +172,7 @@ public:
      * @return Backing unit identifier.
      */
     Aestra::Audio::UnitID getUnitId() const { return m_unitId; }
+    void beginRename() { if (m_nameLabel) m_nameLabel->beginRename(); }
     /** @brief The output by name ("Master", "Drum Bus"), as the row's pill reads it. */
     const std::string& outputName() const { return m_mixerRouteName; }
     int outputColorIndex() const { return m_mixerRouteColorIndex; }

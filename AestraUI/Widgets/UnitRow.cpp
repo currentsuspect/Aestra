@@ -4,6 +4,7 @@
 #include "../../AestraCore/include/AestraLog.h"
 #include "AudioEngine.h"
 #include "Commands/AssignUnitToFirstFreeInsertCommand.h"
+#include "Commands/CommandTransaction.h"
 #include "Commands/EditPatternNotesCommand.h"
 #include "Commands/SetRoleCommand.h"
 #include "Commands/SetUnitMixerChannelCommand.h"
@@ -1820,29 +1821,38 @@ void UnitRow::showRowContextMenu(const NUIPoint& pos) {
     });
     m_rowContextMenu->addItem(rename);
 
-    auto groupMenu = std::make_shared<NUIContextMenu>();
-    const auto addGroup = [this, &groupMenu](const char* label, Aestra::Audio::UnitGroup group) {
+    auto categoryMenu = std::make_shared<NUIContextMenu>();
+    const auto addGroup = [this, &categoryMenu](const char* label, Aestra::Audio::UnitGroup group) {
         auto item = std::make_shared<NUIContextMenuItem>(label);
         item->setOnClick([this, group]() {
             if (m_onMoveSelectedToGroup) m_onMoveSelectedToGroup(m_unitId, group);
         });
-        groupMenu->addItem(item);
+        categoryMenu->addItem(item);
     };
-    addGroup("Drums", Aestra::Audio::UnitGroup::Drums);
-    addGroup("Synth", Aestra::Audio::UnitGroup::Synth);
-    addGroup("Audio", Aestra::Audio::UnitGroup::Audio);
-    m_rowContextMenu->addSubmenu("Move Selected to Group", groupMenu);
+    addGroup("Group: Drums", Aestra::Audio::UnitGroup::Drums);
+    addGroup("Group: Synth", Aestra::Audio::UnitGroup::Synth);
+    addGroup("Group: Audio", Aestra::Audio::UnitGroup::Audio);
+    categoryMenu->addSeparator();
+    const size_t selectedCount = m_getSelectedUnitIds ? m_getSelectedUnitIds().size() : 1;
 
     // Category: what this sound is in the song. "Auto" reads it from the name; picking one is the user's own
     // choice, which outranks any name. One undo step.
     {
         using namespace Aestra::Audio;
         const MusicalRole current = m_manager.unitRole(m_unitId);
-        auto categoryMenu = std::make_shared<NUIContextMenu>();
         const auto choose = [this](const MusicalRole& role) {
             if (!m_trackManager || !m_manager.getUnit(m_unitId)) return;
-            m_trackManager->getCommandHistory().pushAndExecute(
-                std::make_shared<SetUnitRoleCommand>(m_trackManager->getUnitManager(), m_unitId, role));
+            std::vector<UnitID> targets = m_getSelectedUnitIds ? m_getSelectedUnitIds() : std::vector<UnitID>{};
+            if (std::find(targets.begin(), targets.end(), m_unitId) == targets.end()) targets = {m_unitId};
+            if (targets.size() == 1) {
+                m_trackManager->getCommandHistory().pushAndExecute(
+                    std::make_shared<SetUnitRoleCommand>(m_trackManager->getUnitManager(), targets.front(), role));
+                return;
+            }
+            auto transaction = std::make_shared<CommandTransaction>("Set Category for Selected Units");
+            for (const UnitID id : targets)
+                transaction->add(std::make_shared<SetUnitRoleCommand>(m_trackManager->getUnitManager(), id, role));
+            m_trackManager->getCommandHistory().pushAndExecute(transaction);
         };
         auto autoItem = std::make_shared<NUIContextMenuItem>("Auto (from the name)");
         autoItem->setChecked(current.source != RoleSource::User);
@@ -1851,14 +1861,16 @@ void UnitRow::showRowContextMenu(const NUIPoint& pos) {
         categoryMenu->addSeparator();
         for (const auto& entry : roleCategoryTable()) {
             auto item = std::make_shared<NUIContextMenuItem>(entry.label);
-            item->setChecked(current.source == RoleSource::User && current.category == entry.category);
+            item->setChecked(selectedCount <= 1 && current.source == RoleSource::User && current.category == entry.category);
             const RoleCategory category = entry.category;
             const RoleSub keepSub = current.category == category ? current.sub : RoleSub::None; // "Kick 01" chosen as Drums stays Kick
             item->setOnClick([choose, category, keepSub]() { choose(userRole(category, keepSub)); });
             categoryMenu->addItem(item);
         }
-        m_rowContextMenu->addSubmenu("Category", categoryMenu);
     }
+    m_rowContextMenu->addSubmenu(selectedCount > 1
+        ? "Category for " + std::to_string(selectedCount) + " selected units"
+        : "Category", categoryMenu);
 
     m_rowContextMenu->addItem(m_hasMultipleSelection && m_hasMultipleSelection()
                                   ? "Duplicate Selected Units"
@@ -1870,7 +1882,7 @@ void UnitRow::showRowContextMenu(const NUIPoint& pos) {
     });
 
     m_rowContextMenu->addSeparator();
-    m_rowContextMenu->addItem("Delete Unit", [this, pos]() {
+    m_rowContextMenu->addItem(selectedCount > 1 ? "Delete Selected Units" : "Delete Unit", [this, pos]() {
         if (!m_manager.getUnit(m_unitId))
             return;
         showDeleteConfirmation(pos);
@@ -1881,13 +1893,15 @@ void UnitRow::showRowContextMenu(const NUIPoint& pos) {
 
 void UnitRow::showDeleteConfirmation(const NUIPoint& pos) {
     auto confirm = std::make_shared<NUIContextMenu>();
-    confirm->addItem("Confirm Delete", [this]() {
+    const size_t selectedCount = m_getSelectedUnitIds ? m_getSelectedUnitIds().size() : 1;
+    confirm->addItem(selectedCount > 1 ? "Confirm Delete " + std::to_string(selectedCount) + " Units" : "Confirm Delete",
+      [this]() {
         // Verify unit still exists (defensive check against use-after-free)
         if (!m_manager.getUnit(m_unitId))
             return;
         if (m_onDeleteUnit)
             m_onDeleteUnit(m_unitId);
-    });
+      });
     confirm->addItem("Cancel", []() {});
     attachAndShowContextMenu(this, confirm, pos);
 }

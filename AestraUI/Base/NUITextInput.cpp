@@ -197,11 +197,58 @@ bool NUITextInput::onKeyEvent(const NUIKeyEvent& event)
 
     if (event.pressed)
     {
+        if ((event.modifiers & NUIModifiers::Ctrl) && event.keyCode == NUIKeyCode::Z) {
+            if (event.modifiers & NUIModifiers::Shift) redoTextEdit();
+            else undoTextEdit();
+            return true;
+        }
+        if ((event.modifiers & NUIModifiers::Ctrl) && event.keyCode == NUIKeyCode::Y) {
+            redoTextEdit();
+            return true;
+        }
+        const EditSnapshot before{text_, caretPosition_, selectionStart_, selectionEnd_, hasSelection_};
         handleKeyInput(event);
+        if (text_ != before.text) {
+            m_undoEdits.push_back(before);
+            if (m_undoEdits.size() > 256) m_undoEdits.erase(m_undoEdits.begin());
+            m_redoEdits.clear();
+        }
         return true;
     }
 
     return false;
+}
+
+void NUITextInput::restoreEditSnapshot(const EditSnapshot& snapshot)
+{
+    text_ = snapshot.text;
+    caretPosition_ = std::clamp(snapshot.caret, 0, static_cast<int>(text_.size()));
+    selectionStart_ = std::clamp(snapshot.selectionStart, 0, static_cast<int>(text_.size()));
+    selectionEnd_ = std::clamp(snapshot.selectionEnd, 0, static_cast<int>(text_.size()));
+    hasSelection_ = snapshot.hasSelection && selectionStart_ != selectionEnd_;
+    invalidateLayout();
+    triggerTextChange();
+    setDirty(true);
+}
+
+bool NUITextInput::undoTextEdit()
+{
+    if (m_undoEdits.empty()) return false;
+    m_redoEdits.push_back({text_, caretPosition_, selectionStart_, selectionEnd_, hasSelection_});
+    const auto snapshot = std::move(m_undoEdits.back());
+    m_undoEdits.pop_back();
+    restoreEditSnapshot(snapshot);
+    return true;
+}
+
+bool NUITextInput::redoTextEdit()
+{
+    if (m_redoEdits.empty()) return false;
+    m_undoEdits.push_back({text_, caretPosition_, selectionStart_, selectionEnd_, hasSelection_});
+    const auto snapshot = std::move(m_redoEdits.back());
+    m_redoEdits.pop_back();
+    restoreEditSnapshot(snapshot);
+    return true;
 }
 
 void NUITextInput::onFocusGained()
@@ -249,6 +296,8 @@ void NUITextInput::setText(const std::string& text)
 {
     if (text_ != text)
     {
+        m_undoEdits.clear();
+        m_redoEdits.clear();
         text_ = text;
         invalidateLayout();
         setCaretPosition(static_cast<int>(text_.length()));

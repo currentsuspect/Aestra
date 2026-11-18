@@ -133,6 +133,7 @@ void ArsenalSceneMenu::show(const Request& request) {
     del->setDestructive(true);
     del->setEnabled(allowed);
     del->setOnClick([request, selected]() {
+      const auto performDelete = [request, selected]() {
         auto& patterns = request.tracks->getPatternManager();
         auto transaction = std::make_shared<Audio::CommandTransaction>("Delete Arsenal Pattern(s)");
         std::vector<std::shared_ptr<Audio::DeletePatternCommand>> commands;
@@ -173,6 +174,15 @@ void ArsenalSceneMenu::show(const Request& request) {
         }
         const std::vector<uint64_t> selection = next == 0 ? std::vector<uint64_t>{} : std::vector<uint64_t>{next};
         if (request.changed) request.changed(next, selection);
+      };
+      if (request.confirm) {
+          const std::string noun = selected.size() == 1 ? "pattern" : "patterns";
+          request.confirm("Delete " + noun + "?", "Delete " + std::to_string(selected.size()) +
+              " selected " + noun + "? This can be undone.", "Delete",
+              [performDelete](bool confirmed) { if (confirmed) performDelete(); });
+      } else {
+          performDelete();
+      }
     });
     m_menu->addItem(del);
 

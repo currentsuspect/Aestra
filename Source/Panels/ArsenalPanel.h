@@ -45,6 +45,9 @@ public:
     /** @brief Handle mouse input routed to the Arsenal panel. */
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
     bool onKeyEvent(const AestraUI::NUIKeyEvent& event) override;
+    using ConfirmDialogRequest = std::function<void(const std::string&, const std::string&, const std::string&,
+                                                     std::function<void(bool)>)>;
+    void setOnConfirmDelete(ConfirmDialogRequest callback) { m_onConfirmDelete = std::move(callback); }
     /** @brief Handle drag-enter for plugin/sample drops. */
     AestraUI::DropFeedback onDragEnter(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) override;
     /** @brief Handle drag-over for plugin/sample drops. */
@@ -222,13 +225,18 @@ private:
     UnitID m_unitSelectionAnchor = 0;
     std::vector<uint64_t> m_selectedPatternIds; // Desktop-style pattern multi-selection
     uint64_t m_patternSelectionAnchor = 0;
+    enum class SelectionKind { None, Units, Patterns };
+    SelectionKind m_selectionKind{SelectionKind::None};
     UnitID m_selectionUnitId = 0; // Unit owning the current step selection (survives row rebuilds)
     std::vector<int> m_selectedSteps; // Selected step indices for m_selectionUnitId
+    ConfirmDialogRequest m_onConfirmDelete;
 
     void onAddUnit();
     bool removeSelectedUnit();
     bool removeSelectedUnits();
     bool removeSelectedPatterns();
+    bool confirmDeleteSelection();
+    bool beginRenameSelectedPattern();
     void handleUnitSelection(UnitID unitId, AestraUI::NUIModifiers modifiers);
     void handlePatternSelection(uint64_t patternId, AestraUI::NUIModifiers modifiers);
     void syncRowSelection();

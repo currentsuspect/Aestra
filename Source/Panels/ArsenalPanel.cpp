@@ -456,10 +456,15 @@ void ArsenalPanel::refreshUnits() {
             m_selectedUnitIds = duplicates;
             m_selectedUnitId = duplicates.back();
             m_unitSelectionAnchor = m_selectedUnitId;
+            m_selectionKind = SelectionKind::Units;
+            m_selectedPatternIds.clear();
+            m_patternSelectionAnchor = 0;
+            m_scenes.setSelectedPatterns({});
             if (m_onSelectedUnitChanged) m_onSelectedUnitChanged(m_selectedUnitId);
             refreshUnits();
         });
         row->setHasMultipleSelection([this]() { return m_selectedUnitIds.size() > 1; });
+        row->setGetSelectedUnitIds([this]() { return m_selectedUnitIds; });
         row->setOnMoveSelectedToGroup([this](UnitID clicked, UnitGroup group) {
             if (!m_trackManager) return;
             std::vector<UnitID> targets = m_selectedUnitIds;
@@ -538,6 +543,10 @@ void ArsenalPanel::createUnitOfType(UnitType type, const std::string& nameOverri
     m_selectedUnitId = created;
     m_selectedUnitIds = {created};
     m_unitSelectionAnchor = created;
+    m_selectionKind = SelectionKind::Units;
+    m_selectedPatternIds.clear();
+    m_patternSelectionAnchor = 0;
+    m_scenes.setSelectedPatterns({});
     if (m_onSelectedUnitChanged) m_onSelectedUnitChanged(m_selectedUnitId);
     m_showUnitTypePicker = false;
     if (m_addUnitBtn) m_addUnitBtn->setText("+ Add a sound");
@@ -612,6 +621,10 @@ bool ArsenalPanel::removeSelectedUnits() {
 }
 void ArsenalPanel::handleUnitSelection(UnitID unitId, NUIModifiers modifiers) {
     if (!m_trackManager || unitId == 0) return;
+    m_selectionKind = SelectionKind::Units;
+    m_selectedPatternIds.clear();
+    m_patternSelectionAnchor = 0;
+    m_scenes.setSelectedPatterns({});
     const auto ids = m_trackManager->getUnitManager().getAllUnitIDs();
     const auto clicked = std::find(ids.begin(), ids.end(), unitId);
     if (clicked == ids.end()) return;
@@ -685,6 +698,14 @@ void ArsenalPanel::removeUnitNotes(UnitID unitId) {
 
 void ArsenalPanel::handlePatternSelection(uint64_t patternId, NUIModifiers modifiers) {
     if (!m_trackManager || patternId == 0) return;
+    m_selectionKind = SelectionKind::Patterns;
+    m_selectedUnitIds.clear();
+    m_unitSelectionAnchor = 0;
+    m_selectedUnitId = 0;
+    m_selectionUnitId = 0;
+    m_selectedSteps.clear();
+    for (const auto& row : m_unitRows) if (row) row->setStepSelection({});
+    syncRowSelection();
     const auto scenes = m_scenes.scenes();
     const auto clicked = std::find_if(scenes.begin(), scenes.end(), [patternId](const auto& s) { return s.id == patternId; });
     if (clicked == scenes.end()) return;
@@ -777,6 +798,23 @@ bool ArsenalPanel::removeSelectedPatterns() {
     return true;
 }
 
+bool ArsenalPanel::confirmDeleteSelection() {
+    if (!m_onConfirmDelete) return false;
+    const bool patterns = m_selectionKind == SelectionKind::Patterns && !m_selectedPatternIds.empty();
+    const bool units = !patterns && !m_selectedUnitIds.empty();
+    if (!patterns && !units) return false;
+    const size_t count = patterns ? m_selectedPatternIds.size() : m_selectedUnitIds.size();
+    const std::string noun = patterns ? (count == 1 ? "pattern" : "patterns") : (count == 1 ? "unit" : "units");
+    m_onConfirmDelete("Delete " + noun + "?",
+        "Delete " + std::to_string(count) + " selected " + noun + "? This can be undone.", "Delete",
+        [this, patterns](bool confirmed) {
+            if (!confirmed) return;
+            if (patterns) removeSelectedPatterns();
+            else removeSelectedUnits();
+        });
+    return true;
+}
+
 void ArsenalPanel::setActivePattern(PatternID patternId) {
     if (m_activePatternID == patternId) return;
     m_activePatternID = patternId;
@@ -805,6 +843,10 @@ void ArsenalPanel::setSelectedUnit(UnitID unitId) {
     m_selectedUnitId = unitId;
     m_selectedUnitIds = {unitId};
     m_unitSelectionAnchor = unitId;
+    m_selectionKind = SelectionKind::Units;
+    m_selectedPatternIds.clear();
+    m_patternSelectionAnchor = 0;
+    m_scenes.setSelectedPatterns({});
     syncRowSelection();
     if (m_onSelectedUnitChanged) {
         m_onSelectedUnitChanged(m_selectedUnitId);
@@ -1632,6 +1674,10 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
         if (scene.kind == SceneKind::Select) {
             handlePatternSelection(scene.id, scene.modifiers);
         } else if (scene.kind == SceneKind::PatternAdded) {
+            m_selectionKind = SelectionKind::Patterns;
+            m_selectedUnitIds.clear();
+            m_selectedUnitId = 0;
+            syncRowSelection();
             m_selectedPatternIds = {scene.id};
             m_patternSelectionAnchor = scene.id;
             setActivePattern(PatternID{scene.id});
@@ -1649,6 +1695,11 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
         if (scene.kind == SceneKind::PlaceInTimeline && m_onPlaceInTimeline) m_onPlaceInTimeline(m_activePatternID);
         if (scene.kind == SceneKind::Menu) {
             if (std::find(m_selectedPatternIds.begin(), m_selectedPatternIds.end(), scene.id) == m_selectedPatternIds.end()) {
+                m_selectionKind = SelectionKind::Patterns;
+                m_selectedUnitIds.clear();
+                m_selectedUnitId = 0;
+                m_unitSelectionAnchor = 0;
+                syncRowSelection();
                 m_selectedPatternIds = {scene.id};
                 m_patternSelectionAnchor = scene.id;
                 m_scenes.setSelectedPatterns(m_selectedPatternIds);
@@ -1768,6 +1819,7 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
         for (size_t i = 0; i < m_unitRows.size(); ++i) {
             if (m_unitRows[i] && m_unitRows[i]->getBounds().contains(event.position)) {
                 m_selectedUnitId = m_unitRows[i]->getUnitId();
+                m_selectionKind = SelectionKind::Units;
                 syncRowSelection();
                 if (m_onSelectedUnitChanged) {
                     m_onSelectedUnitChanged(m_selectedUnitId);
@@ -1787,6 +1839,34 @@ bool ArsenalPanel::onKeyEvent(const NUIKeyEvent& event) {
     if (bool relayout = false; m_lanes.onKey(event, m_trackManager.get(), relayout)) { if (relayout) layoutUnits(); repaint(); return true; } // the sound drawer owns the keyboard while open
 
     bool isCtrl = (event.modifiers & NUIModifiers::Ctrl);
+
+    if (isCtrl && event.keyCode == NUIKeyCode::A) {
+        if (!m_trackManager) return false;
+        if (m_selectionKind == SelectionKind::Patterns) {
+            m_selectedPatternIds.clear();
+            for (const auto& scene : m_scenes.scenes()) m_selectedPatternIds.push_back(scene.id);
+            m_patternSelectionAnchor = m_selectedPatternIds.empty() ? 0 : m_selectedPatternIds.front();
+            m_scenes.setSelectedPatterns(m_selectedPatternIds);
+        } else {
+            m_selectedUnitIds = m_trackManager->getUnitManager().getAllUnitIDs();
+            m_selectedUnitId = m_selectedUnitIds.empty() ? 0 : m_selectedUnitIds.front();
+            m_unitSelectionAnchor = m_selectedUnitId;
+            m_selectionKind = SelectionKind::Units;
+            syncRowSelection();
+        }
+        repaint();
+        return true;
+    }
+
+    if (event.keyCode == NUIKeyCode::F2) {
+        if (m_selectionKind == SelectionKind::Units && m_selectedUnitIds.size() == 1) {
+            for (const auto& row : m_unitRows)
+                if (row && row->getUnitId() == m_selectedUnitIds.front()) { row->beginRename(); return true; }
+        }
+        if (m_selectionKind == SelectionKind::Patterns && m_selectedPatternIds.size() == 1)
+            return beginRenameSelectedPattern();
+        return false;
+    }
     
     // Ctrl+C: Copy
     if (isCtrl && (event.keyCode == NUIKeyCode::C)) {
@@ -1818,6 +1898,7 @@ bool ArsenalPanel::onKeyEvent(const NUIKeyEvent& event) {
         m_unitSelectionAnchor = 0;
         m_selectedPatternIds.clear();
         m_patternSelectionAnchor = 0;
+        m_selectionKind = SelectionKind::None;
         m_scenes.setSelectedPatterns({});
         m_selectionUnitId = 0;
         m_selectedSteps.clear();
@@ -1834,8 +1915,7 @@ bool ArsenalPanel::onKeyEvent(const NUIKeyEvent& event) {
                 if (row && row->getUnitId() == m_selectionUnitId && row->onKeyEvent(event)) return true;
             }
         }
-        if (!m_selectedPatternIds.empty()) return removeSelectedPatterns();
-        if (!m_selectedUnitIds.empty()) return removeSelectedUnits();
+        if (!m_selectedPatternIds.empty() || !m_selectedUnitIds.empty()) return confirmDeleteSelection();
         return false;
     }
 

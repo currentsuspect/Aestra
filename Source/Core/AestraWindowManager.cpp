@@ -496,7 +496,8 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
             const bool typingInField =
                 dynamic_cast<AestraUI::NUITextInput*>(AestraUI::NUIComponent::getFocusedComponent()) != nullptr;
             const bool arsenalSelectionKey = event.keyCode == AestraUI::NUIKeyCode::Escape ||
-                event.keyCode == AestraUI::NUIKeyCode::Delete || event.keyCode == AestraUI::NUIKeyCode::Backspace;
+                event.keyCode == AestraUI::NUIKeyCode::Delete || event.keyCode == AestraUI::NUIKeyCode::Backspace ||
+                event.keyCode == AestraUI::NUIKeyCode::F2;
             if ((event.keyCode == AestraUI::NUIKeyCode::Space && !typingInField) || event.released || arsenalSelectionKey ||
                 (event.modifiers & AestraUI::NUIModifiers::Ctrl)) {
                 if (m_content->onKeyEvent(event))

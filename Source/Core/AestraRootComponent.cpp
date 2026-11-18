@@ -16,7 +16,7 @@ bool AestraRootComponent::onKeyEvent(const NUIKeyEvent& event) {
     // 1. Global app-level shortcuts and key releases go first. Releases must
     // reach musical typing even if focus moved after note-on.
     const bool arsenalSelectionKey = event.keyCode == NUIKeyCode::Escape ||
-        event.keyCode == NUIKeyCode::Delete || event.keyCode == NUIKeyCode::Backspace;
+        event.keyCode == NUIKeyCode::Delete || event.keyCode == NUIKeyCode::Backspace || event.keyCode == NUIKeyCode::F2;
     const bool globalFirst = event.released || event.keyCode == NUIKeyCode::Space || arsenalSelectionKey ||
         (event.modifiers & NUIModifiers::Ctrl);
     if (globalFirst && m_rootContent) {

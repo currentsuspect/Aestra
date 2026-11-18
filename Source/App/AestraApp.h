@@ -163,6 +163,7 @@ private:
     /// Wired at startup; the dialog itself is built on first use (it lived in the lazy builder, so until Settings or
     /// Export had been opened such deletes ran unasked).
     void wireTimelineConfirmations();
+    void wireArsenalConfirmations();
     void applyTimelineView(const ProjectSerializer::UIState& state);
     void requestClose();
     /// Save, or Save As when the document has no path yet. Save As shows a

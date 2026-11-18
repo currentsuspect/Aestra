@@ -44,11 +44,13 @@ public:
         std::vector<uint64_t> selectedIds;          ///< current chip selection, ordered as displayed
         /// After a verb changed the pattern list: choose the active chip and selection, then refresh.
         std::function<void(uint64_t active, const std::vector<uint64_t>& selected)> changed;
+        std::function<void(const std::string&, const std::string&, const std::string&, std::function<void(bool)>)> confirm;
     };
 
     ~ArsenalSceneMenu();
 
     void show(const Request& request);
+    void rename(const Request& request) { beginRename(request); }
     /// Drop an open menu or rename without applying it (the panel is going away or switching away).
     void cancel();
     bool renaming() const { return static_cast<bool>(m_input); }

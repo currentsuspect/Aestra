@@ -29,7 +29,7 @@ public:
     static constexpr float kCardW = 132.0f;
     static constexpr float kGap = 8.0f;
     static constexpr float kAddW = 44.0f;
-    static constexpr float kSwingW = 96.0f; ///< the "Swing 12%" drag zone
+    static constexpr float kSwingW = 166.0f; ///< bounded 0–100% swing slider
     static constexpr float kPlaceW = 156.0f; ///< the "Place in timeline" button at the right end
     static constexpr float kRightW = kSwingW + kGap + kPlaceW;
     static constexpr size_t kThumbBars = 16;
@@ -175,6 +175,10 @@ public:
         return {std::min(limit, after), m_rect.y, kAddW, m_rect.height};
     }
     AestraUI::NUIRect swingRect() const { return {m_rect.right() - kRightW, m_rect.y, kSwingW, m_rect.height}; }
+    AestraUI::NUIRect swingTrackRect() const {
+        const auto sw = swingRect();
+        return {sw.x + 42.0f, sw.y + 9.0f, std::max(1.0f, sw.width - 78.0f), 18.0f};
+    }
     AestraUI::NUIRect placeRect() const { return {m_rect.right() - kPlaceW, m_rect.y + (m_rect.height - 34.0f) * 0.5f, kPlaceW, 34.0f}; }
     float swing() const { return m_swing; }
     /// How much swing, 0 to 100% (100% = every odd sixteenth half a step late), as the mock shows it.
@@ -234,14 +238,19 @@ public:
         renderer.fillRoundedRect(add, tp.radiusXS, theme.getColor("backgroundPrimary"));
         renderer.strokeRoundedRect(add, tp.radiusXS, 1.0f, theme.getColor("borderSubtle").withAlpha(0.7f));
         renderer.drawTextCentered("+", add, tp.fontSizeM, theme.getColor("textSecondary").withAlpha(0.9f));
-        // Swing as the board draws it: a small caps label and a sunk well holding the amount; dragging the zone sets it.
+        // A bounded slider makes the full 0–100% range visible and the current value easy to place.
         const auto sw = swingRect();
-        const float fs = tp.fontSizeXS + 1.0f, wellH = 26.0f;
-        const float swingLabelW = renderer.measureText("SWING", tp.fontSizeMicro).width + 10.0f;
-        const AestraUI::NUIRect well{sw.x + swingLabelW, sw.y + (sw.height - wellH) * 0.5f, std::max(0.0f, sw.width - swingLabelW), wellH};
-        renderer.drawText("SWING", {sw.x, well.y + (wellH - tp.fontSizeMicro) * 0.5f - 1.0f}, tp.fontSizeMicro, theme.getColor("textMuted"));
-        renderer.fillRoundedRect(well, wellH * 0.5f, theme.getColor("backgroundPrimary"));
-        renderer.drawTextCentered(m_swingMixed ? "MIX" : (std::to_string(swingPercent(m_swing)) + " %"), well, fs, theme.getColor("textPrimary"));
+        const auto track = swingTrackRect();
+        const float cy = track.y + track.height * 0.5f;
+        const float valueX = track.x + track.width * m_swing;
+        renderer.drawText("SWING", {sw.x, sw.y + 3.0f}, tp.fontSizeMicro, theme.getColor("textMuted"));
+        renderer.drawLine({track.x, cy}, {track.right(), cy}, 3.0f, theme.getColor("borderSubtle"));
+        renderer.drawLine({track.x, cy}, {valueX, cy}, 3.0f, theme.getColor("accentPrimary"));
+        renderer.fillCircle({valueX, cy}, 6.0f, theme.getColor("accentPrimary"));
+        renderer.drawText(m_swingMixed ? "MIX" : (std::to_string(swingPercent(m_swing)) + "%"),
+                          {sw.right() - 32.0f, sw.y + 3.0f}, tp.fontSizeXS, theme.getColor("textPrimary"));
+        renderer.drawText("0", {track.x, track.bottom() + 1.0f}, tp.fontSizeMicro, theme.getColor("textMuted"));
+        renderer.drawText("100", {track.right() - 17.0f, track.bottom() + 1.0f}, tp.fontSizeMicro, theme.getColor("textMuted"));
         const auto pl = placeRect(); // the one primary action of the header (the mock's purple button)
         renderer.fillRoundedRect(pl, tp.radiusXS, theme.getColor("accentPrimary"));
         const AestraUI::NUIColor white(1.0f, 1.0f, 1.0f, 1.0f);
@@ -341,7 +350,7 @@ private:
     }
 
     void setSwing(Audio::PatternManager& pm, uint64_t id, float x) {
-        const auto r = swingRect();
+        const auto r = swingTrackRect();
         setSwingValue(pm, id, (x - r.x) / r.width);
     }
 

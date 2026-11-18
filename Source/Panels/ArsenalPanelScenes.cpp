@@ -25,7 +25,24 @@ void ArsenalPanel::showSceneMenu(uint64_t patternId, const AestraUI::NUIPoint& a
     request.scenes = m_scenes.scenes();
     request.selectedIds = m_selectedPatternIds;
     request.changed = [this](uint64_t active, const std::vector<uint64_t>& selected) { sceneMenuChanged(active, selected); };
+    request.confirm = m_onConfirmDelete;
     m_sceneMenu.show(request);
+}
+
+bool ArsenalPanel::beginRenameSelectedPattern() {
+    if (!m_trackManager || m_selectedPatternIds.size() != 1) return false;
+    const uint64_t id = m_selectedPatternIds.front();
+    ArsenalSceneMenu::Request request;
+    request.tracks = m_trackManager.get();
+    request.owner = this;
+    request.id = id;
+    request.activeId = m_activePatternID.value;
+    request.chip = m_scenes.chipRectOf(id);
+    request.scenes = m_scenes.scenes();
+    request.selectedIds = m_selectedPatternIds;
+    request.changed = [this](uint64_t active, const std::vector<uint64_t>& selected) { sceneMenuChanged(active, selected); };
+    m_sceneMenu.rename(request);
+    return m_sceneMenu.renaming();
 }
 
 void ArsenalPanel::reconcilePatterns() {
@@ -58,6 +75,11 @@ void ArsenalPanel::reconcilePatterns() {
 
 void ArsenalPanel::sceneMenuChanged(uint64_t active, const std::vector<uint64_t>& selected) {
     if (m_patternBrowser) m_patternBrowser->refreshPatterns();
+    m_selectionKind = SelectionKind::Patterns;
+    m_selectedUnitIds.clear();
+    m_selectedUnitId = 0;
+    m_unitSelectionAnchor = 0;
+    syncRowSelection();
     m_selectedPatternIds = selected;
     m_patternSelectionAnchor = selected.empty() ? 0 : selected.back();
     m_scenes.setSelectedPatterns(m_selectedPatternIds);

@@ -1971,20 +1971,21 @@ void AestraContent::onRender(AestraUI::NUIRenderer& renderer) {
         m_workspaceLayer->onRender(renderer);
     }
 
+    const bool embeddedPatternVisible =
+        m_fileBrowser && m_fileBrowser->isVisible() &&
+        m_fileBrowser->getActiveNavAction() == AestraUI::FileBrowser::BrowserNavAction::Patterns;
+    if (m_overlayLayer && m_overlayLayer->isVisible()) {
+        m_overlayLayer->onRender(renderer);
+    }
+
+    // Keep the dock divider visible over floating panels such as Arsenal.
     if (m_fileBrowser && m_fileBrowser->isVisible()) {
         drawDividerRail(m_fileBrowser);
     } else if (m_pluginBrowser && m_pluginBrowser->isVisible()) {
         drawDividerRail(m_pluginBrowser);
     }
-    const bool embeddedPatternVisible =
-        m_fileBrowser && m_fileBrowser->isVisible() &&
-        m_fileBrowser->getActiveNavAction() == AestraUI::FileBrowser::BrowserNavAction::Patterns;
     if (m_patternBrowser && m_patternBrowser->isVisible() && !embeddedPatternVisible) {
         drawDividerRail(m_patternBrowser);
-    }
-
-    if (m_overlayLayer && m_overlayLayer->isVisible()) {
-        m_overlayLayer->onRender(renderer);
     }
 }
 
@@ -2317,10 +2318,6 @@ bool AestraContent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         return m_workspaceLayer && m_workspaceLayer->onMouseEvent(event);
     }
 
-    if (!m_browserResizing && event.pressed && m_overlayLayer && m_overlayLayer->onMouseEvent(event)) {
-        return true;
-    }
-
     if (m_browserResizing) {
         if (event.released && event.button == AestraUI::NUIMouseButton::Left) {
             m_browserResizing = false;
@@ -2351,6 +2348,12 @@ bool AestraContent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             m_browserResizeStartPatternWidth = std::max(kMinPatternBrowserWidth, m_patternBrowserWidthPref);
             return true;
         }
+    }
+
+    // Docked browser dividers sit behind floating Arsenal/editor overlays. Let
+    // their edge hit target win before the overlay consumes the press.
+    if (!m_browserResizing && event.pressed && m_overlayLayer && m_overlayLayer->onMouseEvent(event)) {
+        return true;
     }
 
     return AestraUI::NUIComponent::onMouseEvent(event);
@@ -3092,6 +3095,9 @@ AestraUI::NUICursorStyle AestraContent::getPanelResizeCursorStyle(const AestraUI
     if (m_browserResizing && m_browserResizeTarget != BrowserResizeTarget::None) {
         return AestraUI::NUICursorStyle::ResizeEW;
     }
+    if (hitTestBrowserResizeTarget(mouseScreen) != BrowserResizeTarget::None) {
+        return AestraUI::NUICursorStyle::ResizeEW;
+    }
 
     const auto resolveStyle = [&mouseScreen](const auto& panel) {
         if (!panel || !panel->isVisible()) {
@@ -3119,10 +3125,6 @@ AestraUI::NUICursorStyle AestraContent::getPanelResizeCursorStyle(const AestraUI
     const auto mixerStyle = resolveStyle(m_mixerPanel);
     if (mixerStyle != AestraUI::NUICursorStyle::Arrow)
         return mixerStyle;
-
-    if (hitTestBrowserResizeTarget(mouseScreen) != BrowserResizeTarget::None) {
-        return AestraUI::NUICursorStyle::ResizeEW;
-    }
 
     return AestraUI::NUICursorStyle::Arrow;
 }
@@ -4583,6 +4585,11 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     }
 
     if (m_sequencerPanel && m_sequencerPanel->isVisible() && m_sequencerPanel->handleDrawerKey(event)) return true; // sound drawer typing
+    if ((event.modifiers & AestraUI::NUIModifiers::Ctrl) &&
+        (event.keyCode == AestraUI::NUIKeyCode::Z || event.keyCode == AestraUI::NUIKeyCode::Y)) {
+        if (auto* input = dynamic_cast<AestraUI::NUITextInput*>(AestraUI::NUIComponent::getFocusedComponent());
+            input && input->isVisible() && input->onKeyEvent(event)) return true;
+    }
     // Takes panel inline rename captures typing while active: it wins over global shortcuts (Ctrl+Z mid-edit).
     if (m_takesPanel && m_takesPanel->isVisible() && m_takesPanel->handleKeyEvent(event))
         return true;
@@ -4590,9 +4597,11 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     // Arsenal owns selection-level shortcuts even when a child row did not
     // acquire widget focus. Let active text inputs keep Delete/Escape while
     // editing; the pattern rename input is then handled by its own callback.
-    const bool arsenalSelectionKey = event.keyCode == AestraUI::NUIKeyCode::Escape ||
-        event.keyCode == AestraUI::NUIKeyCode::Delete || event.keyCode == AestraUI::NUIKeyCode::Backspace;
-    if (arsenalSelectionKey && m_viewFocus == ViewFocus::Arsenal && m_sequencerPanel &&
+    const bool arsenalPanelKey = event.keyCode == AestraUI::NUIKeyCode::Escape ||
+        event.keyCode == AestraUI::NUIKeyCode::Delete || event.keyCode == AestraUI::NUIKeyCode::Backspace ||
+        event.keyCode == AestraUI::NUIKeyCode::F2 ||
+        ((event.modifiers & AestraUI::NUIModifiers::Ctrl) && event.keyCode == AestraUI::NUIKeyCode::A);
+    if (arsenalPanelKey && m_viewFocus == ViewFocus::Arsenal && m_sequencerPanel &&
         m_sequencerPanel->isVisible() &&
         dynamic_cast<AestraUI::NUITextInput*>(AestraUI::NUIComponent::getFocusedComponent()) == nullptr &&
         m_sequencerPanel->onKeyEvent(event)) {
