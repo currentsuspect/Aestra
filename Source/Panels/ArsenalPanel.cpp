@@ -488,14 +488,32 @@ void ArsenalPanel::createUnitOfType(UnitType type, const std::string& nameOverri
     std::string name = !nameOverride.empty() ? nameOverride : ((type == UnitType::Sampler ? "Sampler " :
                         type == UnitType::PitchedSampler ? "808 " :
                         type == UnitType::Instrument ? "MIDI " : "Audio ") + std::to_string(count));
-    m_selectedUnitId = m_trackManager->getUnitManager().createUnit(name, type);
-    if (const auto* unit = m_trackManager->getUnitManager().getUnit(m_selectedUnitId)) {
-        const std::string destinationName = unit->name.empty() ? "Mixer Channel" : unit->name;
-        routeUnitToFirstFreeMixerChannel(*m_trackManager, m_selectedUnitId, destinationName, unit->color);
+
+    auto& history = m_trackManager->getCommandHistory();
+    auto transaction = std::make_shared<CommandTransaction>("Create Arsenal Unit");
+    auto add = std::make_shared<AddUnitCommand>(m_trackManager->getUnitManager(), name, type);
+    add->execute();
+    const UnitID created = add->getCreatedUnitId();
+    if (created == 0) return;
+
+    auto route = std::make_shared<AssignUnitToFirstFreeMixerChannelCommand>(
+        *m_trackManager, created, name.empty() ? "Mixer Channel" : name,
+        m_trackManager->getUnitManager().getUnit(created)->color);
+    route->execute();
+    if (!route->isUndoable()) {
+        add->undo();
+        return;
     }
-    if (m_onSelectedUnitChanged) {
-        m_onSelectedUnitChanged(m_selectedUnitId);
-    }
+
+    transaction->add(add);
+    transaction->add(route);
+    transaction->markExecuted();
+    history.pushExecuted(transaction);
+
+    m_selectedUnitId = created;
+    m_selectedUnitIds = {created};
+    m_unitSelectionAnchor = created;
+    if (m_onSelectedUnitChanged) m_onSelectedUnitChanged(m_selectedUnitId);
     m_showUnitTypePicker = false;
     if (m_addUnitBtn) m_addUnitBtn->setText("+ Add a sound");
     refreshUnits();
