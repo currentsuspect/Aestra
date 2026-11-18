@@ -77,6 +77,7 @@ public:
     /** @brief Callback fired when the unit name is renamed. */
     std::function<void(Aestra::Audio::UnitID, const std::string&)> m_onRenameUnit;
     /** @brief Callback fired when the unit is deleted via context menu. */
+    std::function<void(Aestra::Audio::UnitID, NUIModifiers)> m_onSelectUnit;
     std::function<void(Aestra::Audio::UnitID)> m_onDeleteUnit;
     /** @brief Callback fired when the unit is duplicated via context menu. */
     std::function<void(Aestra::Audio::UnitID)> m_onDuplicateUnit;
@@ -169,6 +170,8 @@ public:
      * @param selected True when the row is currently selected.
      */
     void setSelected(bool selected) { m_isSelected = selected; invalidateVisuals(); }
+    /** @brief Callback fired when the row becomes the current selection target. */
+    void setOnSelectUnit(std::function<void(Aestra::Audio::UnitID, NUIModifiers)> callback) { m_onSelectUnit = std::move(callback); }
     /**
      * @brief Check whether the row is selected.
      * @return True when the row is selected.
