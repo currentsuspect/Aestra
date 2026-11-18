@@ -27,6 +27,12 @@ public:
         : m_patterns(patterns), m_patternId(patternId), m_unitIds(std::move(unitIds)),
           m_amount(std::clamp(amount, 0.0f, 1.0f)) {}
 
+    void markExecuted(float oldGlobal, std::vector<std::pair<uint64_t, std::optional<float>>> oldOverrides) {
+        m_oldGlobal = oldGlobal;
+        m_oldOverrides = std::move(oldOverrides);
+        m_executed = true;
+    }
+
     void execute() override {
         if (m_executed) return;
         auto* pattern = m_patterns.getPattern(m_patternId);
