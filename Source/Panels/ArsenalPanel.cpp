@@ -588,10 +588,54 @@ bool ArsenalPanel::removeSelectedUnits() {
     Log::info("[Arsenal] Removed " + std::to_string(targets.size()) + " unit(s)");
     return true;
 }
+void ArsenalPanel::handleUnitSelection(UnitID unitId, NUIModifiers modifiers) {
+    if (!m_trackManager || unitId == 0) return;
+    const auto ids = m_trackManager->getUnitManager().getAllUnitIDs();
+    const auto clicked = std::find(ids.begin(), ids.end(), unitId);
+    if (clicked == ids.end()) return;
+
+    const bool shift = (modifiers & NUIModifiers::Shift) != NUIModifiers::None;
+    const bool ctrl = (modifiers & NUIModifiers::Ctrl) != NUIModifiers::None;
+
+    if (shift && m_unitSelectionAnchor != 0) {
+        const auto anchor = std::find(ids.begin(), ids.end(), m_unitSelectionAnchor);
+        if (anchor != ids.end()) {
+            const size_t a = static_cast<size_t>(std::distance(ids.begin(), anchor));
+            const size_t b = static_cast<size_t>(std::distance(ids.begin(), clicked));
+            const size_t lo = std::min(a, b), hi = std::max(a, b);
+            m_selectedUnitIds.assign(ids.begin() + static_cast<std::ptrdiff_t>(lo),
+                                     ids.begin() + static_cast<std::ptrdiff_t>(hi + 1));
+        } else {
+            m_selectedUnitIds = {unitId};
+        }
+    } else if (ctrl) {
+        const auto selected = std::find(m_selectedUnitIds.begin(), m_selectedUnitIds.end(), unitId);
+        if (selected != m_selectedUnitIds.end()) {
+            if (m_selectedUnitIds.size() > 1) m_selectedUnitIds.erase(selected);
+        } else {
+            m_selectedUnitIds.push_back(unitId);
+        }
+        m_unitSelectionAnchor = unitId;
+    } else {
+        m_selectedUnitIds = {unitId};
+        m_unitSelectionAnchor = unitId;
+    }
+
+    if (std::find(m_selectedUnitIds.begin(), m_selectedUnitIds.end(), unitId) != m_selectedUnitIds.end()) {
+        m_selectedUnitId = unitId;
+    } else if (!m_selectedUnitIds.empty()) {
+        m_selectedUnitId = m_selectedUnitIds.front();
+    }
+    syncRowSelection();
+    if (m_onSelectedUnitChanged && m_selectedUnitId != 0) m_onSelectedUnitChanged(m_selectedUnitId);
+    repaint();
+}
+
 void ArsenalPanel::syncRowSelection() {
     for (auto& row : m_unitRows) {
         if (row) {
-            row->setSelected(row->getUnitId() == m_selectedUnitId);
+            row->setSelected(std::find(m_selectedUnitIds.begin(), m_selectedUnitIds.end(), row->getUnitId()) !=
+                             m_selectedUnitIds.end());
         }
     }
 }
@@ -643,6 +687,8 @@ void ArsenalPanel::setSelectedUnit(UnitID unitId) {
     }
 
     m_selectedUnitId = unitId;
+    m_selectedUnitIds = {unitId};
+    m_unitSelectionAnchor = unitId;
     syncRowSelection();
     if (m_onSelectedUnitChanged) {
         m_onSelectedUnitChanged(m_selectedUnitId);
