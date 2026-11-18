@@ -306,6 +306,8 @@ public:
      * @return True when a unit was removed.
      */
     bool removeUnit(UnitID id);
+    /** @brief Restore a previously removed unit at its original display position. */
+    bool restoreUnit(const UnitInfo& info, size_t index);
     /**
      * @brief Remove every unit from the manager.
      */
