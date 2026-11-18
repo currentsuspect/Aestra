@@ -1342,7 +1342,7 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
         m_stepsIncrementRect = NUIRect(m_stepsValueRect.right() + 4.0f, leftCard.y + 4.0f, compactHitArea,
                                        leftCard.height - 8.0f);
         Aestra::drawArsenalStepper(renderer, m_stepsDecrementRect, m_stepsValueRect, m_stepsIncrementRect,
-                                   (displayedSteps % bars == 0 ? std::to_string(displayedSteps / bars) + " per bar" : std::to_string(displayedSteps) + " steps"),
+                                   std::to_string(displayedSteps) + " steps",
                                    displayedSteps > kArsenalMinPatternSteps,
                                    displayedSteps < kArsenalMaxPatternSteps);
     } else {
