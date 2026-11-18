@@ -71,6 +71,40 @@ inline bool needsExpression(const std::vector<MidiNote>& notes, const PatternSou
     });
 }
 
+/// Backward-compatible scalar helpers used by non-pattern callers and tests.
+inline bool needsExpression(const std::vector<MidiNote>& notes, float swing) {
+    if (swing > 0.0f) return true;
+    return std::any_of(notes.begin(), notes.end(), [](const MidiNote& n) { return n.chance < 1.0f || n.ratchet > 1; });
+}
+
+inline std::vector<MidiNote> expandForPlayback(const std::vector<MidiNote>& notes, float swing, uint64_t patternId,
+                                               uint32_t instanceId, uint64_t pass) {
+    std::vector<MidiNote> out;
+    out.reserve(notes.size());
+    for (const auto& n : notes) {
+        if (!chancePasses(patternId, instanceId, n.unitId, n.startBeat, n.pitch, pass, n.chance)) continue;
+        const double start = n.startBeat + swingDelayBeats(n.startBeat, swing);
+        const int hits = std::clamp<int>(n.ratchet, 1, kMaxRatchet);
+        if (hits == 1) {
+            MidiNote m = n;
+            m.startBeat = start;
+            out.push_back(m);
+            continue;
+        }
+        const double span = std::max(n.durationBeats, 0.01) / hits;
+        for (int i = 0; i < hits; ++i) {
+            MidiNote m = n;
+            m.startBeat = start + span * i;
+            m.durationBeats = span;
+            m.gate = n.gate / static_cast<float>(hits);
+            m.slide = n.slide && i == hits - 1;
+            m.ratchet = 1;
+            out.push_back(m);
+        }
+    }
+    return out;
+}
+
 /// The notes as they play on this pass: per-unit swing, chance and ratchets expanded.
 inline std::vector<MidiNote> expandForPlayback(const std::vector<MidiNote>& notes, const PatternSource& pattern,
                                                uint64_t patternId, uint32_t instanceId, uint64_t pass) {
