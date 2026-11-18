@@ -41,7 +41,8 @@ public:
         m_previousName = unit->name;
         m_previousEnabled = unit->isEnabled || unit->enabled;
         m_unitManager.setUnitAudioClip(m_unitId, m_path);
-        m_unitManager.setUnitEnabled(m_unitId, true);
+        if (!m_newName.empty()) m_unitManager.setUnitName(m_unitId, m_newName);
+        m_unitManager.setUnitEnabled(m_unitId, m_newEnabled);
         m_executed = true;
     }
 
