@@ -40,14 +40,15 @@ public:
 
         if (m_unitIds.empty()) {
             m_oldGlobal = pattern->swing;
-            pattern->swing = m_amount;
+            m_patterns.applyPatch(m_patternId, [this](PatternSource& p) { p.swing = m_amount; });
         } else {
             m_oldOverrides.clear();
             m_oldOverrides.reserve(m_unitIds.size());
-            for (const uint64_t unitId : m_unitIds) {
+            for (const uint64_t unitId : m_unitIds)
                 m_oldOverrides.emplace_back(unitId, pattern->unitSwingOverride(unitId));
-                pattern->setUnitSwing(unitId, m_amount);
-            }
+            m_patterns.applyPatch(m_patternId, [this](PatternSource& p) {
+                for (const uint64_t unitId : m_unitIds) p.setUnitSwing(unitId, m_amount);
+            });
         }
         m_executed = true;
     }
@@ -58,10 +59,11 @@ public:
         if (!pattern) return;
 
         if (m_unitIds.empty()) {
-            pattern->swing = m_oldGlobal;
+            m_patterns.applyPatch(m_patternId, [this](PatternSource& p) { p.swing = m_oldGlobal; });
         } else {
-            for (const auto& [unitId, old] : m_oldOverrides)
-                pattern->restoreUnitSwingOverride(unitId, old);
+            m_patterns.applyPatch(m_patternId, [this](PatternSource& p) {
+                for (const auto& [unitId, old] : m_oldOverrides) p.restoreUnitSwingOverride(unitId, old);
+            });
         }
         m_executed = false;
     }
