@@ -11,10 +11,15 @@
 
 namespace Aestra {
 
-/// The row a command leaves in a version's step log (an unnamed command still gets one).
+/// The label a command records into the step log: an unnamed command still gets a row.
+inline std::string stepLabel(const Audio::ICommand& command) {
+    const std::string name = command.getName();
+    return name.empty() ? std::string("(unnamed)") : name;
+}
+
+/// The row a command leaves in a version's step log.
 inline TakeManager::TakeEntry::Step stepFor(const Audio::ICommand& command) {
-    std::string label = command.getName();
-    return {label.empty() ? std::string("(unnamed)") : label, typeid(command).name(), command.createdAtMs()};
+    return {stepLabel(command), typeid(command).name(), command.createdAtMs()};
 }
 
 /**

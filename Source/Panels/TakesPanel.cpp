@@ -164,7 +164,9 @@ bool TakesPanel::getBouncePlayCenter(NUIPoint& out) const {
 void TakesPanel::updateUnsaved() {
     // The app owns this number (VersionEdits): it is the only side that knows which steps the open version
     // recorded and where the undo cursor stands. Counting here would be a second, disagreeing answer.
-    m_unsaved = m_unsavedProvider ? m_unsavedProvider() : UnsavedInfo{};
+    // A panel with nothing plugged in has no evidence of edits: a clean, counted zero. Claiming otherwise makes
+    // the renderer draw "Edited" over a pristine project.
+    m_unsaved = m_unsavedProvider ? m_unsavedProvider() : UnsavedInfo{0, true};
     m_unsaved.steps = std::max(0, m_unsaved.steps);
 }
 

@@ -239,14 +239,20 @@ private:
     void showVersionSwitchPrompt(const std::string& takeId, const Aestra::VersionEdits::State& edits);
     /** @brief Steps the open version recorded, and whether the project has moved on from it. Cheap between changes. */
     Aestra::VersionEdits::State currentVersionEdits();
-    std::vector<TakeManager::TakeEntry::Step> m_openVersionSteps; ///< the open version's recorded steps, cached
-    /** How many leading commands of the history `m_openVersionSteps` already covers: the save point. */
-    size_t m_versionHistoryChronicled{0};
+    /** The open version's log, the commands it was saved with, and the history evictions seen then. */
+    Aestra::VersionEdits::Baseline m_versionBaseline;
     Aestra::VersionEdits::State m_versionEdits;
     uint64_t m_versionEditsMutation{0}; ///< the history's mutation count the cached answer was measured at
     bool m_versionEditsStale{true};
-    /** The open version's log and the save point, as VersionEdits measures against them. */
-    Aestra::VersionEdits::Baseline versionBaseline() const;
+    /** The manifest read behind the chip: the frame loop asks, so an unchanged file is not read again. */
+    std::string m_versionManifestPath;
+    uint64_t m_versionManifestMtime{0};
+    uint64_t m_versionManifestSize{0};
+    bool m_versionManifestKnown{false};
+    /** @brief Writes the working state aside so a switch that fails can hand it back; empty when it could not. */
+    std::string stageWorkingState();
+    /** @brief Puts a staged session, or the canonical file, back after a switch failed part-way. */
+    void restoreWorkingState(const std::string& stagedPath);
     static std::string getRecoveryMarkerPath(const std::string& autosavePath);
     static std::string readCrashFlagToken();
     static std::string readRecoveryOriginalProjectPath(const std::string& recoveryMarkerPath,

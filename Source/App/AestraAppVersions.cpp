@@ -17,6 +17,20 @@
 
 using namespace Aestra;
 
+namespace {
+
+/// Two versions' logs are the same log when every row is the same row (TakeEntry::Step carries no comparison).
+bool sameSteps(const std::vector<TakeManager::TakeEntry::Step>& a,
+               const std::vector<TakeManager::TakeEntry::Step>& b) {
+    if (a.size() != b.size()) return false;
+    for (size_t i = 0; i < a.size(); ++i) {
+        if (a[i].label != b[i].label || a[i].commandType != b[i].commandType || a[i].atMs != b[i].atMs) return false;
+    }
+    return true;
+}
+
+} // namespace
+
 void AestraApp::wireVersionsPanel(Aestra::Audio::TakesPanel& panel) {
     const auto path = [this]() { return m_documentState.canonicalPath(); };
     wireVersionsDock(panel, [this]() -> Audio::CommandHistory& { return m_content->getTrackManager()->getCommandHistory(); },
@@ -39,24 +53,44 @@ void AestraApp::wireVersionsPanel(Aestra::Audio::TakesPanel& panel) {
 }
 
 void AestraApp::refreshVersionChip() {
-    // The open version's recorded steps feed the unsaved count; re-read them whenever this version may have
-    // changed (a save rewrites them, a switch and a load move to another version).
     const std::string path = m_documentState.canonicalPath();
+    // The frame loop reaches here through updateWindowTitle() with nothing changed, and reading the manifest is a
+    // stat, a read and a JSON parse. Its size and timestamp say whether there is anything new to read.
+    uint64_t mtime = 0;
+    uint64_t size = 0;
+    if (!path.empty()) {
+        std::error_code ec;
+        const std::string manifestPath = TakeManager::getManifestPath(path);
+        const auto stamp = std::filesystem::last_write_time(manifestPath, ec);
+        if (!ec) {
+            mtime = static_cast<uint64_t>(stamp.time_since_epoch().count());
+            size = static_cast<uint64_t>(std::filesystem::file_size(manifestPath, ec));
+            if (ec) size = 0;
+        }
+    }
+    if (m_versionManifestKnown && path == m_versionManifestPath && mtime == m_versionManifestMtime &&
+        size == m_versionManifestSize) {
+        return; // nothing wrote the manifest: the chip and the open version's rows are what they were
+    }
+    m_versionManifestPath = path;
+    m_versionManifestMtime = mtime;
+    m_versionManifestSize = size;
+    m_versionManifestKnown = true;
+
     const auto manifest = path.empty() ? TakeManager::Manifest{} : TakeManager::loadManifest(path);
     const auto* open = manifest.ok ? manifest.activeTake() : nullptr;
-    m_openVersionSteps = open ? open->steps : std::vector<TakeManager::TakeEntry::Step>{};
-    m_versionEditsStale = true;
+    const std::vector<TakeManager::TakeEntry::Step> steps =
+        open ? open->steps : std::vector<TakeManager::TakeEntry::Step>{};
+    // Only the version's own rows come from disk; the save point is this session's. The cached answer is
+    // invalidated when those rows actually change, not on every refresh.
+    if (!sameSteps(steps, m_versionBaseline.recorded)) {
+        m_versionBaseline.recorded = steps;
+        m_versionEditsStale = true;
+    }
 
     if (!m_windowManager) return;
     const auto chip = VersionPicker::chip(manifest);
     m_windowManager->setVersionChip(chip.branch, AestraUI::NUIColor::fromHex(VersionsTimeline::laneHex(chip.lane)), chip.version);
-}
-
-VersionEdits::Baseline AestraApp::versionBaseline() const {
-    VersionEdits::Baseline baseline;
-    baseline.recorded = m_openVersionSteps;
-    baseline.chronicled = m_versionHistoryChronicled;
-    return baseline;
 }
 
 VersionEdits::State AestraApp::currentVersionEdits() {
@@ -68,7 +102,7 @@ VersionEdits::State AestraApp::currentVersionEdits() {
     // the oldest and leaves both depths unchanged, which a cached answer must not survive.
     const uint64_t mutations = history.mutationCount();
     if (m_versionEditsStale || mutations != m_versionEditsMutation) {
-        m_versionEdits = VersionEdits::measure(history, versionBaseline());
+        m_versionEdits = VersionEdits::measure(history, m_versionBaseline);
         m_versionEditsMutation = mutations;
         m_versionEditsStale = false;
     }

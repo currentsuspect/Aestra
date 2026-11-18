@@ -305,13 +305,23 @@ void CommandHistory::clear() {
 void CommandHistory::setMaxHistorySize(size_t size) {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_maxHistorySize = size;
+    const size_t before = m_undoStack.size();
     trimHistory();
+    // A trim removes commands the cached version answer was measured on. Bump the counter callers watch, but
+    // keep the listeners out of it: they mark the project modified, and changing a limit is not an edit.
+    if (m_undoStack.size() != before) {
+        ++m_mutations;
+    }
 }
 
 void CommandHistory::setMaxHistoryMemory(size_t bytes) {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_maxHistoryMemory = bytes;
+    const size_t before = m_undoStack.size();
     trimHistoryByMemory();
+    if (m_undoStack.size() != before) {
+        ++m_mutations;
+    }
 }
 
 size_t CommandHistory::getHistoryMemoryUsage() const {
@@ -327,6 +337,7 @@ void CommandHistory::trimHistory() {
     if (m_maxHistorySize > 0 && m_undoStack.size() > m_maxHistorySize) {
         size_t excess = m_undoStack.size() - m_maxHistorySize;
         m_undoStack.erase(m_undoStack.begin(), m_undoStack.begin() + excess);
+        m_dropped += excess;
     }
 
     // Then trim by memory if still over limit
@@ -342,6 +353,7 @@ void CommandHistory::trimHistoryByMemory() {
     while (!m_undoStack.empty() && calculateMemoryUsage() > m_maxHistoryMemory) {
         // Remove oldest commands until under memory limit
         m_undoStack.erase(m_undoStack.begin());
+        ++m_dropped;
     }
 }
 
