@@ -368,7 +368,7 @@ void PatternPlaybackEngine::refillWindow(uint16_t ticket, uint64_t currentFrame,
             auto* pattern = instPtr ? m_patternManager->getPattern(instPtr->patternId) : nullptr;
             if (!instPtr || !pattern || !pattern->isMidi()) return;
             const auto& patternNotes = std::get<MidiPayload>(pattern->payload).notes;
-            const bool expressive = needsExpression(patternNotes, pattern->swing);
+            const bool expressive = needsExpression(patternNotes, *pattern);
             // The repeats that can be sounding at the playhead (V82-T3); just repeat 0 when the clip doesn't repeat.
             const double repeatLength = instPtr->repeatPattern ? pattern->lengthBeats : 0.0;
             const double playheadBeat =
@@ -379,7 +379,7 @@ void PatternPlaybackEngine::refillWindow(uint16_t ticket, uint64_t currentFrame,
             for (int64_t repeat = repeatsHere.first; repeat <= repeatsHere.last; ++repeat) {
             const double repeatStartBeat = instPtr->startBeat + static_cast<double>(repeat) * repeatLength;
             const std::vector<MidiNote> expandedNotes =
-                expressive ? expandForPlayback(patternNotes, pattern->swing, pattern->id.value, instPtr->instanceId,
+                expressive ? expandForPlayback(patternNotes, *pattern, pattern->id.value, instPtr->instanceId,
                                                PatternRepeat::passSeed(
                                                    playheadPass, repeat))
                            : std::vector<MidiNote>{};
@@ -536,8 +536,8 @@ void PatternPlaybackEngine::refillWindow(uint16_t ticket, uint64_t currentFrame,
         const double repeatOffset = static_cast<double>(repeat) * repeatLength;
         const double repeatStartBeat = inst.startBeat + repeatOffset;
         std::vector<MidiNote> expandedNotes;
-        const bool expressive = needsExpression(midi.notes, pattern->swing);
-        if (expressive) expandedNotes = expandForPlayback(midi.notes, pattern->swing, pattern->id.value, inst.instanceId, PatternRepeat::passSeed(loopIter, repeat));
+        const bool expressive = needsExpression(midi.notes, *pattern);
+        if (expressive) expandedNotes = expandForPlayback(midi.notes, *pattern, pattern->id.value, inst.instanceId, PatternRepeat::passSeed(loopIter, repeat));
         for (const auto& note : (expressive ? expandedNotes : midi.notes)) {
             if (repeatLength > 0.0 && note.startBeat >= repeatLength) {
                 continue; // past the pattern's end: a repeating clip wraps there, so the note never plays
