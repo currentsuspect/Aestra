@@ -35,7 +35,7 @@ void check(bool condition, const std::string& message) {
     }
 }
 
-/** @brief A new project's shape: untouched "Track N" tracks, every one folded away. */
+/** @brief Untouched "Track N" tracks: the first in view, the rest folded away (a new project has just the one). */
 struct Fixture {
     std::shared_ptr<TrackManager> trackManager;
     std::shared_ptr<AestraUI::NUIComponent> root;

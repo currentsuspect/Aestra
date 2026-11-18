@@ -1714,7 +1714,7 @@ bool UnitRow::routeToFirstFreeMixerChannel() {
         return false;
     }
 
-    const std::string destinationName = m_name.empty() ? "Mixer Insert" : m_name;
+    const std::string destinationName = m_name.empty() ? "Mixer Channel" : m_name;
     const bool routed = Aestra::Audio::assignUnitToFirstFreeInsert(*m_trackManager, m_unitId, destinationName, m_color);
     updateState();
     return routed;
@@ -1746,7 +1746,7 @@ void UnitRow::showMixerRoutingMenu(const NUIPoint& pos) {
     }
 
     m_mixerRoutingMenu->addSeparator();
-    m_mixerRoutingMenu->addItem("Assign to first free insert", [this]() { routeToFirstFreeMixerChannel(); });
+    m_mixerRoutingMenu->addItem("Assign to First Free Channel", [this]() { routeToFirstFreeMixerChannel(); });
     attachAndShowContextMenu(this, m_mixerRoutingMenu, pos);
 }
 

@@ -14,12 +14,24 @@ void UnitColorPicker::showAt(NUIPoint position) {
     setBounds(NUIRect(position.x, position.y, WIDTH, HEIGHT));
     m_isVisible = true;
     m_hoveredIndex = -1;
+    setPopupOpen(this, true); // tooltips stay down while it is open
+    setFocused(true);         // so Escape reaches it
     repaint();
 }
 
 void UnitColorPicker::hide() {
     m_isVisible = false;
+    setPopupOpen(this, false);
+    setFocused(false);
     repaint();
+}
+
+bool UnitColorPicker::onKeyEvent(const NUIKeyEvent& event) {
+    if (m_isVisible && event.pressed && event.keyCode == NUIKeyCode::Escape) {
+        hide();
+        return true;
+    }
+    return NUIComponent::onKeyEvent(event);
 }
 
 void UnitColorPicker::onRender(NUIRenderer& renderer) {

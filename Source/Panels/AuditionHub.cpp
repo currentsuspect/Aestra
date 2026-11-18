@@ -1,5 +1,6 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AuditionHub.h"
+#include "../AestraUI/Core/NUIWheel.h"
 #include "AuditionFit.h"
 #include "AuditionCover.h"
 
@@ -633,7 +634,7 @@ bool AuditionHub::onMouseEvent(const NUIMouseEvent& event) {
     if (event.type == NUIMouseEventType::Scroll && f.content.contains(p)) {
         const float top = f.content.y + shelvesTop();
         const float contentH = AuditionHubLayout::contentHeight(layoutShelves(), top - m_scroll) + shelvesTop();
-        m_scroll = std::clamp(m_scroll - event.wheelDelta * 60.0f, 0.0f, std::max(0.0f, contentH - f.content.height));
+        m_scroll = std::clamp(m_scroll - event.wheelDelta * AestraUI::kWheelNotchPx, 0.0f, std::max(0.0f, contentH - f.content.height));
         setDirty(true);
         return true;
     }

@@ -60,13 +60,6 @@ void NUIButton::setLook(Look look, Tone tone, HoverStrength hover) {
     setDirty();
 }
 
-namespace {
-float easeOut(float t) {
-    t = std::clamp(t, 0.0f, 1.0f);
-    return 1.0f - (1.0f - t) * (1.0f - t) * (1.0f - t);
-}
-} // namespace
-
 void NUIButton::renderSpecLook(NUIRenderer& renderer) {
     // Design Spec, Buttons (locked 12 Nov 2026). Values from the spec's .ak-btn.
     const auto& t = NUIThemeManager::getInstance().getCurrentTheme();
@@ -98,7 +91,7 @@ void NUIButton::renderSpecLook(NUIRenderer& renderer) {
     }
 
     const bool full = hoverStrength_ == HoverStrength::Full;
-    const float e = easeOut(fill_);
+    const float e = motion_.hover();
     const bool latched = toggleable_ && toggled_;
 
     NUIColor text = look_ == Look::Solid ? ton : tt;
@@ -149,6 +142,19 @@ void NUIButton::renderSpecLook(NUIRenderer& renderer) {
 
 void NUIButton::onRender(NUIRenderer& renderer) {
     if (!isVisible()) return;
+    // The press dip and bounce scale the whole button about its centre (children and text included).
+    const float s = motion_.scale();
+    if (s != 1.0f) {
+        const auto b = getBounds();
+        renderer.pushTransform((b.x + b.width * 0.5f) * (1.0f - s), (b.y + b.height * 0.5f) * (1.0f - s), s);
+        renderContents(renderer);
+        renderer.popTransform();
+        return;
+    }
+    renderContents(renderer);
+}
+
+void NUIButton::renderContents(NUIRenderer& renderer) {
     if (look_ != Look::Legacy) {
         renderSpecLook(renderer);
         return;
@@ -184,16 +190,18 @@ void NUIButton::onRender(NUIRenderer& renderer) {
     
     // Create render rect for background
     // If background relies on flat design logic, we should be careful.
-    bool shouldDrawBackground = hovered || active || hasCustomBg_ || style_ == Style::Primary;
+    const float pop = motion_.hover(); // colour pop: eased in and out, the same for every group
+    const bool themeHover = !hasCustomBg_ && !active && !hasCustomHover_ && style_ != Style::Primary;
+    bool shouldDrawBackground = hovered || active || hasCustomBg_ || style_ == Style::Primary || (themeHover && pop > 0.0f);
     
     if (shouldDrawBackground) {
         NUIColor drawColor = backgroundColor;
         
-        // Refined hover style for default buttons (not custom)
-        // FIX: Only apply the 0.15f alpha reduction if we are using the THEME hover color.
-        // If the user set a custom hover color (like in TrackUIComponent or WindowPanel), utilize it as is.
-        if (!hasCustomBg_ && hovered && !active && !hasCustomHover_) {
-            drawColor = drawColor.withAlpha(std::max(0.18f, drawColor.a));
+        if (themeHover) {
+            // The theme's hover fill eases in and out instead of switching, so a button fading out is not
+            // cut off. (A button with its own colours keeps them exactly, as before.)
+            const NUIColor hover = hovered ? backgroundColor : themeProps.hover;
+            drawColor = hover.withAlpha(std::max(0.18f, hover.a) * pop);
         }
         
         renderer.fillRoundedRect(visualRect, radius, drawColor);
@@ -243,17 +251,14 @@ void NUIButton::onRender(NUIRenderer& renderer) {
 
 void NUIButton::onUpdate(double deltaTime) {
     NUIComponent::onUpdate(deltaTime);
-    if (look_ == Look::Legacy)
-        return;
+    if (!groupSet_) motion_.setGroup(toggleable_ ? ButtonGroup::Toggle : ButtonGroup::Action);
     const bool hovered = isEnabled() && isHovered();
-    // Hover is a quick colour change, the same 120ms for every look.
-    const float seconds = 0.12f;
-    const float target = hovered ? 1.0f : 0.0f;
-    if (fill_ != target) {
-        const float step = static_cast<float>(deltaTime) / seconds;
-        fill_ = hovered ? std::min(1.0f, fill_ + step) : std::max(0.0f, fill_ - step);
-        setDirty();
-    }
+    const bool wasLatched = latchedForMotion_;
+    latchedForMotion_ = toggleable_ && toggled_;
+    if (latchedForMotion_ != wasLatched) motion_.kick(); // a latch flipping bounces once
+    const bool wasMoving = motion_.animating();
+    motion_.update(static_cast<float>(deltaTime), hovered, isEnabled() && pressed_);
+    if (wasMoving || motion_.animating()) setDirty();
 }
 
 bool NUIButton::onMouseEvent(const NUIMouseEvent& event) {

@@ -199,7 +199,7 @@ AestraUI::DropResult TrackManagerUI::placeDrop(const AestraUI::DragData& data, c
     // Reject unsupported payloads before appending a lane.
     if (data.type == AestraUI::DragDataType::Plugin) {
         result.accepted = false;
-        result.message = "Drop effects on a mixer insert";
+        result.message = "Drop effects on a mixer channel";
         clearDropPreview();
         return result;
     }
@@ -262,7 +262,7 @@ AestraUI::DropResult TrackManagerUI::placeDrop(const AestraUI::DragData& data, c
         if (!targetLaneId.isValid()) {
             laneCommand.reset();
             result.accepted = false;
-            result.message = "Could not create track";
+            result.message = "Could not make a track";
             clearDropPreview();
             return result;
         }
@@ -331,7 +331,7 @@ AestraUI::DropResult TrackManagerUI::placeDrop(const AestraUI::DragData& data, c
                 if (!playlist.getClip(clip.id)) {
                     rollbackLane();
                     result.accepted = false;
-                    result.message = "Could not place pattern";
+                    result.message = "Could not place the pattern";
                     clearDropPreview();
                     return result;
                 }
@@ -654,7 +654,7 @@ AestraUI::DropResult TrackManagerUI::placeDrop(const AestraUI::DragData& data, c
         } else {
             rollbackLane();
             result.accepted = false;
-            result.message = "Failed to create source";
+            result.message = "Could not add that sound";
         }
 
         clearDropPreview();

@@ -367,7 +367,7 @@ void MembershipSettingsPage::refreshAccount() {
 
 #if defined(AESTRA_HAS_LICENSE_GATE) && AESTRA_HAS_LICENSE_GATE
     if (!m_accountService) {
-        m_lastRefreshValue = "Failed to sync";
+        m_lastRefreshValue = "Could not sync";
         m_lastRefreshFailed = true;
         m_actionErrorMessage = "Could not reach license server. Try again later.";
         m_actionErrorTimer = 6.0f;
@@ -381,7 +381,7 @@ void MembershipSettingsPage::refreshAccount() {
         } else if (result.status == Aestra::License::AccountServiceStatus::RejectedSignature ||
                    result.status == Aestra::License::AccountServiceStatus::Unauthorized) {
             // Lease invalid/revoked: treat as sign-out
-            m_lastRefreshValue = "Failed to sync";
+            m_lastRefreshValue = "Could not sync";
             m_lastRefreshFailed = true;
             m_actionErrorMessage = "Your license could not be verified. Please sign in again.";
             m_actionErrorTimer = 6.0f;
@@ -391,14 +391,14 @@ void MembershipSettingsPage::refreshAccount() {
             refreshDisplay();
             return;
         } else {
-            m_lastRefreshValue = "Failed to sync";
+            m_lastRefreshValue = "Could not sync";
             m_lastRefreshFailed = true;
             m_actionErrorMessage = "Could not reach license server. Try again later.";
             m_actionErrorTimer = 6.0f;
         }
     }
 #else
-    m_lastRefreshValue = "Failed to sync";
+    m_lastRefreshValue = "Could not sync";
     m_lastRefreshFailed = true;
     m_actionErrorMessage = "Could not reach license server. Try again later.";
     m_actionErrorTimer = 6.0f;

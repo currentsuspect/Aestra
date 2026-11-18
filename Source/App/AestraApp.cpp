@@ -510,6 +510,9 @@ bool AestraApp::initializeAudio() {
 void AestraApp::initializeContent() {
     m_content = std::make_shared<AestraContent>();
     m_content->setPlatformBridge(m_windowManager->getWindow());
+    m_content->onOpenProjectRequested = [this](const std::string& path) {
+        confirmLeaveProject("opening another project", [this, path]() { openProjectFromPath(path); });
+    };
     m_content->setAudioStatus(m_audioController->isInitialized());
     if (m_audioController->getEngine()) {
         m_content->setAudioEngine(m_audioController->getEngine());

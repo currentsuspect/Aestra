@@ -91,6 +91,8 @@ public:
     void resetPeaks();
     /// Fired when density or grouping changes, so the owner can save the preference.
     std::function<void()> onViewPreferencesChanged;
+    /// "+ Channel" in the toolbar. The owner adds the channel (undoably) and refreshes the strips.
+    std::function<void()> onAddChannelRequested;
     const UIMixerToolbar* toolbar() const { return m_toolbar.get(); }
     const UIMixerNavigator* navigator() const { return m_navigator.get(); }
 

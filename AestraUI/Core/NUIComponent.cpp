@@ -24,6 +24,7 @@ namespace {
 
 // Define static tooltip state
 TooltipState NUIComponent::s_tooltipState;
+std::vector<const void*> NUIComponent::s_openPopups;
 bool NUIComponent::s_cursorCaptureActive = false;
 NUIComponent* NUIComponent::s_pressOwner = nullptr;
 NUIMouseButton NUIComponent::s_pressOwnerButton = NUIMouseButton::None;
@@ -37,6 +38,7 @@ NUIComponent::NUIComponent() {
 
 NUIComponent::~NUIComponent() {
     hideRemoteTooltip(this);
+    setPopupOpen(this, false);
     // Children are still attached here, so a whole subtree going at once forgets its owner too.
     if (s_pressOwner && subtreeContains(s_pressOwner)) {
         s_pressOwner = nullptr;
@@ -734,11 +736,30 @@ void NUIComponent::showRemoteTooltip(const std::string& text, const NUIPoint& po
     }
 }
 
+void NUIComponent::setPopupOpen(const void* popup, bool open) {
+    auto& popups = s_openPopups;
+    const auto it = std::find(popups.begin(), popups.end(), popup);
+    if (open) {
+        if (it == popups.end()) popups.push_back(popup);
+        hideRemoteTooltip(); // whatever was explaining a control is now behind the popup
+    } else if (it != popups.end()) {
+        popups.erase(it);
+    }
+}
+
+bool NUIComponent::isAnyPopupOpen() {
+    return !s_openPopups.empty();
+}
+
 void NUIComponent::showRemoteTooltip(const std::string& text, const NUIRect& anchor, const void* owner, bool force) {
     if (text.empty()) {
         hideRemoteTooltip(owner);
         return;
     }
+
+    // Tooltips respect open dropdowns, menus and pickers: they never draw over one.
+    if (!force && !s_openPopups.empty())
+        return;
 
     // Hover tooltips stay down for the length of a gesture: a cursor capture, or any held
     // button (a drag). Forced readouts are the drag's own value display and still show.

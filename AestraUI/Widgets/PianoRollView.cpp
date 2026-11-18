@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "NUIPianoRollWidgets.h"
+#include "NUIWheel.h"
 #include "PianoRollInspector.h"
 #include "PlayheadMarker.h"
 #include "NUIRenderer.h"
@@ -690,14 +691,14 @@ bool PianoRollView::onMouseEvent(const NUIMouseEvent& event) {
             applyZoom(std::pow(1.15f, zoomDelta), event.position.x - m_grid->getBounds().x);
         } else if (shift) {
             // H-Scroll
-            m_targetScrollX = std::max(0.0f, m_targetScrollX - event.wheelDelta * 40.0f);
+            m_targetScrollX = std::max(0.0f, m_targetScrollX - event.wheelDelta * kWheelNotchPx);
         } else {
             // V-Scroll
             float totalH = 128 * m_keyHeight;
             float visibleH = m_grid->getHeight();
             float maxScroll = std::max(0.0f, totalH - visibleH);
             
-            float newY = m_targetScrollY - event.wheelDelta * 30.0f;
+            float newY = m_targetScrollY - event.wheelDelta * kWheelNotchPx;
             m_targetScrollY = safeClampRange(newY, 0.0f, maxScroll);
         }
         
