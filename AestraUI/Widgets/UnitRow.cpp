@@ -1632,9 +1632,8 @@ DropResult UnitRow::onDrop(const DragData& data, const NUIPoint& position) {
             // Remove extension
             filename = filename.substr(0, filename.find_last_of('.'));
 
-            // Update unit name and load sample
+            // Update the display name; sample loading is owned by the panel callback so it can be async and undoable.
             m_manager.setUnitName(m_unitId, filename);
-            m_manager.setUnitAudioClip(m_unitId, path);
 
             // Trigger callback if set
             if (m_onSampleDropped) {
