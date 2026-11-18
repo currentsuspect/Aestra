@@ -100,6 +100,7 @@ UIMixerPanel::UIMixerPanel(std::shared_ptr<Aestra::MixerViewModel> viewModel,
     m_toolbar->onDensityChanged = [this](MixerDensity d) { setDensity(d); };
     m_toolbar->onGroupToggled = [this](bool on) { setGroupByOutput(on); };
     m_toolbar->onResetPeaks = [this]() { resetPeaks(); };
+    m_toolbar->onAddChannel = [this]() { if (onAddChannelRequested) onAddChannelRequested(); };
     addChild(m_toolbar);
 
     // Create master strip (pinned on right, does not scroll with channels).
@@ -1211,7 +1212,7 @@ DropResult UIMixerPanel::onDrop(const DragData& data, const NUIPoint& position) 
 
     if (!loadPluginToChannel(vmChannel, pluginId)) {
         result.accepted = false;
-        result.message = "Failed to load plugin (see log)";
+        result.message = "Could not load that plugin";
         return result;
     }
 

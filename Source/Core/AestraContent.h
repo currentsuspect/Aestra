@@ -471,7 +471,9 @@ public:
     void updatePreviewPlayhead();
 
     /** @brief Show a transient status pill (bottom-center overlay). */
-    void showToast(const std::string& message, double seconds = 2.6);
+    /// A project file was opened from the file browser (double-click, Enter). The app asks about unsaved work, then loads it.
+    std::function<void(const std::string&)> onOpenProjectRequested;
+    void showToast(const std::string& message); // one wait time for every toast (ToastStack.h)
 
     /** @brief Load an effect plugin onto the selected track. */
     void loadEffectToSelectedTrack(const std::string& pluginId);

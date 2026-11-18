@@ -155,6 +155,8 @@ inline constexpr char kPanelTakes[] = "panel.takes";
 // Timeline follow-playhead (SPEC 3 §3.1): how this user arranges the app, so FD-23's store.
 inline constexpr char kTimelineFollowPlayhead[] = "panel.timeline.followPlayhead";
 inline constexpr char kTimelineFollowContinuous[] = "panel.timeline.followContinuous";
+// Arsenal grid: fit the whole loop to the width (true) or scroll it at a readable step size (false).
+inline constexpr char kArsenalFitToWidth[] = "panel.arsenal.fitToWidth";
 // Plugin browser favorites (V8-C14): plugin ids, imported once from the legacy favorites.json.
 inline constexpr char kPluginBrowserFavorites[] = "pluginBrowser.favorites";
 // Plugin browser recents (V8-S5): plugin ids, most recently loaded first.

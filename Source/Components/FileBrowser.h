@@ -57,7 +57,7 @@ struct FileFilter {
     // destructor to race. Lower-case, compared against a lower-cased extension.
     static constexpr std::array<std::string_view, 11> audioExtensions{
         ".wav", ".aif", ".aiff", ".mp3", ".flac", ".ogg", ".oga", ".opus", ".mp4", ".m4a", ".aac"};
-    static constexpr std::array<std::string_view, 2> projectExtensions{".madproj", ".Aestra"};
+    static constexpr std::array<std::string_view, 3> projectExtensions{".aes", ".aestra", ".madproj"}; // lower case: getType() lower-cases the extension before it compares
 
     template <size_t N>
     static bool contains(const std::array<std::string_view, N>& list, const std::string& ext) {

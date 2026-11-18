@@ -1,5 +1,6 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "TakesPanel.h"
+#include "../AestraUI/Core/NUIWheel.h"
 
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
@@ -775,7 +776,7 @@ bool TakesPanel::onMouseEvent(const NUIMouseEvent& event) {
             if (l.cancelButton.contains(event.position)) m_hoveredButton = "cancel";
             setDirty(true);
         } else if (event.type == NUIMouseEventType::Scroll && l.list.contains(event.position)) {
-            m_bring->scrollBy(bringArea(), -event.wheelDelta * 40.0f);
+            m_bring->scrollBy(bringArea(), -event.wheelDelta * AestraUI::kWheelNotchPx);
             setDirty(true);
         } else if (event.pressed && event.button == NUIMouseButton::Left) {
             if (l.cancelButton.contains(event.position)) closeBringOver();
@@ -800,13 +801,13 @@ bool TakesPanel::onMouseEvent(const NUIMouseEvent& event) {
     }
 
     if (event.type == NUIMouseEventType::Scroll && layout.timeline.contains(event.position) && layout.nodes.maxScroll > 0.0f) {
-        m_timelineScroll = std::clamp(m_timelineScroll - event.wheelDelta * 60.0f, 0.0f, layout.nodes.maxScroll);
+        m_timelineScroll = std::clamp(m_timelineScroll - event.wheelDelta * AestraUI::kWheelNotchPx, 0.0f, layout.nodes.maxScroll);
         setDirty(true);
         return true;
     }
     if (event.type == NUIMouseEventType::Scroll && layout.stepsList.contains(event.position)) {
         const float contentH = static_cast<float>(m_steps.size()) * STEP_ROW_HEIGHT;
-        m_stepScroll = std::clamp(m_stepScroll - event.wheelDelta * 30.0f, 0.0f, std::max(0.0f, contentH - layout.stepsList.height));
+        m_stepScroll = std::clamp(m_stepScroll - event.wheelDelta * AestraUI::kWheelNotchPx, 0.0f, std::max(0.0f, contentH - layout.stepsList.height));
         setDirty(true);
         return true;
     }

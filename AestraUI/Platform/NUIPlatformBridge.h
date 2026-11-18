@@ -1,6 +1,8 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include <cstdint>
+
 #include "../../AestraPlat/include/AestraPlatform.h"
 #include "NUICursorService.h"
 #include "NUICursorStyle.h"
@@ -88,6 +90,9 @@ public:
     
     // Native handles
     void* getNativeHandle() const;
+    /// A plugin's editor window, made by the helper as a child of ours: place, show or hide it (window pixels).
+    bool placeChildWindow(std::uintptr_t child, int x, int y, int width, int height, bool visible);
+    bool getChildWindowSize(std::uintptr_t child, int& width, int& height) const;
     void* getNativeDeviceContext() const;
     void* getNativeGLContext() const;
 

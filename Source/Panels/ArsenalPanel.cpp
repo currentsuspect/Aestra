@@ -1,7 +1,11 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "ArsenalPanel.h"
 #include "UnitGroupMenu.h"
+#include "ArsenalGridScroll.h"
+#include "../AestraUI/Core/NUIWheel.h"
 #include "ArsenalRackDraw.h"
+#include "../App/ServiceLocator.h"
+#include "../Core/UISurfaceStore.h"
 
 #include "Commands/AssignUnitToFirstFreeInsertCommand.h"
 #include "Commands/EditPatternNotesCommand.h"
@@ -154,6 +158,11 @@ ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
         m_trackManager->getUnitManager().setDefaultColorProvider([](size_t n) { return AestraUI::paletteIndexToARGB(static_cast<int>(n % AestraUI::PALETTE_SIZE)); }); // new units rotate the Ember hues
     }
     ensureDefaultUnit(); // Sampler 1, so a fresh project plays straight away
+    // Fit or Scroll is how this user works the grid, so it is remembered like the mixer's density and the
+    // timeline's follow switch (it opened on Fit every launch).
+    if (const auto* store = Aestra::ServiceLocator::get<Aestra::UISurfaceStoreFile>()) {
+        if (const auto fit = store->boolPreference(Aestra::UISurfaceKeys::kArsenalFitToWidth)) m_fitToWidth = *fit;
+    }
 
     // Modern list container
     m_listContainer = std::make_shared<AestraUI::NUIComponent>();
@@ -198,19 +207,47 @@ int ArsenalPanel::computeLoopStepCount() const {
     return std::clamp(steps, beatsPerBar() * 4, 256);
 }
 
-float ArsenalPanel::computeGridMaxScrollX() const {
-    if (m_fitToWidth) return 0.0f; // Whole loop shown → nothing to scroll
-    // Mirrors the UnitRow grid geometry (control block + 8px context inset +
-    // 6px lane padding + min 20px pads) so the shared scroll clamps against
-    // the real content.
-    const float width = m_progressHeaderRect.width;
-    if (width <= 0.0f) return 0.0f;
+float ArsenalPanel::gridStepWidth() const {
+    // Mirrors the UnitRow grid geometry (control block + 8px context inset + 6px lane padding + min 20px
+    // pads) so the shared scroll clamps against the real content.
     const float availWidth = std::max(1.0f, gridSpan().second);
     const float groupTotal = static_cast<float>((m_stepCount + 3) / 4) * kGroupGap;
-    const float stepWidth = std::max(std::max(0.0f, availWidth - groupTotal) /
-                                         static_cast<float>(std::max(1, m_stepCount)),
-                                     20.0f);
-    return std::max(0.0f, stepWidth * static_cast<float>(m_stepCount) + groupTotal - availWidth);
+    return std::max(std::max(0.0f, availWidth - groupTotal) / static_cast<float>(std::max(1, m_stepCount)), 20.0f);
+}
+
+float ArsenalPanel::computeGridMaxScrollX() const {
+    if (m_fitToWidth) return 0.0f; // Whole loop shown → nothing to scroll
+    if (m_progressHeaderRect.width <= 0.0f) return 0.0f;
+    const float availWidth = std::max(1.0f, gridSpan().second);
+    const float groupTotal = static_cast<float>((m_stepCount + 3) / 4) * kGroupGap;
+    return std::max(0.0f, gridStepWidth() * static_cast<float>(m_stepCount) + groupTotal - availWidth);
+}
+
+// Scroll mode moves a bar at a time: the wheel (or a trackpad swipe) lands on a bar line, the same place the
+// playhead follow pages to, so a pattern is never left cut mid-bar by a wheel notch.
+void ArsenalPanel::snapGridScrollBy(float deltaPx) {
+    const auto now = std::chrono::steady_clock::now();
+    if (now - m_lastGridWheel > std::chrono::milliseconds(250)) m_gridWheelAccum = 0.0f;
+    m_lastGridWheel = now;
+    // A wheel notch is 40 px and moves one bar; a trackpad's smaller deltas add up to one. The
+    // accumulator keeps what is left over a whole bar, so equal distance moves equal bars however
+    // the events are split.
+    constexpr float kNotchPx = 40.0f;
+    const int bars = ArsenalGridScroll::wheelBars(m_gridWheelAccum, deltaPx, kNotchPx);
+    if (bars == 0) return;
+    const int direction = bars > 0 ? 1 : -1;
+    int barsLeft = std::abs(bars);
+
+    const int stepsPerBar = beatsPerBar() * 4;
+    const float barWidth = static_cast<float>(stepsPerBar) * gridStepWidth() +
+                           static_cast<float>((stepsPerBar + 3) / 4) * kGroupGap;
+    const float maxScroll = computeGridMaxScrollX();
+    // The offset can sit between two bar lines (the clamp stops short of one), so the step comes from
+    // ArsenalGridScroll: it leaves the line the offset is on, in the direction of travel, never skipping
+    // the bar behind a clamped endpoint.
+    float target = m_gridScrollX;
+    while (barsLeft-- > 0) target = ArsenalGridScroll::nextBarOffset(target, barWidth, maxScroll, direction);
+    scrollGridBy(target - m_gridScrollX);
 }
 
 void ArsenalPanel::scrollGridBy(float deltaPx, bool userScroll) {
@@ -234,17 +271,15 @@ void ArsenalPanel::followGridPlayhead() {
         m_gridFollowSuspended = false; // Transport stopped: resume following next play
         return;
     }
-    const float width = m_progressHeaderRect.width;
-    if (width <= 0.0f) return;
+    if (m_progressHeaderRect.width <= 0.0f) return;
     const float availWidth = std::max(1.0f, gridSpan().second);
-    const float groupTotal = static_cast<float>((m_stepCount + 3) / 4) * kGroupGap;
-    const float stepWidth = std::max(std::max(0.0f, availWidth - groupTotal) /
-                                         static_cast<float>(std::max(1, m_stepCount)),
-                                     20.0f);
-    const float maxScroll = std::max(0.0f, stepWidth * static_cast<float>(m_stepCount) + groupTotal - availWidth);
+    const float stepWidth = gridStepWidth();
+    const float maxScroll = computeGridMaxScrollX();
+    // The same x the rows draw a step at: its width plus the gap after every earlier group of four.
+    const auto stepX = [&](int step) { return static_cast<float>(step) * stepWidth + static_cast<float>(step / 4) * kGroupGap; };
     if (maxScroll <= 0.0f) return; // Whole loop fits: nothing to follow
 
-    const float stepLeft = static_cast<float>(playStep) * stepWidth;
+    const float stepLeft = stepX(playStep);
     const bool visible = stepLeft >= m_gridScrollX &&
                          stepLeft + stepWidth <= m_gridScrollX + availWidth;
     if (visible) {
@@ -254,7 +289,7 @@ void ArsenalPanel::followGridPlayhead() {
     if (m_gridFollowSuspended) return; // Don't fight a deliberate manual scroll
     // Page to the playing bar's start so a full musical bar reads at once.
     const int stepsPerBar = beatsPerBar() * 4;
-    const float barLeft = static_cast<float>((playStep / stepsPerBar) * stepsPerBar) * stepWidth;
+    const float barLeft = stepX((playStep / stepsPerBar) * stepsPerBar);
     scrollGridBy(std::clamp(barLeft, 0.0f, maxScroll) - m_gridScrollX, false);
 }
 
@@ -305,7 +340,7 @@ void ArsenalPanel::refreshUnits() {
         row->setScrollX(m_gridScrollX);
         row->setOnGridScroll([this](float deltaPx) {
             m_gridFollowSuspended = true; // Manual scroll wins over playhead follow
-            scrollGridBy(deltaPx);
+            snapGridScrollBy(deltaPx);
         });
 
         // Set up callbacks for drag-drop and color picker
@@ -1430,6 +1465,8 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
     if (event.pressed && event.button == NUIMouseButton::Left && m_fitToggleRect.contains(event.position)) {
         const bool wantFit = m_fitModeRect.contains(event.position);
         m_fitToWidth = wantFit;        m_gridScrollX = 0.0f;
+        if (auto* store = Aestra::ServiceLocator::get<Aestra::UISurfaceStoreFile>())
+            store->setBoolPreference(Aestra::UISurfaceKeys::kArsenalFitToWidth, m_fitToWidth);
         for (auto& row : m_unitRows) {
             if (row) row->setFitToWidth(m_fitToWidth);
         }
@@ -1523,7 +1560,7 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
         float viewportHeight = m_listContainer ? m_listContainer->getBounds().height : 100.0f;
         float maxScroll = std::max(0.0f, contentHeight - viewportHeight);
         
-        m_targetScrollY -= event.wheelDelta * 40.0f;
+        m_targetScrollY -= event.wheelDelta * AestraUI::kWheelNotchPx;
         m_targetScrollY = safeClampPanelScroll(m_targetScrollY, maxScroll);
         return true;
     }
