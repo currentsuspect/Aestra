@@ -200,7 +200,7 @@ private:
     void adjustPatternBars(int deltaBars);
     void adjustPatternSteps(int deltaBars);
     void createUnitOfType(UnitType type, const std::string& nameOverride = {});
-    void loadKitFromFolder(const std::string& folder); ///< each audio file in the folder becomes a unit
+    void loadKitFromFolder(const std::string& folder); ///< selecting a kit opens it in the File Browser; it creates no units
     Aestra::PendingFileDialog m_kitPicker; ///< "Choose a folder" runs off the UI thread, so the app never stops responding
     void drawUnitTypePicker(AestraUI::NUIRenderer& renderer);
 
