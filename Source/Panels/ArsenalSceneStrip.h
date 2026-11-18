@@ -242,11 +242,17 @@ public:
         // A bounded slider makes the full 0–100% range visible and the current value easy to place.
         const auto sw = swingRect();
         const auto track = swingTrackRect();
-        const float fillWidth = track.width * std::clamp(m_swing, 0.0f, 1.0f);
+        // Keep the value fill inside the rounded track's AA fringe. The GL
+        // rounded-rect primitive expands its quad by 1.5 px, which was visible
+        // as a sliver escaping the left edge for small swing values.
+        constexpr float fillInset = 2.0f;
+        const float fillTrackWidth = std::max(0.0f, track.width - fillInset * 2.0f);
+        const float fillWidth = fillTrackWidth * std::clamp(m_swing, 0.0f, 1.0f);
         renderer.fillRoundedRect(track, track.height * 0.5f, theme.getColor("backgroundPrimary"));
         if (fillWidth > 0.0f) {
-            renderer.fillRoundedRect({track.x, track.y, fillWidth, track.height},
-                                     std::min(track.height * 0.5f, fillWidth * 0.5f),
+            const NUIRect fillRect(track.x + fillInset, track.y + fillInset, fillWidth,
+                                   std::max(1.0f, track.height - fillInset * 2.0f));
+            renderer.fillRoundedRect(fillRect, std::min(fillRect.height * 0.5f, fillRect.width * 0.5f),
                                      theme.getColor("accentPrimary"));
         }
         renderer.strokeRoundedRect(track, track.height * 0.5f, 1.0f, theme.getColor("borderSubtle"));
@@ -254,9 +260,12 @@ public:
                                   theme.getColor("textMuted"));
         renderer.drawTextCentered(m_swingMixed ? "MIX" : (std::to_string(swingPercent(m_swing)) + "%"),
                                   track, tp.fontSizeXS, theme.getColor("textPrimary"));
-        const auto pl = placeRect(); // the one primary action of the header (the mock's purple button)
-        renderer.fillRoundedRect(pl, tp.radiusXS, theme.getColor("accentPrimary"));
-        const auto buttonText = theme.getContrastColor(theme.getColor("accentPrimary"));
+        const auto pl = placeRect();
+        // This is a chrome action, so use neutral control colors instead of
+        // coupling its fill and label contrast to the theme accent.
+        renderer.fillRoundedRect(pl, tp.radiusXS, theme.getColor("buttonBgDefault"));
+        renderer.strokeRoundedRect(pl, tp.radiusXS, 1.0f, theme.getColor("borderSubtle"));
+        const auto buttonText = theme.getColor("buttonTextDefault");
         const float labelFont = tp.fontSizeXS + 1.0f, arrowW = 11.0f, arrowGap = 8.0f;
         const float labelW = renderer.measureText("Place in timeline", labelFont).width;
         const float startX = pl.x + (pl.width - (labelW + arrowGap + arrowW)) * 0.5f, midY = pl.y + pl.height * 0.5f;
