@@ -661,6 +661,99 @@ void ArsenalPanel::removeUnitNotes(UnitID unitId) {
     }
 }
 
+void ArsenalPanel::handlePatternSelection(uint64_t patternId, NUIModifiers modifiers) {
+    if (!m_trackManager || patternId == 0) return;
+    const auto scenes = m_scenes.scenes();
+    const auto clicked = std::find_if(scenes.begin(), scenes.end(), [patternId](const auto& s) { return s.id == patternId; });
+    if (clicked == scenes.end()) return;
+
+    const bool shift = (modifiers & NUIModifiers::Shift) != NUIModifiers::None;
+    const bool ctrl = (modifiers & NUIModifiers::Ctrl) != NUIModifiers::None;
+
+    if (shift && m_patternSelectionAnchor != 0) {
+        const auto anchor = std::find_if(scenes.begin(), scenes.end(), [&](const auto& s) {
+            return s.id == m_patternSelectionAnchor;
+        });
+        if (anchor != scenes.end()) {
+            const size_t a = static_cast<size_t>(std::distance(scenes.begin(), anchor));
+            const size_t b = static_cast<size_t>(std::distance(scenes.begin(), clicked));
+            const size_t lo = std::min(a, b), hi = std::max(a, b);
+            m_selectedPatternIds.clear();
+            for (size_t i = lo; i <= hi; ++i) m_selectedPatternIds.push_back(scenes[i].id);
+        } else {
+            m_selectedPatternIds = {patternId};
+        }
+    } else if (ctrl) {
+        const auto it = std::find(m_selectedPatternIds.begin(), m_selectedPatternIds.end(), patternId);
+        if (it != m_selectedPatternIds.end()) {
+            if (m_selectedPatternIds.size() > 1) m_selectedPatternIds.erase(it);
+        } else {
+            m_selectedPatternIds.push_back(patternId);
+        }
+        m_patternSelectionAnchor = patternId;
+    } else {
+        m_selectedPatternIds = {patternId};
+        m_patternSelectionAnchor = patternId;
+    }
+
+    setActivePattern(PatternID{patternId});
+    m_scenes.setSelectedPatterns(m_selectedPatternIds);
+    repaint();
+}
+
+bool ArsenalPanel::removeSelectedPatterns() {
+    if (!m_trackManager || m_selectedPatternIds.empty()) return false;
+
+    auto& patterns = m_trackManager->getPatternManager();
+    const size_t midiCount = std::count_if(patterns.getAllPatterns().begin(), patterns.getAllPatterns().end(),
+        [](const auto& p) { return p && p->isMidi(); });
+
+    std::vector<uint64_t> targets;
+    for (const uint64_t id : m_selectedPatternIds) {
+        const auto* pattern = patterns.getPattern(PatternID{id});
+        if (!pattern || !pattern->isMidi()) continue;
+        if (m_trackManager->getPlaylistModel().isPatternUsed(PatternID{id})) continue;
+        targets.push_back(id);
+    }
+    if (targets.empty()) return false;
+
+    const size_t keepAtLeast = 1;
+    if (targets.size() >= midiCount && midiCount <= keepAtLeast) return false;
+    if (midiCount - targets.size() < keepAtLeast) targets.resize(midiCount - keepAtLeast);
+
+    auto transaction = std::make_shared<CommandTransaction>("Delete Arsenal Pattern(s)");
+    std::vector<std::shared_ptr<DeletePatternCommand>> commands;
+    commands.reserve(targets.size());
+    for (const uint64_t id : targets)
+        commands.push_back(std::make_shared<DeletePatternCommand>(patterns, PatternID{id}));
+
+    for (auto& command : commands) {
+        command->execute();
+        if (!command->isUndoable()) {
+            for (auto it = commands.rbegin(); it != commands.rend(); ++it)
+                if ((*it)->isUndoable()) (*it)->undo();
+            return false;
+        }
+        transaction->add(command);
+    }
+    transaction->markExecuted();
+    m_trackManager->getCommandHistory().pushExecuted(transaction);
+
+    m_selectedPatternIds.clear();
+    m_patternSelectionAnchor = 0;
+    const auto remaining = patterns.getAllPatterns();
+    PatternID next{};
+    for (const auto& p : remaining) {
+        if (p && p->isMidi()) { next = p->id; break; }
+    }
+    if (!patterns.getPattern(m_activePatternID)) m_activePatternID = next;
+    refreshUnits();
+    if (m_patternBrowser) m_patternBrowser->refreshPatterns();
+    if (m_onActivePatternChanged && m_activePatternID.isValid()) m_onActivePatternChanged(m_activePatternID);
+    repaint();
+    return true;
+}
+
 void ArsenalPanel::setActivePattern(PatternID patternId) {
     if (m_activePatternID == patternId) return;
     m_activePatternID = patternId;
