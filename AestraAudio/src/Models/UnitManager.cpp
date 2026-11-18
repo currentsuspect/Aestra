@@ -617,6 +617,11 @@ void UnitManager::setUnitAudioClip(UnitID id, const std::string& path) {
     u->audioPreviewWaveform.clear();
 
     if (path.empty()) {
+        if (auto sampler = std::dynamic_pointer_cast<Plugins::SamplerPlugin>(u->plugin)) {
+            sampler->clearSample();
+            u->pluginState = sampler->saveState();
+        }
+        publishSnapshot();
         return;
     }
 
@@ -682,6 +687,10 @@ bool UnitManager::setUnitAudioClipFromDecoded(UnitID id, const std::string& path
     u->audioPreviewWaveform = std::move(previewWaveform);
 
     if (path.empty()) {
+        if (auto sampler = std::dynamic_pointer_cast<Plugins::SamplerPlugin>(u->plugin)) {
+            sampler->clearSample();
+            u->pluginState = sampler->saveState();
+        }
         publishSnapshot();
         return true;
     }
