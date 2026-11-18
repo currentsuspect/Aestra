@@ -812,6 +812,10 @@ uint64_t PatternPlaybackEngine::contentFingerprint(const PatternSource& pattern)
     };
     mix(&pattern.lengthBeats, sizeof(pattern.lengthBeats));
     mix(&pattern.swing, sizeof(pattern.swing));
+    for (const auto& [unitId, amount] : pattern.unitSwing) {
+        mix(&unitId, sizeof(unitId));
+        mix(&amount, sizeof(amount));
+    }
     if (pattern.isMidi()) {
         for (const auto& n : std::get<MidiPayload>(pattern.payload).notes) {
             mix(&n.pitch, sizeof(n.pitch));
