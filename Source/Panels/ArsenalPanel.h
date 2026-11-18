@@ -187,6 +187,11 @@ private:
     // Pattern Progress Visualization
     static constexpr float COMMAND_HEADER_HEIGHT = 64.0f;
     static constexpr float PROGRESS_HEADER_HEIGHT = 34.0f;
+    /// The list's visible height, and how far it can scroll. One answer for the clamp and the wheel:
+    /// with two, the wheel stopped short of the bottom onUpdate allows, so the rack's floor could not be
+    /// scrolled into view.
+    float listViewportHeight() const;
+    float listMaxScrollY() const;
     void drawProgressHeader(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds);
     void drawCommandHeader(AestraUI::NUIRenderer& renderer);
     int calculateCurrentStep(); // Calculate step from TrackManager clock

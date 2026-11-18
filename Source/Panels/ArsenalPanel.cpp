@@ -215,6 +215,16 @@ float ArsenalPanel::gridStepWidth() const {
     return std::max(std::max(0.0f, availWidth - groupTotal) / static_cast<float>(std::max(1, m_stepCount)), 20.0f);
 }
 
+float ArsenalPanel::listViewportHeight() const {
+    const float reservedHeight = COMMAND_HEADER_HEIGHT + PROGRESS_HEADER_HEIGHT + 24.0f;
+    return std::max(0.0f, (m_listContainer ? m_listContainer->getBounds().height : 0.0f) - reservedHeight);
+}
+
+float ArsenalPanel::listMaxScrollY() const {
+    const float contentHeight = m_rack.contentHeight + kArsenalListBottomPadding;
+    return std::max(0.0f, contentHeight - listViewportHeight());
+}
+
 float ArsenalPanel::computeGridMaxScrollX() const {
     if (m_fitToWidth) return 0.0f; // Whole loop shown → nothing to scroll
     if (m_progressHeaderRect.width <= 0.0f) return 0.0f;
@@ -800,11 +810,7 @@ void ArsenalPanel::onResize(int width, int height) {
 void ArsenalPanel::onUpdate(double dt) {
     WindowPanel::onUpdate(dt);
     if (auto folder = m_kitPicker.takeResult()) loadKitFromFolder(*folder); // the kit picker closed
-    const float reservedHeight = COMMAND_HEADER_HEIGHT + PROGRESS_HEADER_HEIGHT + 24.0f;
-    const float viewportHeight = std::max(0.0f,
-        (m_listContainer ? m_listContainer->getBounds().height : 0.0f) - reservedHeight);
-    const float contentHeight = m_rack.contentHeight + kArsenalListBottomPadding;
-    const float maxScroll = std::max(0.0f, contentHeight - viewportHeight);
+    const float maxScroll = listMaxScrollY();
     m_targetScrollY = safeClampPanelScroll(m_targetScrollY, maxScroll);
     m_scrollY = safeClampPanelScroll(m_scrollY, maxScroll);
     const float delta = m_targetScrollY - m_scrollY;
@@ -1555,11 +1561,10 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
             }
         }
         
-        // Fallback: scroll the unit list
-        float contentHeight = m_rack.contentHeight + kArsenalListBottomPadding;
-        float viewportHeight = m_listContainer ? m_listContainer->getBounds().height : 100.0f;
-        float maxScroll = std::max(0.0f, contentHeight - viewportHeight);
-        
+        // Fallback: scroll the unit list, to the same limit onUpdate clamps to (listMaxScrollY), or the
+        // wheel stops short of it and the last row's floor never comes into view.
+        const float maxScroll = listMaxScrollY();
+
         m_targetScrollY -= event.wheelDelta * AestraUI::kWheelNotchPx;
         m_targetScrollY = safeClampPanelScroll(m_targetScrollY, maxScroll);
         return true;
