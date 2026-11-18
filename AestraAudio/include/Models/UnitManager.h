@@ -399,6 +399,7 @@ public:
 
     /** @brief Set the PatternManager used for auto-creating patterns per unit. */
     void setPatternManager(PatternManager* pm) { m_patternManager = pm; }
+    PatternManager* getPatternManager() const { return m_patternManager; }
 
     /**
      * @brief Publish the current Arsenal state as an immutable snapshot.
