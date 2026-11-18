@@ -66,6 +66,7 @@ constexpr int kCountInStartupFrameLimit = 60;
 
 // Audio includes
 #include "../AestraAudio/include/Commands/CommandRegistry.h"
+#include "../AestraAudio/include/Commands/LoadSampleCommand.h"
 #include "../AestraAudio/include/Playback/PlaybackContextController.h"
 #include "../AestraCore/include/AestraLog.h"
 #include "AudioEngine.h"
@@ -4011,6 +4012,10 @@ void AestraContent::loadSampleIntoUnitAsync(UnitID unitId, const std::string& sa
     }
     auto weakSelf = weak_from_this();
 
+    std::string previousSamplePath;
+    if (const auto* currentUnit = m_trackManager->getUnitManager().getUnit(unitId)) {
+        previousSamplePath = currentUnit->audioClipPath;
+    }
     if (m_trackManager->getUnitManager().getUnit(unitId)) {
         std::string filename = std::filesystem::path(samplePath).stem().string();
         if (!filename.empty()) {
@@ -4057,7 +4062,7 @@ void AestraContent::loadSampleIntoUnitAsync(UnitID unitId, const std::string& sa
             return;
         }
 
-        self->enqueueMainThreadTask([weakSelf, generation, unitId, samplePath, openEditorWhenReady, decoded,
+        self->enqueueMainThreadTask([weakSelf, generation, unitId, samplePath, previousSamplePath, openEditorWhenReady, decoded,
                                      decodedData = std::move(decodedData), sampleRate, numChannels,
                                      sampleLength, editorWaveform = std::move(editorWaveform),
                                      previewWaveform = std::move(previewWaveform), durationSeconds]() mutable {
@@ -4083,6 +4088,11 @@ void AestraContent::loadSampleIntoUnitAsync(UnitID unitId, const std::string& sa
             }
             // A new sample invalidates keep-length renders: re-render the notes already written.
             self->m_trackManager->prewarmSamplerKeepLength(false);
+
+            auto sampleCommand = std::make_shared<Audio::LoadSampleCommand>(
+                unitManager, unitId, samplePath);
+            sampleCommand->markExecuted(previousSamplePath);
+            self->m_trackManager->getCommandHistory().pushExecuted(sampleCommand);
 
             if (self->m_sequencerPanel) {
                 self->m_sequencerPanel->setSelectedUnit(unitId);
