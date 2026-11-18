@@ -321,16 +321,20 @@ void ArsenalPanel::refreshUnits() {
         m_selectedSteps.clear();
     }
 
+    m_selectedUnitIds.erase(std::remove_if(m_selectedUnitIds.begin(), m_selectedUnitIds.end(),
+        [&](UnitID id) { return std::find(unitIDs.begin(), unitIDs.end(), id) == unitIDs.end(); }), m_selectedUnitIds.end());
     if (m_selectedUnitId == 0 || std::find(unitIDs.begin(), unitIDs.end(), m_selectedUnitId) == unitIDs.end()) {
         m_selectedUnitId = unitIDs.empty() ? 0 : unitIDs.front();
     }
+    if (m_selectedUnitIds.empty() && m_selectedUnitId != 0) m_selectedUnitIds = {m_selectedUnitId};
+    if (m_unitSelectionAnchor == 0 && !m_selectedUnitIds.empty()) m_unitSelectionAnchor = m_selectedUnitIds.front();
     if (m_onSelectedUnitChanged && m_selectedUnitId != 0) {
         m_onSelectedUnitChanged(m_selectedUnitId);
     }
     
     for (size_t i = 0; i < unitIDs.size(); ++i) {
         auto row = std::make_shared<UnitRow>(m_trackManager, unitMgr, unitIDs[i], m_activePatternID);
-        row->setSelected(unitIDs[i] == m_selectedUnitId);
+        row->setSelected(std::find(m_selectedUnitIds.begin(), m_selectedUnitIds.end(), unitIDs[i]) != m_selectedUnitIds.end());
         if (unitIDs[i] == m_selectionUnitId) {
             row->setStepSelection(m_selectedSteps);
         }
@@ -348,6 +352,9 @@ void ArsenalPanel::refreshUnits() {
         });
 
         // Set up callbacks for drag-drop and color picker
+        row->setOnSelectUnit([this](UnitID id, NUIModifiers modifiers) {
+            handleUnitSelection(id, modifiers);
+        });
         row->setOnDragStart([this](UnitID id) {
             onUnitDragStart(id);
         });
