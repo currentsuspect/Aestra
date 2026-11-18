@@ -598,8 +598,8 @@ void ArsenalPanel::handleUnitSelection(UnitID unitId, NUIModifiers modifiers) {
     const auto clicked = std::find(ids.begin(), ids.end(), unitId);
     if (clicked == ids.end()) return;
 
-    const bool shift = (modifiers & NUIModifiers::Shift) != NUIModifiers::None;
-    const bool ctrl = (modifiers & NUIModifiers::Ctrl) != NUIModifiers::None;
+    const bool shift = modifiers & NUIModifiers::Shift;
+    const bool ctrl = modifiers & NUIModifiers::Ctrl;
 
     if (shift && m_unitSelectionAnchor != 0) {
         const auto anchor = std::find(ids.begin(), ids.end(), m_unitSelectionAnchor);
@@ -671,8 +671,8 @@ void ArsenalPanel::handlePatternSelection(uint64_t patternId, NUIModifiers modif
     const auto clicked = std::find_if(scenes.begin(), scenes.end(), [patternId](const auto& s) { return s.id == patternId; });
     if (clicked == scenes.end()) return;
 
-    const bool shift = (modifiers & NUIModifiers::Shift) != NUIModifiers::None;
-    const bool ctrl = (modifiers & NUIModifiers::Ctrl) != NUIModifiers::None;
+    const bool shift = modifiers & NUIModifiers::Shift;
+    const bool ctrl = modifiers & NUIModifiers::Ctrl;
 
     if (shift && m_patternSelectionAnchor != 0) {
         const auto anchor = std::find_if(scenes.begin(), scenes.end(), [&](const auto& s) {

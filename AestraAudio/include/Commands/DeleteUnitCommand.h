@@ -84,6 +84,9 @@ public:
 
 private:
     struct NoteSnapshot {
+        NoteSnapshot(PatternID id, std::vector<MidiNote> ownedNotes)
+            : patternId(id), notes(std::move(ownedNotes)) {}
+
         PatternID patternId;
         std::vector<MidiNote> notes;
     };
