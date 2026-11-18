@@ -520,63 +520,67 @@ void ArsenalPanel::createUnitOfType(UnitType type, const std::string& nameOverri
 }
 
 bool ArsenalPanel::removeSelectedUnit() {
-    if (!m_trackManager || m_selectedUnitId == 0) {
-        return false;
-    }
+    return removeSelectedUnits();
+}
+
+bool ArsenalPanel::removeSelectedUnits() {
+    if (!m_trackManager) return false;
 
     auto& unitMgr = m_trackManager->getUnitManager();
-    auto unitIDs = unitMgr.getAllUnitIDs();
-    if (unitIDs.size() <= 1) {
-        // Last unit — reset to fresh default instead of refusing
-        UnitID oldId = m_selectedUnitId;
-        unitMgr.removeUnit(oldId);
-        removeUnitNotes(oldId);
-        UnitID newId = unitMgr.createUnit();
-        if (const auto* unit = unitMgr.getUnit(newId)) {
-            const std::string destinationName = unit->name.empty() ? "Mixer Channel" : unit->name;
-            routeUnitToFirstFreeMixerChannel(*m_trackManager, newId, destinationName, unit->color);
+    const auto unitIDs = unitMgr.getAllUnitIDs();
+    std::vector<UnitID> targets = m_selectedUnitIds;
+    if (targets.empty() && m_selectedUnitId != 0) targets.push_back(m_selectedUnitId);
+    targets.erase(std::remove_if(targets.begin(), targets.end(), [&](UnitID id) {
+        return std::find(unitIDs.begin(), unitIDs.end(), id) == unitIDs.end();
+    }), targets.end());
+    if (targets.empty()) return false;
+
+    std::sort(targets.begin(), targets.end(), [&](UnitID a, UnitID b) {
+        return std::find(unitIDs.begin(), unitIDs.end(), a) < std::find(unitIDs.begin(), unitIDs.end(), b);
+    });
+
+    auto transaction = std::make_shared<CommandTransaction>("Delete Arsenal Unit(s)");
+    std::vector<std::shared_ptr<DeleteUnitCommand>> commands;
+    commands.reserve(targets.size());
+    for (const UnitID id : targets) {
+        const auto it = std::find(unitIDs.begin(), unitIDs.end(), id);
+        const size_t index = static_cast<size_t>(std::distance(unitIDs.begin(), it));
+        commands.push_back(std::make_shared<DeleteUnitCommand>(*m_trackManager, id, index));
+    }
+
+    for (auto& command : commands) {
+        command->execute();
+        if (!command->isUndoable()) {
+            for (auto it = commands.rbegin(); it != commands.rend(); ++it) {
+                if ((*it)->isUndoable()) (*it)->undo();
+            }
+            return false;
         }
-        m_selectedUnitId = newId;
-        refreshUnits();
-        if (m_onSelectedUnitChanged && m_selectedUnitId != 0) {
-            m_onSelectedUnitChanged(m_selectedUnitId);
-        }
-        return true;
+        transaction->add(command);
     }
+    transaction->markExecuted();
+    m_trackManager->getCommandHistory().pushExecuted(transaction);
 
-    auto it = std::find(unitIDs.begin(), unitIDs.end(), m_selectedUnitId);
-    if (it == unitIDs.end()) {
-        return false;
-    }
-
-    const size_t removedIndex = static_cast<size_t>(std::distance(unitIDs.begin(), it));
-    const UnitID removedUnit = m_selectedUnitId;
-    if (!unitMgr.removeUnit(removedUnit)) {
-        return false;
-    }
-
-    removeUnitNotes(removedUnit);
-
-    auto remaining = unitMgr.getAllUnitIDs();
+    const auto remaining = unitMgr.getAllUnitIDs();
+    m_selectedUnitIds.clear();
     if (remaining.empty()) {
         m_selectedUnitId = 0;
-    } else if (removedIndex < remaining.size()) {
-        m_selectedUnitId = remaining[removedIndex];
+        m_unitSelectionAnchor = 0;
     } else {
-        m_selectedUnitId = remaining.back();
+        auto next = std::find_if(remaining.begin(), remaining.end(), [&](UnitID id) {
+            return id > 0 && std::find(unitIDs.begin(), unitIDs.end(), id) != unitIDs.end();
+        });
+        m_selectedUnitId = next != remaining.end() ? *next : remaining.front();
+        m_selectedUnitIds = {m_selectedUnitId};
+        m_unitSelectionAnchor = m_selectedUnitId;
     }
 
     refreshUnits();
-    if (m_onSelectedUnitChanged && m_selectedUnitId != 0) {
-        m_onSelectedUnitChanged(m_selectedUnitId);
-    }
-    if (m_activePatternID.isValid() && m_onPatternEdited) {
-        m_onPatternEdited(m_activePatternID);
-    }
-    Log::info("[Arsenal] Removed Unit " + std::to_string(removedUnit));
+    if (m_onSelectedUnitChanged && m_selectedUnitId != 0) m_onSelectedUnitChanged(m_selectedUnitId);
+    if (m_activePatternID.isValid() && m_onPatternEdited) m_onPatternEdited(m_activePatternID);
+    Log::info("[Arsenal] Removed " + std::to_string(targets.size()) + " unit(s)");
     return true;
 }
-
 void ArsenalPanel::syncRowSelection() {
     for (auto& row : m_unitRows) {
         if (row) {
