@@ -1492,6 +1492,13 @@ void AestraContent::setupArsenalPanels() {
     m_sequencerPanel->setOnPluginDropped([this](const std::string& pluginId) { loadInstrumentToArsenal(pluginId); });
     m_sequencerPanel->setOnPluginDroppedToUnit([this](UnitID unitId, const std::string& pluginId) { loadInstrumentIntoArsenalUnit(unitId, pluginId); });
     m_sequencerPanel->setOnSampleDroppedToUnit([this](UnitID unitId, const std::string& samplePath) { loadSampleIntoUnitAsync(unitId, samplePath, false); });
+    m_sequencerPanel->setOnKitFolderSelected([this](const std::string& folder) {
+        if (m_browserToggle) m_browserToggle->setSelectedIndex(0);
+        if (m_fileBrowser) {
+            m_fileBrowser->setVisible(true);
+            m_fileBrowser->navigateTo(folder);
+        }
+    });
     wireArsenalSoundSets(*m_sequencerPanel, m_fileBrowser, m_trackManager, [this]() { setDirty(true); });
     m_sequencerPanel->setOnSelectedUnitChanged([this](UnitID unitId) {
         if (m_pianoRollPanel) {
