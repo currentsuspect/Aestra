@@ -54,7 +54,7 @@ int main() {
         manager.getCommandHistory().pushAndExecute(command);
         check(units.getUnit(id) == nullptr, "delete removes the unit");
         check(manager.getPatternManager().getPattern(pattern) == nullptr, "delete removes an unplaced default pattern");
-        check(!command->isUndoable() == false, "delete command remains undoable");
+        check(command->isUndoable(), "delete command remains undoable");
 
         manager.getCommandHistory().undo();
         check(units.getUnit(id) != nullptr, "undo restores the same unit id");
