@@ -4039,7 +4039,7 @@ void AestraContent::loadSampleIntoUnitAsync(UnitID unitId, const std::string& sa
         m_sequencerPanel->refreshUnits();
     }
 
-    std::thread([weakSelf, generation, unitId, samplePath, openEditorWhenReady]() {
+    std::thread([weakSelf, generation, unitId, samplePath, previousSamplePath, previousUnitName, previousUnitEnabled, openEditorWhenReady]() {
         std::vector<float> decodedData;
         uint32_t sampleRate = 0;
         uint32_t numChannels = 0;
