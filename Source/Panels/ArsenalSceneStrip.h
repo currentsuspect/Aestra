@@ -216,7 +216,7 @@ public:
             const auto r = chipRect(p);
             const float tileRadius = 8.0f; // the board's pattern tile
             const auto& scene = m_scenes[p.index];
-            const bool selected = m_selectedPatterns.empty() ? scene.id == m_activeId : std::find(m_selectedPatterns.begin(), m_selectedPatterns.end(), scene.id) != m_selectedPatterns.end();
+            const bool selected = std::find(m_selectedPatterns.begin(), m_selectedPatterns.end(), scene.id) != m_selectedPatterns.end();
             renderer.fillRoundedRect(r, tileRadius, selected ? AestraUI::NUIColor::lerp(theme.getColor("backgroundSecondary"), theme.getColor("accentPrimary"), 0.32f) : theme.getColor("backgroundSecondary"));
             renderer.strokeRoundedRect(r, tileRadius, 1.0f, selected ? theme.getColor("accentPrimary").withAlpha(0.55f) : theme.getColor("borderSubtle").withAlpha(0.7f));
             renderer.setClipRect(AestraUI::intersectRects(view, r));
@@ -275,7 +275,10 @@ public:
         if (!m_rect.contains(e.position)) return false;
         if (std::abs(e.wheelDelta) > 0.001f) { scrollBy(-e.wheelDelta * 40.0f); return true; }
         if (e.pressed && e.button == AestraUI::NUIMouseButton::Right) { // a chip's menu (V82-AR1, FD-52)
-            if (const Hit h = hitTest(e.position); h.kind == Hit::Kind::Scene) out = {Action::Kind::Menu, h.id, e.position};
+            if (const Hit h = hitTest(e.position); h.kind == Hit::Kind::Scene) {
+                out = {Action::Kind::Menu, h.id, e.position};
+                out.modifiers = e.modifiers;
+            }
             return true;
         }
         if (!e.pressed || !left) return true;

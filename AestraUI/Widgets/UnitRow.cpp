@@ -1000,6 +1000,9 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
                 // The row menu opens from anywhere on the row except the step grid, where a right-press
                 // is the erase gesture (it used to open only from the name label).
                 if (!localGridRect.contains(localPoint)) {
+                    // A context menu acts on the current selection when its row is already selected. Right-clicking
+                    // an unselected row first makes that row the selection, matching desktop list behavior.
+                    if (!m_isSelected && m_onSelectUnit) m_onSelectUnit(m_unitId, event.modifiers);
                     showRowContextMenu(event.position);
                 }
                 return true;
@@ -1807,12 +1810,28 @@ void UnitRow::showRowContextMenu(const NUIPoint& pos) {
     }
 
     m_rowContextMenu->addSeparator();
-    m_rowContextMenu->addItem("Rename", [this]() {
+    auto rename = std::make_shared<NUIContextMenuItem>("Rename");
+    rename->setEnabled(!m_hasMultipleSelection || !m_hasMultipleSelection());
+    rename->setOnClick([this]() {
         if (!m_manager.getUnit(m_unitId))
             return;
         if (m_nameLabel)
             m_nameLabel->beginRename();
     });
+    m_rowContextMenu->addItem(rename);
+
+    auto groupMenu = std::make_shared<NUIContextMenu>();
+    const auto addGroup = [this, &groupMenu](const char* label, Aestra::Audio::UnitGroup group) {
+        auto item = std::make_shared<NUIContextMenuItem>(label);
+        item->setOnClick([this, group]() {
+            if (m_onMoveSelectedToGroup) m_onMoveSelectedToGroup(m_unitId, group);
+        });
+        groupMenu->addItem(item);
+    };
+    addGroup("Drums", Aestra::Audio::UnitGroup::Drums);
+    addGroup("Synth", Aestra::Audio::UnitGroup::Synth);
+    addGroup("Audio", Aestra::Audio::UnitGroup::Audio);
+    m_rowContextMenu->addSubmenu("Move Selected to Group", groupMenu);
 
     // Category: what this sound is in the song. "Auto" reads it from the name; picking one is the user's own
     // choice, which outranks any name. One undo step.
@@ -1841,7 +1860,9 @@ void UnitRow::showRowContextMenu(const NUIPoint& pos) {
         m_rowContextMenu->addSubmenu("Category", categoryMenu);
     }
 
-    m_rowContextMenu->addItem("Duplicate Unit", [this]() {
+    m_rowContextMenu->addItem(m_hasMultipleSelection && m_hasMultipleSelection()
+                                  ? "Duplicate Selected Units"
+                                  : "Duplicate Unit", [this]() {
         if (!m_manager.getUnit(m_unitId))
             return;
         if (m_onDuplicateUnit)

@@ -44,6 +44,7 @@ public:
     void onUpdate(double dt) override;
     /** @brief Handle mouse input routed to the Arsenal panel. */
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
+    bool onKeyEvent(const AestraUI::NUIKeyEvent& event) override;
     /** @brief Handle drag-enter for plugin/sample drops. */
     AestraUI::DropFeedback onDragEnter(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) override;
     /** @brief Handle drag-over for plugin/sample drops. */
@@ -147,7 +148,7 @@ private:
     AestraUI::NUIRect m_sceneRect{};
     Aestra::ArsenalSceneMenu m_sceneMenu; ///< right-click a pattern: Rename, Duplicate, Delete (V82-AR1, FD-52)
     void showSceneMenu(uint64_t patternId, const AestraUI::NUIPoint& at); ///< ArsenalPanelScenes.cpp
-    void sceneMenuChanged(uint64_t select);                                ///< ArsenalPanelScenes.cpp
+    void sceneMenuChanged(uint64_t active, const std::vector<uint64_t>& selected); ///< ArsenalPanelScenes.cpp
     void reconcilePatterns();                                              ///< ArsenalPanelScenes.cpp: after undo/redo, a vanished active pattern and a stale browser
     size_t m_patternSignature{0};                                          ///< ids + names the browser was last refreshed for
     Aestra::ArsenalRackLayout m_rack; ///< groups, headers and row positions (one answer for layout, scroll and drop)
@@ -239,7 +240,6 @@ private:
     void onUnitDrop(UnitID unitId, int dropIndex);
     void showColorPicker(UnitID unitId, AestraUI::NUIPoint position);
     
-    bool onKeyEvent(const AestraUI::NUIKeyEvent& event) override;
     
     std::function<void(UnitID)> m_onRequestEditor;
     std::function<void(PatternID, UnitID)> m_onRequestPatternEditor;

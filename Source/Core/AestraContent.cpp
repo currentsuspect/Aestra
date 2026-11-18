@@ -4587,6 +4587,18 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     if (m_takesPanel && m_takesPanel->isVisible() && m_takesPanel->handleKeyEvent(event))
         return true;
 
+    // Arsenal owns selection-level shortcuts even when a child row did not
+    // acquire widget focus. Let active text inputs keep Delete/Escape while
+    // editing; the pattern rename input is then handled by its own callback.
+    const bool arsenalSelectionKey = event.keyCode == AestraUI::NUIKeyCode::Escape ||
+        event.keyCode == AestraUI::NUIKeyCode::Delete || event.keyCode == AestraUI::NUIKeyCode::Backspace;
+    if (arsenalSelectionKey && m_viewFocus == ViewFocus::Arsenal && m_sequencerPanel &&
+        m_sequencerPanel->isVisible() &&
+        dynamic_cast<AestraUI::NUITextInput*>(AestraUI::NUIComponent::getFocusedComponent()) == nullptr &&
+        m_sequencerPanel->onKeyEvent(event)) {
+        return true;
+    }
+
     // Global view-toggle shortcuts (the transport view buttons advertise these
     // in their tooltips). F-keys never reach text inputs or musical typing, so
     // handle them here as unconditional global shortcuts.

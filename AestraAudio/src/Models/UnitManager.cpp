@@ -731,7 +731,12 @@ bool UnitManager::setUnitAudioClipFromDecoded(UnitID id, const std::string& path
     return loaded;
 }
 void UnitManager::setUnitColor(UnitID id, uint32_t color) { if (auto* u = getUnit(id)) u->color = color; }
-void UnitManager::setUnitGroup(UnitID id, UnitGroup group) { if (auto* u = getUnit(id)) u->group = std::move(group); }
+void UnitManager::setUnitGroup(UnitID id, UnitGroup group) {
+    if (auto* unit = getUnit(id); unit && unit->group != group) {
+        unit->group = group;
+        publishSnapshot();
+    }
+}
 bool UnitManager::setUnitType(UnitID id, UnitType type) {
     auto* unit = getUnit(id);
     if (!unit) {
@@ -1011,11 +1016,12 @@ void UnitManager::loadFromJSON(const JSON& json) {
             if (category != RoleCategory::Unknown) unit.role = userRole(category, sub); // an unknown id (a newer file) is ignored
         }
 
-        if (ju.has("group")) {
+        const bool hasStoredGroup = ju.has("group");
+        if (hasStoredGroup) {
             unit.group = unitGroupFromJson(ju["group"]);
         }
         unit.type = ju.has("type") ? unitTypeFromJson(ju["type"]) : unitTypeFromGroup(unit.group);
-        unit.group = unitGroupForType(unit.type);
+        if (!hasStoredGroup) unit.group = unitGroupForType(unit.type);
 
         unit.pluginId = ju.has("pluginId") ? ju["pluginId"].asString() : std::string{};
         if (ju.has("pluginStateHex") && ju["pluginStateHex"].isString()) {

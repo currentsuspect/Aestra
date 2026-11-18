@@ -2,6 +2,7 @@
 #include "ArsenalSceneMenu.h"
 
 #include "Commands/PatternMenuCommands.h"
+#include "Commands/CommandTransaction.h"
 #include "Models/TrackManager.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "NUIComponent.h"
@@ -57,29 +58,121 @@ void ArsenalSceneMenu::show(const Request& request) {
     cancel();
     const Audio::PatternID id{request.id};
     auto& tracks = *request.tracks;
+    std::vector<uint64_t> selected = request.selectedIds;
+    if (selected.empty() || std::find(selected.begin(), selected.end(), request.id) == selected.end())
+        selected = {request.id};
+    std::sort(selected.begin(), selected.end(), [&](uint64_t a, uint64_t b) {
+        const auto indexOf = [&](uint64_t value) {
+            const auto it = std::find_if(request.scenes.begin(), request.scenes.end(),
+                [value](const auto& scene) { return scene.id == value; });
+            return std::distance(request.scenes.begin(), it);
+        };
+        return indexOf(a) < indexOf(b);
+    });
+    selected.erase(std::unique(selected.begin(), selected.end()), selected.end());
 
     m_menu = std::make_shared<AestraUI::NUIContextMenu>();
     m_menu->setOnHide([this]() { detach(m_menu); });
 
-    m_menu->addItem("Rename", [this, request]() { beginRename(request); });
+    auto rename = std::make_shared<AestraUI::NUIContextMenuItem>("Rename");
+    rename->setEnabled(selected.size() == 1);
+    rename->setOnClick([this, request]() { beginRename(request); });
+    m_menu->addItem(rename);
 
-    m_menu->addItem("Duplicate", [request, id]() {
-        auto copy = std::make_shared<Audio::DuplicatePatternCommand>(request.tracks->getPatternManager(), id);
-        request.tracks->getCommandHistory().pushAndExecute(copy);
-        if (request.changed) request.changed(copy->copyId().value);
+    m_menu->addItem("Duplicate", [request, selected, id]() {
+        auto& patterns = request.tracks->getPatternManager();
+        auto transaction = std::make_shared<Audio::CommandTransaction>("Duplicate Arsenal Pattern(s)");
+        std::vector<std::shared_ptr<Audio::DuplicatePatternCommand>> commands;
+        std::vector<uint64_t> copies;
+        uint64_t activeCopy = 0;
+        for (const uint64_t source : selected) {
+            const auto* pattern = patterns.getPattern(Audio::PatternID{source});
+            if (!pattern || !pattern->isMidi()) continue;
+            auto copy = std::make_shared<Audio::DuplicatePatternCommand>(patterns, Audio::PatternID{source});
+            copy->execute();
+            if (!copy->copyId().isValid()) continue;
+            if (source == id.value) activeCopy = copy->copyId().value;
+            copies.push_back(copy->copyId().value);
+            transaction->add(copy);
+            commands.push_back(std::move(copy));
+        }
+        if (commands.empty()) return;
+        transaction->markExecuted();
+        if (!request.tracks->getCommandHistory().pushExecuted(transaction)) {
+            for (auto it = commands.rbegin(); it != commands.rend(); ++it) (*it)->undo();
+            return;
+        }
+        if (request.changed) request.changed(activeCopy, copies);
     });
 
+    auto& patterns = tracks.getPatternManager();
+    const auto allPatterns = patterns.getAllPatterns();
+    const size_t midiCount = static_cast<size_t>(std::count_if(allPatterns.begin(), allPatterns.end(),
+        [](const auto& pattern) { return pattern && pattern->isMidi(); }));
+    bool allowed = true;
     std::string why;
-    const bool allowed = canDelete(request.tracks->getPlaylistModel().isPatternUsed(id), request.scenes.size(), &why);
+    for (const uint64_t patternId : selected) {
+        const Audio::PatternID target{patternId};
+        const auto* pattern = patterns.getPattern(target);
+        if (!pattern || !pattern->isMidi()) {
+            allowed = false;
+            why = "Delete (selection contains an unavailable pattern)";
+            break;
+        }
+        if (tracks.getPlaylistModel().isPatternUsed(target)) {
+            allowed = false;
+            why = "Delete (a selected pattern plays in the timeline)";
+            break;
+        }
+    }
+    if (allowed && (midiCount <= selected.size())) {
+        allowed = false;
+        why = midiCount <= 1 ? "Delete (the only pattern)" : "Delete (Arsenal must keep one pattern)";
+    }
     auto del = std::make_shared<AestraUI::NUIContextMenuItem>(allowed ? "Delete" : why);
     del->setDestructive(true);
     del->setEnabled(allowed);
-    del->setOnClick([request, id]() {
-        // Pick the neighbour before the pattern is gone; only move the selection when the active one is the one deleted.
-        const uint64_t next = request.activeId == request.id ? ArsenalSceneMenu::selectAfterDelete(request.scenes, request.id) : 0;
-        auto remove = std::make_shared<Audio::DeletePatternCommand>(request.tracks->getPatternManager(), id);
-        request.tracks->getCommandHistory().pushAndExecute(remove);
-        if (request.changed) request.changed(next);
+    del->setOnClick([request, selected]() {
+        auto& patterns = request.tracks->getPatternManager();
+        auto transaction = std::make_shared<Audio::CommandTransaction>("Delete Arsenal Pattern(s)");
+        std::vector<std::shared_ptr<Audio::DeletePatternCommand>> commands;
+        for (const uint64_t patternId : selected) {
+            auto remove = std::make_shared<Audio::DeletePatternCommand>(patterns, Audio::PatternID{patternId});
+            remove->execute();
+            if (!remove->isUndoable()) {
+                for (auto it = commands.rbegin(); it != commands.rend(); ++it) (*it)->undo();
+                return;
+            }
+            transaction->add(remove);
+            commands.push_back(std::move(remove));
+        }
+        if (commands.empty()) return;
+
+        uint64_t next = request.activeId;
+        if (std::find(selected.begin(), selected.end(), next) != selected.end()) {
+            const auto active = std::find_if(request.scenes.begin(), request.scenes.end(),
+                [next](const auto& scene) { return scene.id == next; });
+            next = 0;
+            if (active != request.scenes.end()) {
+                for (auto it = std::next(active); it != request.scenes.end(); ++it)
+                    if (std::find(selected.begin(), selected.end(), it->id) == selected.end()) { next = it->id; break; }
+                if (next == 0) {
+                    auto it = active;
+                    while (it != request.scenes.begin()) {
+                        --it;
+                        if (std::find(selected.begin(), selected.end(), it->id) == selected.end()) { next = it->id; break; }
+                    }
+                }
+            }
+        }
+
+        transaction->markExecuted();
+        if (!request.tracks->getCommandHistory().pushExecuted(transaction)) {
+            for (auto it = commands.rbegin(); it != commands.rend(); ++it) (*it)->undo();
+            return;
+        }
+        const std::vector<uint64_t> selection = next == 0 ? std::vector<uint64_t>{} : std::vector<uint64_t>{next};
+        if (request.changed) request.changed(next, selection);
     });
     m_menu->addItem(del);
 
@@ -114,6 +207,7 @@ void ArsenalSceneMenu::beginRename(const Request& request) {
     m_tracks = request.tracks;
     m_renameId = request.id;
     m_changed = request.changed;
+    m_selectedIds = request.selectedIds;
     request.owner->addChild(m_input);
     m_input->setFocused(true);
     m_input->setCaretPosition(static_cast<int>(pattern->name.length()));
@@ -139,7 +233,7 @@ void ArsenalSceneMenu::finishRename(bool commit) {
     if (!pattern || pattern->name == text) return;
     auto rename = std::make_shared<Audio::RenamePatternCommand>(m_tracks->getPatternManager(), id, text);
     m_tracks->getCommandHistory().pushAndExecute(rename);
-    if (m_changed) m_changed(0);
+    if (m_changed) m_changed(0, m_selectedIds);
 }
 
 } // namespace Aestra

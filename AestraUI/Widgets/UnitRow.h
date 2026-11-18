@@ -81,6 +81,8 @@ public:
     std::function<void(Aestra::Audio::UnitID)> m_onDeleteUnit;
     /** @brief Callback fired when the unit is duplicated via context menu. */
     std::function<void(Aestra::Audio::UnitID)> m_onDuplicateUnit;
+    std::function<bool()> m_hasMultipleSelection;
+    std::function<void(Aestra::Audio::UnitID, Aestra::Audio::UnitGroup)> m_onMoveSelectedToGroup;
 
     void setOnDragStart(std::function<void(Aestra::Audio::UnitID)> cb) { m_onDragStart = cb; }
     void setOnDrop(std::function<void(Aestra::Audio::UnitID, int)> cb) { m_onDrop = cb; }
@@ -95,6 +97,10 @@ public:
     void setOnRenameUnit(std::function<void(Aestra::Audio::UnitID, const std::string&)> cb) { m_onRenameUnit = cb; }
     void setOnDeleteUnit(std::function<void(Aestra::Audio::UnitID)> cb) { m_onDeleteUnit = cb; }
     void setOnDuplicateUnit(std::function<void(Aestra::Audio::UnitID)> cb) { m_onDuplicateUnit = cb; }
+    void setHasMultipleSelection(std::function<bool()> cb) { m_hasMultipleSelection = std::move(cb); }
+    void setOnMoveSelectedToGroup(std::function<void(Aestra::Audio::UnitID, Aestra::Audio::UnitGroup)> cb) {
+        m_onMoveSelectedToGroup = std::move(cb);
+    }
     
     /**
      * @brief Set the visible step count for the sequencer section.

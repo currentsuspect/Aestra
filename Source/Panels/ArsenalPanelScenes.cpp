@@ -23,7 +23,8 @@ void ArsenalPanel::showSceneMenu(uint64_t patternId, const AestraUI::NUIPoint& a
     request.at = at;
     request.chip = m_scenes.chipRectOf(patternId);
     request.scenes = m_scenes.scenes();
-    request.changed = [this](uint64_t select) { sceneMenuChanged(select); };
+    request.selectedIds = m_selectedPatternIds;
+    request.changed = [this](uint64_t active, const std::vector<uint64_t>& selected) { sceneMenuChanged(active, selected); };
     m_sceneMenu.show(request);
 }
 
@@ -55,10 +56,13 @@ void ArsenalPanel::reconcilePatterns() {
     }
 }
 
-void ArsenalPanel::sceneMenuChanged(uint64_t select) {
+void ArsenalPanel::sceneMenuChanged(uint64_t active, const std::vector<uint64_t>& selected) {
     if (m_patternBrowser) m_patternBrowser->refreshPatterns();
-    // After Duplicate the copy becomes active (as in the browser); after deleting the active pattern its neighbour does.
-    if (select != 0) setActivePattern(PatternID{select});
+    m_selectedPatternIds = selected;
+    m_patternSelectionAnchor = selected.empty() ? 0 : selected.back();
+    m_scenes.setSelectedPatterns(m_selectedPatternIds);
+    // After Duplicate the copy becomes active; deleting the active pattern picks a surviving neighbour.
+    if (active != 0) setActivePattern(PatternID{active});
     refreshUnits();
     repaint();
 }

@@ -12,6 +12,7 @@
 #include "Commands/CommandTransaction.h"
 #include "Commands/DeleteUnitCommand.h"
 #include "Commands/PatternMenuCommands.h"
+#include "Commands/SetUnitGroupCommand.h"
 #include "Commands/SetPatternSwingCommand.h"
 #include "Commands/EditPatternNotesCommand.h"
 #include "Commands/SetPatternLengthCommand.h"
@@ -323,10 +324,8 @@ void ArsenalPanel::refreshUnits() {
 
     m_selectedUnitIds.erase(std::remove_if(m_selectedUnitIds.begin(), m_selectedUnitIds.end(),
         [&](UnitID id) { return std::find(unitIDs.begin(), unitIDs.end(), id) == unitIDs.end(); }), m_selectedUnitIds.end());
-    if (m_selectedUnitId == 0 || std::find(unitIDs.begin(), unitIDs.end(), m_selectedUnitId) == unitIDs.end()) {
-        m_selectedUnitId = unitIDs.empty() ? 0 : unitIDs.front();
-    }
-    if (m_selectedUnitIds.empty() && m_selectedUnitId != 0) m_selectedUnitIds = {m_selectedUnitId};
+    if (std::find(m_selectedUnitIds.begin(), m_selectedUnitIds.end(), m_selectedUnitId) == m_selectedUnitIds.end())
+        m_selectedUnitId = m_selectedUnitIds.empty() ? 0 : m_selectedUnitIds.front();
     if (m_unitSelectionAnchor == 0 && !m_selectedUnitIds.empty()) m_unitSelectionAnchor = m_selectedUnitIds.front();
     if (m_onSelectedUnitChanged && m_selectedUnitId != 0) {
         m_onSelectedUnitChanged(m_selectedUnitId);
@@ -430,7 +429,7 @@ void ArsenalPanel::refreshUnits() {
             }
         });
         row->setOnRenameUnit([this](UnitID id, const std::string& name) {
-            if (!m_trackManager) return;
+            if (!m_trackManager || m_selectedUnitIds.size() > 1) return;
             m_trackManager->getUnitManager().setUnitName(id, name); m_trackManager->markModified(); // a rename is a change to save
             refreshUnits();
         });
@@ -440,15 +439,34 @@ void ArsenalPanel::refreshUnits() {
         });
         row->setOnDuplicateUnit([this](UnitID id) {
             if (!m_trackManager) return;
-            UnitID newId = m_trackManager->getUnitManager().duplicateUnit(id);
-            if (newId != 0) {
-                if (const auto* unit = m_trackManager->getUnitManager().getUnit(newId)) {
+            std::vector<UnitID> targets = m_selectedUnitIds;
+            if (std::find(targets.begin(), targets.end(), id) == targets.end()) targets = {id};
+            std::vector<UnitID> duplicates;
+            auto& units = m_trackManager->getUnitManager();
+            for (const UnitID source : targets) {
+                const UnitID newId = units.duplicateUnit(source);
+                if (newId == 0) continue;
+                if (const auto* unit = units.getUnit(newId)) {
                     const std::string destinationName = unit->name.empty() ? "Mixer Channel" : unit->name;
                     routeUnitToFirstFreeMixerChannel(*m_trackManager, newId, destinationName, unit->color);
                 }
-                m_selectedUnitId = newId;
-                refreshUnits();
+                duplicates.push_back(newId);
             }
+            if (duplicates.empty()) return;
+            m_selectedUnitIds = duplicates;
+            m_selectedUnitId = duplicates.back();
+            m_unitSelectionAnchor = m_selectedUnitId;
+            if (m_onSelectedUnitChanged) m_onSelectedUnitChanged(m_selectedUnitId);
+            refreshUnits();
+        });
+        row->setHasMultipleSelection([this]() { return m_selectedUnitIds.size() > 1; });
+        row->setOnMoveSelectedToGroup([this](UnitID clicked, UnitGroup group) {
+            if (!m_trackManager) return;
+            std::vector<UnitID> targets = m_selectedUnitIds;
+            if (std::find(targets.begin(), targets.end(), clicked) == targets.end()) targets = {clicked};
+            auto command = std::make_shared<SetUnitGroupCommand>(m_trackManager->getUnitManager(), targets, group);
+            m_trackManager->getCommandHistory().pushAndExecute(command);
+            refreshUnits();
         });
 
         m_listContainer->addChild(row);
@@ -700,8 +718,8 @@ void ArsenalPanel::handlePatternSelection(uint64_t patternId, NUIModifiers modif
         m_patternSelectionAnchor = patternId;
     }
 
-    setActivePattern(PatternID{patternId});
     m_scenes.setSelectedPatterns(m_selectedPatternIds);
+    setActivePattern(PatternID{patternId});
     repaint();
 }
 
@@ -1629,7 +1647,15 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
             if (m_onPatternEdited) m_onPatternEdited(m_activePatternID);
         }
         if (scene.kind == SceneKind::PlaceInTimeline && m_onPlaceInTimeline) m_onPlaceInTimeline(m_activePatternID);
-        if (scene.kind == SceneKind::Menu) showSceneMenu(scene.id, scene.at);
+        if (scene.kind == SceneKind::Menu) {
+            if (std::find(m_selectedPatternIds.begin(), m_selectedPatternIds.end(), scene.id) == m_selectedPatternIds.end()) {
+                m_selectedPatternIds = {scene.id};
+                m_patternSelectionAnchor = scene.id;
+                m_scenes.setSelectedPatterns(m_selectedPatternIds);
+                setActivePattern(PatternID{scene.id});
+            }
+            showSceneMenu(scene.id, scene.at);
+        }
         repaint();
         return true;
     }
@@ -1757,6 +1783,7 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
 
 bool ArsenalPanel::onKeyEvent(const NUIKeyEvent& event) {
     if (!event.pressed) return false;
+    if (m_sceneMenu.key(event)) return true;
     if (bool relayout = false; m_lanes.onKey(event, m_trackManager.get(), relayout)) { if (relayout) layoutUnits(); repaint(); return true; } // the sound drawer owns the keyboard while open
 
     bool isCtrl = (event.modifiers & NUIModifiers::Ctrl);
@@ -1785,9 +1812,31 @@ bool ArsenalPanel::onKeyEvent(const NUIKeyEvent& event) {
         return true;
     }
 
+    if (event.keyCode == NUIKeyCode::Escape) {
+        m_selectedUnitId = 0;
+        m_selectedUnitIds.clear();
+        m_unitSelectionAnchor = 0;
+        m_selectedPatternIds.clear();
+        m_patternSelectionAnchor = 0;
+        m_scenes.setSelectedPatterns({});
+        m_selectionUnitId = 0;
+        m_selectedSteps.clear();
+        syncRowSelection();
+        for (const auto& row : m_unitRows) if (row) row->setStepSelection({});
+        if (m_onSelectedUnitChanged) m_onSelectedUnitChanged(0);
+        repaint();
+        return true;
+    }
+
     if (event.keyCode == NUIKeyCode::Delete || event.keyCode == NUIKeyCode::Backspace) {
+        if (m_selectionUnitId != 0 && !m_selectedSteps.empty()) {
+            for (const auto& row : m_unitRows) {
+                if (row && row->getUnitId() == m_selectionUnitId && row->onKeyEvent(event)) return true;
+            }
+        }
         if (!m_selectedPatternIds.empty()) return removeSelectedPatterns();
-        return removeSelectedUnits();
+        if (!m_selectedUnitIds.empty()) return removeSelectedUnits();
+        return false;
     }
 
     return false;
