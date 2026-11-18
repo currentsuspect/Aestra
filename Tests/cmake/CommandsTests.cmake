@@ -69,6 +69,15 @@ target_include_directories(EditPatternNotesCommandTest PRIVATE
 add_test(NAME EditPatternNotesCommandTest COMMAND EditPatternNotesCommandTest)
 set_tests_properties(EditPatternNotesCommandTest PROPERTIES LABELS "commands;phase2;regression;contract:application")
 
+# Arsenal unit lifecycle: creation/deletion restore stable ids and owned default patterns.
+add_executable(ArsenalUnitCommandsTest Commands/ArsenalUnitCommandsTest.cpp)
+target_link_libraries(ArsenalUnitCommandsTest PRIVATE AestraAudioCore)
+target_include_directories(ArsenalUnitCommandsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include)
+add_test(NAME ArsenalUnitCommandsTest COMMAND ArsenalUnitCommandsTest)
+set_tests_properties(ArsenalUnitCommandsTest PROPERTIES LABELS "commands;arsenal;regression")
+
 # Arsenal pattern menu (V82-AR1, FD-52): Rename, Duplicate and Delete are one undo step each.
 add_executable(PatternMenuCommandsTest Commands/PatternMenuCommandsTest.cpp)
 target_link_libraries(PatternMenuCommandsTest PRIVATE AestraAudioCore)
