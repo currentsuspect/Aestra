@@ -84,7 +84,7 @@ int main() {
         check(tm.getUnitManager().getUnitMixerChannel(a) == MASTER_MIXER_CHANNEL_ID, "and back to Master on undo");
     }
 
-    // Two sounds on one channel count once; a sound already in a group is left alone.
+    // Two sounds on one channel are a group already; a sound already in a group is left alone.
     {
         TrackManager tm;
         auto* shared = tm.addChannel("Shared");
@@ -93,12 +93,12 @@ int main() {
         const UnitID b = units.createUnit("Snare 1", UnitType::Sampler);
         units.setUnitMixerChannel(a, shared->getChannelId());
         units.setUnitMixerChannel(b, shared->getChannelId());
-        check(planRoleBus(tm, RoleCategory::Drums).members.size() == 1, "two drums on one channel are one member (nothing to group)");
+        check(planRoleBus(tm, RoleCategory::Drums).members.empty(), "two drums already on one channel are a group already (nothing to group)");
 
         const UnitID c = addUnit(tm, "Clap 1", true);
         const UnitID d = addUnit(tm, "Hat 1", true);
         const RoleBusPlan plan = planRoleBus(tm, RoleCategory::Drums);
-        check(plan.members.size() == 3, "the shared channel and the two own channels are three members");
+        check(plan.members.size() == 2, "the two own channels are two members; the shared pair is left alone");
         CreateRoleBusCommand cmd(tm, plan);
         cmd.execute();
         const UnitID e = addUnit(tm, "Tom 1", true);
@@ -106,6 +106,21 @@ int main() {
         const RoleBusPlan again = planRoleBus(tm, RoleCategory::Drums);
         check(again.members.size() == 1, "a sound added after the bus is offered alone: one member, not worth a second bus");
         cmd.undo();
+    }
+
+    // A bus made of sounds that went straight to Master is a group too: a sound added afterwards is offered alone.
+    {
+        TrackManager tm;
+        const UnitID kick = addUnit(tm, "Kick 1", false);
+        const UnitID snare = addUnit(tm, "Snare 1", false);
+        const RoleBusPlan plan = planRoleBus(tm, RoleCategory::Drums);
+        CreateRoleBusCommand cmd(tm, plan);
+        cmd.execute();
+        const UnitID tom = addUnit(tm, "Tom 1", false);
+        (void)kick; (void)snare; (void)tom;
+        const RoleBusPlan again = planRoleBus(tm, RoleCategory::Drums);
+        check(again.members.size() == 1, "a drum added after a Master-made bus is offered alone, not with the bus nested inside");
+        check(!again.worthOffering(), "so there is no second Drum Bus to offer");
     }
 
     // A name that says nothing is no member; the user's own choice is.

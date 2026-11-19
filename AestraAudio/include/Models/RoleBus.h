@@ -16,6 +16,7 @@
 #include "Models/MusicalRole.h"
 #include "Models/TrackManager.h"
 
+#include <map>
 #include <set>
 #include <string>
 #include <vector>
@@ -65,14 +66,34 @@ inline bool alreadyGrouped(const TrackManager& tm, uint32_t channelId) {
     return out != 0xFFFFFFFFu && out != MASTER_MIXER_CHANNEL_ID;
 }
 
+/// How many of @p category's sounds each channel already collects, Master included.
+inline std::map<uint32_t, size_t> soundsPerChannel(const UnitManager& units, RoleCategory category) {
+    std::map<uint32_t, size_t> counts;
+    for (UnitID id : units.getAllUnitIDs()) {
+        const UnitInfo* unit = units.getUnit(id);
+        if (!unit || unit->role.category != category) continue;
+        ++counts[unit->targetMixerChannelId];
+    }
+    return counts;
+}
+
+/// True when this channel already collects more than one of the category's sounds: that is a group already, whether it
+/// was made by hand or by a role bus, so a bus made of it would nest one group inside another.
+inline bool alreadyACollector(const std::map<uint32_t, size_t>& collected, uint32_t channelId) {
+    const auto it = collected.find(channelId);
+    return it != collected.end() && it->second > 1;
+}
+
 } // namespace role_bus_detail
 
 /**
  * @brief The bus the project could use for @p category: the sounds and tracks with that role that are not already in
  * a group. Empty or under two members means there is nothing to offer.
  *
- * Units on the same channel count once (their channel goes into the bus, as one). A track still going straight to
- * Master has no channel to route and is left out; a track that has one is included.
+ * Units on the same channel count once (their channel goes into the bus, as one). A channel that already collects two
+ * of the category's sounds is a group already and is left alone, which is also what keeps a Drum Bus out of a second
+ * Drum Bus. A track still going straight to Master has no channel to route and is left out; a track that has one is
+ * included.
  */
 inline RoleBusPlan planRoleBus(TrackManager& tm, RoleCategory category) {
     RoleBusPlan plan;
@@ -82,6 +103,7 @@ inline RoleBusPlan planRoleBus(TrackManager& tm, RoleCategory category) {
     std::set<uint32_t> channelsTaken;
 
     const UnitManager& units = static_cast<const TrackManager&>(tm).getUnitManager();
+    const std::map<uint32_t, size_t> collected = role_bus_detail::soundsPerChannel(units, category);
     for (UnitID id : units.getAllUnitIDs()) {
         const UnitInfo* unit = units.getUnit(id);
         if (!unit || unit->role.category != category) continue;
@@ -94,7 +116,9 @@ inline RoleBusPlan planRoleBus(TrackManager& tm, RoleCategory category) {
             plan.members.push_back(std::move(m));
             continue;
         }
-        if (role_bus_detail::alreadyGrouped(tm, channelId) || !channelsTaken.insert(channelId).second) continue;
+        if (role_bus_detail::alreadyGrouped(tm, channelId) || role_bus_detail::alreadyACollector(collected, channelId) ||
+            !channelsTaken.insert(channelId).second)
+            continue;
         RoleBusMember m;
         m.channelId = channelId;
         m.name = unit->name;
@@ -104,7 +128,9 @@ inline RoleBusPlan planRoleBus(TrackManager& tm, RoleCategory category) {
         if (!track || track->role.category != category) continue;
         const uint32_t channelId = track->channelId;
         if (channelId == MASTER_MIXER_CHANNEL_ID || !tm.getChannelById(channelId)) continue;
-        if (role_bus_detail::alreadyGrouped(tm, channelId) || !channelsTaken.insert(channelId).second) continue;
+        if (role_bus_detail::alreadyGrouped(tm, channelId) || role_bus_detail::alreadyACollector(collected, channelId) ||
+            !channelsTaken.insert(channelId).second)
+            continue;
         RoleBusMember m;
         m.channelId = channelId;
         m.name = track->name;
