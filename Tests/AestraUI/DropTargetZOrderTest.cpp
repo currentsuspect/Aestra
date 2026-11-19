@@ -93,6 +93,7 @@ struct Rig {
         mixer->setVisible(false);
         overlay->addChild(mixer);
 
+        pianoRoll->setId("pianoRoll");
         pianoRoll->setBounds({0, 600, 600, 168});
         pianoRoll->setVisible(false);
         overlay->addChild(pianoRoll);
@@ -165,6 +166,45 @@ void testCoverThatTakesNoDrops() {
     check(rig.total() == 0, "a panel that takes no drops still covers the timeline: the drop is rejected");
 }
 
+// A drop that lands nowhere says why in one line (13 Nov 2026: drops into Arsenal units silently did nothing
+// for a whole session, the log said only "drag started", and a restart cleared it before it could be traced).
+bool says(const std::string& text, const std::string& part) {
+    return text.find(part) != std::string::npos;
+}
+
+void testAMissSaysWhy() {
+    auto& dnd = NUIDragDropManager::getInstance();
+    {
+        Rig rig;
+        rig.pianoRoll->setVisible(true);
+        const std::string why = dnd.describeDropPoint({300, 700});
+        std::cout << "  covered: " << why << "\n";
+        check(says(why, "timeline") && says(why, "pianoRoll"), "names the target under the pointer and what covers it");
+    }
+    {
+        Rig rig;
+        rig.arsenal->setVisible(false);
+        rig.timeline->setVisible(false);
+        const std::string why = dnd.describeDropPoint({600, 160});
+        std::cout << "  hidden: " << why << "\n";
+        check(says(why, "arsenal-row") && says(why, "hidden") && says(why, "arsenal"),
+              "names a target that is there but hidden, and which ancestor hides it");
+    }
+    {
+        Rig rig;
+        rig.timeline->setHitTestVisible(false);
+        const std::string why = dnd.describeDropPoint({1000, 300});
+        std::cout << "  no pointer: " << why << "\n";
+        check(says(why, "timeline") && says(why, "takes no pointer"), "names a target that takes no pointer");
+    }
+    {
+        Rig rig;
+        const std::string why = dnd.describeDropPoint({5, 30}); // above the timeline: no target there
+        std::cout << "  nothing: " << why << "\n";
+        check(says(why, "no drop target") && says(why, "4 registered"), "says when nothing registered is there at all");
+    }
+}
+
 void testOverlappingPanelsFollowScreenOrder() {
     {
         Rig rig;
@@ -230,6 +270,7 @@ int main() {
     testUncoveredTimeline();
     testCoverThatTakesNoDrops();
     testOverlappingPanelsFollowScreenOrder();
+    testAMissSaysWhy();
     testCoverAppearsBetweenMoveAndRelease();
     testClosedMenuLeftInTheTree();
     testTargetsOutsideTheTreeKeepRegistrationOrder();
