@@ -87,6 +87,11 @@ running app can serve — `project.save`, `project.open`, `project.new`, `view.*
 `get_schema` (as `hostVerbs`, with their arguments and their refusal codes) and in
 `get_capabilities`; a headless session lists none, because it has nothing to save.
 
+Effect parameters can be set the way they are shown: `get_effects` publishes each parameter's unit,
+range, curve and step labels, and `set_effect_param --value 3.5k` reaches the same value the plugin
+prints back ("3.5kHz"). A plain number 0..1 is still the normalized value, and the reply reports what the
+plugin now displays.
+
 ## Repository Layout
 
 - `AestraCore` - core utilities and shared infrastructure

@@ -320,6 +320,11 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             }
             if (!cmdResult.createdKind.empty()) result.set("createdKind", JSON(cmdResult.createdKind));
             response.set("result", result);
+        } else if (!cmdResult.displayText.empty()) {
+            // A value-setting verb: what the object shows now (#1405).
+            JSON result = JSON::object();
+            result.set("display", JSON(cmdResult.displayText));
+            response.set("result", result);
         }
         response.set("executionMs", JSON(cmdResult.executionMs));
         return response.toString();

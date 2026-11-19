@@ -150,9 +150,11 @@ void RecoveryDialog::onRender(AestraUI::NUIRenderer& renderer) {
     renderer.fillRect({c.x, c.y, c.width, 60.0f}, amber.withAlpha(0.10f));
     renderer.fillCircle({c.x + 32.0f, c.y + 30.0f}, 5.0f, amber);
     const std::string headline = "Aestra closed unexpectedly. Your work is still here.";
-    renderer.drawText(headline, {c.x + 52.0f, c.y + 22.0f}, 15.0f, text);
-    const float hw = renderer.measureText(headline, 15.0f).width;
-    renderer.drawText(m_info.detail.empty() ? "An autosave was found from " + m_autosaveTimestamp : m_info.detail, {c.x + 52.0f + hw + 16.0f, c.y + 24.0f}, 12.0f, muted);
+    renderer.drawText(headline, {c.x + 52.0f, c.y + 12.0f}, 15.0f, text);
+    // Under the headline, not beside it: at a restored 640 px window the sentence ran off the card.
+    const std::string detail =
+        m_info.detail.empty() ? "An autosave was found from " + m_autosaveTimestamp : m_info.detail;
+    renderer.drawText(detail, {c.x + 52.0f, c.y + 34.0f}, 12.0f, muted);
     renderer.fillRect({c.x, c.y + 60.0f, c.width, 1.0f}, theme.borderSubtle);
 
     // The timeline: the last saved version, then the autosaves after it, lit.

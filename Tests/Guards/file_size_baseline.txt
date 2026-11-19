@@ -3,7 +3,7 @@
 # Tests/Guards/file_size_ratchet.cmake for the rules and the regeneration command.
 # <lines> <repo-relative path>
 2698 AestraAudio/include/Models/TrackManager.h
-2328 AestraAudio/include/Plugin/AestraEQ.h
+2342 AestraAudio/include/Plugin/AestraEQ.h
 1984 AestraAudio/include/Plugin/AestraVerb.h
 4352 AestraAudio/src/Core/AudioEngine.cpp
 3588 AestraUI/Graphics/OpenGL/NUIRendererGL.cpp
@@ -11,7 +11,7 @@
 1585 AestraUI/Widgets/AestraVerbEditor.cpp
 1927 AestraUI/Widgets/PianoRollNoteLayer.cpp
 1870 AestraUI/Widgets/UnitRow.cpp
-2471 Source/App/AestraApp.cpp
+2576 Source/App/AestraApp.cpp
 3856 Source/Components/FileBrowser.cpp
 3170 Source/Components/TrackUIComponent.cpp
 4752 Source/Core/AestraContent.cpp

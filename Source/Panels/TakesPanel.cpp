@@ -162,10 +162,12 @@ bool TakesPanel::getBouncePlayCenter(NUIPoint& out) const {
 
 /// Steps made since the open version was saved: the undo side of the history beyond what the version recorded.
 void TakesPanel::updateUnsaved() {
-    int done = 0, recorded = 0;
-    for (const auto& step : m_steps) if (!step.undone) ++done;
-    for (const auto& row : m_takeRows) if (row.take.active) recorded = static_cast<int>(row.take.steps.size());
-    m_unsaved = std::max(0, done - recorded);
+    // The app owns this number (VersionEdits): it is the only side that knows which steps the open version
+    // recorded and where the undo cursor stands. Counting here would be a second, disagreeing answer.
+    // A panel with nothing plugged in has no evidence of edits: a clean, counted zero. Claiming otherwise makes
+    // the renderer draw "Edited" over a pristine project.
+    m_unsaved = m_unsavedProvider ? m_unsavedProvider() : UnsavedInfo{0, true};
+    m_unsaved.steps = std::max(0, m_unsaved.steps);
 }
 
 TakesPanel::Layout TakesPanel::computeLayout() const {
@@ -364,7 +366,13 @@ bool TakesPanel::requestOpenSelected() {
     const int row = getDockVersion();
     if (row < 0) return false;
     const std::string takeId = m_takeRows[static_cast<size_t>(row)].take.id;
-    return invokeAction([this, takeId]() { return m_onOpenTake && m_onOpenTake(takeId); }, "Could not open the version");
+    if (!m_onOpenTake) return false;
+    setStatus("");
+    const OpenVersionResult result = m_onOpenTake(takeId);
+    // A prompt the user answered with Cancel is not a failure, so only a real one gets reported.
+    if (result == OpenVersionResult::Failed) setStatus("Could not open the version");
+    refreshTakes();
+    return result == OpenVersionResult::Opened;
 }
 
 bool TakesPanel::requestDuplicateSelected() {
@@ -552,7 +560,7 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
         const auto& to = layout.nodes.nodes[static_cast<size_t>(link.to)];
         if (from.lane != to.lane) forkCurve(renderer, {from.x, from.y}, {to.x, to.y}, laneColor(to.lane));
     }
-    const int unsaved = m_unsaved;
+    const UnsavedInfo unsaved = m_unsaved;
     for (size_t i = 0; i < layout.nodes.nodes.size(); ++i) {
         const auto& n = layout.nodes.nodes[i];
         const auto& v = m_takeRows[i].take;
@@ -581,10 +589,15 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
         const float ww = renderer.measureText(when, 10.0f).width;
         renderer.drawText(when, {n.x - ww * 0.5f, labelY + 16.0f}, 10.0f, n.open ? theme.getColor("secondary") : quiet);
         if (n.open) {
-            if (unsaved > 0) { // the dashed tail: what has been done since the version was saved
+            if (unsaved.steps > 0 || !unsaved.counted) { // the dashed tail: what has been done since the version was saved
                 const NUIPoint tailEnd{std::min(layout.timeline.right() - 24.0f, n.x + 150.0f), n.y};
                 dashedLine(renderer, {n.x + 16.0f, n.y}, tailEnd, muted.withAlpha(0.6f));
-                const std::string label = std::to_string(unsaved) + (unsaved == 1 ? " unsaved change" : " unsaved changes");
+                // A number only when it is exact: steps taken back leave no honest count, and the title bar
+                // says "Edited" too. A clean, counted zero draws no tail.
+                const std::string label = !unsaved.counted
+                                              ? std::string("Edited")
+                                              : std::to_string(unsaved.steps) +
+                                                    (unsaved.steps == 1 ? " unsaved change" : " unsaved changes");
                 const float lw = renderer.measureText(label, 11.0f).width;
                 const NUIRect chip{std::min(tailEnd.x + 8.0f, layout.timeline.right() - lw - 40.0f), n.y - 14.0f, lw + 34.0f, 28.0f};
                 renderer.fillRoundedRect(chip, Depth::Radius::pill(chip.height), theme.getColor("surfaceTertiary"));

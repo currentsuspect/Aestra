@@ -286,6 +286,36 @@ std::optional<std::string> handleLibraryVerbs(const RequestContext& ctx, const R
                 paramJson.set("value", JSON(static_cast<double>(value)));
                 paramJson.set("display", JSON(plugin->getParameterDisplay(param.id)));
                 if (!param.unit.empty()) paramJson.set("unit", JSON(param.unit));
+                // The mapping the display string is one direction of (#1405):
+                // min/max are in the parameter's OWN unit, so a caller that wants
+                // "3.5 kHz" can compute it instead of bisecting. Absent means the
+                // parameter is normalized-only — the honest answer, rather than a
+                // 0..1 range published as if it were Hz.
+                ParameterTextInfo text;
+                if (plugin->describeParameterText(param.id, text)) {
+                    // A stepped parameter's range is its labels, each one carrying
+                    // its own value ("6 dB/oct" .. "96 dB/oct"): publishing the
+                    // normalized 0..1 the steps index as if it were the unit's
+                    // range would advertise two bounds the parameter refuses.
+                    if (text.curve != ParamCurve::Stepped) {
+                        paramJson.set("min", JSON(text.min));
+                        paramJson.set("max", JSON(text.max));
+                    }
+                    const char* curve = text.curve == ParamCurve::Log
+                                            ? "log"
+                                            : (text.curve == ParamCurve::Stepped ? "stepped" : "linear");
+                    paramJson.set("curve", JSON(std::string(curve)));
+                    if (!text.unit.empty()) paramJson.set("unit", JSON(text.unit));
+                    if (!text.labels.empty()) {
+                        JSON labels = JSON::array();
+                        for (const auto& label : text.labels) labels.push(JSON(label));
+                        paramJson.set("labels", labels);
+                    }
+                    if (!text.note.empty()) paramJson.set("note", JSON(text.note));
+                    paramJson.set("acceptsText", JSON(true));
+                } else {
+                    paramJson.set("acceptsText", JSON(false));
+                }
                 params.push(paramJson);
             }
             entry.set("params", params);

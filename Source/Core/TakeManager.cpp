@@ -199,7 +199,16 @@ bool saveManifest(const TakeManager::Manifest& manifest, std::string& error) {
     }
 
     const Aestra::JSON root = manifestToJson(manifest);
-    if (!ProjectSerializer::writeAtomically(TakeManager::getManifestPath(manifest.projectPath), root.toString(2))) {
+    const std::string contents = root.toString(2);
+    // The reader refuses anything over the limit, so writing more would make every version in this manifest
+    // unreadable — the dock would come up empty with no way back. Refuse the write instead and keep the old
+    // manifest, which is still readable.
+    if (contents.size() > TAKE_MAX_MANIFEST_BYTES) {
+        error = "Takes manifest would exceed its " + std::to_string(TAKE_MAX_MANIFEST_BYTES / (1024 * 1024)) +
+                " MiB limit; nothing was written";
+        return false;
+    }
+    if (!ProjectSerializer::writeAtomically(TakeManager::getManifestPath(manifest.projectPath), contents)) {
         error = "Could not write Takes manifest";
         return false;
     }

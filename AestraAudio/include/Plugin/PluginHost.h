@@ -37,6 +37,31 @@ enum class PluginType : uint8_t {
 };
 
 /**
+ * @brief How a parameter's 0..1 value reaches the number it displays as.
+ */
+enum class ParamCurve : uint8_t {
+    Linear, ///< value = min + norm * (max - min)
+    Log,    ///< value = min * (max / min) ^ norm      (min must be > 0)
+    Stepped ///< the parameter picks one of `labels`; norm = index / (labels - 1)
+};
+
+/**
+ * @brief A parameter's display units and the mapping to them, declared.
+ *
+ * Complements PluginParameter, which describes the normalized side. min/max are
+ * in @ref unit, not 0..1 — that is the whole point: a caller reads the range it
+ * can ask for.
+ */
+struct ParameterTextInfo {
+    std::string unit;                    ///< "Hz", "dB", "ms", ":1", "%", "" for a bare number
+    double min = 0.0;                    ///< Smallest value in unit
+    double max = 1.0;                    ///< Largest value in unit
+    ParamCurve curve = ParamCurve::Linear;
+    std::vector<std::string> labels;     ///< Stepped only: one per position, low to high
+    std::string note;                    ///< Optional: a caveat worth publishing
+};
+
+/**
  * @brief Plugin metadata information
  */
 struct PluginInfo {
@@ -229,6 +254,39 @@ public:
      * @return Formatted string for display
      */
     virtual std::string getParameterDisplay(uint32_t id) const = 0;
+
+    /**
+     * @brief Describe how a parameter's 0..1 value maps to the unit it displays in.
+     *
+     * The display string is one direction of a mapping the plugin already owns.
+     * This is the same mapping declared, so a client can compute the value for a
+     * target ("3.5 kHz", "+2.4 dB") instead of setting one, reading the display
+     * back and bisecting — which is what an agent had to do for every EQ band
+     * before #1405.
+     *
+     * Returning false (the default) means "this parameter is normalized only":
+     * the caller is told that, rather than being given a range that is really
+     * 0..1 dressed in a unit.
+     *
+     * Not real-time: called from query and command-building paths.
+     */
+    virtual bool describeParameterText(uint32_t /*id*/, ParameterTextInfo& /*out*/) const { return false; }
+
+    /**
+     * @brief Read a value written in the parameter's own unit, as normalized 0..1.
+     *
+     * Accepts what getParameterDisplay() prints, and close variants: "3.5k",
+     * "3500 Hz", "+2.4 dB", "30 ms", "2:1", "85%". THE CALLER DECIDES whether a
+     * plain number is normalized or a unit value; this is only asked when the
+     * text is a unit value (see SetEffectParamCommand). Out-of-range and
+     * unparseable input return false with @p error naming the unit and range.
+     *
+     * Not real-time: called from command building.
+     */
+    virtual bool parseParameterText(uint32_t /*id*/, const std::string& /*text*/, float& /*normalized*/,
+                                    std::string& /*error*/) const {
+        return false;
+    }
 
     // ==============================
     // State Management
