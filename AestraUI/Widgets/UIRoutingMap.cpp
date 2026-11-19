@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIRoutingMap.h"
+#include "NUIWheel.h"
 
 #include "ChannelDisplayName.h"
 #include "MixerViewModel.h"
@@ -496,7 +497,7 @@ void UIRoutingMap::openSendMenu(const NUIPoint& at, uint32_t channelId, uint64_t
     }
     m_menu->addSubmenu("Set level", level);
     m_menu->addSeparator();
-    m_menu->addItem("Delete send", [this, channelId, sendId]() {
+    m_menu->addItem("Delete Send", [this, channelId, sendId]() {
         if (m_onRemoveSend) m_onRemoveSend(channelId, sendId);
         m_signature = 0;
     });
@@ -513,8 +514,8 @@ void UIRoutingMap::openNodeMenu(const NUIPoint& at, uint32_t channelId) {
         if (m_onNodeMuteToggle) m_onNodeMuteToggle(channelId);
     });
     m_menu->addSeparator();
-    m_menu->addItem("Route output to...", [this, channelId, at]() { openOutputMenu(at, channelId); });
-    m_menu->addItem("Add a send...", [this, channelId, at]() { openAddSendMenu(at, channelId); });
+    m_menu->addItem("Route Output to...", [this, channelId, at]() { openOutputMenu(at, channelId); });
+    m_menu->addItem("Add a Send...", [this, channelId, at]() { openAddSendMenu(at, channelId); });
     showMenu(at);
 }
 
@@ -575,7 +576,7 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
         if (g.list.contains(p)) {
             const float content = static_cast<float>(m_direct.size()) * kListRowH;
             const float view = g.list.height - kListHeadH;
-            m_listScroll = std::clamp(m_listScroll - event.wheelDelta * 30.0f, 0.0f, std::max(0.0f, content - view));
+            m_listScroll = std::clamp(m_listScroll - event.wheelDelta * kWheelNotchPx, 0.0f, std::max(0.0f, content - view));
             repaint();
             return true;
         }

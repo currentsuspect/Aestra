@@ -21,7 +21,7 @@ void AestraApp::startUpdateChecks() {
     hooks.postToMain = [this](std::function<void()> task) { enqueueMainThreadTask(std::move(task)); };
     hooks.requestQuit = [this]() { requestClose(); }; // the usual way out, so unsaved work is asked about first
     hooks.showMessage = [this](const std::string& text) {
-        if (m_content) m_content->showToast(text, 9.0);
+        if (m_content) m_content->showToast(text);
     };
     m_updateNotifier = std::make_shared<UpdateNotifier>(std::move(hooks));
     m_updateNotifier->start();

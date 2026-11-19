@@ -42,24 +42,14 @@ inline void goToVersionStep(Audio::CommandHistory& history, const Audio::TakesPa
     else history.undoTo(step.stackIndex + 1);
 }
 
-/// Steps made since the open version was saved: the history's depth beyond the steps the version recorded.
-inline int unsavedStepCount(const Audio::CommandHistory& history, const TakeManager::Manifest& manifest) {
-    const auto* open = manifest.ok ? manifest.activeTake() : nullptr;
-    const int recorded = open ? static_cast<int>(open->steps.size()) : 0;
-    return std::max(0, static_cast<int>(history.getUndoStack().size()) - recorded);
-}
-
-/// Hands the dock its live data: the project's name, the open version's steps, the unsaved count, and step jumps.
+/// Hands the dock its live data: the project's name, the open version's steps, and step jumps.
+/// The "N unsaved" count comes from the app (VersionEdits), which is the side that knows the open version.
 inline void wireVersionsDock(Audio::TakesPanel& panel, std::function<Audio::CommandHistory&()> history,
-                             std::function<std::string()> projectPath, std::function<std::string()> projectName,
+                             std::function<std::string()> projectName,
                              std::function<void()> afterStep = nullptr) {
     panel.setProjectNameProvider(std::move(projectName));
     panel.setStepsProvider([history]() { return versionStepEntries(history()); });
     panel.setOnStepActivated([history, afterStep](const Audio::TakesPanel::StepEntry& e) { goToVersionStep(history(), e); if (afterStep) afterStep(); });
-    panel.setUnsavedProvider([history, projectPath]() {
-        const std::string path = projectPath();
-        return path.empty() ? 0 : unsavedStepCount(history(), TakeManager::loadManifest(path));
-    });
 }
 
 /// Bounce a just-saved version with the real loudness measure (EBU R128 integrated loudness, the analysis service).

@@ -51,6 +51,8 @@ public:
 
     // Native handles
     void* getNativeHandle() const override;
+    bool placeChildWindow(std::uintptr_t child, int x, int y, int width, int height, bool visible) override;
+    bool getChildWindowSize(std::uintptr_t child, int& width, int& height) const override;
     void* getNativeDisplayHandle() const override;
 
     // DPI support

@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "PatternBrowserPanel.h"
+#include "../AestraUI/Core/NUIWheel.h"
 #include "TrackManager.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
@@ -967,7 +968,7 @@ bool PatternBrowserPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         float viewportHeight = b.height - m_headerHeight - m_footerHeight;
         float maxScroll = std::max(0.0f, listHeight - viewportHeight);
         
-        m_targetScrollOffset -= event.wheelDelta * 40.0f;
+        m_targetScrollOffset -= event.wheelDelta * AestraUI::kWheelNotchPx;
         m_targetScrollOffset = safeClampBrowserScroll(m_targetScrollOffset, maxScroll);
         
         repaint();
@@ -1165,7 +1166,7 @@ void PatternBrowserPanel::showClipContextMenu(const ClipEntry& entry, const Aest
     detachContextMenu(m_clipContextMenu);
     m_clipContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
     m_clipContextMenu->setOnHide([this]() { detachContextMenu(m_clipContextMenu); });
-    m_clipContextMenu->addItem("Place on timeline", [this, filePath = entry.filename, name = entry.name]() {
+    m_clipContextMenu->addItem("Place on Timeline", [this, filePath = entry.filename, name = entry.name]() {
         if (m_onClipPlaceOnTimelineRequested) {
             m_onClipPlaceOnTimelineRequested(filePath, name);
         }
@@ -1175,7 +1176,7 @@ void PatternBrowserPanel::showClipContextMenu(const ClipEntry& entry, const Aest
             m_onClipPreviewRequested(filePath);
         }
     });
-    m_clipContextMenu->addItem("Remove from bin", [this, sourceId = entry.id]() {
+    m_clipContextMenu->addItem("Remove from Bin", [this, sourceId = entry.id]() {
         m_removedClipSourceIds.insert(sourceId.value);
         if (m_selectedClipId == sourceId) {
             m_selectedClipId = ClipSourceID{};
@@ -1183,7 +1184,7 @@ void PatternBrowserPanel::showClipContextMenu(const ClipEntry& entry, const Aest
         refreshClips();
         repaint();
     });
-    m_clipContextMenu->addItem("Show in file browser", [this, filePath = entry.filename]() {
+    m_clipContextMenu->addItem("Show in File Browser", [this, filePath = entry.filename]() {
         if (m_onClipShowInFileBrowserRequested) {
             m_onClipShowInFileBrowserRequested(filePath);
         }
@@ -1195,7 +1196,7 @@ void PatternBrowserPanel::showPatternContextMenu(const PatternEntry& entry, cons
     detachContextMenu(m_patternContextMenu);
     m_patternContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
     m_patternContextMenu->setOnHide([this]() { detachContextMenu(m_patternContextMenu); });
-    m_patternContextMenu->addItem("Place on timeline", [this, patternId = entry.id]() {
+    m_patternContextMenu->addItem("Place on Timeline", [this, patternId = entry.id]() {
         if (m_onPatternPlaceOnTimelineRequested) {
             m_onPatternPlaceOnTimelineRequested(patternId);
         }
@@ -1205,7 +1206,7 @@ void PatternBrowserPanel::showPatternContextMenu(const PatternEntry& entry, cons
             m_onPatternPreviewRequested(patternId);
         }
     });
-    m_patternContextMenu->addItem("Remove from bin", [this, patternId = entry.id]() {
+    m_patternContextMenu->addItem("Remove from Bin", [this, patternId = entry.id]() {
         if (!m_trackManager || !patternId.isValid()) {
             return;
         }
@@ -1220,7 +1221,7 @@ void PatternBrowserPanel::showPatternContextMenu(const PatternEntry& entry, cons
         refreshPatterns();
         repaint();
     });
-    m_patternContextMenu->addItem("Show in file browser", []() {
+    m_patternContextMenu->addItem("Show in File Browser", []() {
         Aestra::Log::warning("Show in file browser is unavailable for pattern entries.");
     });
     attachAndShowContextMenu(this, m_patternContextMenu, position);

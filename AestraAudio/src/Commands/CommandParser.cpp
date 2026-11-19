@@ -33,6 +33,62 @@ static std::vector<std::string> splitWhitespace(const std::string& input) {
     return tokens;
 }
 
+namespace {
+
+// "valid flags: --track, --effect, --slot" — an error that only says what was
+// wrong makes the caller guess again; one that names the schema's flags is the
+// answer to the mistake. add_effect --plugin was reported as "unknown flag"
+// with no hint that the flag is called --effect, and an agent had to read the
+// manifest to find out.
+std::string validFlagsText(const CommandSchema& schema) {
+    if (schema.flags.empty())
+        return "valid flags: none — this verb takes no flags";
+    std::string out = "valid flags: ";
+    for (size_t i = 0; i < schema.flags.size(); ++i) {
+        if (i)
+            out += ", ";
+        out += "--" + schema.flags[i].name;
+    }
+    return out;
+}
+
+// Levenshtein distance, bounded by the strings' length (both are short).
+size_t editDistance(const std::string& a, const std::string& b) {
+    std::vector<size_t> previous(b.size() + 1), current(b.size() + 1);
+    for (size_t j = 0; j <= b.size(); ++j)
+        previous[j] = j;
+    for (size_t i = 1; i <= a.size(); ++i) {
+        current[0] = i;
+        for (size_t j = 1; j <= b.size(); ++j) {
+            const size_t substitution = previous[j - 1] + (a[i - 1] == b[j - 1] ? 0 : 1);
+            current[j] = std::min({previous[j] + 1, current[j - 1] + 1, substitution});
+        }
+        previous.swap(current);
+    }
+    return previous[b.size()];
+}
+
+// " (did you mean --effect?)" when the caller's flag is close to one the verb has.
+// Only offered when the guess is genuinely near: a suggestion for an unrelated
+// name reads as a licence to use it.
+std::string closestFlagSuggestion(const CommandSchema& schema, const std::string& given) {
+    const std::string* best = nullptr;
+    size_t bestDistance = std::string::npos;
+    for (const auto& flag : schema.flags) {
+        const size_t distance = editDistance(given, flag.name);
+        if (distance < bestDistance) {
+            bestDistance = distance;
+            best = &flag.name;
+        }
+    }
+    const size_t allowed = given.size() <= 4 ? 1 : 2;
+    if (!best || bestDistance > allowed)
+        return {};
+    return " (did you mean --" + *best + "?)";
+}
+
+} // namespace
+
 CommandResult CommandParser::parse(const std::string& input, CommandHistory& history,
                                    const CommandContext& context) {
     CommandResult result;
@@ -104,7 +160,8 @@ std::unique_ptr<ICommand> CommandParser::buildValidated(
         }
         if (!known) {
             outStatus = CommandStatus::ValidationError;
-            outMessage = "unknown flag for " + verb + ": --" + entry.first;
+            outMessage = "unknown flag for " + verb + ": --" + entry.first + " — " + validFlagsText(*schema) +
+                         closestFlagSuggestion(*schema, entry.first);
             return nullptr;
         }
     }
@@ -233,7 +290,7 @@ bool CommandParser::validateFlags(
         auto it = parsed.find(flag.name);
 
         if (flag.required && it == parsed.end()) {
-            outError = "missing required flag: --" + flag.name;
+            outError = "missing required flag: --" + flag.name + " — " + validFlagsText(schema);
             return false;
         }
 
@@ -387,6 +444,12 @@ bool CommandParser::describeCreated(const ICommand& cmd, CommandResult& out) {
         return clip(dup->getDuplicateId(), "duplicate clip");
     if (const auto* arranged = dynamic_cast<const ArrangePatternCommand*>(&cmd))
         return clip(arranged->getClipId(), "arrange pattern");
+    // set_effect_param: report the value the plugin now displays, so a caller
+    // that set "3.5k" learns it landed on "3.5kHz" without a follow-up query.
+    if (const auto* setParam = dynamic_cast<const SetEffectParamCommand*>(&cmd)) {
+        out.displayText = setParam->displayValue();
+        if (!out.displayText.empty()) out.message = "set to " + out.displayText;
+    }
     return true;
 }
 

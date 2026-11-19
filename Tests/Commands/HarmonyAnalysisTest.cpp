@@ -79,7 +79,23 @@ std::string verbNames(JSON& r) {
 }
 } // namespace
 
+// Passing chords: a chord that lasts one beat is a chord, not a smear. Half-bar windows merged beats 3 and 4 of a bar
+// into one reading, so the namer only ever named what sat on the beat.
+void testOneBeatPassingChordsAreNamed() {
+    Notes n;
+    add(n, 0, 2, {48, 60, 64, 67});  // C
+    add(n, 2, 1, {43, 59, 62, 67});  // G, one beat
+    add(n, 3, 1, {45, 57, 60, 64});  // Am, one beat
+    add(n, 4, 4, {48, 60, 64, 67});  // C again, so the key is C
+    const HarmonyTimeline t = analyzeHarmony(n, 4.0, {});
+    check(t.chordAt(0.5).name == "C", "beats 1-2 read C (got " + t.chordAt(0.5).name + ")");
+    check(t.chordAt(2.5).name == "G", "the one-beat G at beat 3 is named (got " + t.chordAt(2.5).name + ")");
+    check(t.chordAt(3.5).name == "Am", "the one-beat Am at beat 4 is named (got " + t.chordAt(3.5).name + ")");
+    check(t.chordAt(5.0).name == "C", "the next bar is still C (got " + t.chordAt(5.0).name + ")");
+}
+
 int main() {
+    testOneBeatPassingChordsAreNamed();
     std::cout << "[1] known answers\n";
     {
         Notes n;

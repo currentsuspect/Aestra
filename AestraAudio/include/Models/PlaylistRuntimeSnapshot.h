@@ -38,6 +38,8 @@ struct ClipRuntimeInfo {
     float pitchSemitones{0.0f};
     uint64_t fadeInSamples{0};
     uint64_t fadeOutSamples{0};
+    uint8_t fadeInShape{0};  ///< FadeShape of the fade-in ramp (0 linear, 1 equal power)
+    uint8_t fadeOutShape{0}; ///< same for the fade-out ramp
     /** Stable source-level mixer destination (0 routes directly to Master). */
     uint32_t mixerChannelId{0};
 

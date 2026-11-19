@@ -92,10 +92,11 @@ void testTakesPanel() {
 
     // Open action routes through the callback with the selected take's id.
     std::string openedId;
-    panel.setOnOpenTake([&](const std::string& takeId) {
+    panel.setOnOpenTake([&](const std::string& takeId) -> TakesPanel::OpenVersionResult {
         openedId = takeId;
         // Mimic the app: activate the take in the manifest (snapshot load is app-side).
-        return TakeManager::setActiveTake(projectPath, takeId).ok;
+        return TakeManager::setActiveTake(projectPath, takeId).ok ? TakesPanel::OpenVersionResult::Opened
+                                                                 : TakesPanel::OpenVersionResult::Failed;
     });
     panel.selectTake(mainRow);
     require(panel.getSelectedTake() == mainRow, "Selection should stick");
@@ -126,7 +127,7 @@ void testTakesPanel() {
     int jumpedTo = -1;
     panel.setOnStepActivated([&](const TakesPanel::StepEntry& e) { jumpedTo = e.stackIndex; });
     int unsavedCount = 3;
-    panel.setUnsavedProvider([&]() { return unsavedCount; });
+    panel.setUnsavedProvider([&]() { return TakesPanel::UnsavedInfo{unsavedCount, true}; });
     bool newBranch = false;
     panel.setOnSaveToNewBranch([&]() { newBranch = true; return true; });
     require(panel.requestSaveToNewBranch() && newBranch, "Save to new branch should route through its callback");

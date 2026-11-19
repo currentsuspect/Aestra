@@ -475,6 +475,13 @@ int main(int argc, char** argv) {
             return 1;
         }
 
+        // RAISE with nothing open is refused, not faked: the app then reopens the
+        // window instead of believing a window it cannot see is in front.
+        if (oopFraming->sendRawCommandForTest("EDITOR RAISE").find("ERR") != 0) {
+            std::cerr << "EDITOR RAISE succeeded with no editor open\n";
+            return 1;
+        }
+
         // A CRLF-terminated reply must arrive with the '\r' gone. Windows' default
         // text-mode stdout appended one to every reply, which prefix checks like
         // find("OK") == 0 cannot see — so LOAD/INITIALIZE/ACTIVATE all passed while

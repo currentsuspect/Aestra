@@ -3,6 +3,7 @@
 
 #include "Commands/ICommand.h"
 #include "Models/ClipInstance.h"
+#include "Models/FrozenTrackState.h"
 #include "Models/PatternSource.h"
 #include "Core/AutomationCurve.h"
 #include "Models/PlaylistModel.h"
@@ -33,16 +34,21 @@ class TrackManager;
  * curves' points are all kept so undo restores them exactly, and redo reuses
  * the rendered file instead of rendering again.
  */
+/**
+ * With @p freeze (V83-E11) the source clips are muted instead of removed and the channel records what was done
+ * (FrozenTrackState), so the track can be thawed after a save and reopen, not only through undo.
+ */
 class BounceInPlaceCommand final : public ICommand {
 public:
     BounceInPlaceCommand(TrackManager& manager, std::vector<ClipInstanceID> clipIds, uint32_t mixerChannelId,
-                         std::shared_ptr<AudioBufferData> rendered, double startBeat, double lengthBeats);
+                         std::shared_ptr<AudioBufferData> rendered, double startBeat, double lengthBeats,
+                         bool freeze = false);
 
     void execute() override;
     void undo() override;
     void redo() override { execute(); }
 
-    std::string getName() const override { return "Bounce in Place"; }
+    std::string getName() const override { return m_freeze ? "Freeze Track" : "Bounce in Place"; }
     size_t getSizeInBytes() const override;
     bool changesProjectState() const override { return true; }
     bool isUndoable() const override { return m_executed; }
@@ -80,6 +86,8 @@ private:
     std::vector<size_t> m_bypassedByUs;        ///< slots this command switched to bypassed
     std::vector<LaneAutomation> m_mutedLanes;  ///< lanes whose curves this command changed, as they were
     bool m_executed{false};
+    bool m_freeze{false};
+    FrozenTrackState m_frozen; ///< freeze only: what this command did, also written to the channel
 };
 
 } // namespace Audio

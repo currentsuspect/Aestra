@@ -15,12 +15,15 @@
 #include "AestraPanelWindow.h"
 #include "NUITypes.h"
 #include "PluginHost.h"
+#include "RumbleKept.h"
 
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
+#include <vector>
 
 namespace Aestra {
 namespace Plugins {
@@ -44,6 +47,8 @@ public:
 
     void drawContent(NUIRenderer& renderer, const NUIRect& contentRect) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
+    // Left and Right move between the sounds, Down makes six more, Up goes back a step (SPEC-025 R8).
+    bool onKeyEvent(const NUIKeyEvent& event) override;
     void onResize(int width, int height) override;
 
     // For tests and the screenshot recipe: the session the screen draws.
@@ -59,6 +64,15 @@ private:
     // When the instrument's sound changed outside this screen, start from it, so a later move never writes
     // the old sound back over the change.
     void followInstrument();
+    void startFromKept(size_t index);
+    void keep();
+    void undoKeep();
+    void refreshKept();
+    // A move replaces what Keep or Undo said, and Undo no longer points at that keep.
+    void moved() {
+        m_editorSaid.clear();
+        m_lastKept.reset();
+    }
     void soundChanged(); // hand the current sound to the instrument; ask for outlines
     Aestra::Plugins::RumbleSound instrumentSound() const;
 
@@ -70,6 +84,7 @@ private:
     void drawPicture(NUIRenderer& renderer);
     void drawControls(NUIRenderer& renderer);
     void drawSaid(NUIRenderer& renderer);
+    void drawEverything(NUIRenderer& renderer);
     // An outline in @p rect, mirrored about its middle; false while it is still being made.
     bool drawOutline(NUIRenderer& renderer, const NUIRect& rect, const Aestra::Plugins::RumbleSound& sound,
                      const NUIColor& color, bool picture);
@@ -84,6 +99,13 @@ private:
     std::unique_ptr<Aestra::Plugins::RumbleOutlineWorker> m_outlines;
     std::shared_ptr<const Aestra::Plugins::RumbleOutline> m_lastPicture; // shown while a shaped one is made
     size_t m_startPreset = 0;
+    int m_startKept = -1; // the kept sound this session started from, or -1
+
+    // Your 808s (R7): the producer's kept sounds, and the last keep so it can be undone.
+    std::unique_ptr<Aestra::Plugins::RumbleKept> m_keptStore;
+    std::vector<Aestra::Plugins::RumbleKept::Kept> m_kept;
+    std::optional<Aestra::Plugins::RumbleKept::Kept> m_lastKept;
+    std::string m_editorSaid;
 
     // Layout.
     NUIRect m_shelf;
@@ -97,9 +119,15 @@ private:
     std::array<NUIRect, 3> m_distance{};
     std::array<NUIRect, 5> m_holds{};
     NUIRect m_back;
+    NUIRect m_keep;
+    NUIRect m_undo;
+    std::array<NUIRect, 8> m_keptRows{};
     NUIRect m_picture;
     std::array<NUIRect, kControlCount> m_controls{};
     NUIRect m_said;
+    NUIRect m_everythingToggle;
+    std::array<NUIRect, 10> m_everything{}; // the nine detail settings, then Velocity
+    bool m_showEverything = false;
 
     // Pointer.
     NUIPoint m_hover;

@@ -24,6 +24,7 @@ namespace {
 
 // Define static tooltip state
 TooltipState NUIComponent::s_tooltipState;
+std::vector<const void*> NUIComponent::s_openPopups;
 bool NUIComponent::s_cursorCaptureActive = false;
 NUIComponent* NUIComponent::s_pressOwner = nullptr;
 NUIMouseButton NUIComponent::s_pressOwnerButton = NUIMouseButton::None;
@@ -37,6 +38,7 @@ NUIComponent::NUIComponent() {
 
 NUIComponent::~NUIComponent() {
     hideRemoteTooltip(this);
+    setPopupOpen(this, false);
     // Children are still attached here, so a whole subtree going at once forgets its owner too.
     if (s_pressOwner && subtreeContains(s_pressOwner)) {
         s_pressOwner = nullptr;
@@ -221,6 +223,7 @@ void NUIComponent::onMouseLeave() {
 void NUIComponent::setBounds(float x, float y, float width, float height) {
     if (bounds_.x != x || bounds_.y != y || 
         bounds_.width != width || bounds_.height != height) {
+        frameDirtyRegion().add(expandRect(bounds_, invalidationMargin_)); // where it was: the new bounds follow via setDirty()
         bounds_ = NUIRect(x, y, width, height);
         setDirty();
         onResize(static_cast<int>(width), static_cast<int>(height));
@@ -558,8 +561,29 @@ thread_local int t_dirtyDepth = 0; // > 0 while propagating to parents (perf pro
 thread_local double t_renderInnerMs = 0.0; // children's render time inside the current child
 } // namespace
 
+namespace {
+// The region repaint(rect) wants recorded for the setDirty() it wraps (instead of the widget's whole bounds).
+thread_local const NUIRect* t_explicitRegion = nullptr;
+} // namespace
+
+NUIDirtyRegion& NUIComponent::frameDirtyRegion() {
+    thread_local NUIDirtyRegion region;
+    return region;
+}
+
+void NUIComponent::repaint(const NUIRect& localRegion) {
+    const NUIRect window(bounds_.x + localRegion.x, bounds_.y + localRegion.y, localRegion.width, localRegion.height);
+    t_explicitRegion = &window;
+    setDirty(true);
+    t_explicitRegion = nullptr;
+}
+
 void NUIComponent::setDirty(bool dirty) {
     dirty_ = dirty;
+    if (dirty && t_dirtyDepth == 0) {
+        // Only where the invalidation starts: the parents it propagates to are not what changed.
+        frameDirtyRegion().add(t_explicitRegion ? *t_explicitRegion : expandRect(bounds_, invalidationMargin_));
+    }
     if (dirty && t_dirtyDepth == 0 && PerfProbe::enabled()) {
         PerfProbe::recordDirtyOrigin(*this, parent_);
     }
@@ -712,11 +736,30 @@ void NUIComponent::showRemoteTooltip(const std::string& text, const NUIPoint& po
     }
 }
 
+void NUIComponent::setPopupOpen(const void* popup, bool open) {
+    auto& popups = s_openPopups;
+    const auto it = std::find(popups.begin(), popups.end(), popup);
+    if (open) {
+        if (it == popups.end()) popups.push_back(popup);
+        hideRemoteTooltip(); // whatever was explaining a control is now behind the popup
+    } else if (it != popups.end()) {
+        popups.erase(it);
+    }
+}
+
+bool NUIComponent::isAnyPopupOpen() {
+    return !s_openPopups.empty();
+}
+
 void NUIComponent::showRemoteTooltip(const std::string& text, const NUIRect& anchor, const void* owner, bool force) {
     if (text.empty()) {
         hideRemoteTooltip(owner);
         return;
     }
+
+    // Tooltips respect open dropdowns, menus and pickers: they never draw over one.
+    if (!force && !s_openPopups.empty())
+        return;
 
     // Hover tooltips stay down for the length of a gesture: a cursor capture, or any held
     // button (a drag). Forced readouts are the drag's own value display and still show.

@@ -38,33 +38,26 @@ inline void drawArsenalRackHeaders(AestraUI::NUIRenderer& renderer, const Arsena
     renderer.clearClipRect();
 }
 
-/// The FIT | SCROLL segmented control in the command header; the active mode is lightly filled.
+/// The Fit | Scroll segment switch as the board draws it: a sunk pill track, the chosen side a raised pill thumb.
 inline void drawArsenalFitToggle(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& toggle, const AestraUI::NUIRect& fitRect,
                                  const AestraUI::NUIRect& scrollRect, bool fitToWidth) {
     using namespace AestraUI;
     if (toggle.width <= 0.0f) return;
     auto& theme = NUIThemeManager::getInstance();
-    const auto& tp = theme.getCurrentTheme();
-    renderer.fillRoundedRect(toggle, tp.radiusS, theme.getColor("surfaceTertiary").withAlpha(0.85f));
-    renderer.strokeRoundedRect(toggle, tp.radiusS, 1.0f, theme.getColor("borderSubtle").withAlpha(0.5f));
-    const NUIColor activeFill = theme.getColor("accentPrimary").withAlpha(0.16f);
-    const NUIColor activeText = theme.getColor("accentPrimary").withAlpha(0.95f);
-    const NUIColor idleText = theme.getColor("textSecondary").withAlpha(0.85f);
-    if (fitRect.width > 0.0f) {
-        if (fitToWidth) renderer.fillRoundedRect(fitRect, tp.radiusXS, activeFill);
-        renderer.drawTextCentered("FIT", fitRect, tp.fontSizeMicro, fitToWidth ? activeText : idleText);
-    }
-    if (scrollRect.width > 0.0f) {
-        if (!fitToWidth) renderer.fillRoundedRect(scrollRect, tp.radiusXS, activeFill);
-        renderer.drawTextCentered("SCROLL", scrollRect, tp.fontSizeMicro, fitToWidth ? idleText : activeText);
-    }
-    const float dividerX = fitRect.width > 0.0f ? fitRect.right() : toggle.x + toggle.width * 0.5f;
-    renderer.drawLine(NUIPoint(dividerX, toggle.y + 5.0f), NUIPoint(dividerX, toggle.bottom() - 5.0f), 1.0f,
-                      theme.getColor("borderSubtle").withAlpha(0.6f));
+    const float h = std::min(24.0f, toggle.height), y = toggle.y + (toggle.height - h) * 0.5f;
+    renderer.fillRoundedRect({toggle.x, y, toggle.width, h}, h * 0.5f, theme.getColor("backgroundPrimary"));
+    const auto side = [&](const NUIRect& r, const char* text, bool on) {
+        if (r.width <= 0.0f) return;
+        const NUIRect thumb{r.x + 3.0f, y + 3.0f, r.width - 6.0f, h - 6.0f};
+        if (on) renderer.fillRoundedRect(thumb, thumb.height * 0.5f, theme.getColor("surfaceRaised"));
+        renderer.drawTextCentered(text, thumb, 11.0f, theme.getColor(on ? "textPrimary" : "textMuted"));
+    };
+    side(fitRect, "Fit", fitToWidth);
+    side(scrollRect, "Scroll", !fitToWidth);
 }
 
-/// A length control as plain text (FD-27: the header reads like a sentence, not a row of boxes): the value in
-/// the middle and a quiet minus and plus either side, dimmed when that way is at its limit.
+/// A length control as the locked board draws it: one sunk pill (fully rounded, no outline) with the value in the
+/// middle and a quiet minus and plus either side, dimmed when that way is at its limit.
 inline void drawArsenalStepper(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& dec, const AestraUI::NUIRect& value,
                                const AestraUI::NUIRect& inc, const std::string& text, bool decEnabled, bool incEnabled) {
     using namespace AestraUI;
@@ -72,6 +65,8 @@ inline void drawArsenalStepper(AestraUI::NUIRenderer& renderer, const AestraUI::
     const auto& tp = theme.getCurrentTheme();
     const NUIColor glyph = theme.getColor("textSecondary").withAlpha(0.85f);
     const NUIColor off = theme.getColor("textDisabled");
+    const float pillH = std::min(24.0f, dec.height), pillY = dec.y + (dec.height - pillH) * 0.5f;
+    renderer.fillRoundedRect(NUIRect(dec.x, pillY, inc.right() - dec.x, pillH), pillH * 0.5f, theme.getColor("backgroundPrimary"));
     renderer.drawTextCentered("\xE2\x88\x92", dec, tp.fontSizeS, decEnabled ? glyph : off);
     renderer.drawTextCentered(text, value, tp.fontSizeXS, theme.getColor("textPrimary").withAlpha(0.92f));
     renderer.drawTextCentered("+", inc, tp.fontSizeS, incEnabled ? glyph : off);

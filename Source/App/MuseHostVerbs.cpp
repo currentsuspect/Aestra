@@ -161,6 +161,7 @@ void registerMuseHostVerbs(Audio::MuseService& service, ::AestraContent& content
         spec.mutates = false; // window layout, not project state — nothing to undo
         spec.description = "Open a workspace overlay. Known views: " + knownViewList() + ".";
         spec.args.push_back(viewArg());
+        spec.failureCodes = {"no_such_view"};
         registerOrLog(service, std::move(spec),
                       [setOpen](const JSON& args) { return setOpen(args, true); });
     }
@@ -172,6 +173,7 @@ void registerMuseHostVerbs(Audio::MuseService& service, ::AestraContent& content
         spec.mutates = false;
         spec.description = "Close a workspace overlay. Known views: " + knownViewList() + ".";
         spec.args.push_back(viewArg());
+        spec.failureCodes = {"no_such_view"};
         registerOrLog(service, std::move(spec),
                       [setOpen](const JSON& args) { return setOpen(args, false); });
     }

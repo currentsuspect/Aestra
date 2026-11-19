@@ -197,12 +197,22 @@ bool UIMixerHeader::onMouseEvent(const NUIMouseEvent& event)
     if (!isVisible() || !isEnabled()) return false;
     if (!getBounds().contains(event.position)) return false;
 
+    if (event.pressed && event.button == NUIMouseButton::Left && m_doubleClick.press(event.position, event.doubleClick) &&
+        !m_isMaster && onRenameRequested) {
+        onRenameRequested();
+        return true;
+    }
+
     if (event.pressed && event.button == NUIMouseButton::Right) {
         if (!m_colorMenu) {
             m_colorMenu = std::make_shared<NUIContextMenu>();
             m_colorMenu->setCloseOnSelection(true);
         }
         m_colorMenu->clear();
+        if (!m_isMaster && onRenameRequested) {
+            m_colorMenu->addItem("Rename", [this]() { if (onRenameRequested) onRenameRequested(); });
+            m_colorMenu->addSeparator();
+        }
 
         for (int i = 0; i < PALETTE_SIZE; ++i) {
             const bool selected = (i == m_colorIndex);

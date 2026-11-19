@@ -10,9 +10,9 @@ namespace Audio {
 
 BounceInPlaceCommand::BounceInPlaceCommand(TrackManager& manager, std::vector<ClipInstanceID> clipIds,
                                            uint32_t mixerChannelId, std::shared_ptr<AudioBufferData> rendered,
-                                           double startBeat, double lengthBeats)
+                                           double startBeat, double lengthBeats, bool freeze)
     : m_manager(manager), m_clipIds(std::move(clipIds)), m_mixerChannelId(mixerChannelId),
-      m_rendered(std::move(rendered)), m_startBeat(startBeat), m_lengthBeats(lengthBeats) {}
+      m_rendered(std::move(rendered)), m_startBeat(startBeat), m_lengthBeats(lengthBeats), m_freeze(freeze) {}
 
 size_t BounceInPlaceCommand::getSizeInBytes() const {
     // The rendered buffer is held only until the first execute() has written it.
@@ -53,8 +53,23 @@ void BounceInPlaceCommand::execute() {
         return;
     }
 
-    for (const auto& removed : m_removed)
-        playlist.removeClip(removed.clip.id);
+    if (m_freeze) {
+        // Kept in the project, muted: that is what lets a reopened project thaw. Only clips that were audible
+        // are ours to mute again later.
+        m_frozen.mutedClips.clear();
+        for (const auto& removed : m_removed) {
+            const ClipInstance* live = playlist.getClip(removed.clip.id);
+            if (!live || live->edits.muted)
+                continue;
+            ClipEdits edits = live->edits;
+            edits.muted = true;
+            playlist.setClipEdits(removed.clip.id, edits);
+            m_frozen.mutedClips.push_back(removed.clip.id);
+        }
+    } else {
+        for (const auto& removed : m_removed)
+            playlist.removeClip(removed.clip.id);
+    }
 
     m_newClipLane = m_removed.front().lane;
     if (!m_newClip.id.isValid()) {
@@ -64,8 +79,18 @@ void BounceInPlaceCommand::execute() {
         playlist.setClipEdits(id, ClipEdits{});
         const ClipInstance* placed = playlist.getClip(id);
         if (!placed) {
-            for (const auto& removed : m_removed)
-                playlist.addClip(removed.lane, removed.clip);
+            if (m_freeze) {
+                for (const auto& id : m_frozen.mutedClips)
+                    if (const ClipInstance* live = playlist.getClip(id)) {
+                        ClipEdits edits = live->edits;
+                        edits.muted = false;
+                        playlist.setClipEdits(id, edits);
+                    }
+                m_frozen.mutedClips.clear();
+            } else {
+                for (const auto& removed : m_removed)
+                    playlist.addClip(removed.lane, removed.clip);
+            }
             return;
         }
         m_newClip = *placed;
@@ -75,6 +100,12 @@ void BounceInPlaceCommand::execute() {
 
     bypassInserts();
     muteInsertAutomation();
+    if (m_freeze) {
+        m_frozen.frozenClip = m_newClip.id;
+        m_frozen.bypassedSlots.assign(m_bypassedByUs.begin(), m_bypassedByUs.end());
+        if (MixerChannel* channel = m_manager.getChannelById(m_mixerChannelId))
+            channel->frozenTrack() = m_frozen;
+    }
 
     m_manager.markModified();
     m_manager.requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
@@ -91,8 +122,19 @@ void BounceInPlaceCommand::undo() {
     restoreInserts();
 
     playlist.removeClip(m_newClip.id);
-    for (const auto& removed : m_removed)
-        playlist.addClip(removed.lane, removed.clip);
+    if (m_freeze) {
+        for (const auto& id : m_frozen.mutedClips)
+            if (const ClipInstance* live = playlist.getClip(id)) {
+                ClipEdits edits = live->edits;
+                edits.muted = false;
+                playlist.setClipEdits(id, edits);
+            }
+        if (MixerChannel* channel = m_manager.getChannelById(m_mixerChannelId))
+            channel->frozenTrack().clear();
+    } else {
+        for (const auto& removed : m_removed)
+            playlist.addClip(removed.lane, removed.clip);
+    }
     // Detach rather than remove: redo reinserts this exact pattern; its file stays on disk.
     m_detachedPattern = m_manager.getPatternManager().detachPattern(m_patternId);
 
@@ -132,6 +174,7 @@ void BounceInPlaceCommand::restoreInserts() {
 
 void BounceInPlaceCommand::muteInsertAutomation() {
     m_mutedLanes.clear();
+    m_frozen.mutedCurves.clear();
     if (m_mixerChannelId == MASTER_MIXER_CHANNEL_ID)
         return; // nothing was baked in that would play twice; the Master's own automation is not ours to mute
     auto& playlist = m_manager.getPlaylistModel();
@@ -150,8 +193,14 @@ void BounceInPlaceCommand::muteInsertAutomation() {
                 changed = true;
             }
         }
-        if (changed)
+        if (changed) {
             m_mutedLanes.push_back({lane->id, before});
+            for (size_t i = 0; i < lane->automationCurves.size(); ++i) {
+                const auto& now = lane->automationCurves[i];
+                if (now.muted && i < before.size() && !before[i].muted)
+                    m_frozen.mutedCurves.push_back({lane->id, now.deviceInstanceId, now.paramId});
+            }
+        }
     }
 }
 
