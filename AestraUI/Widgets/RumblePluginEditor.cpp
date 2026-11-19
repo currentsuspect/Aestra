@@ -828,13 +828,10 @@ bool RumblePluginEditor::onKeyEvent(const NUIKeyEvent& event) {
     case NUIKeyCode::Enter:
         keep();
         return true;
-<<<<<<< HEAD
     case NUIKeyCode::Space: // plays the picked sound (SPEC-025 keys); the transport keeps Space everywhere else
         audition();
         return true;
-||||||| 42693aa3a
-=======
->>>>>>> origin/develop
+
     default:
         return AestraPanelWindow::onKeyEvent(event);
     }
