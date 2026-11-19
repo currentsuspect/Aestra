@@ -567,6 +567,41 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/TakeManagerVersionsTest.cpp")
     set_tests_properties(TakeManagerVersionsTest PROPERTIES LABELS "integration;takes;versions;project;contract:durability")
 endif()
 
+# Version edits (SPEC-017 criterion 4): the unsaved count after undo, and the three switch answers
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/VersionEditsTest.cpp")
+    add_executable(VersionEditsTest Integration/VersionEditsTest.cpp)
+    target_link_libraries(VersionEditsTest PRIVATE AestraAudio)
+    target_include_directories(VersionEditsTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Core
+    )
+    add_test(NAME VersionEditsTest COMMAND VersionEditsTest)
+    set_tests_properties(VersionEditsTest PROPERTIES LABELS "integration;takes;versions;project;contract:durability")
+endif()
+
+# The recovery card's words (SPEC-017 criterion 7, #1309)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/RecoveryInfoTest.cpp")
+    add_executable(RecoveryInfoTest
+        Integration/RecoveryInfoTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/TakeManager.cpp
+    )
+    target_link_libraries(RecoveryInfoTest PRIVATE AestraAudio)
+    target_include_directories(RecoveryInfoTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Core
+    )
+    add_test(NAME RecoveryInfoTest COMMAND RecoveryInfoTest)
+    set_tests_properties(RecoveryInfoTest PROPERTIES LABELS "integration;takes;versions;project;contract:durability")
+endif()
+
 # Plugin Scanner Test
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/PluginScanTest.cpp")
     add_executable(AestraPluginScanTest Integration/PluginScanTest.cpp)
