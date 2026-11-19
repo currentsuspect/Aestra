@@ -34,6 +34,7 @@
  * Refactored to delegate to AestraWindowManager and AestraAudioController.
  */
 #include "../Core/RecoveryInfo.h"
+#include "../Core/VersionEdits.h"
 #include "../Panels/AuditionBounceTile.h"
 namespace Aestra { enum class RecoveryResponse; class UpdateNotifier; class SettingsDialog; namespace Audio { class TakesPanel; } }
 namespace AestraUI { class NUIContextMenu; }
@@ -194,7 +195,18 @@ private:
     serializeCurrentProject(int indentSpaces, const ProjectSerializer::UIState* uiState = nullptr) const;
     bool saveActiveTakeSnapshot(const ProjectSerializer::UIState* uiState = nullptr);
     bool createTakeFromCurrentProject(bool newBranch = false);
-    ProjectSerializer::LoadResult switchToTake(const std::string& takeId);
+    /**
+     * @brief Loads a version's snapshot into the open project.
+     * @param saveCurrent When false the working state is left behind (the user chose Discard in the switch prompt).
+     */
+    ProjectSerializer::LoadResult switchToTake(const std::string& takeId, bool saveCurrent = true);
+    /**
+     * @brief A user asked to open a version: asks first when the project has moved on from it (SPEC-017 scope 5).
+     * @return whether the version was opened, the user declined, or the switch failed — the panel says which.
+     */
+    Aestra::VersionEdits::OpenOutcome requestSwitchToTake(const std::string& takeId);
+    /** @brief The panel's word for a switch that was attempted: opened, or failed with its reason logged. */
+    Aestra::VersionEdits::OpenOutcome reportSwitch(const ProjectSerializer::LoadResult& result);
     bool branchFromTake(const std::string& takeId);
     void wireTakesPanel();
     void reinitAutosaveManager();
@@ -223,7 +235,24 @@ private:
     void onRecoveryResponse(Aestra::RecoveryResponse response, const std::string& autosavePath, const std::string& projectPath,
                             bool hasRequestedProject, const std::string& originalProjectPath, const std::vector<std::string>& candidates);
     void showVersionPicker(float x);
-    int m_recordedSteps = 0;  ///< steps the open version recorded when saved, for the "N unsaved" count
+    /** @brief Asks what to do with steps the open version does not have, then switches (SPEC-017 scope 5). */
+    void showVersionSwitchPrompt(const std::string& takeId, const Aestra::VersionEdits::State& edits);
+    /** @brief Steps the open version recorded, and whether the project has moved on from it. Cheap between changes. */
+    Aestra::VersionEdits::State currentVersionEdits();
+    /** The open version's log, the commands it was saved with, and the history evictions seen then. */
+    Aestra::VersionEdits::Baseline m_versionBaseline;
+    Aestra::VersionEdits::State m_versionEdits;
+    uint64_t m_versionEditsMutation{0}; ///< the history's mutation count the cached answer was measured at
+    bool m_versionEditsStale{true};
+    /** The manifest read behind the chip: the frame loop asks, so an unchanged file is not read again. */
+    std::string m_versionManifestPath;
+    uint64_t m_versionManifestMtime{0};
+    uint64_t m_versionManifestSize{0};
+    bool m_versionManifestKnown{false};
+    /** @brief Writes the working state aside so a switch that fails can hand it back; empty when it could not. */
+    std::string stageWorkingState();
+    /** @brief Puts a staged session, or the canonical file, back after a switch failed part-way. */
+    void restoreWorkingState(const std::string& stagedPath);
     static std::string getRecoveryMarkerPath(const std::string& autosavePath);
     static std::string readCrashFlagToken();
     static std::string readRecoveryOriginalProjectPath(const std::string& recoveryMarkerPath,

@@ -18,10 +18,12 @@
 #include "MusicHelpers.h"
 #include "NUILabel.h"
 #include "NUIIcon.h"
+#include "NUIContextMenu.h"
 #include "NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
 #include "ViewTypes.h"
 #include "TransportInfoContainer.h"
+#include "Music/ProjectHarmony.h"
 
 #include <memory>
 #include <functional>
@@ -122,6 +124,16 @@ public:
         finally the record aids. Transport, position and tempo never hide. */
     static float requiredWidth(bool record, bool panels, bool keys);
 
+    /** @brief The song key module (V83-KEY3, FD-98): the key as heard, a semitone stepper, and a menu to name or move it. */
+    void showKey(const Audio::ProjectHarmony& harmony);
+    const Audio::ProjectHarmony& shownKey() const { return m_harmony; }
+    /** @brief The user changed the key: the new harmony and the history name. The owner runs it as ONE undoable command. */
+    /** @brief The user chose the computer keyboard's root octave, or turned it on/off (right-click the key module). */
+    void setOnTypingChange(std::function<void(bool enabled, int octave)> callback) { m_onTypingChange = std::move(callback); }
+    void setOnKeyChange(std::function<void(const Audio::ProjectHarmony&, const std::string&)> callback) {
+        m_onKeyChange = std::move(callback);
+    }
+
     /** @brief Set the platform bridge for hover cursor styling (hand on buttons). */
     void setPlatformBridge(AestraUI::NUIPlatformBridge* bridge) { m_platformBridge = bridge; }
     /** @brief Release hover cursor + tooltip when the pointer leaves the bar. */
@@ -177,6 +189,8 @@ private:
     std::function<void()> m_onPause;
     std::function<void(bool)> m_onStop;
     std::function<void(float)> m_onTempoChange;
+    std::function<void(const Audio::ProjectHarmony&, const std::string&)> m_onKeyChange;
+    std::function<void(bool, int)> m_onTypingChange;
     std::function<void(bool)> m_onMetronomeToggle;
     std::function<void(int)> m_onTimeSignatureChange;
     AestraUI::NUIPlatformBridge* m_platformBridge = nullptr;
@@ -222,8 +236,15 @@ private:
     struct ModuleMark { const char* label; float x; float width; };
     std::vector<ModuleMark> m_moduleMarks;
     std::vector<float> m_dividers;
-    AestraUI::NUIRect m_keysValueRect;
-    bool m_showKeys{true};
+
+    // Song key module: what is shown, where its three hit areas are (bar-local), and the open menu.
+    Audio::ProjectHarmony m_harmony;
+    bool m_showKey{true};
+    AestraUI::NUIRect m_keyMinusRect, m_keyNameRect, m_keyPlusRect, m_keyTypingRect;
+    std::shared_ptr<AestraUI::NUIContextMenu> m_keyMenu;
+    void openKeyMenu();
+    void openTypingMenu();
+    void changeKey(const Audio::ProjectHarmony& next, const char* name);
     
     void createIcons();
     void createButtons();
