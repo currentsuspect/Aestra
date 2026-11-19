@@ -13,6 +13,7 @@
 #include "Models/TrackManager.h"
 
 #include <cstdio>
+#include <filesystem>
 #include <memory>
 #include <string>
 
@@ -27,6 +28,15 @@ void check(bool ok, const char* name) {
     std::printf("[%s] %s\n", ok ? "PASS" : "FAIL", name);
     if (!ok)
         ++g_failures;
+}
+
+
+// Save a project and load it into a fresh TrackManager, the way Save then Open does.
+std::shared_ptr<TrackManager> roundTrip(const std::shared_ptr<TrackManager>& source, const std::filesystem::path& file) {
+    auto ser = ProjectSerializer::serialize(source, 120.0, 0.0, 2);
+    if (!ser.ok || !ProjectSerializer::writeAtomically(file.string(), ser.contents)) return nullptr;
+    auto loaded = std::make_shared<TrackManager>();
+    return ProjectSerializer::load(file.string(), loaded).ok ? loaded : nullptr;
 }
 
 } // namespace
@@ -91,6 +101,69 @@ int main() {
         model.add(4.0, "Existing");
         markersFromJson(JSON::parse("null"), model);
         check(model.empty(), "ANonArraySectionClearsRatherThanKeeps");
+    }
+
+
+    // --- QA: persistence ---
+    {
+        // 50 markers, with names that stress the file format: quotes, backslashes, a newline, a tab, emoji, non-Latin.
+        auto tm = std::make_shared<TrackManager>();
+        auto& h = tm->getCommandHistory();
+        const char* nasty[] = {"Say \"hi\"", "back\\slash", "two\nlines", "tab\there", "<b>&amp;</b>",
+                               "\xF0\x9F\x8E\xB5 song", "\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E", "caf\xC3\xA9"};
+        for (int i = 0; i < 50; ++i) {
+            const std::string name = i < 8 ? std::string(nasty[i]) : "Section " + std::to_string(i);
+            h.pushAndExecute(std::make_shared<AddMarkerCommand>(*tm, i * 4.0, name));
+        }
+        auto back = roundTrip(tm, dir.path() / "fifty.aes");
+        check(back != nullptr, "FiftyMarkerProjectRoundTrips");
+        if (back) {
+            const auto& a = tm->markers().markers();
+            const auto& b = back->markers().markers();
+            bool same = a.size() == b.size();
+            for (size_t i = 0; same && i < a.size(); ++i)
+                same = a[i].id == b[i].id && a[i].name == b[i].name && a[i].beat == b[i].beat;
+            check(b.size() == 50, "AllFiftyMarkersComeBack");
+            check(same, "NamesWithQuotesNewlinesAndUnicodeSurviveByteForByte");
+        }
+    }
+    {
+        // Rename, then save at once; delete, then save at once; undo, then save: the file holds what the UI showed.
+        auto tm = std::make_shared<TrackManager>();
+        auto& h = tm->getCommandHistory();
+        auto a = std::make_shared<AddMarkerCommand>(*tm, 4.0, "A");
+        auto b = std::make_shared<AddMarkerCommand>(*tm, 8.0, "B");
+        h.pushAndExecute(a);
+        h.pushAndExecute(b);
+        h.pushAndExecute(std::make_shared<RenameMarkerCommand>(*tm, a->markerId(), "A renamed"));
+        auto r1 = roundTrip(tm, dir.path() / "renamed.aes");
+        check(r1 && r1->markers().find(a->markerId()) && r1->markers().find(a->markerId())->name == "A renamed",
+              "RenameThenSaveImmediatelyKeepsTheNewName");
+        h.pushAndExecute(std::make_shared<DeleteMarkerCommand>(*tm, b->markerId()));
+        auto r2 = roundTrip(tm, dir.path() / "deleted.aes");
+        check(r2 && r2->markers().count() == 1 && r2->markers().find(b->markerId()) == nullptr,
+              "DeleteThenSaveImmediatelyDropsTheMarker");
+        h.undo(); // brings B back
+        auto r3 = roundTrip(tm, dir.path() / "undone.aes");
+        check(r3 && r3->markers().count() == 2 && r3->markers().find(b->markerId()) != nullptr,
+              "UndoThenSaveWritesTheUndoneState");
+    }
+    {
+        // An older file with two markers on one beat (the model used to allow it) loads with both, in a stable order.
+        MarkerModel model;
+        markersFromJson(JSON::parse("[{\"id\":1,\"beat\":8,\"name\":\"One\"},{\"id\":2,\"beat\":8,\"name\":\"Two\"}]"), model);
+        check(model.count() == 2 && model.markers()[0].name == "One" && model.markers()[1].name == "Two",
+              "SameBeatMarkersInAnOldFileBothLoadInOrder");
+    }
+    {
+        // After a load, a new unnamed marker must not reuse a default name already in the project.
+        MarkerModel model;
+        markersFromJson(JSON::parse("[{\"id\":1,\"beat\":0,\"name\":\"Marker 1\"},{\"id\":2,\"beat\":4,\"name\":\"Marker 2\"}]"), model);
+        const uint64_t fresh = model.add(8.0);
+        const Marker* m = model.find(fresh);
+        check(m != nullptr && m->name != "Marker 1" && m->name != "Marker 2",
+              "ANewDefaultNameAfterLoadDoesNotRepeatOne");
+        check(fresh > 2, "ANewIdAfterLoadDoesNotCollide");
     }
 
     if (g_failures) {

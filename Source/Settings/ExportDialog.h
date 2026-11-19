@@ -40,6 +40,8 @@ public:
         std::string errorMessage;
         /** @brief Files written: 1 for a mix, one per track plus the master for stems. */
         int fileCount = 1;
+        /** @brief With a loudness target: "Loudness -18.2 > -14.0 LUFS" (and why it stopped short). */
+        std::string loudnessNote;
     };
 
     /**
@@ -116,7 +118,7 @@ private:
     void applyPanelState();
     void startExport();
     Aestra::Audio::ExportFormat formatOf(int optionIndex) const; ///< WAV, FLAC or MP3 for a Format menu entry
-    ExportJobResult exportThreadFn(std::string outputPath, int selectedBitDepth, int selectedSampleRate, int selectedScope, double tailSeconds, bool stems);
+    ExportJobResult exportThreadFn(std::string outputPath, int selectedBitDepth, int selectedSampleRate, int selectedScope, double tailSeconds, bool stems, int selectedLoudness);
     void openBrowse();
     bool parseTailInput(double& outTailSeconds) const;
     void syncTailInputFromValue();
@@ -146,6 +148,10 @@ private:
     // when their encoders are on this computer (EncodedAudioWriter, FD-61).
     std::vector<std::string> m_bitDepthOptions = {"WAV 16-bit", "WAV 24-bit", "WAV 32-bit float"};
     std::vector<std::string> m_sampleRateOptions = {"44.1 kHz", "48 kHz", "88.2 kHz", "96 kHz"};
+    // Loudness target: as mixed, streaming (-14), loud (-9), broadcast (-23); one gain, true peak kept under -1 dBTP.
+    std::vector<std::string> m_loudnessOptions = {"As mixed", "-14 LUFS", "-9 LUFS", "-23 LUFS"};
+    int m_selectedLoudness = 0;
+    std::string m_exportLoudnessNote;
     static constexpr uint32_t kSampleRates[4] = {44100, 48000, 88200, 96000}; ///< what each rate entry renders at
     std::vector<std::string> m_scopeOptions = { "Full Song", "Loop Region", "Selection" };
 
@@ -173,7 +179,7 @@ private:
     std::shared_ptr<AestraUI::NUILabel> m_outputLabel, m_scopeLabel, m_rateLabel, m_depthLabel, m_tailLabel;
     std::shared_ptr<AestraUI::NUITextInput> m_outputInput, m_tailField;
     std::shared_ptr<AestraUI::NUIButton> m_browseButton;
-    std::shared_ptr<AestraUI::NUIDropdown> m_scopeDropdown, m_rateDropdown, m_depthDropdown;
+    std::shared_ptr<AestraUI::NUIDropdown> m_scopeDropdown, m_rateDropdown, m_depthDropdown, m_loudnessDropdown;
     std::shared_ptr<AestraUI::NUICheckbox> m_stemsCheckbox;
     std::shared_ptr<AestraUI::NUILabel> m_stemsHint;
     std::shared_ptr<AestraUI::NUILabel> m_statusLabel, m_detailLabel, m_detailLabel2, m_elapsedLabel;

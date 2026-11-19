@@ -285,6 +285,14 @@ if(UNIX AND TARGET AestraPluginHost AND EXISTS ${CMAKE_SOURCE_DIR}/AestraAudio/E
     add_dependencies(ClapScanAllTest AestraPluginHost ClapMultiPluginFixture)
     add_test(NAME ClapScanAllTest COMMAND ClapScanAllTest)
     set_tests_properties(ClapScanAllTest PROPERTIES LABELS "audio;plugins;clap;regression;contract:plugins")
+
+    # VST3 scanning happens in the helper so the app never keeps a scanned plugin mapped (SPEC-028 memory lever 2).
+    add_executable(PluginScanProtocolTest AestraAudio/PluginScanProtocolTest.cpp)
+    target_include_directories(PluginScanProtocolTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)
+    target_compile_definitions(PluginScanProtocolTest PRIVATE HELPER_PATH="$<TARGET_FILE:AestraPluginHost>")
+    add_dependencies(PluginScanProtocolTest AestraPluginHost)
+    add_test(NAME PluginScanProtocolTest COMMAND PluginScanProtocolTest)
+    set_tests_properties(PluginScanProtocolTest PROPERTIES LABELS "audio;plugins;vst3;regression;contract:plugins")
 endif()
 
 # The road a parameter value takes to a VST3 processor, and back from the plugin's own window (V82-H4/H5).

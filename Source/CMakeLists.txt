@@ -38,6 +38,7 @@ set(Aestra_SOURCES
 	Core/AestraContentBounce.cpp
 	Core/AestraContentEditorPreview.cpp
 	Core/AestraContentMeters.cpp
+	Core/AestraContentKey.cpp
 	Panels/DspLoadReadout.h
 	Core/AestraContentImport.cpp
 	Core/AestraContentPanelMode.cpp
@@ -155,6 +156,7 @@ set(Aestra_SOURCES
 	Components/TrackManagerUIClipOps.cpp
 	Components/TrackManagerUIRender.cpp
 	Components/TrackManagerUIEvents.cpp
+	Components/TrackManagerUIMarkers.cpp
 	Components/TrackManagerUIView.cpp
 	Components/TrackManagerUIFold.cpp
 	Components/TimelineFold.h

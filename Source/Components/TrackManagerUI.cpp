@@ -12,6 +12,10 @@
 #include "Commands/AddClipCommand.h"
 #include "Commands/CreateTrackWithLaneCommand.h"
 #include "Commands/DeleteLaneCommand.h"
+#include "Commands/MoveTrackCommand.h"
+#include "Commands/RenameCommand.h"
+#include "Commands/RemoveTrackCommand.h"
+#include "Commands/DuplicateTrackCommand.h"
 #include "Commands/DuplicateClipCommand.h"
 #include "Commands/MoveClipCommand.h"
 #include "Commands/RemoveClipCommand.h"
@@ -48,6 +52,8 @@ TrackManagerUI::TrackManagerUI(std::shared_ptr<TrackManager> trackManager)
         Log::error("TrackManagerUI created with null track manager");
         return;
     }
+    // Names change by command (rename, undo, redo): re-read them on the next update.
+    m_trackManager->getCommandHistory().addOnStateChanged([flag = m_namesDirty]() { flag->store(true); });
 
     // Create add-track icon (SVG) for consistent header styling
     const char* addTrackSvg = R"(
@@ -206,7 +212,9 @@ void TrackManagerUI::refreshTracks() {
             continue;
         }
         seenTracks.insert(track->trackId);
-        if (!m_showEmptyTracks && isFoldableEmptyLane(*lane, track->laneIds.size())) {
+        // The first row always shows, so a project is never an empty timeline behind "show". (A new project
+        // has just the one track; a saved one with a run of untouched tracks keeps the first and folds the rest.)
+        if (!m_showEmptyTracks && !orderedLaneIds.empty() && isFoldableEmptyLane(*lane, track->laneIds.size())) {
             ++m_foldedEmptyTracks; // V82-T2: folded into the last row
             continue;
         }
@@ -440,17 +448,17 @@ void TrackManagerUI::revealLane(PlaylistLaneID laneId) {
             // Bring the row into view only if it is not already, and by the least that does it. It used to put the row at the
             // top of the screen every time, so finishing a recording threw the whole timeline to that lane (owner,
             // 2026-10-21: "when recording on a lane it moves to that lane"; it already sits where you were looking).
-            const float rowHeight = static_cast<float>(m_trackHeight + m_trackSpacing);
-            const float rowTop = static_cast<float>(i) * rowHeight;
-            const float rowBottom = rowTop + static_cast<float>(m_trackHeight);
-            const float viewHeight = currentTimelineLayout().rows.height;
+            const auto layout = currentTimelineLayout();
+            const TimelineRowHeights heights = rowHeights();
+            const float rowTop = timelineRowTopY(layout, heights, static_cast<float>(m_trackSpacing), static_cast<int>(i), 0.0f) - layout.rows.y;
+            const float rowBottom = rowTop + heights.at(i);
+            const float viewHeight = layout.rows.height;
             if (rowTop < m_scrollOffset) {
                 setVerticalScroll(rowTop);
             } else if (rowBottom > m_scrollOffset + viewHeight + 0.5f) {
-                // Whole rows, no more than it takes: the top row slides out and every other row stays where the
+                // No more than it takes: the rows above slide up and every other row stays where the
                 // producer left it (owner, 2026-10-31: the screen is full, so move one down, do not focus the take).
-                const float rows = std::ceil((rowBottom - viewHeight - m_scrollOffset) / rowHeight);
-                setVerticalScroll(m_scrollOffset + rows * rowHeight);
+                setVerticalScroll(rowBottom - viewHeight);
             }
             break;
         }
@@ -606,15 +614,19 @@ void TrackManagerUI::layoutTracks() {
     // FD-14 §10: nested rows keep FULL-WIDTH bounds — the timeline grid must
     // stay globally aligned across lanes (a row-x indent would shift clip
     // snapping); nesting is expressed in the chrome instead.
-    const auto rows = arrangeTimelineRows(layout, static_cast<float>(m_trackHeight),
-                                          static_cast<float>(m_trackSpacing), m_trackUIComponents.size(),
-                                          m_scrollOffset, trace);
+    // Rows of their own height once any track was resized; the uniform stack (with its layout trace) otherwise.
+    const auto rows = m_rowHeightOverrides.empty()
+                          ? arrangeTimelineRows(layout, static_cast<float>(m_trackHeight),
+                                                static_cast<float>(m_trackSpacing), m_trackUIComponents.size(),
+                                                m_scrollOffset, trace)
+                          : arrangeTimelineRows(layout, rowHeights(), static_cast<float>(m_trackSpacing),
+                                                m_trackUIComponents.size(), m_scrollOffset);
     AestraUI::Layout::finishLayoutPass(trace);
     // V82-T2: the folded empty tracks take the row after the last track, the row where a drop makes a new track.
     {
         const auto withFold =
-            arrangeTimelineRows(layout, static_cast<float>(m_trackHeight), static_cast<float>(m_trackSpacing),
-                                m_trackUIComponents.size() + 1, m_scrollOffset, nullptr);
+            arrangeTimelineRows(layout, rowHeights(), static_cast<float>(m_trackSpacing),
+                                m_trackUIComponents.size() + 1, m_scrollOffset);
         m_foldedRowRect = withFold.empty() ? AestraUI::NUIRect{} : toWindow(withFold.back().rect);
     }
     for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
@@ -854,6 +866,7 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
     m_activeContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
     auto menu = m_activeContextMenu;
     std::shared_ptr<AestraUI::NUIContextMenuItem> deleteLaneItem; // listed last, behind a divider (P1)
+    std::shared_ptr<AestraUI::NUIContextMenuItem> deleteTrackItem;
     uint32_t routingChannel = 0; // the track's mixer channel, for "Show in Routing Graph"
 
     TrackUIComponent* selectedTrack = target ? target : getSelectedTrackUI();
@@ -900,6 +913,34 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
         }
         menu->addSeparator();
 
+        menu->addItem("Rename Track", [this, selectedTrack]() { beginTrackRename(selectedTrack); });
+        if (lane->trackId != 0)
+            menu->addItem("Duplicate Track", [this, laneId]() {
+                auto cmd = std::make_shared<DuplicateTrackCommand>(*m_trackManager, laneId);
+                m_trackManager->getCommandHistory().pushAndExecute(cmd);
+                refreshTracks();
+                invalidateCache();
+                scheduleTimelineMinimapRebuild();
+                if (cmd->newHeadLane().isValid()) revealLane(cmd->newHeadLane());
+            });
+        // Reorder: the row swaps with its neighbour and the track's lanes travel with it (one undo step).
+        std::vector<PlaylistLaneID> shown; // rows the timeline shows: a move steps over folded empty tracks
+        for (const auto& row : m_trackUIComponents)
+            if (row) shown.push_back(row->getLaneId());
+        for (const auto& [label, dir] : {std::pair{"Move Track Up", -1}, std::pair{"Move Track Down", 1}}) {
+            auto item = std::make_shared<AestraUI::NUIContextMenuItem>(label);
+            item->setEnabled(MoveTrackCommand::canMove(*m_trackManager, laneId, dir, shown));
+            item->setOnClick([this, laneId, dir = dir, shown]() {
+                m_trackManager->getCommandHistory().pushAndExecute(
+                    std::make_shared<MoveTrackCommand>(*m_trackManager, laneId, dir, shown));
+                refreshTracks();
+                invalidateCache();
+                scheduleTimelineMinimapRebuild();
+            });
+            menu->addItem(item);
+        }
+        menu->addSeparator();
+
         // FD-14 phase-5: take lanes accumulate with no escape hatch. Only the
         // LAST owned lane is protected — a track must keep at least one lane;
         // unowned lanes are always deletable.
@@ -911,6 +952,9 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
         deleteLaneItem->setDestructive(true);
         deleteLaneItem->setEnabled(deletable);
         deleteLaneItem->setOnClick([this, laneId]() { deleteLane(laneId); });
+        deleteTrackItem = std::make_shared<AestraUI::NUIContextMenuItem>("Delete Track");
+        deleteTrackItem->setDestructive(true);
+        deleteTrackItem->setOnClick([this, laneId]() { deleteTrack(laneId); });
     }
 
     menu->addItem("Send Track to Audition", [onSendToAudition]() {
@@ -930,6 +974,7 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
     if (deleteLaneItem) {
         menu->addSeparator();
         menu->addItem(deleteLaneItem);
+        if (deleteTrackItem) menu->addItem(deleteTrackItem);
     }
 
     attachAndShowContextMenu(this, menu, position);
@@ -940,6 +985,47 @@ void TrackManagerUI::addSendSelectionToAudition(AestraUI::NUIContextMenu& menu) 
     menu.addItem("Send Selection to Audition", [this]() {
         if (m_onSendSelectionToAudition) m_onSendSelectionToAudition(m_loopStartBeat, m_loopEndBeat);
     });
+}
+
+void TrackManagerUI::beginTrackRename(TrackUIComponent* row) {
+    if (!row || !m_trackManager) return;
+    const PlaylistLaneID laneId = row->getLaneId();
+    const auto* lane = m_trackManager->getPlaylistModel().getLane(laneId);
+    const auto* track = lane && lane->trackId != 0 ? m_trackManager->getTrack(lane->trackId) : nullptr;
+    const auto* head = track && !track->laneIds.empty() ? m_trackManager->getPlaylistModel().getLane(track->laneIds.front()) : lane;
+    if (!head) return;
+    AestraUI::NUIRect field = row->getNameBounds();
+    field.width = std::max(field.width, 120.0f);
+    field.height = std::max(field.height, 22.0f);
+    m_trackRename.begin(field, head->name, [this, laneId](const std::string& name) {
+        auto cmd = RenameCommand::forTrack(*m_trackManager, laneId, name);
+        if (cmd->empty()) return;
+        m_trackManager->getCommandHistory().pushAndExecute(cmd);
+        refreshTracks();
+        invalidateCache();
+    }, [this]() { repaint(); });
+}
+
+void TrackManagerUI::deleteTrack(PlaylistLaneID rowLane) {
+    if (!m_trackManager) return;
+    const auto executeDelete = [this, rowLane]() {
+        m_trackManager->getCommandHistory().pushAndExecute(std::make_shared<RemoveTrackCommand>(*m_trackManager, rowLane));
+        refreshTracks();
+        invalidateCache();
+        scheduleTimelineMinimapRebuild();
+    };
+    // A track that still holds clips is asked about first, as a lane is; an empty one just goes.
+    const size_t clips = RemoveTrackCommand::clipCount(*m_trackManager, rowLane);
+    if (clips > 0 && m_onConfirmDialogRequest) {
+        m_onConfirmDialogRequest("Delete Track",
+                                 "This track holds " + std::to_string(clips) + (clips == 1 ? " clip" : " clips") +
+                                     ". Deleting it removes them, its lanes and its mixer channel. This can be undone.",
+                                 "Delete Track", [executeDelete](bool confirmed) {
+                                     if (confirmed) executeDelete();
+                                 });
+        return;
+    }
+    executeDelete();
 }
 
 void TrackManagerUI::deleteLane(PlaylistLaneID laneId) {

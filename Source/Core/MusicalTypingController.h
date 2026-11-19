@@ -40,6 +40,8 @@ public:
     int baseMidiNote() const { return m_baseMidiNote; }
     /** @brief Display octave using Aestra's convention where MIDI 60 is C3. */
     int displayOctave() const { return (m_baseMidiNote / 12) - 2; }
+    /** @brief Move the root to this display octave (clamped to the keyboard's range); held notes are released. */
+    void setDisplayOctave(int octave) { shiftOctave((octave - displayOctave()) * 12); }
     size_t heldNoteCount() const { return m_activeNotes.size(); }
 
 private:

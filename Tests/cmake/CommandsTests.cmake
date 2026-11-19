@@ -544,3 +544,67 @@ target_include_directories(FactoryPresetsTest PRIVATE
 )
 add_test(NAME FactoryPresetsTest COMMAND FactoryPresetsTest)
 set_tests_properties(FactoryPresetsTest PROPERTIES TIMEOUT 120 LABELS "commands;plugins;presets;contract:application")
+
+# MoveTrackCommandTest — reorder tracks (DAW Essentials Checklist P0): a row moves, its lanes travel, undo restores.
+add_executable(MoveTrackCommandTest Commands/MoveTrackCommandTest.cpp)
+target_link_libraries(MoveTrackCommandTest PRIVATE AestraAudioCore)
+target_include_directories(MoveTrackCommandTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MoveTrackCommandTest COMMAND MoveTrackCommandTest)
+set_tests_properties(MoveTrackCommandTest PROPERTIES TIMEOUT 120 LABELS "commands;timeline;contract:application")
+
+# RenameCommandTest — rename tracks and mixer channels; names that matched stay matched; one undo step.
+add_executable(RenameCommandTest Commands/RenameCommandTest.cpp)
+target_link_libraries(RenameCommandTest PRIVATE AestraAudioCore)
+target_include_directories(RenameCommandTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME RenameCommandTest COMMAND RenameCommandTest)
+set_tests_properties(RenameCommandTest PROPERTIES TIMEOUT 120 LABELS "commands;timeline;mixer;contract:application")
+
+# RemoveTrackCommandTest — delete a track: lanes, track and its own channel in one undo step; a shared channel stays.
+add_executable(RemoveTrackCommandTest Commands/RemoveTrackCommandTest.cpp)
+target_link_libraries(RemoveTrackCommandTest PRIVATE AestraAudioCore)
+target_include_directories(RemoveTrackCommandTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME RemoveTrackCommandTest COMMAND RemoveTrackCommandTest)
+set_tests_properties(RemoveTrackCommandTest PROPERTIES TIMEOUT 120 LABELS "commands;timeline;mixer;contract:application")
+
+# DuplicateTrackCommandTest — duplicate a track: own channel (settings + chain), lanes and clips, audio routed to the copy.
+add_executable(DuplicateTrackCommandTest Commands/DuplicateTrackCommandTest.cpp)
+target_link_libraries(DuplicateTrackCommandTest PRIVATE AestraAudioCore)
+target_include_directories(DuplicateTrackCommandTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME DuplicateTrackCommandTest COMMAND DuplicateTrackCommandTest)
+set_tests_properties(DuplicateTrackCommandTest PROPERTIES TIMEOUT 120 LABELS "commands;timeline;mixer;contract:application")
+
+# MuseDiscoveryTest — what an agent can learn from the surface itself (#1409):
+# host verbs (project.save) in get_schema, the connecting note, and refusals
+# that name the flags/args that would have worked.
+add_executable(MuseDiscoveryTest Commands/MuseDiscoveryTest.cpp)
+target_link_libraries(MuseDiscoveryTest PRIVATE AestraAudioCore)
+target_include_directories(MuseDiscoveryTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MuseDiscoveryTest COMMAND MuseDiscoveryTest)
+set_tests_properties(MuseDiscoveryTest PROPERTIES TIMEOUT 120 LABELS "commands;muse;contract:application")
+
+# MuseParamUnitsTest — effect parameters read and write in their own units (#1405):
+# get_effects publishes unit/min/max/curve/labels, set_effect_param accepts '3.5k',
+# refusals quote the range, and every declaration matches what the plugin prints.
+add_executable(MuseParamUnitsTest Commands/MuseParamUnitsTest.cpp)
+target_link_libraries(MuseParamUnitsTest PRIVATE AestraAudioCore)
+target_include_directories(MuseParamUnitsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MuseParamUnitsTest COMMAND MuseParamUnitsTest)
+set_tests_properties(MuseParamUnitsTest PROPERTIES TIMEOUT 120 LABELS "commands;muse;effects;contract:application")

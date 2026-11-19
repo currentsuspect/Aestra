@@ -48,6 +48,7 @@ UnitGroup unitGroupForType(UnitType type) {
     }
 }
 
+
 void applySamplerDefaultsForUnitType(const UnitInfo& unit) {
     auto sampler = std::dynamic_pointer_cast<Plugins::SamplerPlugin>(unit.plugin);
     if (!sampler) {
@@ -117,6 +118,22 @@ ArsenalBridgeMode bridgeModeFallbackFromRouteId(int routeId) {
     return routeId < 0 ? ArsenalBridgeMode::PreviewToMaster : ArsenalBridgeMode::LinkedRack;
 }
 } // namespace
+
+// The first group for a sampled sound, from its name (#1400): melodic one-shots (bells, keys, plucks, pads, basses...)
+// follow the key, so they go under Synth; everything else under Drums. A word matches whole or as a word's start, so
+// "keys" and "keyboard" match "key" and "monkey" does not. The user can always move a unit.
+UnitGroup unitGroupForSample(UnitType type, const std::string& name) {
+    if (type != UnitType::Sampler && type != UnitType::PitchedSampler) return unitGroupForType(type);
+    static const char* const kSynth[] = {"bell", "key", "lead", "pluck", "synth", "pad", "chord", "piano", "rhodes", "organ",
+                                         "string", "brass", "flute", "guitar", "arp", "bass", "melod", "choir", "harp", "marimba"};
+    std::string lower(name);
+    for (auto& c : lower) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    for (const char* word : kSynth) {
+        for (size_t at = lower.find(word); at != std::string::npos; at = lower.find(word, at + 1))
+            if (at == 0 || !std::isalpha(static_cast<unsigned char>(lower[at - 1]))) return UnitGroup::Synth;
+    }
+    return UnitGroup::Drums;
+}
 
 std::string unitTypeName(UnitType type) {
     switch (type) {
@@ -317,7 +334,8 @@ UnitID UnitManager::createUnit(const std::string& name, UnitType type) {
     info.id = id;
     info.name = name;
     info.type = type;
-    info.group = unitGroupForType(type);
+    info.group = unitGroupForSample(type, name);
+    info.role = roleFromName(name); // "Kick 01" arrives as drums; "Audio 17" stays unknown
     if (m_defaultColor) info.color = m_defaultColor(m_unitOrder.size());
     info.bridgeMode = bridgeModeFallbackFromRouteId(info.targetMixerRoute);
 
@@ -357,6 +375,7 @@ UnitID UnitManager::duplicateUnit(UnitID sourceId) {
     dst->isSolo           = src->isSolo;
     dst->isArmed          = src->isArmed;
     dst->group            = src->group;
+    if (src->role.source == RoleSource::User) dst->role = src->role; // a copy keeps what the user said, not just the name
     dst->audioClipPath    = src->audioClipPath;
     dst->soundSet         = src->soundSet;
     dst->audioDurationSeconds  = src->audioDurationSeconds;
@@ -462,7 +481,23 @@ void UnitManager::setUnitSoundSet(UnitID id, const std::string& setName) {
     if (auto* u = getUnit(id)) u->soundSet = setName;
 }
 
-void UnitManager::setUnitName(UnitID id, const std::string& name) { if (auto* u = getUnit(id)) u->name = name; }
+void UnitManager::setUnitName(UnitID id, const std::string& name) {
+    if (auto* u = getUnit(id)) {
+        u->name = name;
+        u->role = roleAfterNaming(u->role, name); // the user's choice stands; a name-given role follows the name
+    }
+}
+
+void UnitManager::setUnitRole(UnitID id, const MusicalRole& role) {
+    auto* u = getUnit(id);
+    if (!u) return;
+    u->role = role.known() ? userRole(role.category, role.sub) : roleFromName(u->name);
+}
+
+MusicalRole UnitManager::unitRole(UnitID id) const {
+    const auto* u = getUnit(id);
+    return u ? u->role : MusicalRole{};
+}
 void UnitManager::setUnitMute(UnitID id, bool muted) { if (auto* u = getUnit(id)) { u->isMuted = muted; publishSnapshot(); } }
 void UnitManager::setUnitSolo(UnitID id, bool solo) { if (auto* u = getUnit(id)) { u->isSolo = solo; publishSnapshot(); } }
 void UnitManager::setUnitArmed(UnitID id, bool armed) { if (auto* u = getUnit(id)) u->isArmed = armed; }
@@ -818,6 +853,14 @@ JSON UnitManager::saveToJSON() const {
         }
         // Only a switch the user set: a unit on its type's default writes nothing (FD-76).
         if (unit->followsKeyOverride) u.set("followsKey", JSON(*unit->followsKeyOverride));
+        // Only a role the user chose is saved: a role read from the name is read again on load, so a renamed
+        // file or an older Aestra cannot disagree with it. Absent means "from the name".
+        if (unit->role.source == RoleSource::User && unit->role.known()) {
+            JSON role = JSON::object();
+            role.set("category", JSON(std::string(roleCategoryId(unit->role.category))));
+            if (unit->role.sub != RoleSub::None) role.set("sub", JSON(std::string(roleSubId(unit->role.sub))));
+            u.set("role", role);
+        }
 
         units.push(u);
     }
@@ -956,12 +999,19 @@ void UnitManager::loadFromJSON(const JSON& json) {
             unit.defaultPatternId = PatternID(static_cast<uint64_t>(ju["defaultPatternId"].asNumber()));
         }
         if (ju.has("followsKey") && ju["followsKey"].isBool()) unit.followsKeyOverride = ju["followsKey"].asBool();
+        unit.role = roleFromName(unit.name); // the name's reading, unless the user chose one below
+        if (ju.has("role") && ju["role"].isObject() && ju["role"].has("category") && ju["role"]["category"].isString()) {
+            const RoleCategory category = roleCategoryFromId(ju["role"]["category"].asString());
+            const RoleSub sub = ju["role"].has("sub") && ju["role"]["sub"].isString() ? roleSubFromId(ju["role"]["sub"].asString()) : RoleSub::None;
+            if (category != RoleCategory::Unknown) unit.role = userRole(category, sub); // an unknown id (a newer file) is ignored
+        }
 
         if (ju.has("group")) {
             unit.group = unitGroupFromJson(ju["group"]);
         }
         unit.type = ju.has("type") ? unitTypeFromJson(ju["type"]) : unitTypeFromGroup(unit.group);
-        unit.group = unitGroupForType(unit.type);
+        // A saved group is the user's (or the first guess they kept): only a file without one falls back to the type.
+        if (!ju.has("group") || unit.group == UnitGroup::Unknown) unit.group = unitGroupForType(unit.type);
 
         unit.pluginId = ju.has("pluginId") ? ju["pluginId"].asString() : std::string{};
         if (ju.has("pluginStateHex") && ju["pluginStateHex"].isString()) {

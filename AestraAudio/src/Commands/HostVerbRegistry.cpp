@@ -210,8 +210,21 @@ HostVerbResult HostVerbRegistry::invoke(const std::string& name, const JSON& arg
             std::any_of(spec.args.begin(), spec.args.end(),
                         [&](const HostVerbArg& arg) { return arg.name == entry.first; });
         if (!declared) {
+            // Name what the verb does take, for the same reason the flag
+            // validator does: "unknown arg" alone makes the caller re-read the
+            // manifest to find the spelling it should have used.
+            std::string valid = "'" + name + " takes args: ";
+            if (spec.args.empty()) {
+                valid += "none";
+            } else {
+                for (size_t i = 0; i < spec.args.size(); ++i) {
+                    if (i) valid += ", ";
+                    valid += spec.args[i].name;
+                    if (spec.args[i].required) valid += " (required)";
+                }
+            }
             return HostVerbResult::failure("invalid_args",
-                                           "unknown arg for " + name + ": " + entry.first);
+                                           "unknown arg for " + name + ": " + entry.first + " — " + valid);
         }
     }
 

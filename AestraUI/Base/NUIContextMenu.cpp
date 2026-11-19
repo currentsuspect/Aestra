@@ -443,6 +443,7 @@ void NUIContextMenu::showAt(int x, int y)
     }
 
     isVisible_ = true;
+    NUIComponent::setPopupOpen(this, true);
     setDropPassThrough(false);
     hoveredItemIndex_ = findSelectableItem(0, 1);
     ensureItemVisible(hoveredItemIndex_);
@@ -459,6 +460,7 @@ void NUIContextMenu::hide()
     // Mark the parent hidden before cascading so a submenu cannot restore focus
     // to an already-hidden menu.
     isVisible_ = false;
+    NUIComponent::setPopupOpen(this, false);
     setDropPassThrough(true);
     hoveredItemIndex_ = -1;
     pressedItemIndex_ = -1;
@@ -613,6 +615,12 @@ bool NUIContextMenu::hasLiveOwner() const
     return !ownerBound_ || !owner_.expired();
 }
 
+bool NUIContextMenu::containsPointInMenuTree(const NUIPoint& point) const
+{
+    if (getBounds().contains(point)) return true;
+    return activeSubmenu_ && activeSubmenu_->isVisible() && activeSubmenu_->containsPointInMenuTree(point);
+}
+
 void NUIContextMenu::setOnItemClick(std::function<void(std::shared_ptr<NUIContextMenuItem>)> callback)
 {
     onItemClickCallback_ = callback;
@@ -714,6 +722,23 @@ void NUIContextMenu::drawBackground(NUIRenderer& renderer)
     Depth::floatingCard(renderer, bounds, borderRadius_, backgroundColor_);
 }
 
+void NUIContextMenu::onUpdate(double deltaTime)
+{
+    NUIComponent::onUpdate(deltaTime);
+    if (!isVisible_) return;
+    // The hovered row's colour pops in; moving to another row restarts it (group Row: colour only, nothing moves).
+    if (rowMotionIndex_ != hoveredItemIndex_) {
+        rowMotionIndex_ = hoveredItemIndex_;
+        rowMotion_.restartHover();
+    }
+    const bool wasMoving = rowMotion_.animating();
+    rowMotion_.update(static_cast<float>(deltaTime), hoveredItemIndex_ >= 0, false);
+    if (wasMoving || rowMotion_.animating()) setDirty(true);
+    // The submenu is rendered and hit-tested directly rather than as a child, so it
+    // gets no onUpdate of its own: without this its rows' hover motion never advances.
+    if (activeSubmenu_ && activeSubmenu_->isVisible()) activeSubmenu_->onUpdate(deltaTime);
+}
+
 void NUIContextMenu::drawItem(NUIRenderer& renderer, std::shared_ptr<NUIContextMenuItem> item, int index)
 {
     if (!item || !item->isVisible()) return;
@@ -728,7 +753,7 @@ void NUIContextMenu::drawItem(NUIRenderer& renderer, std::shared_ptr<NUIContextM
     } else if (index == submenuItemIndex_ && activeSubmenu_ && activeSubmenu_->isVisible()) {
         renderer.fillRoundedRect(itemRect, kRowRadius, themeManager.getColor("selected"));
     } else if (index == hoveredItemIndex_ && item->isEnabled()) {
-        renderer.fillRoundedRect(itemRect, kRowRadius, hoverColor_);
+        renderer.fillRoundedRect(itemRect, kRowRadius, hoverColor_.withAlpha(hoverColor_.a * rowMotion_.hover()));
     }
     
     // Draw item content

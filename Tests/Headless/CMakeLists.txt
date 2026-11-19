@@ -178,6 +178,45 @@ if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND
     )
 endif()
 
+# Your 808s (SPEC-025 R7): kept sounds as the producer's own Rumble presets.
+if(TARGET AestraAudioCore AND TARGET AestraRumble AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RumbleKeptTest.cpp")
+    add_executable(RumbleKeptTest RumbleKeptTest.cpp)
+    if(UNIX AND NOT APPLE)
+        target_link_libraries(RumbleKeptTest PRIVATE -Wl,--start-group -Wl,--whole-archive AestraRumble -Wl,--no-whole-archive AestraAudioCore -Wl,--end-group)
+    else()
+        target_link_libraries(RumbleKeptTest PRIVATE AestraPremiumPlugins AestraAudioCore)
+    endif()
+    target_include_directories(RumbleKeptTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME RumbleKeptTest COMMAND RumbleKeptTest)
+    set_tests_properties(RumbleKeptTest PROPERTIES
+        LABELS "headless;rumble;plugin;presets;contract:durability"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
+# Rumble audition (SPEC-025 R6): the editor's audition through the engine's AuditionUnit, transport stopped.
+if(TARGET AestraAudioCore AND TARGET AestraRumble AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RumbleAuditionTest.cpp")
+    add_executable(RumbleAuditionTest RumbleAuditionTest.cpp)
+    if(UNIX AND NOT APPLE)
+        target_link_libraries(RumbleAuditionTest PRIVATE -Wl,--start-group -Wl,--whole-archive AestraRumble -Wl,--no-whole-archive AestraAudioCore -Wl,--end-group)
+    else()
+        target_link_libraries(RumbleAuditionTest PRIVATE AestraPremiumPlugins AestraAudioCore)
+    endif()
+    target_include_directories(RumbleAuditionTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME RumbleAuditionTest COMMAND RumbleAuditionTest)
+    set_tests_properties(RumbleAuditionTest PROPERTIES
+        LABELS "headless;rumble;arsenal;audio;contract:audio"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
+
 # Rumble Factory Preset Bank Contract
 if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND
    EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RumblePresetBankTest.cpp")

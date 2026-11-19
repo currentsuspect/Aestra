@@ -3,8 +3,11 @@
 // FD-27 point 2, "a grouped rack": units sit under Drums, Synth and Audio headers with their counts, in unit
 // order inside a group, and the positions drive layout, scrolling and drag-and-drop from one answer.
 
+#include "ArsenalGridScroll.h"
 #include "ArsenalRackLayout.h"
 
+#include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <string>
 
@@ -95,6 +98,56 @@ int main() {
         check(ArsenalRackLayout::finalIndexAfterMove(order, 40, 1) == 1, "dragged up: the slot index as it is");
         check(ArsenalRackLayout::finalIndexAfterMove(order, 20, 4) == 3, "dragged to the very end: the last place");
         check(ArsenalRackLayout::finalIndexAfterMove(order, 30, 2) == 2 && ArsenalRackLayout::finalIndexAfterMove(order, 30, 3) == 2, "dropped on or just after itself: it stays");
+    }
+
+    {   // #1400: a row dragged under another group's header lands in that group
+        const auto two = ArsenalRackLayout::compute({UnitGroup::Drums, UnitGroup::Drums, UnitGroup::Synth});
+        float synthHeaderY = -1.0f;
+        for (const auto& item : two.items) if (item.kind == ArsenalRackItem::Kind::Header && item.group == UnitGroup::Synth) synthHeaderY = item.y;
+        check(two.groupAtY(-20.0f) == UnitGroup::Drums, "above the first header: the first group");
+        check(two.groupAtY(40.0f) == UnitGroup::Drums, "among the drum rows: Drums");
+        check(synthHeaderY > 0.0f && two.groupAtY(synthHeaderY + 1.0f) == UnitGroup::Synth, "under the Synth header: Synth");
+        check(two.groupAtY(two.contentHeight + 200.0f) == UnitGroup::Synth, "below the last row: the last group");
+        check(ArsenalRackLayout::compute({}).groupAtY(10.0f) == UnitGroup::Unknown, "an empty rack has no group");
+    }
+
+    std::cout << "[8] a wheel notch lands on a bar line, and reversing never skips one\n";
+    {
+        // A 4-bar loop in a 2.75-bar viewport: the clamp stops at 1.25 bars, not on a bar line.
+        const float bar = 100.0f;
+        const float maxScroll = 1.25f * bar;
+        check(Audio::ArsenalGridScroll::nextBarOffset(0.0f, bar, maxScroll, +1) == bar, "forward from the start: the next bar");
+        const float clampedToEnd = std::min(2.0f * bar, maxScroll); // bar 2 is past the end
+        check(Audio::ArsenalGridScroll::nextBarOffset(bar, bar, maxScroll, +1) == clampedToEnd,
+              "forward from bar 1: the clamp, since bar 2 is past the end");
+        check(Audio::ArsenalGridScroll::nextBarOffset(maxScroll, bar, maxScroll, -1) == bar,
+              "reverse from the clamped 1.25 bars: back to bar 1, not past it to 0");
+        check(Audio::ArsenalGridScroll::nextBarOffset(bar, bar, maxScroll, -1) == 0.0f, "reverse from a bar line: the bar before");
+        check(Audio::ArsenalGridScroll::nextBarOffset(1.5f * bar, bar, maxScroll, -1) == bar,
+              "reverse from half a bar past a line: back to that line");
+        check(Audio::ArsenalGridScroll::nextBarOffset(0.0f, bar, maxScroll, -1) == 0.0f, "reverse at the start: nowhere to go");
+    }
+
+    std::cout << "[9] equal wheel distance moves equal bars, however it is split\n";
+    {
+        const float barPx = 40.0f; // one wheel notch
+        float combined = 0.0f;
+        const int once = Audio::ArsenalGridScroll::wheelBars(combined, 40.0f, barPx);
+        float split = 0.0f;
+        const int firstHalf = Audio::ArsenalGridScroll::wheelBars(split, 20.0f, barPx);
+        const int secondHalf = Audio::ArsenalGridScroll::wheelBars(split, 20.0f, barPx);
+        check(once == 1 && firstHalf == 0 && secondHalf == 1,
+              "40 px once and 20 + 20 px both move one bar");
+        check(std::abs(combined - split) < 1e-6f, "and leave the same remainder behind");
+        float leftover = 0.0f;
+        check(Audio::ArsenalGridScroll::wheelBars(leftover, 25.0f, barPx) == 0, "under a bar: nothing moves");
+        check(Audio::ArsenalGridScroll::wheelBars(leftover, 25.0f, barPx) == 1, "the remainder completes the bar");
+        check(std::abs(leftover - 10.0f) < 1e-6f, "past the bar stays in the accumulator");
+        float flick = 0.0f;
+        check(Audio::ArsenalGridScroll::wheelBars(flick, 120.0f, barPx) == 3, "120 px in one event is three bars");
+        check(std::abs(flick) < 1e-6f, "a whole-bar flick leaves nothing over");
+        float back = 0.0f;
+        check(Audio::ArsenalGridScroll::wheelBars(back, -40.0f, barPx) == -1, "reversing moves back a bar");
     }
 
     std::cout << (g_failures == 0 ? "ALL PASS\n" : "FAILURES\n");

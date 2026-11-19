@@ -5,6 +5,7 @@
 #include "ICommand.h"
 #include "CommandTransaction.h"
 
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -118,6 +119,30 @@ public:
     void clear();
 
     /**
+     * @brief Bumped by every change to either stack (push, undo, redo, clear, truncation).
+     *
+     * Truer than the two depths, which a new command at the history limit leaves unchanged: the
+     * oldest command goes and the newest arrives. Callers that cache an answer computed from the
+     * history compare this instead of the sizes.
+     */
+    uint64_t mutationCount() const {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        return m_mutations;
+    }
+
+    /**
+     * @brief How many undo entries a history limit has thrown away, ever.
+     *
+     * A dropped entry's edit is still applied, so the stack stops describing everything that was done: a count
+     * of "steps since the save" measured from it would be short. Callers that cached a count compare this with
+     * the value they saw and stop claiming an exact number once it moves past it.
+     */
+    uint64_t droppedCount() const {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        return m_dropped;
+    }
+
+    /**
      * @brief Set maximum number of commands in history
      * @param size Maximum number of commands (0 = unlimited)
      */
@@ -156,6 +181,8 @@ private:
     std::shared_ptr<CommandTransaction> m_activeTransaction;
     int m_transactionNestingLevel = 0;
 
+    uint64_t m_mutations = 0;
+    uint64_t m_dropped = 0; ///< undo entries a limit removed; never reset, so a cached count sees it move
     size_t m_maxHistorySize = 100;
     size_t m_maxHistoryMemory = 100 * 1024 * 1024; // 100MB default
 

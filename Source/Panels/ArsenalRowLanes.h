@@ -64,11 +64,11 @@ public:
             const bool open = m_open.count(row.getUnitId()) > 0;
             const auto c = caretRect(row);
             const float cx = c.x + c.width * 0.5f, cy = c.y + c.height * 0.5f;
-            const auto col = theme.getColor("textSecondary").withAlpha(open ? 1.0f : 0.8f);
-            r.strokeRoundedRect(c, theme.getRadius("xs"), 1.0f, theme.getColor("border").withAlpha(open ? 0.9f : 0.6f));
-            const float d = open ? -2.5f : 2.5f; // open points up
-            r.drawLine({cx - 4.0f, cy - d}, {cx, cy + d}, 1.5f, col);
-            r.drawLine({cx, cy + d}, {cx + 4.0f, cy - d}, 1.5f, col);
+            // The board's quiet chevron: no box, muted until the row is open.
+            const auto col = theme.getColor(open ? "textPrimary" : "textMuted");
+            const float d = open ? -2.0f : 2.0f; // open points up
+            r.drawLine({cx - 3.5f, cy - d}, {cx, cy + d}, 1.6f, col);
+            r.drawLine({cx, cy + d}, {cx + 3.5f, cy - d}, 1.6f, col);
             if (open && item.extraH > 0.0f) {
                 auto ctx = contextFor(*tm, pattern, row, item.extraH);
                 ctx.clip = viewport; // nested clips stay inside the list, and hand it back when done

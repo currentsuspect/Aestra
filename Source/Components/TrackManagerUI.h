@@ -23,10 +23,12 @@
 #include "TimelineSummaryCache.h"
 #include "TimelineInteractionPolicy.h"
 #include "TimelineMarquee.h"
+#include "../AestraUI/Widgets/InlineRename.h"
 #include "TrackManagerUILayout.h"
 #include "TrackManagerUIMath.h"
 #include "WaveformCache.h"
 
+#include <atomic>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -38,6 +40,7 @@
 
 namespace AestraUI {
 class NUIPlatformBridge;
+class NUITextInput;
 }
 
 namespace Aestra {
@@ -156,6 +159,21 @@ public:
     void setOnCursorVisibilityChanged(std::function<void(bool)> callback) { m_onCursorVisibilityChanged = callback; }
     bool isMinimapResizeCursorActive() const;
     bool isCustomCursorActive() const; // Returns true if any tool/resize cursor is active
+
+    // --- Track heights (TrackManagerUIView.cpp) ---
+    static constexpr float kMinTrackHeight = 30.0f;
+    static constexpr float kDefaultTrackHeight = 46.0f; ///< m_trackHeight's starting value
+    static constexpr float kMaxTrackHeight = 320.0f;
+    /// Every row's height, top to bottom.
+    TimelineRowHeights rowHeights() const;
+    /// Set one row's height (clamped); the others keep theirs.
+    void setRowHeight(PlaylistLaneID laneId, float height);
+    /// Scale every row (vertical zoom): the shared height and each resized row together.
+    void zoomTrackHeights(float factor);
+    /// The shared height and the rows that differ from it, for the project's UI state; and back.
+    float defaultTrackHeight() const { return static_cast<float>(m_trackHeight); }
+    const std::unordered_map<std::string, float>& rowHeightOverrides() const { return m_rowHeightOverrides; }
+    void restoreTrackHeights(float defaultHeight, const std::unordered_map<std::string, float>& overrides);
     /** @brief True while the timeline ruler row is the interaction (playhead
      *  scrub, loop markers, ruler selection) — grab-hand cursor territory. */
     bool isRulerPointerActive() const;
@@ -237,6 +255,11 @@ public:
     void openTrackContextMenu(const ::AestraUI::NUIPoint& position, std::function<void()> onSendToAudition,
                               TrackUIComponent* target = nullptr);
     void deleteLane(PlaylistLaneID laneId);
+    /// Delete the row's whole track (lanes, track, its own channel), asking first when it holds clips; one undo step.
+    void deleteTrack(PlaylistLaneID rowLane);
+    /// Rename the track on @p row in place (header double-click, or "Rename Track" in its menu); one undo step.
+    void beginTrackRename(TrackUIComponent* row);
+    bool isRenamingTrack() const { return m_trackRename.active(); }
 
     // Snap-to-Grid control
     // Choke point: propagates to every row so trim/resize honors the same
@@ -342,6 +365,28 @@ public:
     bool isLoopEnabled() const { return m_loopEnabled; }
     double getLoopStartBeat() const { return m_loopStartBeat; }
     double getLoopEndBeat() const { return m_loopEndBeat; }
+
+    // === Song markers (v0.8.3 essentials: markers and song sections) ===
+    // The model, its undo steps and the project-file section landed in slice 1
+    // (#1337). This is the ruler: a marker is a chip on the ruler with its name on
+    // it, a click jumps the playhead to it, a drag moves it (one undo step), and
+    // M adds one at the playhead.
+    /// Add a marker at the playhead and select it. Returns the new id, 0 when the model refused.
+    uint64_t addMarkerAtPlayhead();
+    uint64_t markerIdAtBeat(double beat, uint64_t ignoreId) const; // 0 when no other marker sits there
+    /// Put the playhead on a marker and select it. False when the id is unknown.
+    bool seekToMarker(uint64_t id);
+    /// Select a marker (0 clears). The selected marker is what Delete and the rename box act on.
+    void selectMarker(uint64_t id);
+    uint64_t selectedMarkerId() const { return m_selectedMarkerId; }
+    /// The marker's chip in component-local coordinates; empty when the marker is not drawn.
+    ::AestraUI::NUIRect markerChipRect(uint64_t id) const;
+    /// The marker whose chip covers `localX` in the ruler row, or 0. Pure hit-test.
+    uint64_t markerAtX(float localX) const;
+    /// The inline rename box over the chip. Commit is one undoable step.
+    void beginMarkerRename(uint64_t id);
+    void finishMarkerRename(bool commit);
+    bool isRenamingMarker() const { return static_cast<bool>(m_markerRenameInput); }
 
     bool onMouseEvent(const ::AestraUI::NUIMouseEvent& event) override;
     bool onKeyEvent(const ::AestraUI::NUIKeyEvent& event) override;
@@ -460,6 +505,12 @@ private:
     // Contiguous rows (2026-08 plane redesign): the grid plane is continuous,
     // so rows carry no seam — a quiet separator line marks each boundary.
     int m_trackSpacing{0};
+    // Resize a track (drag its header's bottom edge) and vertical zoom (Alt+wheel over the tracks). A row with no
+    // entry here is m_trackHeight tall. Keyed by the row's lane id, so it survives reordering and refreshTracks().
+    std::unordered_map<std::string, float> m_rowHeightOverrides;
+    int m_resizingRow = -1;      ///< the row whose bottom edge is being dragged
+    float m_resizeStartY = 0.0f; ///< pointer y and row height when the drag began
+    float m_resizeStartH = 0.0f;
     float m_scrollOffset{0.0f};
     float m_targetScrollOffset{0.0f};
     std::unordered_set<uint64_t> m_collapsedTrackIds;
@@ -625,12 +676,27 @@ private:
     bool m_hoveringLoopEnd = false;
     double m_loopDragStartBeat = 0.0; // Original beat position when drag started
 
+    // === SONG MARKERS (ruler chips; TrackManagerUIMarkers.cpp) ===
+    uint64_t m_selectedMarkerId = 0;
+    bool m_isDraggingMarker = false;
+    uint64_t m_draggingMarkerId = 0;
+    bool m_markerDragMoved = false;
+    double m_markerDragPreviewBeat = 0.0; // where the dragged chip is drawn and dropped
+    std::shared_ptr<::AestraUI::NUITextInput> m_markerRenameInput; // inline box over the chip
+    std::shared_ptr<::AestraUI::NUITextInput> m_retiredMarkerInput; // outlives a commit: focus may still be read
+    uint64_t m_markerRenameId = 0;
+
     // === SELECTION BOX (left- or right-drag with the Multi-Select tool) ===
     // Widget-independent drag state machine (TimelineMarquee.h, #847): it owns
     // the sequencing rules (ownership until matching-button release, pure
     // endpoint updates); this widget keeps only the screen mapping and the
     // selection application on finalize.
     ::Aestra::Components::TimelineMarqueeDrag m_marquee;
+    AestraUI::InlineRename m_trackRename; ///< the track-name field while a rename is open
+    AestraUI::DoubleClickTimer m_headerDoubleClick; ///< a header name (rename) or a header's bottom edge (reset height)
+    /// Set by the command history (rename, undo, redo); onUpdate then re-reads every row's name. Shared so the
+    /// history's listener stays safe if this view goes first.
+    std::shared_ptr<std::atomic<bool>> m_namesDirty = std::make_shared<std::atomic<bool>>(false);
     ::Aestra::Components::MarqueeOrigin m_marqueeOrigin = ::Aestra::Components::MarqueeOrigin::Tool;
 
     // === SMOOTH ZOOM ANIMATION ===
@@ -851,6 +917,19 @@ private:
     /// ruler always scrubs, so a menu there could never open. Adds the item when a ruler selection exists.
     void addSendSelectionToAudition(::AestraUI::NUIContextMenu& menu);
     bool handleLoopMarkerDrag(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
+    // === Song markers: the ruler's chip layer (TrackManagerUIMarkers.cpp) ===
+    void renderSongMarkers(::AestraUI::NUIRenderer& renderer, const ::AestraUI::NUIRect& rulerBounds);
+    void renderMarkerRenameBox(::AestraUI::NUIRenderer& renderer);
+    ::AestraUI::NUIRect markerChipRectFor(const Marker& marker) const;
+    /// The chip in window coordinates, which is what a renderer and a popup
+    /// anchor need. markerChipRect() stays component-local for hit-testing.
+    ::AestraUI::NUIRect markerChipWindowRect(const Marker& marker) const;
+    bool handleMarkerPress(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos,
+                           bool isInRuler);
+    bool handleMarkerDrag(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
+    void openMarkerContextMenu(uint64_t id);
+    void deleteMarker(uint64_t id);
+    void jumpToAdjacentMarker(int direction);
     bool handlePlayheadDrag(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
     bool handleSplitToolClick(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
     // Rows are contiguous (m_trackSpacing == 0), but the seam handler stays:
@@ -859,6 +938,11 @@ private:
     // row and select it, so clicks between rows are not silently swallowed.
     bool handleTrackSeamSelect(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
     void renderMinimapResizeCursor(::AestraUI::NUIRenderer& renderer, const ::AestraUI::NUIPoint& position);
+    /// The row whose header bottom edge is under @p windowPos (within a few px), or -1.
+    int trackResizeEdgeAt(const ::AestraUI::NUIPoint& windowPos) const;
+    /// A press on a header's bottom edge starts a resize (double-click resets it); the drag and release follow.
+    bool handleTrackResizeMouse(const ::AestraUI::NUIMouseEvent& event, bool doubleClick);
+    std::shared_ptr<::AestraUI::NUIIcon> m_resizeNSCursorIcon;
 
     // Split tool
     void performSplitAtPosition(int trackIndex, double timeSeconds);

@@ -268,9 +268,9 @@ static const std::vector<CommandSchema> s_schemas = {
         {"track", FlagType::Int, true, -1.0},
         {"slot", FlagType::Int, true, 0.0, 9.0},
         {"param", FlagType::String, true},
-        {"value", FlagType::Float, true, 0.0, 1.0}
+        {"value", FlagType::String, true}
     },
-     "Set an effect parameter, normalized 0..1. param = name (case-insensitive) or numeric id from get_effects; get_effects shows the resulting display value."},
+     "Set an effect parameter. param = name (case-insensitive) or numeric id from get_effects. value = a plain 0..1 number for normalized, or the parameter's own unit as get_effects declares it: '3.5k' / '3500 Hz' for a frequency, '-1.0 dB' a level, '2:1' a ratio, '36' a stepped slope. The reply's result.display is the value the plugin now shows."},
 
     // === Mixer routing (V82-M5) === tracks by index as list_tracks shows them; -1 = master
     {"route_unit", CommandCategory::Unit, {
@@ -437,7 +437,7 @@ std::string schemaToJsonString() {
   {"verb": "list_clips", "args": "none", "description": "playlist lanes with clips (id, name, startBeat, durationBeats, pattern; pattern 0 = not a pattern clip)."},
   {"verb": "list_patterns", "args": "none", "description": "id, name, lengthBeats, noteCount and type; audio sources also include mixerChannelId."},
   {"verb": "list_plugins", "args": "none", "description": "available effect plugins: id, name, category. Use id or name with add_effect."},
-  {"verb": "get_effects", "args": "{\"track\": <index, or -1 for the master>}", "description": "a track's (or the master's) effect chain: slot, id, name, bypassed, and every parameter (id, name, value 0..1, display, unit)."},
+  {"verb": "get_effects", "args": "{\"track\": <index, or -1 for the master>}", "description": "a track's (or the master's) effect chain: slot, id, name, bypassed, and every parameter (id, name, value 0..1, display, unit, and — where the parameter has display units — min, max, curve, labels, acceptsText)."},
   {"verb": "get_meters", "args": "none", "description": "master + per-track meters (each with track, the value track verbs take, and id, the mixer channel id) from the most recently processed audio block: peakDb, rmsDb, lufs, clip flags. Headless this reflects the last render; in-app it is live."},
   {"verb": "get_audio_health", "args": "none", "description": "A read-only snapshot of published engine telemetry: callback timing and budget, xruns/underruns, RT violations, recovery, command-queue drops, scheduling status, signal sanitization, resampling, and patternScheduling (lateRefills, missedHits, maxLateMs: pattern hits skipped because a main-loop refill came after the playhead, a stutter that counts no xrun). Counters have engine-lifetime scope."},
   {"verb": "get_project_load_report", "args": "none", "description": "The currently loaded project's or latest load attempt's format, migration/recovery state, missing plugins/assets, unrestored state, and structured warnings/errors. A blank project or no observed load returns status unobserved."},
@@ -447,7 +447,8 @@ std::string schemaToJsonString() {
   {"verb": "get_pattern", "args": "{\"pattern\": <id>}", "description": "one pattern with its notes (pitch, start, duration, velocity, pan, chance, ratchet, unit)."},
   {"verb": "get_harmony", "args": "{\"pattern\": <id, optional>, \"from\": <beat, optional>, \"to\": <beat, optional>, \"beatsPerBar\": <default 4>}", "description": "The key and the chords detected from the MIDI: the whole arrangement (every pattern clip at its arranged position), or one pattern alone when pattern is given; from/to limit it to a beat range. Returns key (name, tonic, mode, confidence) and chords (startBeat, endBeat, name such as Dm7 or F/A, roman numeral in the key, root, bass, confidence, userSet). Silence continues the previous chord."},
   {"verb": "get_session_state", "args": "none", "description": "transport + tracks + laneCount + unitCount + canUndo in one call."},
-  {"verb": "get_schema", "args": "none", "description": "this manifest, over the wire — socket clients bootstrap without the --schema flag."}
+  {"verb": "get_capabilities", "args": "none", "description": "the host verbs this process actually registered (project.save, project.open, project.new, settings.*, view.* …) with their args, thread requirement and refusals. The same array appears in get_schema as hostVerbs; a headless MuseRepl has none."},
+  {"verb": "get_schema", "args": "none", "description": "this manifest, over the wire — socket clients bootstrap without the --schema flag. Carries hostVerbs for the running process."}
 ],
 "actions": [
   {"verb": "render_pattern", "args": "{\"pattern\": <id>, \"file\": <path>, \"tail\": <seconds 0..30>}", "description": "Bounce one pattern (Arsenal preview routing) to a float32 WAV. Result carries durationSeconds, frames, sampleRate, peakDb."},
@@ -458,6 +459,8 @@ std::string schemaToJsonString() {
   {"verb": "redo", "args": "none", "description": "Step forward one entry. Refuses with 'nothing to redo' at the end of the stack. Result carries canUndo, canRedo."}
 ],
 "notes": {
+  "connecting": "You are on a loopback JSONL socket: one JSON request per line in, one JSON response per line out. The FIRST line you send must be {\"auth\":\"<token>\"}; before that every line answers status unauthorized and the server drops you after three tries or ten seconds. The token is a 64-char hex string written by the app to a per-user file named muse-<port>.token: $XDG_RUNTIME_DIR/aestra/ on Linux (else $XDG_STATE_HOME/aestra/, else ~/.local/state/aestra/), %LOCALAPPDATA%\\Aestra\\ on Windows, ~/Library/Application Support/Aestra/ on macOS. The port is the one the app was started with (AESTRA_MUSE_PORT) — its startup log prints both, as '[MuseSocket] listening on 127.0.0.1:<port>; token file <path>'. A headless MuseRepl --port N writes the same file. The muse CLI, muse-agent and this project's scripts read the token for you (muse --token-file <path> to override). Requests: {\"id\": <number>, \"verb\": \"<verb>\", \"args\": {...}}; responses echo id and verb with status ok|parse_error|validation_error|execution_error, a message, and result on success.",
+  "hostVerbs": "Verbs the running application registers (project.save, project.open, project.new, settings.*, view.* …), listed at the top level of this manifest with their args and failureCodes. They are the verbs that save and open work, and they exist only in a live app: a headless session registers none, so an empty hostVerbs array means this process cannot save or open a project. Read their failureCodes: project.save answers no_canonical_path (pass 'path'), save_as_required (the loaded file must not be overwritten; pass 'path'), copy_needs_path, save_failed.",
   "samplerPitch": "The sampler root is MIDI pitch 60: notes at 60 play the loaded sample unshifted, other pitches resample relative to 60. Put drum hits at pitch 60; write melodies around 60.",
   "unitTypes": "sampler = polyphonic sampler; 808 = mono pitched sampler with glide.",
   "patterns": "Every non-audio unit gets a default MIDI pattern at creation (list_units.defaultPatternId). A pattern is just a container: notes carry their unit, so one pattern can hold a whole multi-unit groove.",
@@ -465,7 +468,7 @@ std::string schemaToJsonString() {
   "steps": "Step strings: 'x' hit at the row velocity, 'X' accented hit (+0.2), digits '1'-'9' hit at velocity n/9, '-', '.', ' ' rest. Default step is 0.25 beats (16ths). swing (0..0.9) delays every second step by swing * step/2 for shuffle feels.",
   "ids": "Track, unit, pattern and clip ids are stable across edits; indexes shift when items are deleted.",
   "units_of_measure": "velocity 0..1, pan -1..1, volume 0..1 linear, positions and durations in beats.",
-  "effects": "Effect parameters are normalized 0..1; get_effects shows the human display value after a set. A track chain has 10 slots.",
+  "effects": "Effect parameter values are normalized 0..1 unless you name a unit. get_effects publishes each parameter's unit, min, max, curve and (for stepped parameters) labels; any of those can be passed to set_effect_param as text ('3.5k', '3500 Hz', '-1.0 dB', '2:1', '36'), and a parameter with no declared unit takes 0..1 only. The reply's result.display is what the plugin now shows. A track chain has 10 slots.",
   "undo": "Every mutation and every batch is one step in the same undo history the UI uses."
 }
 }

@@ -2,6 +2,7 @@
 #pragma once
 
 #include "NUIComponent.h"
+#include "../Core/NUIButtonMotion.h"
 #include "NUITypes.h"
 #include "NUIRenderer.h"
 #include <memory>
@@ -80,6 +81,11 @@ public:
     std::optional<DropdownItem> getSelectedItem() const;
     
     bool isOpen() const { return isOpen_; }
+    /// Close the popup if it is open, leaving the widget itself alone. Hiding an
+    /// open dropdown must call this first: setVisible(false) does not clear the
+    /// popup registry, and a registration left behind suppresses hover tooltips
+    /// app-wide until something else closes it.
+    void closeOpenPopup() { closeDropdown(); }
     size_t getItemCount() const { return items_.size(); }
     void setSelectedIndex(int index);
 
@@ -121,6 +127,9 @@ private:
     int selectedIndex_ = -1;
     bool isOpen_ = false;
     float dropdownAnimProgress_ = 0.0f;
+    ButtonMotion headerMotion_{ButtonGroup::Row}; ///< the closed field's hover pop: colour only, it is a well, not a pill
+    ButtonMotion rowMotion_{ButtonGroup::Row};    ///< the hovered list row's colour pop
+    int rowMotionIndex_ = -1;
     float chevronRotation_ = 0.0f;  // Current rotation angle (0 = down, 180 = up)
     std::string placeholderText_ = "Select an item...";
     int maxVisibleItems_ = 5;

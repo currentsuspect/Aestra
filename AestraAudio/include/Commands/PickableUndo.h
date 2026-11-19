@@ -2,7 +2,7 @@
 // Pickable undo (SPEC-026, FD-82): which later steps depend on an earlier one, read from what each touched.
 #pragma once
 
-#include "ICommand.h"
+#include "Commands/ICommand.h"
 
 #include <cstddef>
 #include <memory>

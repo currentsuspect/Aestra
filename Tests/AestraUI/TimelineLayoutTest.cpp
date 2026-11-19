@@ -107,15 +107,15 @@ void testRowsMatchLayoutTracks() {
 }
 
 void testRowVisibilityAgainstTheViewport() {
-    // 720 tall: the row viewport runs from y=82 (toolbar 30 + minimap 24 + ruler 28) to 720. Scrolled 400 px,
-    // row i starts at 82 - 400 + 38i. Row 9 (24..62) is entirely under the time band; row 10 (62..100)
-    // straddles the band's edge; row 27 (708..746) starts just inside the bottom; row 28 (746) starts below it.
+    // 720 tall: the row viewport runs from y=98 (toolbar 30 + minimap 24 + marker lane and ruler 44) to 720. Scrolled 400 px,
+    // row i starts at 98 - 400 + 38i. Row 9 (40..78) is entirely under the time band; row 10 (78..116)
+    // straddles the band's edge; row 26 (686..724) starts just inside the bottom; row 27 (724) starts below it.
     const auto layout = resolveTimelineLayout(1280.0f, 720.0f, kControls);
     const auto rows = arrangeTimelineRows(layout, kRowHeight, 0.0f, 30, 400.0f);
     check(!rows[9].visible, "row 9 has scrolled entirely under the time band");
     check(rows[10].visible, "row 10 straddles the band's edge and counts as visible");
-    check(rows[27].visible, "row 27 starts inside the bottom edge");
-    check(!rows[28].visible, "row 28 starts below the row viewport");
+    check(rows[26].visible, "row 26 starts inside the bottom edge");
+    check(!rows[27].visible, "row 27 starts below the row viewport");
 }
 
 void testSlotsMatchTheHandWrittenHitTests() {
@@ -134,8 +134,8 @@ void testSlotsMatchTheHandWrittenHitTests() {
         }
     }
     check(timelineRowSlotAt(layout, kRowHeight, 0.0f, 0.0f, 10.0f) == -1, "the time band is above every row");
-    check(timelineRowSlotAt(layout, kRowHeight, 0.0f, 0.0f, 82.0f) == 0, "the first pixel under the band is row 0");
-    check(timelineRowSlotAt(layout, kRowHeight, 0.0f, 0.0f, 82.0f + 38.0f * 50.0f) == 50,
+    check(timelineRowSlotAt(layout, kRowHeight, 0.0f, 0.0f, 98.0f) == 0, "the first pixel under the band is row 0");
+    check(timelineRowSlotAt(layout, kRowHeight, 0.0f, 0.0f, 98.0f + 38.0f * 50.0f) == 50,
           "below the last row the slot keeps counting (drops can target new rows)");
 }
 
@@ -146,8 +146,8 @@ void testScrollRange() {
     check(nearly(timelineRowsContentHeight(kRowHeight, 6.0f, 3), 38.0f * 3.0f + 6.0f * 2.0f),
           "no spacing after the last row");
     check(nearly(timelineRowsContentHeight(kRowHeight, 6.0f, 0), 0.0f), "no rows, no content");
-    check(nearly(timelineMaxVerticalScroll(layout, kRowHeight, 0.0f, 30), 30.0f * 38.0f - 638.0f),
-          "max scroll is the content beyond the 638 px row viewport");
+    check(nearly(timelineMaxVerticalScroll(layout, kRowHeight, 0.0f, 30), 30.0f * 38.0f - 622.0f),
+          "max scroll is the content beyond the 622 px row viewport");
     check(nearly(timelineMaxVerticalScroll(layout, kRowHeight, 0.0f, 5), 0.0f), "content that fits does not scroll");
 }
 
@@ -162,6 +162,39 @@ void testNarrowAndShortComponentsStayNonNegative() {
 
 } // namespace
 
+// Resize a track / vertical zoom: rows at their own heights. With every row at the shared height the per-row
+// helpers must agree with the uniform ones exactly; with one tall row, everything below it moves down by the extra.
+void testRowsOfTheirOwnHeight() {
+    const auto layout = resolveTimelineLayout(1280.0f, 720.0f, kControls);
+    TimelineRowHeights uniform;
+    uniform.fallback = kRowHeight;
+    uniform.heights.assign(24, kRowHeight);
+    const auto a = arrangeTimelineRows(layout, kRowHeight, 0.0f, 24, 13.0f);
+    const auto b = arrangeTimelineRows(layout, uniform, 0.0f, 24, 13.0f);
+    bool same = a.size() == b.size();
+    for (size_t i = 0; same && i < a.size(); ++i)
+        same = sameRect(b[i].rect, a[i].rect.x, a[i].rect.y, a[i].rect.width, a[i].rect.height) && a[i].visible == b[i].visible;
+    check(same, "uniform heights lay rows exactly as the shared-height stack");
+    for (float y = 0.0f; y < 720.0f; y += 3.0f)
+        if (timelineRowSlotAt(layout, uniform, 0.0f, 13.0f, y) != timelineRowSlotAt(layout, kRowHeight, 0.0f, 13.0f, y))
+            check(false, "uniform slot differs at y=" + std::to_string(y));
+    check(nearly(timelineRowsContentHeight(uniform, 0.0f, 24), timelineRowsContentHeight(kRowHeight, 0.0f, 24)),
+          "uniform content height matches");
+
+    TimelineRowHeights tall = uniform;
+    tall.heights[1] = 160.0f; // track 2 made much larger than the rest
+    const auto rows = arrangeTimelineRows(layout, tall, 0.0f, 24, 0.0f);
+    check(nearly(rows[1].rect.height, 160.0f), "the resized row is 160 tall");
+    check(nearly(rows[2].rect.y, layout.rows.y + kRowHeight + 160.0f), "the row under it starts below it");
+    check(nearly(rows[0].rect.y, layout.rows.y) && nearly(rows[0].rect.height, kRowHeight), "the row above is untouched");
+    check(timelineRowSlotAt(layout, tall, 0.0f, 0.0f, layout.rows.y + kRowHeight + 150.0f) == 1, "a point inside the tall row is row 1");
+    check(timelineRowSlotAt(layout, tall, 0.0f, 0.0f, layout.rows.y + kRowHeight + 161.0f) == 2, "just below it is row 2");
+    check(nearly(timelineRowTopY(layout, tall, 0.0f, 3, 0.0f), layout.rows.y + kRowHeight * 2.0f + 160.0f), "row 3's top");
+    check(nearly(timelineRowsContentHeight(tall, 0.0f, 24), kRowHeight * 23.0f + 160.0f), "content grows by the extra");
+    check(timelineRowSlotAt(layout, tall, 0.0f, 0.0f, layout.rows.y + kRowHeight * 23.0f + 160.0f + 1.0f) == 24,
+          "below the last row the slots go on (a new row)");
+}
+
 int main() {
     testRegionsMatchLayoutTracks();
     testRowsMatchLayoutTracks();
@@ -169,6 +202,7 @@ int main() {
     testSlotsMatchTheHandWrittenHitTests();
     testScrollRange();
     testNarrowAndShortComponentsStayNonNegative();
+    testRowsOfTheirOwnHeight();
 
     if (g_failures != 0) {
         std::cerr << g_failures << " check(s) failed\n";

@@ -21,7 +21,7 @@ void AestraApp::watchAudioDevice() {
             std::string name = lost ? std::string() : manager->getPreferredDeviceName();
             enqueueMainThreadTask([this, lost, name = std::move(name)]() {
                 const AudioDeviceNotice notice = lost ? m_audioDeviceNotice.onLost() : m_audioDeviceNotice.onRestored(name);
-                if (notice.show && m_content) m_content->showToast(notice.text, notice.seconds);
+                if (notice.show && m_content) m_content->showToast(notice.text);
             });
         });
 }

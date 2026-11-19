@@ -117,6 +117,17 @@ struct ArsenalRackLayout {
         return insertBefore > old ? insertBefore - 1 : insertBefore;
     }
 
+    /// The group a drop at @p y (relative to the rack's start) lands in: the group of the last header above it, so
+    /// dragging a row under another group's header moves it into that group (#1400). Unknown when the rack is empty.
+    Audio::UnitGroup groupAtY(float y) const {
+        Audio::UnitGroup group = Audio::UnitGroup::Unknown;
+        for (const auto& item : items) {
+            if (item.kind != ArsenalRackItem::Kind::Header) continue;
+            if (group == Audio::UnitGroup::Unknown || item.y <= y) group = item.group;
+        }
+        return group;
+    }
+
     /// The unit-order index a drop at display slot @p slot inserts before (the row count when it is the end).
     size_t insertIndexForSlot(size_t slot, size_t rowCount) const {
         return slot < displayOrder.size() ? displayOrder[slot] : rowCount;
