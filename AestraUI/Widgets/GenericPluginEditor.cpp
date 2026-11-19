@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "GenericPluginEditor.h"
+#include "NUIWheel.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 #include <algorithm>
@@ -192,7 +193,7 @@ bool GenericPluginEditor::onMouseEvent(const NUIMouseEvent& event) {
 
     // Mouse wheel scrolling
     if (event.wheelDelta != 0) {
-        m_scrollOffset -= event.wheelDelta * 15.0f;
+        m_scrollOffset -= event.wheelDelta * kWheelNotchPx;
 
         // Clamp scroll
         float contentHeight = m_parameters.size() * PARAMETER_HEIGHT + PADDING * 2;

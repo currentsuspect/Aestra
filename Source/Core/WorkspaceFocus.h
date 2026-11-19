@@ -205,4 +205,20 @@ inline bool parseWorkspaceFocus(const std::string& name, ViewFocus& out) {
     return false;
 }
 
+/**
+ * @brief Where the file browser's preview-dock button sends a sound: it follows the mode the user is listening in.
+ *
+ * In the Arsenal the sound becomes a sampler row; in the Timeline it is placed on the arrangement. Anywhere else
+ * (the routing map; Audition hides the dock) the Arsenal is the sensible home for a new sound.
+ */
+enum class PreviewAddTarget { Arsenal, Timeline };
+
+inline constexpr PreviewAddTarget previewAddTarget(ViewFocus focus) {
+    return focus == ViewFocus::Timeline ? PreviewAddTarget::Timeline : PreviewAddTarget::Arsenal;
+}
+
+inline constexpr const char* previewAddLabel(PreviewAddTarget target) {
+    return target == PreviewAddTarget::Timeline ? "Add to Timeline" : "Add to Arsenal";
+}
+
 } // namespace WorkspaceFocusModel

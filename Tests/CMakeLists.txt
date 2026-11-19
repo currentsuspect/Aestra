@@ -2811,10 +2811,15 @@ target_include_directories(AutomationLaneEditingTest PRIVATE
 add_test(NAME AutomationLaneEditingTest COMMAND AutomationLaneEditingTest)
 set_tests_properties(AutomationLaneEditingTest PROPERTIES LABELS "automation;ui-model;regression;contract:application")
 
-# V8-C14 ranked gap 4: a toast that arrives while another shows waits its turn (ToastQueue.h).
-add_executable(ToastQueueTest AestraUI/ToastQueueTest.cpp)
-add_test(NAME ToastQueueTest COMMAND ToastQueueTest)
-set_tests_properties(ToastQueueTest PROPERTIES LABELS "ui;toast;regression;contract:application")
+# Button groups: one motion per kind of control (NUIButtonMotion.h).
+add_executable(ButtonMotionTest AestraUI/ButtonMotionTest.cpp)
+add_test(NAME ButtonMotionTest COMMAND ButtonMotionTest)
+set_tests_properties(ButtonMotionTest PROPERTIES LABELS "ui;buttons;regression;contract:application")
+
+# Toasts stack three high, share one wait time, and a fourth pushes the oldest off (ToastStack.h).
+add_executable(ToastStackTest AestraUI/ToastStackTest.cpp)
+add_test(NAME ToastStackTest COMMAND ToastStackTest)
+set_tests_properties(ToastStackTest PROPERTIES LABELS "ui;toast;regression;contract:application")
 
 # V8-X2b phase 5: the file browser's panes and chrome from the layout system
 # (FileBrowserLayout.h); the folder rows are drawn and hit-tested by one rect.
@@ -3208,6 +3213,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Panels/AudioClipEditorPanel.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/SampleEditorPanel.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/ArsenalPanel.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/UISurfaceStore.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/ArsenalPanelScenes.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/ArsenalSceneMenu.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/PatternBrowserPanel.cpp
@@ -3252,6 +3258,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Panels/AudioClipEditorPanel.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/SampleEditorPanel.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/ArsenalPanel.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/UISurfaceStore.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/ArsenalPanelScenes.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/ArsenalSceneMenu.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/PatternBrowserPanel.cpp
@@ -3814,6 +3821,26 @@ if(AESTRA_ENABLE_UI)
     )
     add_test(NAME PluginRackBindingLifecycleTest COMMAND PluginRackBindingLifecycleTest)
     set_tests_properties(PluginRackBindingLifecycleTest PROPERTIES LABELS "ui;plugin;regression;contract:application")
+endif()
+
+# A sandboxed plugin's editor is its OWN window (HelperEditorHost.h), not the generic
+# parameter grid. openPluginEditor() used to build a widget editor for every plugin, so
+# VST3/CLAP GUI support that already existed in the host was unreachable.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(PluginEditorDispatchTest AestraUI_Core AestraUI_Platform)
+    add_executable(PluginEditorDispatchTest
+        AestraUI/PluginEditorDispatchTest.cpp
+    )
+    target_link_libraries(PluginEditorDispatchTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
+    target_include_directories(PluginEditorDispatchTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PluginEditorDispatchTest COMMAND PluginEditorDispatchTest)
+    set_tests_properties(PluginEditorDispatchTest PROPERTIES LABELS "ui;plugin;regression;contract:plugins")
 endif()
 
 # The preset bar in every plugin window (V83-S2, FD-72): step, browse by ear (Esc puts back, Enter keeps as one
@@ -4783,6 +4810,7 @@ if(AESTRA_ENABLE_UI)
         ArsenalKitTest
         UIMixerPanelGroupingTest
         PluginRackBindingLifecycleTest
+        PluginEditorDispatchTest
         PluginPresetBarTest
         WindowPanelRaiseTest
         TakesHistoryPanelTest

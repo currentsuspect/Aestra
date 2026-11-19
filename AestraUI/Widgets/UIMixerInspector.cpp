@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerInspector.h"
+#include "NUIWheel.h"
 #include "MixerScale.h"
 #include "UIMixerSendList.h"
 
@@ -55,6 +56,17 @@ namespace {
             out.pop_back();
         }
         return out + ellipsis;
+    }
+
+    // A dropdown hidden while its popup is open keeps its registration in the popup registry, and
+    // that registration suppresses hover tooltips app-wide until something else closes it. A hidden
+    // dropdown cannot close itself by mouse input, so hide through here.
+    void setDropdownVisible(const std::shared_ptr<NUIDropdown>& dropdown, bool visible)
+    {
+        if (!dropdown) return;
+        if (!visible) dropdown->closeOpenPopup();
+        if (dropdown->isVisible() == visible) return;
+        dropdown->setVisible(visible);
     }
 
 }
@@ -369,8 +381,8 @@ void UIMixerInspector::computeColumn(const Aestra::ChannelViewModel* channel)
     if (m_trimBar) m_trimBar->setVisible(!master && inView(m_trimBar->getBounds()));
     if (m_widthBar) m_widthBar->setVisible(!master && inView(m_widthBar->getBounds()));
     if (m_effectRack) m_effectRack->setVisible(inView(m_rackRect));
-    if (m_mainOutputDropdown) m_mainOutputDropdown->setVisible(!master && inView(m_outputRowRect));
-    if (m_ioInputDropdown) m_ioInputDropdown->setVisible(!master && inView(m_inputRowRect));
+    if (m_mainOutputDropdown) setDropdownVisible(m_mainOutputDropdown, !master && inView(m_outputRowRect));
+    if (m_ioInputDropdown) setDropdownVisible(m_ioInputDropdown, !master && inView(m_inputRowRect));
     for (size_t i = 0; i < m_sendWidgets.size(); ++i) {
         m_sendWidgets[i]->setVisible(!master && static_cast<int>(i) == m_expandedSend && inView(m_sendWidgets[i]->getBounds()));
     }
@@ -850,7 +862,7 @@ void UIMixerInspector::onUpdate(double deltaTime)
                 }
             }
         } else {
-            m_ioInputDropdown->setVisible(false);
+            setDropdownVisible(m_ioInputDropdown, false);
         }
     }
 
@@ -900,10 +912,10 @@ void UIMixerInspector::onUpdate(double deltaTime)
                 }
             }
         } else {
-            m_mainOutputDropdown->setVisible(false);
+            setDropdownVisible(m_mainOutputDropdown, false);
         }
-    } else if (m_mainOutputDropdown) {
-        m_mainOutputDropdown->setVisible(false);
+    } else {
+        setDropdownVisible(m_mainOutputDropdown, false);
     }
 }
 
@@ -919,7 +931,7 @@ bool UIMixerInspector::onMouseEvent(const NUIMouseEvent& event)
     }
 
     if (event.wheelDelta != 0.0f && m_viewportRect.contains(event.position)) {
-        m_targetScrollOffset -= event.wheelDelta * 36.0f;
+        m_targetScrollOffset -= event.wheelDelta * kWheelNotchPx;
         clampScrollOffsets();
         repaint();
         return true;

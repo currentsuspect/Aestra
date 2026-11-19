@@ -444,6 +444,12 @@ bool CommandParser::describeCreated(const ICommand& cmd, CommandResult& out) {
         return clip(dup->getDuplicateId(), "duplicate clip");
     if (const auto* arranged = dynamic_cast<const ArrangePatternCommand*>(&cmd))
         return clip(arranged->getClipId(), "arrange pattern");
+    // set_effect_param: report the value the plugin now displays, so a caller
+    // that set "3.5k" learns it landed on "3.5kHz" without a follow-up query.
+    if (const auto* setParam = dynamic_cast<const SetEffectParamCommand*>(&cmd)) {
+        out.displayText = setParam->displayValue();
+        if (!out.displayText.empty()) out.message = "set to " + out.displayText;
+    }
     return true;
 }
 

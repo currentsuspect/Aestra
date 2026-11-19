@@ -596,3 +596,15 @@ target_include_directories(MuseDiscoveryTest PRIVATE
 )
 add_test(NAME MuseDiscoveryTest COMMAND MuseDiscoveryTest)
 set_tests_properties(MuseDiscoveryTest PROPERTIES TIMEOUT 120 LABELS "commands;muse;contract:application")
+
+# MuseParamUnitsTest — effect parameters read and write in their own units (#1405):
+# get_effects publishes unit/min/max/curve/labels, set_effect_param accepts '3.5k',
+# refusals quote the range, and every declaration matches what the plugin prints.
+add_executable(MuseParamUnitsTest Commands/MuseParamUnitsTest.cpp)
+target_link_libraries(MuseParamUnitsTest PRIVATE AestraAudioCore)
+target_include_directories(MuseParamUnitsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MuseParamUnitsTest COMMAND MuseParamUnitsTest)
+set_tests_properties(MuseParamUnitsTest PROPERTIES TIMEOUT 120 LABELS "commands;muse;effects;contract:application")

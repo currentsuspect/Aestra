@@ -186,6 +186,14 @@ int main() {
             panel.onMouseEvent(click);
             check(vm->getChannelById(kick->getChannelId())->peakSinceResetDb <= MixerMath::DB_MIN + 0.01f,
                   "Reset peaks clears every channel's peak");
+
+            // The mixer starts with one strip and grows on request: "+ Channel" asks the owner to add one.
+            int addRequests = 0;
+            panel.onAddChannelRequested = [&addRequests]() { ++addRequests; };
+            const AestraUI::NUIRect addRect = tb->addRect();
+            click.position = {addRect.x + addRect.width * 0.5f, addRect.y + addRect.height * 0.5f};
+            panel.onMouseEvent(click);
+            check(addRequests == 1, "+ Channel asks the owner to add a channel");
         }
     }
 
@@ -237,6 +245,8 @@ int main() {
         const auto reset = tb.resetRect();
         check(narrow.right() <= group.x && group.right() <= reset.x && reset.right() <= 400.0f,
               "density, Group and Reset sit side by side without overlapping");
+        check(tb.addRect().right() <= wide.x && tb.addRect().x >= 8.0f + 30.0f,
+              "+ Channel sits left of the density segment and still leaves room for the Mixer title");
         check(wide.x >= 8.0f + 30.0f, "the density segment still leaves room for the Mixer title (x=" +
                                           std::to_string(wide.x) + ")");
         tb.setBounds({0, 0, 900, 28});

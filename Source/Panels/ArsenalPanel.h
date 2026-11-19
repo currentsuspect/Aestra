@@ -177,6 +177,10 @@ private:
     void layoutUnits();
     void scrollGridBy(float deltaPx, bool userScroll = true); // Clamp + broadcast the shared grid scroll
     float computeGridMaxScrollX() const;
+    float gridStepWidth() const; // One step's width in the grid: fit-to-width, or the readable 20 px minimum
+    void snapGridScrollBy(float deltaPx); // Wheel in scroll mode: one bar per notch, landing on bar lines
+    float m_gridWheelAccum = 0.0f;
+    std::chrono::steady_clock::time_point m_lastGridWheel{};
     void followGridPlayhead(); // Keep the playing bar in view unless the user scrolled away
     
     // Pattern Progress Visualization

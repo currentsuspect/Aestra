@@ -234,8 +234,10 @@ void NUIDropdown::onRender(NUIRenderer& renderer) {
     const float cornerRadius = bounds.height * 0.5f;
     const bool hovered = isEnabled() && isHovered();
     Depth::bed(renderer, bounds, cornerRadius, isOpen_ ? Depth::Cut::Deep : Depth::Cut::Shallow);
-    if (hovered && !isOpen_)
-        renderer.fillRoundedRect(bounds, cornerRadius, themeManager.getColor("hover"));
+    if (!isOpen_ && headerMotion_.hover() > 0.0f) {
+        const NUIColor hover = themeManager.getColor("hover");
+        renderer.fillRoundedRect(bounds, cornerRadius, hover.withAlpha(hover.a * headerMotion_.hover()));
+    }
     if (isFocused() && isEnabled() && !isOpen_)
         Depth::focusRing(renderer, bounds, cornerRadius);
 
@@ -436,7 +438,7 @@ void NUIDropdown::openDropdown() {
     if (s_openDropdown && s_openDropdown != this) {
         s_openDropdown->closeDropdown();
     }
-    NUIComponent::hideRemoteTooltip();
+    NUIComponent::setPopupOpen(this, true);
     isOpen_ = true;
     hoveredIndex_ =
         selectedIndex_ >= 0 && items_[selectedIndex_].enabled ? selectedIndex_ : getNextSelectableIndex(-1, 1);
@@ -452,6 +454,7 @@ void NUIDropdown::closeDropdown() {
     if (!isOpen_)
         return;
     isOpen_ = false;
+    NUIComponent::setPopupOpen(this, false);
     hoveredIndex_ = -1;
     scrollOffset_ = 0;
     if (onClose_)
@@ -473,6 +476,20 @@ void NUIDropdown::onUpdate(double deltaTime) {
         chevronRotation_ = targetRotation;
     }
     
+    // Colour pop on the closed field and on the hovered row (NUIButtonMotion.h, group Row).
+    const float dt = static_cast<float>(deltaTime);
+    if (rowMotionIndex_ != hoveredIndex_) {
+        rowMotionIndex_ = hoveredIndex_;
+        rowMotion_.restartHover();
+    }
+    const bool headerWasMoving = headerMotion_.animating(), rowWasMoving = rowMotion_.animating();
+    headerMotion_.update(dt, isEnabled() && isHovered() && !isOpen_, false);
+    rowMotion_.update(dt, isOpen_ && hoveredIndex_ >= 0, false);
+    if (headerWasMoving || rowWasMoving || headerMotion_.animating() || rowMotion_.animating()) {
+        setDirty(true);
+        if (rowWasMoving || rowMotion_.animating()) cacheDirty_ = true; // the open list may be drawn from its cache
+    }
+
     float targetProgress = isOpen_ ? 1.0f : 0.0f;
     dropdownAnimProgress_ += (targetProgress - dropdownAnimProgress_) * 0.15f;
 }
@@ -540,7 +557,7 @@ void NUIDropdown::renderItem(NUIRenderer& renderer, int index, const NUIRect& bo
     if (isSelected)
         renderer.fillRoundedRect(bounds, kRowRadius, selectedColor_);
     else if (isHovered)
-        renderer.fillRoundedRect(bounds, kRowRadius, hoverColor_);
+        renderer.fillRoundedRect(bounds, kRowRadius, hoverColor_.withAlpha(hoverColor_.a * rowMotion_.hover()));
 
     NUIColor curText = item.enabled ? textColor_ : props.textDisabled;
     float padding = props.spacingS;

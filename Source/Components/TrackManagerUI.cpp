@@ -212,7 +212,9 @@ void TrackManagerUI::refreshTracks() {
             continue;
         }
         seenTracks.insert(track->trackId);
-        if (!m_showEmptyTracks && isFoldableEmptyLane(*lane, track->laneIds.size())) {
+        // The first row always shows, so a project is never an empty timeline behind "show". (A new project
+        // has just the one track; a saved one with a run of untouched tracks keeps the first and folds the rest.)
+        if (!m_showEmptyTracks && !orderedLaneIds.empty() && isFoldableEmptyLane(*lane, track->laneIds.size())) {
             ++m_foldedEmptyTracks; // V82-T2: folded into the last row
             continue;
         }

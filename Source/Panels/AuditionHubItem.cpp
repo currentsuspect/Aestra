@@ -1,6 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 // The Audition hub's page of one mix or reference, and the comparison between a mix and a reference.
 #include "AuditionHub.h"
+#include "../AestraUI/Core/NUIWheel.h"
 #include "AuditionFit.h"
 #include "AuditionCover.h"
 
@@ -401,7 +402,7 @@ bool AuditionHub::itemPageMouse(const NUIMouseEvent& event, const AuditionHubLay
         if (before != m_hoverControl) setDirty(true);
     }
     if (event.wheelDelta != 0.0f && m_tab != ItemTab::Overview && p.body.contains(pos)) {
-        m_tabScroll = std::clamp(m_tabScroll - event.wheelDelta * 48.0f, 0.0f, std::max(0.0f, m_tabContentH - p.panel.height));
+        m_tabScroll = std::clamp(m_tabScroll - event.wheelDelta * AestraUI::kWheelNotchPx, 0.0f, std::max(0.0f, m_tabContentH - p.panel.height));
         setDirty(true);
         return true;
     }
