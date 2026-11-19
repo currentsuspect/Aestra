@@ -139,6 +139,8 @@ private:
     std::shared_ptr<AestraUI::NUIComponent> m_listContainer;
     std::vector<std::shared_ptr<AestraUI::UnitRow>> m_unitRows;
     Aestra::ArsenalKitCard m_kitCard; ///< the empty state (FD-27 point 6)
+    Aestra::Audio::UnitGroup m_dropGroup{Aestra::Audio::UnitGroup::Unknown}; ///< the group under a dragged row (groupAtY)
+    size_t m_lastRowCount{0}; ///< rows at the last refresh: more now means a unit was added, so scroll to it
     Aestra::ArsenalRowLanes m_lanes; ///< which rows are open into step lanes (FD-27 point 4)
     Aestra::ArsenalSceneStrip m_scenes; ///< pattern chips under the command header (FD-27 point 1)
     AestraUI::NUIRect m_sceneRect{};
@@ -173,6 +175,7 @@ private:
     bool m_fitToWidth = true; // Fit whole loop to width vs readable-min + scroll
     int m_stepCount = 16; // Default step count
     void layoutUnits();
+    void revealRowsFrom(size_t firstNewRow); // Scroll just far enough that the added row is in the viewport
     void scrollGridBy(float deltaPx, bool userScroll = true); // Clamp + broadcast the shared grid scroll
     float computeGridMaxScrollX() const;
     float gridStepWidth() const; // One step's width in the grid: fit-to-width, or the readable 20 px minimum
@@ -184,6 +187,11 @@ private:
     // Pattern Progress Visualization
     static constexpr float COMMAND_HEADER_HEIGHT = 64.0f;
     static constexpr float PROGRESS_HEADER_HEIGHT = 34.0f;
+    /// The list's visible height, and how far it can scroll. One answer for the clamp and the wheel:
+    /// with two, the wheel stopped short of the bottom onUpdate allows, so the rack's floor could not be
+    /// scrolled into view.
+    float listViewportHeight() const;
+    float listMaxScrollY() const;
     void drawProgressHeader(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds);
     void drawCommandHeader(AestraUI::NUIRenderer& renderer);
     int calculateCurrentStep(); // Calculate step from TrackManager clock

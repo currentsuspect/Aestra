@@ -1,6 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "ArsenalPanel.h"
-
+#include "UnitGroupMenu.h"
 #include "ArsenalGridScroll.h"
 #include "../AestraUI/Core/NUIWheel.h"
 #include "ArsenalRackDraw.h"
@@ -33,6 +33,7 @@ constexpr float kGroupGap = UnitRow::kStepGroupGap;
 // sits flush against the panel edge. One definition for preferred height and
 // both scroll computations — they used to disagree by this amount.
 constexpr float kArsenalListBottomPadding = 40.0f + 12.0f;
+constexpr float kArsenalDropFloor = 72.0f; // empty space under "Add a sound", always there to drop into
 
 std::string unitTypeContentLabel(UnitType type, int stepCount, double durationSeconds) {
     switch (type) {
@@ -212,6 +213,16 @@ float ArsenalPanel::gridStepWidth() const {
     const float availWidth = std::max(1.0f, gridSpan().second);
     const float groupTotal = static_cast<float>((m_stepCount + 3) / 4) * kGroupGap;
     return std::max(std::max(0.0f, availWidth - groupTotal) / static_cast<float>(std::max(1, m_stepCount)), 20.0f);
+}
+
+float ArsenalPanel::listViewportHeight() const {
+    const float reservedHeight = COMMAND_HEADER_HEIGHT + PROGRESS_HEADER_HEIGHT + 24.0f;
+    return std::max(0.0f, (m_listContainer ? m_listContainer->getBounds().height : 0.0f) - reservedHeight);
+}
+
+float ArsenalPanel::listMaxScrollY() const {
+    const float contentHeight = m_rack.contentHeight + kArsenalListBottomPadding;
+    return std::max(0.0f, contentHeight - listViewportHeight());
 }
 
 float ArsenalPanel::computeGridMaxScrollX() const {
@@ -426,6 +437,7 @@ void ArsenalPanel::refreshUnits() {
             m_selectedUnitId = id;
             removeSelectedUnit();
         });
+        row->setOnGroupChanged([this](UnitID) { refreshUnits(); }); // moved to Synth / Drums: its new header
         row->setOnDuplicateUnit([this](UnitID id) {
             if (!m_trackManager) return;
             UnitID newId = m_trackManager->getUnitManager().duplicateUnit(id);
@@ -441,9 +453,12 @@ void ArsenalPanel::refreshUnits() {
 
         m_listContainer->addChild(row);
         m_unitRows.push_back(row);
-        
     }
-    
+    const size_t rowsBeforeThisRefresh = m_lastRowCount;
+    // One or two added (not a project or kit loading): the new row is revealed below, once the rack has laid it out.
+    const bool rowsAdded = rowsBeforeThisRefresh > 0 && m_unitRows.size() > rowsBeforeThisRefresh &&
+                           m_unitRows.size() - rowsBeforeThisRefresh <= 2;
+    m_lastRowCount = m_unitRows.size();
     // Add "Add Unit" button
     m_addUnitBtn = std::make_shared<NUIButton>("+ Add a sound");
     // The board's quiet add row: no fill or outline at rest, muted text, a surface wash under the pointer.
@@ -455,6 +470,7 @@ void ArsenalPanel::refreshUnits() {
     m_listContainer->addChild(m_addUnitBtn);
     
     layoutUnits();
+    if (rowsAdded) revealRowsFrom(rowsBeforeThisRefresh);
     scrollGridBy(0.0f); // Re-clamp the shared scroll for the (possibly new) loop length
     syncRowSelection();
     if (m_onPreferredHeightChanged) {
@@ -462,13 +478,8 @@ void ArsenalPanel::refreshUnits() {
                                       m_rack.contentHeight + kArsenalListBottomPadding;
         m_onPreferredHeightChanged(preferredHeight);
     }
-    if (shouldRestoreDropTargets) {
-        registerDropTargets(true);
-    }
-    
-    if (auto parent = getParent()) {
-        parent->repaint();
-    }
+    if (shouldRestoreDropTargets) registerDropTargets(true);
+    if (auto parent = getParent()) parent->repaint();
 }
 
 void ArsenalPanel::onAddUnit() {
@@ -763,13 +774,30 @@ void ArsenalPanel::layoutUnits() {
     }
     m_rack = Aestra::ArsenalRackLayout::compute(groups, extras);
     m_kitCard.place(m_trackManager && Aestra::ArsenalRowLanes::noSounds(m_trackManager->getUnitManager()), {startX, rackTop + m_rack.contentHeight, width, Aestra::ArsenalKitCard::kReserve}); if (m_kitCard.shown()) m_rack.contentHeight += Aestra::ArsenalKitCard::kReserve; // empty state: a kit card under the rows
-    m_addUnitButtonRect = {startX + 16.0f, rackTop + m_rack.contentHeight + 8.0f, 112.0f, 32.0f}; m_rack.contentHeight += 48.0f; // "Add unit" ends the rack (the mock)
+    // "Add a sound" ends the rack, then a row's worth of open floor: a full rack still has somewhere to drop a sound
+    m_addUnitButtonRect = {startX + 16.0f, rackTop + m_rack.contentHeight + 8.0f, 112.0f, 32.0f}; m_rack.contentHeight += 48.0f + kArsenalDropFloor;
     if (m_addUnitBtn) { m_addUnitBtn->setBounds(m_addUnitButtonRect); m_addUnitBtn->setVisible(m_addUnitButtonRect.y >= m_progressHeaderRect.bottom() && m_addUnitButtonRect.bottom() <= bounds.bottom()); }
     for (const auto& item : m_rack.items) {
         if (item.kind != Aestra::ArsenalRackItem::Kind::Row || !m_unitRows[item.rowIndex]) continue;
         m_unitRows[item.rowIndex]->setBounds(NUIRect(startX, rackTop + item.y, width, item.h));
         m_unitRows[item.rowIndex]->setViewport(m_listViewportRect);
     }
+}
+
+// A row's bottom sits at (progress header bottom + 8 - scroll + item.y + item.h): the scroll that
+// brings the lowest added row to the bottom of the viewport, and never less than where we are.
+void ArsenalPanel::revealRowsFrom(size_t firstNewRow) {
+    if (!m_listContainer) return;
+    float lowestNewRowBottom = 0.0f;
+    bool found = false;
+    for (const auto& item : m_rack.items) {
+        if (item.kind != Aestra::ArsenalRackItem::Kind::Row || item.rowIndex < firstNewRow) continue;
+        lowestNewRowBottom = std::max(lowestNewRowBottom, item.y + item.h);
+        found = true;
+    }
+    if (!found) return;
+    const float roomBelowHeader = m_listViewportRect.bottom() - (m_progressHeaderRect.bottom() + 8.0f);
+    m_targetScrollY = std::max(m_targetScrollY, lowestNewRowBottom - roomBelowHeader);
 }
 
 void ArsenalPanel::onResize(int width, int height) {
@@ -782,11 +810,7 @@ void ArsenalPanel::onResize(int width, int height) {
 void ArsenalPanel::onUpdate(double dt) {
     WindowPanel::onUpdate(dt);
     if (auto folder = m_kitPicker.takeResult()) loadKitFromFolder(*folder); // the kit picker closed
-    const float reservedHeight = COMMAND_HEADER_HEIGHT + PROGRESS_HEADER_HEIGHT + 24.0f;
-    const float viewportHeight = std::max(0.0f,
-        (m_listContainer ? m_listContainer->getBounds().height : 0.0f) - reservedHeight);
-    const float contentHeight = m_rack.contentHeight + kArsenalListBottomPadding;
-    const float maxScroll = std::max(0.0f, contentHeight - viewportHeight);
+    const float maxScroll = listMaxScrollY();
     m_targetScrollY = safeClampPanelScroll(m_targetScrollY, maxScroll);
     m_scrollY = safeClampPanelScroll(m_scrollY, maxScroll);
     const float delta = m_targetScrollY - m_scrollY;
@@ -1313,12 +1337,9 @@ void ArsenalPanel::onUnitDragStart(UnitID unitId) {
 
 void ArsenalPanel::onUnitDrop(UnitID unitId, int dropIndex) {
     if (!m_trackManager) return;
-    
     m_trackManager->getUnitManager().reorderUnit(unitId, Aestra::ArsenalRackLayout::finalIndexAfterMove(m_trackManager->getUnitManager().getAllUnitIDs(), unitId, static_cast<size_t>(dropIndex)));
-    m_isDragging = false;
-    m_draggedUnitId = 0;
-    m_dropTargetIndex = -1;
-    
+    AestraUI::moveUnitToDroppedGroup(*m_trackManager, unitId, m_dropGroup); // dropped under another header (#1400)
+    m_isDragging = false; m_draggedUnitId = 0; m_dropTargetIndex = -1;
     refreshUnits();
     Log::info("[Arsenal] Dropped Unit " + std::to_string(unitId) + " at index " + std::to_string(dropIndex));
 }
@@ -1514,6 +1535,7 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
         // The drop lands before the row under the pointer, in the grouped display order.
         const float rackTop = m_progressHeaderRect.bottom() + 8.0f - m_scrollY;
         const int dropIndex = static_cast<int>(m_rack.insertIndexForSlot(m_rack.dropSlotForY(event.position.y - rackTop), m_unitRows.size()));
+        m_dropGroup = m_rack.groupAtY(event.position.y - rackTop); // under another group's header: it joins that group
 
         if (dropIndex != m_dropTargetIndex) {
             m_dropTargetIndex = dropIndex;
@@ -1539,11 +1561,10 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
             }
         }
         
-        // Fallback: scroll the unit list
-        float contentHeight = m_rack.contentHeight + kArsenalListBottomPadding;
-        float viewportHeight = m_listContainer ? m_listContainer->getBounds().height : 100.0f;
-        float maxScroll = std::max(0.0f, contentHeight - viewportHeight);
-        
+        // Fallback: scroll the unit list, to the same limit onUpdate clamps to (listMaxScrollY), or the
+        // wheel stops short of it and the last row's floor never comes into view.
+        const float maxScroll = listMaxScrollY();
+
         m_targetScrollY -= event.wheelDelta * AestraUI::kWheelNotchPx;
         m_targetScrollY = safeClampPanelScroll(m_targetScrollY, maxScroll);
         return true;

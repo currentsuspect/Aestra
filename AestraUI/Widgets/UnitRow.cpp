@@ -7,6 +7,7 @@
 #include "Commands/EditPatternNotesCommand.h"
 #include "Commands/SetRoleCommand.h"
 #include "Commands/SetUnitMixerChannelCommand.h"
+#include "UnitGroupMenu.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 #include "PluginBrowserPanel.h"
@@ -1839,12 +1840,9 @@ void UnitRow::showRowContextMenu(const NUIPoint& pos) {
         m_rowContextMenu->addSubmenu("Category", categoryMenu);
     }
 
-    m_rowContextMenu->addItem("Duplicate Unit", [this]() {
-        if (!m_manager.getUnit(m_unitId))
-            return;
-        if (m_onDuplicateUnit)
-            m_onDuplicateUnit(m_unitId);
-    });
+    m_rowContextMenu->addItem("Duplicate Unit", [this]() { if (m_manager.getUnit(m_unitId) && m_onDuplicateUnit) m_onDuplicateUnit(m_unitId); });
+    addUnitGroupMoveItem(*m_rowContextMenu, m_trackManager.get(), m_unitId, m_onGroupChanged); // the first group was a guess
+
 
     m_rowContextMenu->addSeparator();
     m_rowContextMenu->addItem("Delete Unit", [this, pos]() {
