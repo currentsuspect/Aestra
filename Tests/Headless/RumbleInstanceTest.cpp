@@ -329,6 +329,24 @@ void factorySoundsKeepTheirGrain() {
     }
 }
 
+// R6 (first part): picking a sound plays it once, without a key or the transport, from the audio thread's own
+// next block. The request is an atomic: nothing heavy or blocking on either side.
+void anAuditionPlaysThePickedSound() {
+    RumbleInstance rumble;
+    rumble.setSound(rumbleSoundOf(kRumbleFactoryPresets[0]));
+    ready(rumble, 48000.0, 256);
+    rumble.audition(60);
+    const auto reference = RumbleVoice::render(rumbleSoundOf(kRumbleFactoryPresets[0]), 24, 48000.0);
+    const auto out = play(rumble, {}, reference.size(), 256);
+    double worst = 0.0;
+    for (size_t i = 0; i < out.size(); ++i) worst = std::max(worst, std::fabs(out[i] - static_cast<double>(reference[i])));
+    check(worst < 1.0e-6, "an audition of C3 plays the sound at its home pitch, exactly (worst " + std::to_string(worst) + ")");
+    const auto after = play(rumble, {}, 4800, 256);
+    float rest = 0.0f;
+    for (float v : after) rest = std::max(rest, std::fabs(v));
+    check(rest == 0.0f, "and plays once");
+}
+
 int main() {
     c3PlaysTheSoundAtItsHomePitch();
     playsTheApprovedVoiceExactly();
@@ -343,6 +361,7 @@ int main() {
     neverPastFullScale();
     badInputIsRefused();
     factorySoundsKeepTheirGrain();
+    anAuditionPlaysThePickedSound();
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";
         return 1;
