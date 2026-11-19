@@ -81,6 +81,7 @@ public:
     std::function<void(const std::string&)> m_onNotify;
     /** @brief Callback fired when the unit is duplicated via context menu. */
     std::function<void(Aestra::Audio::UnitID)> m_onDuplicateUnit;
+    std::function<void(Aestra::Audio::UnitID)> m_onGroupChanged;
 
     void setOnDragStart(std::function<void(Aestra::Audio::UnitID)> cb) { m_onDragStart = cb; }
     void setOnDrop(std::function<void(Aestra::Audio::UnitID, int)> cb) { m_onDrop = cb; }
@@ -97,6 +98,7 @@ public:
     /// A short line to tell the user what an action just did ("Created Drum Bus with 3 sounds"): the app shows it as a toast.
     void setOnNotify(std::function<void(const std::string&)> cb) { m_onNotify = std::move(cb); }
     void setOnDuplicateUnit(std::function<void(Aestra::Audio::UnitID)> cb) { m_onDuplicateUnit = cb; }
+    void setOnGroupChanged(std::function<void(Aestra::Audio::UnitID)> cb) { m_onGroupChanged = std::move(cb); } ///< moved to Synth / Drums
     
     /**
      * @brief Set the visible step count for the sequencer section.

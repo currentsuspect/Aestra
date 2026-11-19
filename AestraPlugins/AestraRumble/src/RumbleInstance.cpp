@@ -155,6 +155,15 @@ void RumbleInstance::process(const float* const* inputs, float** outputs, uint32
         return;
     }
 
+    // An audition from the editor: struck at full velocity, like a key, without touching the held keys.
+    if (const int key = m_auditionKey.exchange(-1, std::memory_order_acq_rel); key >= 0) {
+        if (m_voice.active()) {
+            m_fading = m_voice;
+            m_fading.stop();
+        }
+        m_voice.start(sound(), pitchOfKey(key), levelFor(key), velocityGain(getParameter(kVelocity), 127));
+    }
+
     size_t eventIndex = 0;
     const size_t eventCount = midiInput ? midiInput->getEventCount() : 0;
     for (uint32_t i = 0; i < numFrames; ++i) {
