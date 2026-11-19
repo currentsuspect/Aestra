@@ -243,39 +243,6 @@ void RumblePluginEditor::startFromKept(size_t index) {
 void RumblePluginEditor::keep() {
     const auto kept = m_keptStore->keep(m_session->current(), m_session->currentName());
     if (!kept) {
-        m_editorSaid = "Could not keep it: the presets folder could not be written.";
-    } else {
-        m_lastKept = kept;
-        m_editorSaid = "Kept " + kept->name + " in Your 808s. It opens in any project.";
-        refreshKept();
-    }
-    setDirty(true);
-}
-
-void RumblePluginEditor::undoKeep() {
-    if (!m_lastKept) return;
-    if (m_keptStore->unkeep(*m_lastKept)) m_editorSaid = "Took " + m_lastKept->name + " back out of Your 808s.";
-    m_lastKept.reset();
-    refreshKept();
-}
-
-void RumblePluginEditor::refreshKept() {
-    m_kept = m_keptStore->list(); // a folder listing of small files: only on open, keep and undo
-    setDirty(true);
-}
-
-void RumblePluginEditor::startFromKept(size_t index) {
-    if (index >= m_kept.size()) return;
-    m_startKept = static_cast<int>(index);
-    m_outlines->forgetPending();
-    m_session = std::make_unique<RumbleFindSession>(m_kept[index].sound, m_kept[index].name, static_cast<uint64_t>(nowMs()));
-    m_lastPicture.reset();
-    soundChanged();
-}
-
-void RumblePluginEditor::keep() {
-    const auto kept = m_keptStore->keep(m_session->current(), m_session->currentName());
-    if (!kept) {
         m_lastKept.reset(); // Undo must never reach back to an earlier keep
         m_editorSaid = "Could not keep it: the presets folder could not be written.";
     } else {
