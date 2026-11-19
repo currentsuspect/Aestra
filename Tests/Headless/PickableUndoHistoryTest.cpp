@@ -43,10 +43,14 @@ public:
         m_w.*m_field = m_from;
         m_w.undone.push_back(m_name);
     }
-    void redo() override { m_w.*m_field = m_to; }
+    void redo() override {
+        if (m_throwOnRedo) throw std::runtime_error("disk gone");
+        m_w.*m_field = m_to;
+    }
     std::string getName() const override { return m_name; }
     Footprint footprint() const override { return m_fp; }
     bool m_throwOnUndo = false;
+    bool m_throwOnRedo = false;
 
 private:
     World& m_w;
@@ -161,6 +165,75 @@ void aFailedUndoLeavesEverythingAsItWas() {
           "the project and history are as they were");
 }
 
+// A grouped step is whole or not at all: if one member fails on the way back, the ones already back go out again.
+void aGroupedStepIsWholeOrNotAtAll() {
+    World w;
+    auto height = std::make_shared<Change>(w, "Resize track", &World::height, 140, touching(Touch::Track, 3, kHeight));
+    auto clip = std::make_shared<Change>(w, "Add clip", &World::clipAt, 0, touching(Touch::Clip, 12));
+    height->execute();
+    clip->execute();
+    auto group = std::make_shared<PickedSteps>(std::vector<std::shared_ptr<ICommand>>{height, clip});
+    height->undo();
+    clip->undo(); // the group's members are out, as undoJust leaves them
+    check(w.height == 100 && w.clipAt == -1, "both members are out");
+
+    clip->m_throwOnRedo = true;
+    bool threw = false;
+    try {
+        group->undo();
+    } catch (const std::exception&) {
+        threw = true;
+    }
+    check(threw, "the failure reaches the caller");
+    check(w.height == 100 && w.clipAt == -1, "and every member is still out: the one that came back went out again");
+
+    clip->m_throwOnRedo = false;
+    group->undo();
+    check(w.height == 140 && w.clipAt == 0, "the group comes back when nothing fails");
+
+    height->m_throwOnUndo = true;
+    threw = false;
+    try {
+        group->redo();
+    } catch (const std::exception&) {
+        threw = true;
+    }
+    check(threw, "a failure on the way out reaches the caller too");
+    check(w.height == 140 && w.clipAt == 0, "and every member is still in: the one that went out came back");
+}
+
+// A step recorded while a failed pickable undo is being repaired is not thrown away with the repair.
+class StepsOnUndo : public ICommand {
+public:
+    StepsOnUndo(World& w, CommandHistory& h) : m_w(w), m_h(h) {}
+    void execute() override { m_w.muted = true; }
+    void undo() override {
+        m_h.pushExecuted(std::make_shared<Mute>(m_w)); // a step recorded while the undo is running
+        throw std::runtime_error("disk gone");
+    }
+    void redo() override { m_w.muted = true; }
+    std::string getName() const override { return "Steps on undo"; }
+    Footprint footprint() const override { return touching(Touch::Track, 3, kHeight); }
+
+private:
+    World& m_w;
+    CommandHistory& m_h;
+};
+
+void aFailedUndoKeepsWhatWasRecordedMeanWhile() {
+    World w;
+    CommandHistory h;
+    h.pushAndExecute(resize(w));
+    auto failing = std::make_shared<StepsOnUndo>(w, h);
+    h.pushAndExecute(failing);
+    const auto picked = h.undoJust(0, true);
+    check(picked.result == PickResult::Failed, "the failure is reported (got " + std::to_string(static_cast<int>(picked.result)) + ")");
+    check(w.height == 140 && w.muted, "the project is as it was");
+    const auto& stack = h.getUndoStack();
+    check(stack.size() == 3, "the step recorded during the repair is kept (" + std::to_string(stack.size()) + ")");
+    check(stack[0]->getName() == "Resize track" && stack[1] == failing, "and the picked steps are back where they were");
+}
+
 void thePickedStepCarriesWhatItTouched() {
     World w;
     CommandHistory h;
@@ -179,6 +252,8 @@ int main() {
     dependantsAreNamedAndNothingChanges();
     stepsThatSayNothingAreNeverUndoneAround();
     aFailedUndoLeavesEverythingAsItWas();
+    aGroupedStepIsWholeOrNotAtAll();
+    aFailedUndoKeepsWhatWasRecordedMeanWhile();
     thePickedStepCarriesWhatItTouched();
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";

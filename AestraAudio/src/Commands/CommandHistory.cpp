@@ -187,7 +187,6 @@ PickedUndo CommandHistory::undoJust(size_t index, bool withDependants) {
     // Phase 1: decide, and take the steps out of the stack, under lock.
     std::vector<size_t> picked;                    // stack indices, oldest first
     std::vector<std::shared_ptr<ICommand>> steps;  // the same steps
-    std::vector<std::shared_ptr<ICommand>> before; // the whole stack, to put back on failure
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         if (m_activeTransaction && m_transactionNestingLevel > 0) {
@@ -202,7 +201,6 @@ PickedUndo CommandHistory::undoJust(size_t index, bool withDependants) {
         }
         picked.push_back(index);
         picked.insert(picked.end(), out.dependants.begin(), out.dependants.end());
-        before = m_undoStack;
         for (size_t i : picked) steps.push_back(m_undoStack[i]);
         for (auto it = picked.rbegin(); it != picked.rend(); ++it) {
             m_undoStack.erase(m_undoStack.begin() + static_cast<std::ptrdiff_t>(*it));
@@ -223,13 +221,20 @@ PickedUndo CommandHistory::undoJust(size_t index, bool withDependants) {
         failed = true;
     }
     if (failed) {
-        try {
-            for (size_t k = steps.size() - undone; k < steps.size(); ++k) steps[k]->redo();
-        } catch (...) {
-            std::cerr << "Pickable undo: could not restore after a failed undo" << std::endl;
+        for (size_t k = steps.size() - undone; k < steps.size(); ++k) {
+            try {
+                steps[k]->redo(); // one that cannot come back must not stop the others coming back
+            } catch (...) {
+                std::cerr << "Pickable undo: could not restore a step after a failed undo" << std::endl;
+            }
         }
+        // Put the picked steps back where they were. Only they were ever taken out, so a step another thread recorded
+        // while this undo ran is kept rather than dropped with the repair.
         std::lock_guard<std::mutex> lock(m_mutex);
-        m_undoStack = std::move(before);
+        for (size_t k = 0; k < picked.size(); ++k) {
+            const size_t at = std::min(picked[k], m_undoStack.size());
+            m_undoStack.insert(m_undoStack.begin() + static_cast<std::ptrdiff_t>(at), steps[k]);
+        }
         out.result = PickResult::Failed;
         return out;
     }

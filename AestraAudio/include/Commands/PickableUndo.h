@@ -51,11 +51,44 @@ class PickedSteps : public ICommand {
 public:
     explicit PickedSteps(std::vector<std::shared_ptr<ICommand>> steps) : m_steps(std::move(steps)) {}
     void execute() override {} // made after the steps were undone
+    // A member that cannot come back takes the ones that did back out again: the group is whole or not at all, so a
+    // failed undo never leaves half its members in the project and half out of it.
     void undo() override {
-        for (auto& step : m_steps) step->redo();
+        size_t back = 0;
+        try {
+            for (auto& step : m_steps) {
+                step->redo();
+                ++back;
+            }
+        } catch (...) {
+            while (back > 0) {
+                --back;
+                try {
+                    m_steps[back]->undo();
+                } catch (...) {
+                }
+            }
+            throw;
+        }
     }
+    // The same, the other way: a member that cannot go out takes the ones that went out back in.
     void redo() override {
-        for (auto it = m_steps.rbegin(); it != m_steps.rend(); ++it) (*it)->undo();
+        size_t out = 0;
+        try {
+            for (auto it = m_steps.rbegin(); it != m_steps.rend(); ++it) {
+                (*it)->undo();
+                ++out;
+            }
+        } catch (...) {
+            const size_t n = m_steps.size();
+            for (size_t j = 0; j < out; ++j) { // the earliest that went out comes back first
+                try {
+                    m_steps[n - out + j]->redo();
+                } catch (...) {
+                }
+            }
+            throw;
+        }
     }
     std::string getName() const override {
         std::string name = "Undid: " + (m_steps.empty() ? std::string() : m_steps.front()->getName());
