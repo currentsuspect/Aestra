@@ -66,13 +66,19 @@ inline bool alreadyGrouped(const TrackManager& tm, uint32_t channelId) {
     return out != 0xFFFFFFFFu && out != MASTER_MIXER_CHANNEL_ID;
 }
 
-/// How many of @p category's sounds each channel already collects, Master included.
-inline std::map<uint32_t, size_t> soundsPerChannel(const UnitManager& units, RoleCategory category) {
+/// How many of @p category's sounds each channel already collects: units routed into it and tracks that own it,
+/// Master included (a bucket that is never consulted, since a sound on Master is never a channel member).
+inline std::map<uint32_t, size_t> soundsPerChannel(TrackManager& tm, RoleCategory category) {
     std::map<uint32_t, size_t> counts;
+    const UnitManager& units = tm.getUnitManager();
     for (UnitID id : units.getAllUnitIDs()) {
         const UnitInfo* unit = units.getUnit(id);
         if (!unit || unit->role.category != category) continue;
         ++counts[unit->targetMixerChannelId];
+    }
+    for (const Track* track : tm.getTracks()) {
+        if (!track || track->role.category != category) continue;
+        ++counts[track->channelId];
     }
     return counts;
 }
@@ -103,7 +109,7 @@ inline RoleBusPlan planRoleBus(TrackManager& tm, RoleCategory category) {
     std::set<uint32_t> channelsTaken;
 
     const UnitManager& units = static_cast<const TrackManager&>(tm).getUnitManager();
-    const std::map<uint32_t, size_t> collected = role_bus_detail::soundsPerChannel(units, category);
+    const std::map<uint32_t, size_t> collected = role_bus_detail::soundsPerChannel(tm, category);
     for (UnitID id : units.getAllUnitIDs()) {
         const UnitInfo* unit = units.getUnit(id);
         if (!unit || unit->role.category != category) continue;

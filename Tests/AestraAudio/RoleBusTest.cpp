@@ -4,11 +4,13 @@
 // one bus; the offer is a deterministic rule over roles and routing; creating it is one undoable step; members keep
 // their own channels; nothing is offered when there is nothing to group (RoleBus.h).
 
+#include "Commands/CreateLaneCommand.h"
 #include "Commands/CreateRoleBusCommand.h"
 #include "Models/RoleBus.h"
 #include "Models/TrackManager.h"
 
 #include <cstdio>
+#include <memory>
 #include <string>
 
 using namespace Aestra::Audio;
@@ -121,6 +123,29 @@ int main() {
         const RoleBusPlan again = planRoleBus(tm, RoleCategory::Drums);
         check(again.members.size() == 1, "a drum added after a Master-made bus is offered alone, not with the bus nested inside");
         check(!again.worthOffering(), "so there is no second Drum Bus to offer");
+    }
+
+    // Tracks count towards a collector too: two Drums tracks already sharing a channel are a group already.
+    {
+        TrackManager tm;
+        auto* shared = tm.addChannel("Shared drums");
+        auto& playlist = tm.getPlaylistModel();
+        auto addTrack = [&](const std::string& name, uint32_t channelId) {
+            auto lane = std::make_shared<CreateLaneCommand>(playlist, name);
+            lane->execute();
+            return tm.createTrack(lane->getLaneId(), name, channelId);
+        };
+        const uint64_t kick = addTrack("Kick 1", shared->getChannelId());
+        const uint64_t snare = addTrack("Snare 1", shared->getChannelId());
+        check(kick != 0 && snare != 0, "two Drums tracks share a channel");
+        const RoleBusPlan sharedOnly = planRoleBus(tm, RoleCategory::Drums);
+        check(sharedOnly.members.empty(), "two Drums tracks on one channel are a group already (nothing to group)");
+
+        const UnitID tom = addUnit(tm, "Tom 1", true);
+        (void)tom;
+        const RoleBusPlan plan = planRoleBus(tm, RoleCategory::Drums);
+        check(plan.members.size() == 1, "the new drum is offered alone, not with the two-track channel nested inside");
+        check(!plan.worthOffering(), "so there is no second Drum Bus to offer");
     }
 
     // A name that says nothing is no member; the user's own choice is.
