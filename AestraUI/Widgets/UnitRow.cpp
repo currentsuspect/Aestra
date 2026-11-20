@@ -250,8 +250,8 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
         cardBg = theme.getColor("accentPrimary").withAlpha(0.18f);
         border = theme.getColor("accentPrimary").withAlpha(0.95f);
     } else if (m_isSelected) {
-        cardBg = NUIColor::lerp(cardBg, theme.getColor("accentPrimary"), 0.28f); // the locked board's selection wash
-        border = theme.getColor("accentPrimary").withAlpha(0.40f);
+        cardBg = NUIColor::lerp(cardBg, theme.getColor("accentPrimary"), 0.16f); // a quiet wash: selected, not shouting
+        border = theme.getColor("accentPrimary").withAlpha(0.30f);
     } else if (m_isHovered) {
         cardBg = theme.getColor("surfaceRaised");
         border = theme.getColor("accentPrimary").withAlpha(0.22f);

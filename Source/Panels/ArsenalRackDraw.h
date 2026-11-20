@@ -22,7 +22,7 @@ inline void drawArsenalGroupHeader(AestraUI::NUIRenderer& renderer, const Aestra
     const std::string n = std::to_string(count);
     renderer.drawText(n, {rect.x + 8.0f + tw + 10.0f, y}, 10.0f, muted.withAlpha(0.5f));
     const float lx = rect.x + 8.0f + tw + 10.0f + renderer.measureText(n, 10.0f).width + 10.0f;
-    renderer.fillRect(AestraUI::NUIRect{lx, y + 6.0f, std::max(0.0f, rect.right() - 8.0f - lx), 1.0f}, theme.getColor("border").withAlpha(0.35f));
+    renderer.fillRect(AestraUI::NUIRect{lx, y + 6.0f, std::max(0.0f, rect.right() - lx), 1.0f}, theme.getColor("border").withAlpha(0.35f));
 }
 
 /// Every header of the rack that is in view, clipped to the list viewport.

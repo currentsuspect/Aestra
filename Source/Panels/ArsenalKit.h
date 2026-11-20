@@ -86,8 +86,13 @@ public:
         renderer.strokeRoundedRect(c, tp.radiusM, 1.0f, theme.getColor("borderSubtle").withAlpha(0.5f));
         renderer.drawTextCentered("Start with a kit", {c.x + 12.0f, c.y + 10.0f, c.width - 24.0f, 24.0f},
                                   tp.fontSizeL, theme.getColor("textPrimary").withAlpha(0.96f));
-        renderer.drawText("Browse a folder of sounds without changing your Arsenal.", {c.x + 20.0f, c.y + 42.0f}, tp.fontSizeXS, theme.getColor("textSecondary").withAlpha(0.85f));
-        renderer.drawText("named after it, ready to play.", {c.x + 20.0f, c.y + 58.0f}, tp.fontSizeXS, theme.getColor("textSecondary").withAlpha(0.85f));
+        // Two centred lines under the heading, each inside the card's padding. The second line used to be left over
+        // from when a kit made units ("named after it, ready to play"); browsing adds nothing now, so say that.
+        const AestraUI::NUIColor body = theme.getColor("textSecondary").withAlpha(0.85f);
+        renderer.drawTextCentered("Browse a folder of sounds without changing your Arsenal.",
+                                  {c.x + 20.0f, c.y + 40.0f, c.width - 40.0f, 18.0f}, tp.fontSizeXS, body);
+        renderer.drawTextCentered("Nothing is added until you choose a sound.",
+                                  {c.x + 20.0f, c.y + 58.0f, c.width - 40.0f, 18.0f}, tp.fontSizeXS, body);
         const auto b = buttonRect();
         renderer.fillRoundedRect(b, tp.radiusS, theme.getColor("accentPrimary").withAlpha(0.22f));
         renderer.strokeRoundedRect(b, tp.radiusS, 1.0f, theme.getColor("accentPrimary").withAlpha(0.8f));
