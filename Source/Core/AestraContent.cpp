@@ -1484,6 +1484,7 @@ void AestraContent::setupArsenalPanels() {
         });
     });
     wireEmptySoundNotice();
+    m_sequencerPanel->setOnUnitAdded([this](UnitID) { applyKeySurfaceEvent(WorkspaceFocusModel::KeySurfaceEvent::UnitAdded); }); // F2 and Delete act on the new row
     m_sequencerPanel->setOnRequestSampleEditor([this](UnitID id) {
         if (!m_trackManager) return;
         const auto* unit = m_trackManager->getUnitManager().getUnit(id);
@@ -2304,6 +2305,7 @@ bool AestraContent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (!isVisible() || !isEnabled()) {
         return false;
     }
+    if (m_notificationToast) m_notificationToast->trackPointer(event.position); // a toast with buttons holds its time under the pointer
 
     // The surface last pressed in owns the selection-level keys. A press inside the visible piano roll makes it
     // the key surface; a press anywhere else hands the keys back to the workspace.

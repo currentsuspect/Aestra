@@ -53,6 +53,8 @@ public:
     /** Removes the action toast without calling any of its callbacks. */
     void dismissAction();
     bool actionShowing() const { return action_.has_value(); }
+    /** Tells the toast where the pointer is, for every mouse event the app sees (a move may never reach the overlay itself). */
+    void trackPointer(const NUIPoint& position);
     /** The pill's top edge, fixed by the strip: the top the owner keeps the list clear of. */
     float actionTop() const;
     /** The pill's rectangle, as last drawn (a centred estimate before the first draw). */
@@ -65,7 +67,6 @@ private:
     ToastStack stack_;
     std::optional<ActionToastSpec> action_;
     ActionToastTimer actionTimer_;
-    double actionAge_ = 0.0; ///< seconds on screen, for the fade only
     NUIRect pill_{}, primaryRect_{}, secondaryRect_{}, closeRect_{};
 };
 

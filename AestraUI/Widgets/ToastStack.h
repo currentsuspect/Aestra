@@ -64,6 +64,8 @@ public:
         if (!m_hovered) m_age += dt;
         return m_age >= kActionToastSeconds;
     }
+    /// Seconds of its time already used (stands still while hovered), for the fades.
+    double age() const { return m_age; }
 
 private:
     double m_age = 0.0;

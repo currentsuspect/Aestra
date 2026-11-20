@@ -1137,14 +1137,17 @@ void ArsenalPanel::onResize(int width, int height) {
     layoutUnits(); // Layout units within the content area
 }
 
-void ArsenalPanel::onUpdate(double dt) {
-    WindowPanel::onUpdate(dt);
-    if (auto folder = m_kitPicker.takeResult()) loadKitFromFolder(*folder); // the kit picker closed
+float ArsenalPanel::maxScrollY() const {
     const float reservedHeight = COMMAND_HEADER_HEIGHT + PROGRESS_HEADER_HEIGHT + 24.0f;
     const float viewportHeight = std::max(0.0f,
         (m_listContainer ? m_listContainer->getBounds().height : 0.0f) - reservedHeight - m_bottomInset);
-    const float contentHeight = m_rack.contentHeight + kArsenalListBottomPadding;
-    const float maxScroll = std::max(0.0f, contentHeight - viewportHeight);
+    return std::max(0.0f, m_rack.contentHeight + kArsenalListBottomPadding - viewportHeight);
+}
+
+void ArsenalPanel::onUpdate(double dt) {
+    WindowPanel::onUpdate(dt);
+    if (auto folder = m_kitPicker.takeResult()) loadKitFromFolder(*folder); // the kit picker closed
+    const float maxScroll = maxScrollY();
     m_targetScrollY = safeClampPanelScroll(m_targetScrollY, maxScroll);
     m_scrollY = safeClampPanelScroll(m_scrollY, maxScroll);
     const float delta = m_targetScrollY - m_scrollY;
@@ -1938,12 +1941,10 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
         }
         
         // Fallback: scroll the unit list
-        float contentHeight = m_rack.contentHeight + kArsenalListBottomPadding;
-        float viewportHeight = (m_listContainer ? m_listContainer->getBounds().height : 100.0f) - m_bottomInset;
-        float maxScroll = std::max(0.0f, contentHeight - viewportHeight);
-        
+        // The same limit as onUpdate: the wheel used to clamp against the whole list height (header included), so the
+        // last ~150 px of the list, the add line with it, could not be reached.
         m_targetScrollY -= event.wheelDelta * AestraUI::kWheelNotchPx;
-        m_targetScrollY = safeClampPanelScroll(m_targetScrollY, maxScroll);
+        m_targetScrollY = safeClampPanelScroll(m_targetScrollY, maxScrollY());
         return true;
     }
     

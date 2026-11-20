@@ -66,11 +66,8 @@ void NotificationToast::onRender(NUIRenderer& renderer)
 void NotificationToast::onUpdate(double deltaTime)
 {
     if (action_) {
-        if (!actionTimer_.update(deltaTime)) {
-            actionAge_ += deltaTime;
-        } else {
+        if (actionTimer_.update(deltaTime))
             finishAction(action_->onClose); // its time is up: the same as the x
-        }
     }
     if (stack_.empty() && !action_) {
         setVisible(false);
@@ -78,6 +75,12 @@ void NotificationToast::onUpdate(double deltaTime)
     }
     stack_.update(deltaTime);
     repaint(); // animate the fades while anything is showing
+}
+
+void NotificationToast::trackPointer(const NUIPoint& position)
+{
+    if (action_)
+        actionTimer_.setHovered(pill_.width > 0.0f && pill_.contains(position)); // the time stands still while it is over the pill
 }
 
 bool NotificationToast::onMouseEvent(const NUIMouseEvent& event)
@@ -109,7 +112,6 @@ void NotificationToast::showAction(ActionToastSpec spec)
 {
     action_ = std::move(spec);
     actionTimer_ = ActionToastTimer{};
-    actionAge_ = 0.0;
     pill_ = {};
     setVisible(true);
     repaint();
@@ -145,8 +147,9 @@ void NotificationToast::drawAction(NUIRenderer& renderer)
     pill_ = {x, y, w, kActionH};
 
     constexpr double kFadeIn = 0.12, kFadeOut = 0.35;
-    const double remaining = kActionToastSeconds - actionAge_;
-    renderer.setOpacity(static_cast<float>(std::clamp(std::min(actionAge_ / kFadeIn, remaining / kFadeOut), 0.0, 1.0)));
+    const double age = actionTimer_.age(); // stands still while the pointer is over the pill, so the pill stays solid
+    const double remaining = kActionToastSeconds - age;
+    renderer.setOpacity(static_cast<float>(std::clamp(std::min(age / kFadeIn, remaining / kFadeOut), 0.0, 1.0)));
 
     // Design Spec, Toast: a floating card, no outline. The dot is the row's own colour; the primary is a raised cap.
     Depth::floatingCard(renderer, pill_, 8.0f, t.surfaceRaised);

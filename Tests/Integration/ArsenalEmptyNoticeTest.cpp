@@ -106,6 +106,15 @@ void testTimerAndHover() {
     held.setHovered(false);
     require(!held.update(5.5), "the time runs again once the pointer leaves, from where it stopped");
     require(held.update(1.0), "and ends 6 s of unhovered time later");
+
+    // The fades follow the timer's age, which stands still under the pointer: a pill held for a minute stays solid.
+    AestraUI::ActionToastTimer fade;
+    fade.setHovered(true);
+    fade.update(60.0);
+    require(fade.age() == 0.0, "a toast held under the pointer does not age, so it never fades out");
+    fade.setHovered(false);
+    fade.update(2.0);
+    require(fade.age() == 2.0, "and ages again once the pointer leaves");
 }
 
 void testRoomForTheToast() {

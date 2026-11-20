@@ -273,6 +273,7 @@ private:
     float m_bottomInset = 0.0f;
     AestraUI::NUIRect m_keepClear{};
     void scrollUnitIntoView(UnitID id);
+    float maxScrollY() const; // how far the list can scroll: the one limit for the wheel and the per-frame clamp
     std::function<void(UnitID)> m_onRequestSampleEditor;
     std::function<void(const std::string&)> m_onPluginDropped;
     std::function<void(UnitID, const std::string&)> m_onPluginDroppedToUnit;
