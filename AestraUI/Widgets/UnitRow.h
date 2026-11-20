@@ -78,6 +78,7 @@ public:
     std::function<void(Aestra::Audio::UnitID, const std::string&)> m_onRenameUnit;
     /** @brief Callback fired when the unit is deleted via context menu. */
     std::function<void(Aestra::Audio::UnitID)> m_onDeleteUnit;
+    std::function<void(const std::string&)> m_onNotify;
     /** @brief Callback fired when the unit is duplicated via context menu. */
     std::function<void(Aestra::Audio::UnitID)> m_onDuplicateUnit;
     std::function<void(Aestra::Audio::UnitID)> m_onGroupChanged;
@@ -94,6 +95,8 @@ public:
     void setOnOpenPatternEditor(std::function<void(Aestra::Audio::PatternID, Aestra::Audio::UnitID)> cb) { m_onOpenPatternEditor = cb; }
     void setOnRenameUnit(std::function<void(Aestra::Audio::UnitID, const std::string&)> cb) { m_onRenameUnit = cb; }
     void setOnDeleteUnit(std::function<void(Aestra::Audio::UnitID)> cb) { m_onDeleteUnit = cb; }
+    /// A short line to tell the user what an action just did ("Created Drum Bus with 3 sounds"): the app shows it as a toast.
+    void setOnNotify(std::function<void(const std::string&)> cb) { m_onNotify = std::move(cb); }
     void setOnDuplicateUnit(std::function<void(Aestra::Audio::UnitID)> cb) { m_onDuplicateUnit = cb; }
     void setOnGroupChanged(std::function<void(Aestra::Audio::UnitID)> cb) { m_onGroupChanged = std::move(cb); } ///< moved to Synth / Drums
     

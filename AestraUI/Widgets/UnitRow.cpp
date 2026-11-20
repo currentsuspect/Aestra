@@ -5,6 +5,7 @@
 #include "AudioEngine.h"
 #include "Commands/AssignUnitToFirstFreeInsertCommand.h"
 #include "Commands/EditPatternNotesCommand.h"
+#include "Commands/CreateRoleBusCommand.h"
 #include "Commands/SetRoleCommand.h"
 #include "Commands/SetUnitMixerChannelCommand.h"
 #include "UnitGroupMenu.h"
@@ -1838,6 +1839,21 @@ void UnitRow::showRowContextMenu(const NUIPoint& pos) {
             categoryMenu->addItem(item);
         }
         m_rowContextMenu->addSubmenu("Category", categoryMenu);
+
+        // The offer: sounds that share a role can share a bus. Made on a sound that would go into it, when there
+        // are at least two. One undo step; every member keeps its own channel.
+        if (m_trackManager && current.known()) {
+            const RoleBusPlan plan = planRoleBus(*m_trackManager, current.category);
+            if (plan.worthOffering() && planIncludesUnit(plan, *m_trackManager, m_unitId)) {
+                m_rowContextMenu->addItem("Create " + plan.name + " (" + std::to_string(plan.members.size()) + " sounds)", [this, plan]() {
+                    if (!m_trackManager) return;
+                    auto command = std::make_shared<CreateRoleBusCommand>(*m_trackManager, plan);
+                    m_trackManager->getCommandHistory().pushAndExecute(command);
+                    if (command->busChannelId() != 0 && m_onNotify)
+                        m_onNotify("Created " + plan.name + " with " + std::to_string(command->memberCount()) + " sounds. Undo takes it back.");
+                });
+            }
+        }
     }
 
     m_rowContextMenu->addItem("Duplicate Unit", [this]() { if (m_manager.getUnit(m_unitId) && m_onDuplicateUnit) m_onDuplicateUnit(m_unitId); });
