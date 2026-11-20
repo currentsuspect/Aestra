@@ -236,6 +236,14 @@ target_include_directories(WorkspaceFocusModelTest PRIVATE
 add_test(NAME WorkspaceFocusModelTest COMMAND WorkspaceFocusModelTest)
 set_tests_properties(WorkspaceFocusModelTest PROPERTIES LABELS "unit;workspace;focus;contract:core")
 
+# Arsenal unit naming: pure header, no libraries. A new unit takes the lowest free number for its kind.
+add_executable(ArsenalUnitNamingTest Integration/ArsenalUnitNamingTest.cpp)
+target_include_directories(ArsenalUnitNamingTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Panels
+)
+add_test(NAME ArsenalUnitNamingTest COMMAND ArsenalUnitNamingTest)
+set_tests_properties(ArsenalUnitNamingTest PROPERTIES LABELS "unit;arsenal;naming;contract:core")
+
 add_executable(ProjectLifecycleInteractionTest
     Integration/ProjectLifecycleInteractionTest.cpp
     ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp

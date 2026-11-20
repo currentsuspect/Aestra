@@ -2,6 +2,7 @@
 #include "ArsenalPanel.h"
 
 #include "ArsenalGridScroll.h"
+#include "ArsenalUnitNaming.h"
 #include "../AestraUI/Core/NUIWheel.h"
 #include "ArsenalRackDraw.h"
 #include "../App/ServiceLocator.h"
@@ -518,10 +519,18 @@ void ArsenalPanel::onAddUnit() {
 
 void ArsenalPanel::createUnitOfType(UnitType type, const std::string& nameOverride) {
     if (!m_trackManager) return;
-    const auto count = m_trackManager->getUnitManager().getUnitCount() + 1;
-    std::string name = !nameOverride.empty() ? nameOverride : ((type == UnitType::Sampler ? "Sampler " :
-                        type == UnitType::PitchedSampler ? "808 " :
-                        type == UnitType::Instrument ? "MIDI " : "Audio ") + std::to_string(count));
+    std::string name = nameOverride;
+    if (name.empty()) {
+        // The lowest free number for this kind, so a delete in the middle never causes a repeated name.
+        auto& units = m_trackManager->getUnitManager();
+        std::vector<std::string> existing;
+        for (const UnitID id : units.getAllUnitIDs()) {
+            if (const auto* unit = units.getUnit(id)) existing.push_back(unit->name);
+        }
+        name = ArsenalUnitNaming::nextUnitName(type == UnitType::Sampler ? "Sampler " :
+                                                type == UnitType::PitchedSampler ? "808 " :
+                                                type == UnitType::Instrument ? "MIDI " : "Audio ", existing);
+    }
 
     auto& history = m_trackManager->getCommandHistory();
     auto transaction = std::make_shared<CommandTransaction>("Create Arsenal Unit");
