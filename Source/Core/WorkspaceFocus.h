@@ -221,4 +221,18 @@ inline constexpr const char* previewAddLabel(PreviewAddTarget target) {
     return target == PreviewAddTarget::Timeline ? "Add to Timeline" : "Add to Arsenal";
 }
 
+/**
+ * @brief The surface the user last pressed in. Focus decides where Delete, Backspace, Escape, F2 and Ctrl+A go.
+ *
+ * The piano roll is an overlay that never takes widget focus and leaves the owning ViewFocus untouched, so the
+ * view focus alone cannot say which surface the user is working in. A press inside the piano roll makes it the
+ * key surface; a press anywhere else hands the keys back to the workspace.
+ */
+enum class KeySurface { Workspace, PianoRoll };
+
+/** @brief True when the Arsenal should interpret the selection-level keys (Delete, Backspace, Escape, F2, Ctrl+A). */
+inline constexpr bool arsenalOwnsSelectionKeys(ViewFocus focus, bool pianoRollVisible, KeySurface lastPressed) {
+    return focus == ViewFocus::Arsenal && !(pianoRollVisible && lastPressed == KeySurface::PianoRoll);
+}
+
 } // namespace WorkspaceFocusModel

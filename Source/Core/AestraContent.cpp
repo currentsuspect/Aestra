@@ -2274,6 +2274,15 @@ bool AestraContent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         return false;
     }
 
+    // The surface last pressed in owns the selection-level keys. A press inside the visible piano roll makes it
+    // the key surface; a press anywhere else hands the keys back to the workspace.
+    if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
+        const bool inPianoRoll = m_pianoRollPanel && m_pianoRollPanel->isVisible() &&
+                                 m_pianoRollPanel->getBounds().contains(event.position);
+        m_keySurface = inPianoRoll ? WorkspaceFocusModel::KeySurface::PianoRoll
+                                   : WorkspaceFocusModel::KeySurface::Workspace;
+    }
+
     // Any left-press outside the file-browser search box dismisses its caret.
     // The browser's own outside-click blur only fires when the event reaches
     // the browser, but a press in another panel is consumed by that panel
@@ -4622,7 +4631,9 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
         event.keyCode == AestraUI::NUIKeyCode::Delete || event.keyCode == AestraUI::NUIKeyCode::Backspace ||
         event.keyCode == AestraUI::NUIKeyCode::F2 ||
         ((event.modifiers & AestraUI::NUIModifiers::Ctrl) && event.keyCode == AestraUI::NUIKeyCode::A);
-    if (arsenalPanelKey && m_viewFocus == ViewFocus::Arsenal && m_sequencerPanel &&
+    const bool pianoRollShown = m_pianoRollPanel && m_pianoRollPanel->isVisible();
+    if (arsenalPanelKey && WorkspaceFocusModel::arsenalOwnsSelectionKeys(m_viewFocus, pianoRollShown, m_keySurface) &&
+        m_sequencerPanel &&
         m_sequencerPanel->isVisible() &&
         dynamic_cast<AestraUI::NUITextInput*>(AestraUI::NUIComponent::getFocusedComponent()) == nullptr &&
         m_sequencerPanel->onKeyEvent(event)) {

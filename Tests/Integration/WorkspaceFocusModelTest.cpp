@@ -145,9 +145,33 @@ void testPreviewAddFollowsTheMode() {
     require(std::string(WorkspaceFocusModel::previewAddLabel(PreviewAddTarget::Arsenal)) == "Add to Arsenal", "the button says where it goes (Arsenal)");
 }
 
+void testSelectionKeysFollowTheSurfaceLastPressed() {
+    using WorkspaceFocusModel::arsenalOwnsSelectionKeys;
+    using WorkspaceFocusModel::KeySurface;
+    // The bug: with the Arsenal as the view and the piano roll in use, Delete removed Arsenal units.
+    require(!arsenalOwnsSelectionKeys(ViewFocus::Arsenal, true, KeySurface::PianoRoll),
+            "after a press in the piano roll, Delete/Backspace/Esc/F2/Ctrl+A must not reach the Arsenal");
+    // Pressing back in the Arsenal hands the keys back, even with the piano roll still open.
+    require(arsenalOwnsSelectionKeys(ViewFocus::Arsenal, true, KeySurface::Workspace),
+            "a press outside the piano roll returns the keys to the Arsenal");
+    // No piano roll on screen: a stale PianoRoll marker must not strand the keys.
+    require(arsenalOwnsSelectionKeys(ViewFocus::Arsenal, false, KeySurface::PianoRoll),
+            "a hidden piano roll cannot hold the keys");
+    require(arsenalOwnsSelectionKeys(ViewFocus::Arsenal, false, KeySurface::Workspace),
+            "plain Arsenal keeps its keys");
+    // Other workspaces never give the Arsenal these keys.
+    require(!arsenalOwnsSelectionKeys(ViewFocus::Timeline, false, KeySurface::Workspace),
+            "Timeline does not route selection keys to the Arsenal");
+    require(!arsenalOwnsSelectionKeys(ViewFocus::Audition, false, KeySurface::Workspace),
+            "Audition does not route selection keys to the Arsenal");
+    require(!arsenalOwnsSelectionKeys(ViewFocus::RoutingMap, false, KeySurface::Workspace),
+            "RoutingMap does not route selection keys to the Arsenal");
+}
+
 } // namespace
 
 int main() {
+    testSelectionKeysFollowTheSurfaceLastPressed();
     testPreviewAddFollowsTheMode();
     testSegmentMapping();
     testTransitionClassification();
