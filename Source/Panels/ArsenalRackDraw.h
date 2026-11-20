@@ -41,14 +41,14 @@ inline void drawArsenalRackHeaders(AestraUI::NUIRenderer& renderer, const Arsena
 
 /// The Fit | Scroll segment switch as the board draws it: a sunk pill track, the chosen side a raised pill thumb.
 inline void drawArsenalFitToggle(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& toggle, const AestraUI::NUIRect& fitRect,
-                                 const AestraUI::NUIRect& scrollRect, bool fitToWidth) {
+                                 const AestraUI::NUIRect& scrollRect, bool fitToWidth, int hover = -1) {
     using namespace AestraUI;
     if (toggle.width <= 0.0f) return;
     auto& theme = NUIThemeManager::getInstance();
     const float h = std::min(24.0f, toggle.height), y = toggle.y + (toggle.height - h) * 0.5f;
     // The same sunk bed and lit thumb as the Arsenal | Timeline | Audition switcher, so the two read as one control.
     Depth::bed(renderer, {toggle.x, y, toggle.width, h}, h * 0.5f, Depth::Cut::Shallow);
-    const auto side = [&](const NUIRect& r, const char* text, bool on) {
+    const auto side = [&](const NUIRect& r, const char* text, bool on, bool hot) {
         if (r.width <= 0.0f) return;
         const NUIRect thumb{r.x + 3.0f, y + 3.0f, r.width - 6.0f, h - 6.0f};
         if (on) {
@@ -58,10 +58,10 @@ inline void drawArsenalFitToggle(AestraUI::NUIRenderer& renderer, const AestraUI
             look.shadeBottom = 0.14f;
             Depth::object(renderer, thumb, thumb.height * 0.5f, look);
         }
-        renderer.drawTextCentered(text, thumb, 11.0f, theme.getColor(on ? "textPrimary" : "textMuted"));
+        renderer.drawTextCentered(text, thumb, 11.0f, theme.getColor(on || hot ? "textPrimary" : "textMuted")); // hover lights the label, as in the title-bar switcher
     };
-    side(fitRect, "Fit", fitToWidth);
-    side(scrollRect, "Scroll", !fitToWidth);
+    side(fitRect, "Fit", fitToWidth, hover == 0);
+    side(scrollRect, "Scroll", !fitToWidth, hover == 1);
 }
 
 /// A length control as the locked board draws it: one sunk pill (fully rounded, no outline) with the value in the

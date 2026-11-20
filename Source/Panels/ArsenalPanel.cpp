@@ -1013,7 +1013,7 @@ void ArsenalPanel::drawCommandHeader(NUIRenderer& renderer) {
     // One flat band: the scenes on the left, the view toggle on the right (the Arsenal mock).
     renderer.fillRect(m_commandHeaderRect, theme.getColor("backgroundPrimary"));
     renderer.fillRect({m_commandHeaderRect.x, m_commandHeaderRect.bottom() - 1.0f, m_commandHeaderRect.width, 1.0f}, theme.getColor("border").withAlpha(0.6f));
-    Aestra::drawArsenalFitToggle(renderer, m_fitToggleRect, m_fitModeRect, m_scrollModeRect, m_fitToWidth);
+    Aestra::drawArsenalFitToggle(renderer, m_fitToggleRect, m_fitModeRect, m_scrollModeRect, m_fitToWidth, m_fitHover);
 }
 
 void ArsenalPanel::layoutUnits() {
@@ -1682,6 +1682,10 @@ void ArsenalPanel::pastePattern() {
 // === Event Handlers ===
 
 bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
+    {
+        const int fitHover = !m_fitToggleRect.contains(event.position) ? -1 : (m_fitModeRect.contains(event.position) ? 0 : 1);
+        if (fitHover != m_fitHover) { m_fitHover = fitHover; repaint(); }
+    }
     // Handle color picker first if visible
     if (m_colorPicker && m_colorPicker->isShowing()) {
         if (m_colorPicker->onMouseEvent(event)) {

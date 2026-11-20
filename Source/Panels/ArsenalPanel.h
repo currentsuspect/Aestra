@@ -270,6 +270,7 @@ private:
     AestraUI::NUIRect m_addUnitButtonRect{};
     AestraUI::NUIRect m_fitToggleRect{};
     AestraUI::NUIRect m_fitModeRect{};
+    int m_fitHover = -1; // 0 = Fit, 1 = Scroll under the pointer: its label lights up, like the title-bar switcher
     AestraUI::NUIRect m_scrollModeRect{};
     float m_scrollIndicatorAlpha = 0.0f;
     std::chrono::steady_clock::time_point m_lastUserGridScroll{};
