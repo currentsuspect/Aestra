@@ -258,15 +258,13 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
     }
 
     renderer.fillRoundedRect(cardBounds, radius, cardBg);
-    // The outline stays whole. The colour strip sits just inside it on the left, the full inner height, flush
-    // against the line and following the corner, so it reads as a thick part of the edge (the owner's sketch):
-    // the inset card shape is filled in the unit's colour through a clip of the strip's width.
+    // The unit's colour strip: a short, rounded bar centred on the card's left edge (the mock and the owner's
+    // sketch). It is drawn after the outline and starts at the outline itself, so the two conjoin: the bar reads
+    // as a thick stretch of the edge, not a pill floating inside the card and not a line running across it.
     renderer.strokeRoundedRect(cardBounds, radius, m_isDropHighlighted ? 2.0f : 1.0f, border);
-    constexpr float kStripW = 4.0f, kLine = 1.0f;
-    const NUIRect inner{cardBounds.x + kLine, cardBounds.y + kLine, cardBounds.width - kLine * 2.0f, cardBounds.height - kLine * 2.0f};
-    renderer.setClipRect(intersectRects(paintClip, NUIRect{inner.x, inner.y, kStripW, inner.height}));
-    renderer.fillRoundedRect(inner, radius - kLine, unitAccent.withAlpha(m_isEnabled ? 0.95f : 0.35f));
-    renderer.setClipRect(paintClip);
+    constexpr float kStripW = 5.0f, kStripInset = 8.0f;
+    renderer.fillRoundedRect({cardBounds.x, cardBounds.y + kStripInset, kStripW, cardBounds.height - kStripInset * 2.0f},
+                             kStripW * 0.5f, unitAccent.withAlpha(m_isEnabled ? 0.95f : 0.35f));
 
     // Density-derived control floor (responsive contract): narrow rows give
     // the grid the width back instead of clipping it against a fixed 220.
