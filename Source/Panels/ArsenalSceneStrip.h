@@ -49,6 +49,11 @@ public:
         enum class Kind { None, Scene, Add, Swing, Place } kind{Kind::None};
         uint64_t id{0};
     };
+    Hit m_hover{};
+    bool m_hoverDirty{false};
+    void updateHover(const Hit& h) {
+        if (h.kind != m_hover.kind || h.id != m_hover.id) { m_hover = h; m_hoverDirty = true; }
+    }
     /// What a pointer event asks the panel to do (the strip changes swing itself).
     struct Action {
         enum class Kind { None, Select, PatternAdded, SwingEdited, PlaceInTimeline, Menu } kind{Kind::None};
@@ -194,6 +199,9 @@ public:
     AestraUI::NUIRect chipRect(const Placed& p) const { return {m_rect.x + p.x, m_rect.y, p.w, m_rect.height}; }
     void scrollBy(float dx) { m_offset += dx; m_followActive = false; }
 
+    /// True once after the hovered piece changed, so the panel repaints for it (a move over a chip changes no data).
+    bool takeHoverDirty() { const bool d = m_hoverDirty; m_hoverDirty = false; return d; }
+
     Hit hitTest(const AestraUI::NUIPoint& pt) const {
         if (!m_rect.contains(pt)) return {};
         if (placeRect().contains(pt)) return {Hit::Kind::Place, 0};
@@ -224,8 +232,9 @@ public:
             const float tileRadius = 8.0f; // the board's pattern tile
             const auto& scene = m_scenes[p.index];
             const bool selected = std::find(m_selectedPatterns.begin(), m_selectedPatterns.end(), scene.id) != m_selectedPatterns.end();
-            renderer.fillRoundedRect(r, tileRadius, selected ? AestraUI::NUIColor::lerp(theme.getColor("backgroundSecondary"), theme.getColor("accentPrimary"), 0.32f) : theme.getColor("backgroundSecondary"));
-            renderer.strokeRoundedRect(r, tileRadius, 1.0f, selected ? theme.getColor("accentPrimary").withAlpha(0.55f) : theme.getColor("borderSubtle").withAlpha(0.7f));
+            const bool hovered = !selected && m_hover.kind == Hit::Kind::Scene && m_hover.id == scene.id; // the unit rows' hover: raised fill, faint accent line
+            renderer.fillRoundedRect(r, tileRadius, selected ? AestraUI::NUIColor::lerp(theme.getColor("backgroundSecondary"), theme.getColor("accentPrimary"), 0.32f) : hovered ? theme.getColor("surfaceRaised") : theme.getColor("backgroundSecondary"));
+            renderer.strokeRoundedRect(r, tileRadius, 1.0f, selected ? theme.getColor("accentPrimary").withAlpha(0.55f) : hovered ? theme.getColor("accentPrimary").withAlpha(0.22f) : theme.getColor("borderSubtle").withAlpha(0.7f));
             renderer.setClipRect(AestraUI::intersectRects(view, r));
             renderer.drawText(fitName(renderer, scene.name, tp.fontSizeXS + 1.0f, r.width - 24.0f), {r.x + 12.0f, r.y + 8.0f}, tp.fontSizeXS + 1.0f, theme.getColor("textPrimary").withAlpha(selected ? 1.0f : 0.9f));
             const float tw = r.width - 24.0f, bw = tw / static_cast<float>(kThumbBars), maxH = 8.0f;
@@ -238,9 +247,14 @@ public:
         }
         renderer.clearClipRect();
         const auto add = addRect();
-        renderer.fillRoundedRect(add, tp.radiusXS, theme.getColor("backgroundPrimary"));
+        const bool addHot = m_hover.kind == Hit::Kind::Add;
+        renderer.fillRoundedRect(add, tp.radiusXS, addHot ? theme.getColor("surfaceRaised") : theme.getColor("backgroundPrimary"));
         renderer.strokeRoundedRect(add, tp.radiusXS, 1.0f, theme.getColor("borderSubtle").withAlpha(0.7f));
-        renderer.drawTextCentered("+", add, tp.fontSizeM, theme.getColor("textSecondary").withAlpha(0.9f));
+        // A drawn plus, so both arms are the same length and weight and sit dead centre (a font "+" sat off-centre and thin).
+        const AestraUI::NUIColor plus = theme.getColor(addHot ? "textPrimary" : "textSecondary").withAlpha(0.9f);
+        const float cx = add.x + add.width * 0.5f, cy = add.y + add.height * 0.5f, arm = 6.0f;
+        renderer.drawLine({cx - arm, cy}, {cx + arm, cy}, 1.5f, plus);
+        renderer.drawLine({cx, cy - arm}, {cx, cy + arm}, 1.5f, plus);
         // A bounded slider makes the full 0–100% range visible and the current value easy to place.
         const auto sw = swingRect();
         const auto track = swingTrackRect();
@@ -265,7 +279,7 @@ public:
         const auto pl = placeRect();
         // This is a chrome action, so use neutral control colors instead of
         // coupling its fill and label contrast to the theme accent.
-        renderer.fillRoundedRect(pl, tp.radiusXS, theme.getColor("buttonBgDefault"));
+        renderer.fillRoundedRect(pl, tp.radiusXS, m_hover.kind == Hit::Kind::Place ? AestraUI::NUIColor::lerp(theme.getColor("buttonBgDefault"), theme.getColor("surfaceRaised"), 0.6f) : theme.getColor("buttonBgDefault"));
         renderer.strokeRoundedRect(pl, tp.radiusXS, 1.0f, theme.getColor("borderSubtle"));
         const auto buttonText = theme.getColor("buttonTextDefault");
         const float labelFont = tp.fontSizeXS + 1.0f, arrowW = 11.0f, arrowGap = 8.0f;
@@ -283,6 +297,7 @@ public:
     /// Returns true when the strip took the event.
     bool onMouse(const AestraUI::NUIMouseEvent& e, Audio::PatternManager& pm, uint64_t activeId, Action& out) {
         const bool left = e.button == AestraUI::NUIMouseButton::Left;
+        updateHover(m_rect.contains(e.position) ? hitTest(e.position) : Hit{});
         if (m_swingDrag) {
             setSwing(pm, activeId, e.position.x);
             out = {Action::Kind::SwingEdited, activeId};

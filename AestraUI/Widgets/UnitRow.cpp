@@ -258,16 +258,14 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
     }
 
     renderer.fillRoundedRect(cardBounds, radius, cardBg);
-    // The colour strip is the card's own left edge, not a pill laid over it: the card shape is filled in the unit's
-    // colour through a clip of the strip's width, and the outline is clipped to start where the strip ends, so the
-    // line meets the colour instead of running across it.
-    constexpr float kStripW = 5.0f;
-    const NUIRect stripClip{cardBounds.x, cardBounds.y, kStripW, cardBounds.height};
-    const NUIRect outlineClip{cardBounds.x + kStripW, cardBounds.y, cardBounds.width - kStripW, cardBounds.height};
-    renderer.setClipRect(intersectRects(paintClip, stripClip));
-    renderer.fillRoundedRect(cardBounds, radius, unitAccent.withAlpha(m_isEnabled ? 0.95f : 0.35f));
-    renderer.setClipRect(intersectRects(paintClip, outlineClip));
+    // The outline stays whole. The colour strip sits just inside it on the left, the full inner height, flush
+    // against the line and following the corner, so it reads as a thick part of the edge (the owner's sketch):
+    // the inset card shape is filled in the unit's colour through a clip of the strip's width.
     renderer.strokeRoundedRect(cardBounds, radius, m_isDropHighlighted ? 2.0f : 1.0f, border);
+    constexpr float kStripW = 4.0f, kLine = 1.0f;
+    const NUIRect inner{cardBounds.x + kLine, cardBounds.y + kLine, cardBounds.width - kLine * 2.0f, cardBounds.height - kLine * 2.0f};
+    renderer.setClipRect(intersectRects(paintClip, NUIRect{inner.x, inner.y, kStripW, inner.height}));
+    renderer.fillRoundedRect(inner, radius - kLine, unitAccent.withAlpha(m_isEnabled ? 0.95f : 0.35f));
     renderer.setClipRect(paintClip);
 
     // Density-derived control floor (responsive contract): narrow rows give

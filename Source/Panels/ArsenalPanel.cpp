@@ -1726,7 +1726,9 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
     if (m_sceneMenu.mouse(event) || (m_ruler && m_ruler->onMouseEvent(event))) { repaint(); return true; } // rename box first; then a click or drag on the bar ruler cues the playhead // click or drag on the bar ruler cues the playhead
     using SceneKind = Aestra::ArsenalSceneStrip::Action::Kind;
     Aestra::ArsenalSceneStrip::Action scene;
-    if (m_trackManager && m_scenes.onMouse(event, m_trackManager->getPatternManager(), m_activePatternID.value, scene)) {
+    const bool sceneTook = m_trackManager && m_scenes.onMouse(event, m_trackManager->getPatternManager(), m_activePatternID.value, scene);
+    if (m_scenes.takeHoverDirty()) repaint(); // hover moved on or off a pattern, the "+" or Place
+    if (sceneTook) {
         if (scene.kind == SceneKind::Select) {
             handlePatternSelection(scene.id, scene.modifiers);
         } else if (scene.kind == SceneKind::PatternAdded) {
