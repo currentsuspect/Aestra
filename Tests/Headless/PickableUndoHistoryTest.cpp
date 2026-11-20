@@ -205,10 +205,10 @@ void aGroupedStepIsWholeOrNotAtAll() {
 // A step recorded while a failed pickable undo is being repaired is not thrown away with the repair.
 class StepsOnUndo : public ICommand {
 public:
-    StepsOnUndo(World& w, CommandHistory& h) : m_w(w), m_h(h) {}
+    StepsOnUndo(World& w, CommandHistory& h, int steps = 1) : m_w(w), m_h(h), m_steps(steps) {}
     void execute() override { m_w.muted = true; }
     void undo() override {
-        m_h.pushExecuted(std::make_shared<Mute>(m_w)); // a step recorded while the undo is running
+        for (int i = 0; i < m_steps; ++i) m_h.pushExecuted(std::make_shared<Mute>(m_w)); // recorded while the undo runs
         throw std::runtime_error("disk gone");
     }
     void redo() override { m_w.muted = true; }
@@ -218,6 +218,7 @@ public:
 private:
     World& m_w;
     CommandHistory& m_h;
+    int m_steps;
 };
 
 void aFailedUndoKeepsWhatWasRecordedMeanWhile() {
@@ -232,6 +233,30 @@ void aFailedUndoKeepsWhatWasRecordedMeanWhile() {
     const auto& stack = h.getUndoStack();
     check(stack.size() == 3, "the step recorded during the repair is kept (" + std::to_string(stack.size()) + ")");
     check(stack[0]->getName() == "Resize track" && stack[1] == failing, "and the picked steps are back where they were");
+}
+
+// A restore puts the picked steps back where they were even when a step recorded during the repair filled the
+// history and trimmed the front, and the limit still holds afterwards.
+void aRestoreKeepsItsPlaceWhenTheLimitBites() {
+    World w;
+    CommandHistory h;
+    h.setMaxHistorySize(4);
+    h.pushAndExecute(std::make_shared<Change>(w, "One", &World::height, 101, touching(Touch::Clip, 21)));
+    h.pushAndExecute(std::make_shared<Change>(w, "Two", &World::height, 102, touching(Touch::Clip, 22)));
+    h.pushAndExecute(std::make_shared<Change>(w, "Three", &World::height, 103, touching(Touch::Clip, 23)));
+    auto failing = std::make_shared<StepsOnUndo>(w, h, 2);
+    h.pushAndExecute(failing);
+    check(h.getUndoStack().size() == 4, "the history is full");
+
+    const auto picked = h.undoJust(3);
+    check(picked.result == PickResult::Failed, "the failure is reported");
+    const auto& stack = h.getUndoStack();
+    check(stack.size() == 4, "the limit still holds (" + std::to_string(stack.size()) + ")");
+    check(stack.size() == 4 && stack[1] == failing,
+          "the restored step comes after the ones before it and before those recorded during it");
+    check(stack.size() == 4 && stack[2]->getName() == "Mute" && stack[3]->getName() == "Mute",
+          "with the recorded steps in the order they were recorded");
+    check(!stack.empty() && stack.front()->getName() == "Three", "and only the oldest went to keep the limit");
 }
 
 void thePickedStepCarriesWhatItTouched() {
@@ -254,6 +279,7 @@ int main() {
     aFailedUndoLeavesEverythingAsItWas();
     aGroupedStepIsWholeOrNotAtAll();
     aFailedUndoKeepsWhatWasRecordedMeanWhile();
+    aRestoreKeepsItsPlaceWhenTheLimitBites();
     thePickedStepCarriesWhatItTouched();
     if (failures != 0) {
         std::cerr << failures << " check(s) failed\n";

@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "Commands/CommandHistory.h"
 
+#include <algorithm>
 #include <cstddef>
 
 #include <iostream>
@@ -187,6 +188,8 @@ PickedUndo CommandHistory::undoJust(size_t index, bool withDependants) {
     // Phase 1: decide, and take the steps out of the stack, under lock.
     std::vector<size_t> picked;                    // stack indices, oldest first
     std::vector<std::shared_ptr<ICommand>> steps;  // the same steps
+    std::shared_ptr<ICommand> predecessor;         // what sat just before them, to put them back by
+    std::shared_ptr<ICommand> successor;           // and just after
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         if (m_activeTransaction && m_transactionNestingLevel > 0) {
@@ -201,6 +204,8 @@ PickedUndo CommandHistory::undoJust(size_t index, bool withDependants) {
         }
         picked.push_back(index);
         picked.insert(picked.end(), out.dependants.begin(), out.dependants.end());
+        predecessor = picked.front() > 0 ? m_undoStack[picked.front() - 1] : nullptr;
+        successor = picked.back() + 1 < m_undoStack.size() ? m_undoStack[picked.back() + 1] : nullptr;
         for (size_t i : picked) steps.push_back(m_undoStack[i]);
         for (auto it = picked.rbegin(); it != picked.rend(); ++it) {
             m_undoStack.erase(m_undoStack.begin() + static_cast<std::ptrdiff_t>(*it));
@@ -229,12 +234,28 @@ PickedUndo CommandHistory::undoJust(size_t index, bool withDependants) {
             }
         }
         // Put the picked steps back where they were. Only they were ever taken out, so a step another thread recorded
-        // while this undo ran is kept rather than dropped with the repair.
-        std::lock_guard<std::mutex> lock(m_mutex);
-        for (size_t k = 0; k < picked.size(); ++k) {
-            const size_t at = std::min(picked[k], m_undoStack.size());
-            m_undoStack.insert(m_undoStack.begin() + static_cast<std::ptrdiff_t>(at), steps[k]);
+        // while this undo ran is kept rather than dropped with the repair. The place is found by the steps around them
+        // and not by index: a step recorded during the repair runs trimHistory(), which drops from the front and moves
+        // every index down — and puts the history over its limit when it was full.
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            const auto where = [this](const std::shared_ptr<ICommand>& step) {
+                return step ? std::find(m_undoStack.begin(), m_undoStack.end(), step) : m_undoStack.end();
+            };
+            auto at = where(successor);
+            if (at == m_undoStack.end()) {
+                const auto before = where(predecessor);
+                if (before != m_undoStack.end())
+                    at = before + 1;
+                else if (picked.front() == 0)
+                    at = m_undoStack.begin(); // they were the oldest, so they go back in front of what came since
+                else
+                    at = m_undoStack.end();
+            }
+            m_undoStack.insert(at, steps.begin(), steps.end());
+            trimHistory();
         }
+        notifyStateChanged();
         out.result = PickResult::Failed;
         return out;
     }
