@@ -235,4 +235,47 @@ inline constexpr bool arsenalOwnsSelectionKeys(ViewFocus focus, bool pianoRollVi
     return focus == ViewFocus::Arsenal && !(pianoRollVisible && lastPressed == KeySurface::PianoRoll);
 }
 
+/**
+ * @brief What can change which surface owns the keys. One reducer, so every path through the app obeys the same rules.
+ *
+ *  - the piano roll becoming visible (button, F7, a double-click on a pattern, a workspace switch that restores it) makes it
+ *    the key surface at once; becoming hidden hands the keys back to the workspace (the Arsenal);
+ *  - a left press inside a panel makes that panel the owner;
+ *  - the pointer merely moving over a panel never does;
+ *  - a unit added with "+ Add a sound" is an Arsenal action, so the keys go to the Arsenal (F2 renames the new row).
+ */
+enum class KeySurfaceEvent { PianoRollOpened, PianoRollClosed, PressInPianoRoll, PressElsewhere, PointerHover, UnitAdded };
+
+inline constexpr KeySurface nextKeySurface(KeySurface current, KeySurfaceEvent event) {
+    switch (event) {
+    case KeySurfaceEvent::PianoRollOpened:
+    case KeySurfaceEvent::PressInPianoRoll:
+        return KeySurface::PianoRoll;
+    case KeySurfaceEvent::PianoRollClosed:
+    case KeySurfaceEvent::PressElsewhere:
+    case KeySurfaceEvent::UnitAdded:
+        return KeySurface::Workspace;
+    case KeySurfaceEvent::PointerHover:
+        return current;
+    }
+    return current;
+}
+
+/// The panel that owns the keys, for the key-owner tick. At most one: the tick is drawn on that panel's title only.
+enum class KeyOwner { None, Arsenal, PianoRoll };
+
+inline constexpr KeyOwner keyOwner(ViewFocus focus, bool pianoRollVisible, KeySurface lastPressed) {
+    if (pianoRollVisible && lastPressed == KeySurface::PianoRoll) return KeyOwner::PianoRoll;
+    return arsenalOwnsSelectionKeys(focus, pianoRollVisible, lastPressed) ? KeyOwner::Arsenal : KeyOwner::None;
+}
+
+/// The app publishes the owner here once per frame so a panel can ask "do I own the keys?" while drawing its title,
+/// without knowing about AestraContent. UI thread only.
+inline KeyOwner& publishedKeyOwner() {
+    static KeyOwner owner = KeyOwner::None;
+    return owner;
+}
+inline KeyOwner currentKeyOwner() { return publishedKeyOwner(); }
+inline void setCurrentKeyOwner(KeyOwner owner) { publishedKeyOwner() = owner; }
+
 } // namespace WorkspaceFocusModel

@@ -592,6 +592,10 @@ private:
     // Where Delete/Backspace/Escape/F2/Ctrl+A go: the surface last pressed in (the piano roll overlay never takes
     // widget focus and leaves m_viewFocus alone, so the view focus cannot say which one the user is working in).
     WorkspaceFocusModel::KeySurface m_keySurface = WorkspaceFocusModel::KeySurface::Workspace;
+    bool m_pianoRollWasShown = false;
+    void applyKeySurfaceEvent(WorkspaceFocusModel::KeySurfaceEvent event);
+    void publishKeyOwner(); // hands the owner to the panels' key-owner tick (WorkspaceFocusModel::setCurrentKeyOwner)
+    void syncKeyOwner();
     ViewFocus m_previousViewFocus = ViewFocus::Timeline;
     uint32_t m_lastSelectedChannelId = 0xFFFFFFFFu;
     // Fingerprint of the mixer's displayed state; the per-frame engine->view

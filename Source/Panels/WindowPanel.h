@@ -4,6 +4,7 @@
 #include "NUIComponent.h"
 #include "NUIButton.h"
 #include "NUIIcon.h"
+#include "../Core/WorkspaceFocus.h"
 #include <chrono>
 #include <string>
 #include <memory>
@@ -51,6 +52,10 @@ public:
     const std::string& getTitle() const { return m_title; }
 
     float getTitleBarHeight() const { return m_titleBarHeight; }
+
+    /// The panel that can own the keyboard shortcuts (Delete, Backspace, Escape, F2, Ctrl+A), if any. While the app's
+    /// published key owner is this role, the title bar carries the key-owner tick: a short accent bar before the title.
+    void setKeyOwnerRole(WorkspaceFocusModel::KeyOwner role) { m_keyOwnerRole = role; }
 
     /**
      * @brief Host a controls strip inside the title bar, beside the title.
@@ -131,6 +136,7 @@ private:
     };
 
     std::string m_title;
+    WorkspaceFocusModel::KeyOwner m_keyOwnerRole = WorkspaceFocusModel::KeyOwner::None;
     std::shared_ptr<AestraUI::NUIComponent> m_content;
     
     // Window state

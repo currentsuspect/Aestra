@@ -161,6 +161,7 @@ ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
     , m_trackManager(std::move(trackManager))
 {
     // setId("ArsenalPanel"); // Handled by WindowPanel title
+    setKeyOwnerRole(WorkspaceFocusModel::KeyOwner::Arsenal); // its title carries the key-owner tick while it owns the keys
     ensureDefaultPattern(); // Auto-create Pattern 1
     if (m_trackManager) {
         m_lanes.setOnSwap([this](UnitID unit, const std::string& path) { if (m_onSampleDroppedToUnit) m_onSampleDroppedToUnit(unit, path); }); // step to a neighbouring sound

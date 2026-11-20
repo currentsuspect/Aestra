@@ -3763,6 +3763,23 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(ArsenalKitTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
 endif()
 
+# The key-owner tick needs 3:1 against the Arsenal title bar and the piano roll header (the real theme tokens).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(ArsenalKeyTickContrastTest AestraUI_Core)
+    add_executable(ArsenalKeyTickContrastTest AestraUI/ArsenalKeyTickContrastTest.cpp)
+    target_link_libraries(ArsenalKeyTickContrastTest PRIVATE AestraUI_Core)
+    target_include_directories(ArsenalKeyTickContrastTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Graphics
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ArsenalKeyTickContrastTest COMMAND ArsenalKeyTickContrastTest)
+    set_tests_properties(ArsenalKeyTickContrastTest PROPERTIES LABELS "ui;theme;contrast;contract:application")
+endif()
+
 # Open rows show step lanes fitted to the unit (V81-AR1, FD-27 point 4).
 if(AESTRA_ENABLE_UI)
     aestra_require_ui_targets(ArsenalStepLanesTest AestraUI_Core)

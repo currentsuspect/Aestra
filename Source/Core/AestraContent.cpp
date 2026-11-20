@@ -1699,6 +1699,7 @@ void AestraContent::logModeStateIfChanged() {
 
 void AestraContent::onUpdate(double dt) {
     drainMainThreadTasks();
+    syncKeyOwner();
     updateEmptySoundNotice();
     closeContextualPanels();
     updatePendingCountIn();
@@ -2271,6 +2272,34 @@ void AestraContent::onResize(int width, int height) {
     AestraUI::NUIComponent::onResize(width, height);
 }
 
+// Keys go to the surface the user is working in (WorkspaceFocusModel::nextKeySurface holds the rules).
+void AestraContent::applyKeySurfaceEvent(WorkspaceFocusModel::KeySurfaceEvent event) {
+    m_keySurface = WorkspaceFocusModel::nextKeySurface(m_keySurface, event);
+    publishKeyOwner();
+}
+
+void AestraContent::publishKeyOwner() {
+    const bool pianoRollShown = m_pianoRollPanel && m_pianoRollPanel->isVisible();
+    const auto owner = WorkspaceFocusModel::keyOwner(m_viewFocus, pianoRollShown, m_keySurface);
+    if (owner == WorkspaceFocusModel::currentKeyOwner()) return;
+    WorkspaceFocusModel::setCurrentKeyOwner(owner);
+    if (m_sequencerPanel) m_sequencerPanel->repaint();
+    if (m_pianoRollPanel) m_pianoRollPanel->repaint();
+}
+
+// The piano roll becoming visible, by any path (button, F7, a double-click on a pattern, a workspace switch that restores
+// it), takes the keys at once; becoming hidden hands them back to the Arsenal.
+void AestraContent::syncKeyOwner() {
+    const bool shown = m_pianoRollPanel && m_pianoRollPanel->isVisible();
+    if (shown != m_pianoRollWasShown) {
+        m_pianoRollWasShown = shown;
+        applyKeySurfaceEvent(shown ? WorkspaceFocusModel::KeySurfaceEvent::PianoRollOpened
+                                   : WorkspaceFocusModel::KeySurfaceEvent::PianoRollClosed);
+        return;
+    }
+    publishKeyOwner(); // the view focus may have changed
+}
+
 bool AestraContent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (!isVisible() || !isEnabled()) {
         return false;
@@ -2281,8 +2310,8 @@ bool AestraContent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
         const bool inPianoRoll = m_pianoRollPanel && m_pianoRollPanel->isVisible() &&
                                  m_pianoRollPanel->getBounds().contains(event.position);
-        m_keySurface = inPianoRoll ? WorkspaceFocusModel::KeySurface::PianoRoll
-                                   : WorkspaceFocusModel::KeySurface::Workspace;
+        applyKeySurfaceEvent(inPianoRoll ? WorkspaceFocusModel::KeySurfaceEvent::PressInPianoRoll
+                                         : WorkspaceFocusModel::KeySurfaceEvent::PressElsewhere);
     }
 
     // Any left-press outside the file-browser search box dismisses its caret.
@@ -4576,6 +4605,7 @@ void AestraContent::toggleTakesPanel() {
 
 // Global Shortcuts
 bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
+    syncKeyOwner(); // a panel opened or closed since the last frame hands the keys over before this key is read
     // A note release must win even if focus moved after its note-on; otherwise
     // an editable field can consume the key-up and leave a stuck voice.
     if (event.released && m_musicalTyping.handleKeyEvent(event)) {
