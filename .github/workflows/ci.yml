@@ -379,11 +379,12 @@ jobs:
       # Do not reintroduce an unbounded --parallel without measuring peak memory:
       # the failure presents as an infrastructure flake rather than as anything this
       # lane did wrong, which makes it expensive to diagnose a second time.
-      - name: Build (headless, plugin formats enabled)
+      - name: Build and measure (headless, plugin formats enabled)
         if: steps.scope.outputs.run == 'true'
         run: |
           set -euo pipefail
-          cmake --build build-plugins --config ${{env.BUILD_TYPE}}
+          python3 scripts/ci/measure-build.py -- \
+            cmake --build build-plugins --config ${{env.BUILD_TYPE}}
           test -x build-plugins/bin/AestraPluginHost \
             || { echo "::error::AestraPluginHost was not produced"; exit 1; }
 
