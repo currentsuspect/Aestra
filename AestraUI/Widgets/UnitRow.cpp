@@ -258,9 +258,17 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
     }
 
     renderer.fillRoundedRect(cardBounds, radius, cardBg);
+    // The colour strip is the card's own left edge, not a pill laid over it: the card shape is filled in the unit's
+    // colour through a clip of the strip's width, and the outline is clipped to start where the strip ends, so the
+    // line meets the colour instead of running across it.
+    constexpr float kStripW = 5.0f;
+    const NUIRect stripClip{cardBounds.x, cardBounds.y, kStripW, cardBounds.height};
+    const NUIRect outlineClip{cardBounds.x + kStripW, cardBounds.y, cardBounds.width - kStripW, cardBounds.height};
+    renderer.setClipRect(intersectRects(paintClip, stripClip));
+    renderer.fillRoundedRect(cardBounds, radius, unitAccent.withAlpha(m_isEnabled ? 0.95f : 0.35f));
+    renderer.setClipRect(intersectRects(paintClip, outlineClip));
     renderer.strokeRoundedRect(cardBounds, radius, m_isDropHighlighted ? 2.0f : 1.0f, border);
-    renderer.fillRoundedRect({cardBounds.x + 1.0f, cardBounds.y + 8.0f, 4.0f, cardBounds.height - 16.0f}, 2.0f,
-                             unitAccent.withAlpha(m_isEnabled ? 0.95f : 0.35f));
+    renderer.setClipRect(paintClip);
 
     // Density-derived control floor (responsive contract): narrow rows give
     // the grid the width back instead of clipping it against a fixed 220.
@@ -356,14 +364,17 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
         // A colour dot for the destination, then its name, cut with an ellipsis to fit.
         NUIColor dot = theme.getColor("accentPrimary");
         if (m_mixerRouteColorIndex >= 0) dot = colorFromUnitValue(paletteIndexToARGB(m_mixerRouteColorIndex));
-        renderer.fillRect(NUIRect{routeRect.x + 8.0f, routeRect.y + routeRect.height * 0.5f - 3.0f, 6.0f, 6.0f}, dot);
+        constexpr float kChipPad = 10.0f, kDot = 6.0f, kChev = 3.0f, kTextGap = 6.0f; // the same pad both ends
+        renderer.fillRect(NUIRect{routeRect.x + kChipPad, routeRect.y + routeRect.height * 0.5f - kDot * 0.5f, kDot, kDot}, dot);
         std::string label = m_mixerRouteName;
-        const float room = routeRect.width - 40.0f;
+        const float textX = routeRect.x + kChipPad + kDot + kTextGap;
+        const float chevCenter = routeRect.right() - kChipPad - kChev;
+        const float room = chevCenter - kChev - kTextGap - textX;
         bool cut = false;
         while (label.size() > 1 && renderer.measureText(label, 10.5f).width > room) { label.pop_back(); cut = true; }
         if (cut) label += "\xE2\x80\xA6";
-        renderer.drawText(label, {routeRect.x + 20.0f, routeRect.y + routeRect.height * 0.5f - 6.0f}, 10.5f, routeText);
-        for (float side : {-3.0f, 3.0f}) renderer.drawLine({routeRect.right() - 12.0f + side, routeRect.y + routeRect.height * 0.5f - 1.5f}, {routeRect.right() - 12.0f, routeRect.y + routeRect.height * 0.5f + 1.5f}, 1.4f, theme.getColor("textMuted")); // the board's trailing chevron
+        renderer.drawText(label, {textX, routeRect.y + routeRect.height * 0.5f - 6.0f}, 10.5f, routeText);
+        for (float side : {-kChev, kChev}) renderer.drawLine({chevCenter + side, routeRect.y + routeRect.height * 0.5f - 1.5f}, {chevCenter, routeRect.y + routeRect.height * 0.5f + 1.5f}, 1.4f, theme.getColor("textMuted")); // the board's trailing chevron
     }
     drawMuteIcon(renderer, muteRect, m_isMuted, engaged);
     drawSoloIcon(renderer, soloRect, m_isSolo, engaged);
@@ -1692,7 +1703,7 @@ void UnitRow::layoutNameLabel() {
     float labelX = 54.0f; // 42 (control block) + 12 (name indent)
     // The label ends before the pill band; the band width follows the tier.
     const float pillBand = (m_density == Density::Minimal) ? 57.0f : 71.0f; // the M, S and open-lanes keys
-    float labelWidth = std::max(16.0f, (controlWidth - 48.0f) - pillBand - 6.0f);
+    float labelWidth = std::max(16.0f, (controlWidth - 48.0f) - pillBand - 10.0f); // 10 px to the M key, as the chip pads
     m_nameLabel->setBounds(NUIRect(labelX, 7.0f, labelWidth, 30.0f));
     m_nameLabel->setCompact(m_density != Density::Full);
 }

@@ -30,7 +30,7 @@ public:
     static constexpr float kCardW = 132.0f;
     static constexpr float kGap = 8.0f;
     static constexpr float kAddW = 44.0f;
-    static constexpr float kSwingW = 166.0f; ///< bounded 0–100% swing slider
+    static constexpr float kSwingW = 132.0f; ///< bounded 0–100% swing slider, one scene card wide
     static constexpr float kPlaceW = 156.0f; ///< the "Place in timeline" button at the right end
     static constexpr float kRightW = kSwingW + kGap + kPlaceW;
     static constexpr size_t kThumbBars = 16;
@@ -178,7 +178,9 @@ public:
     AestraUI::NUIRect swingRect() const { return {m_rect.right() - kRightW, m_rect.y, kSwingW, m_rect.height}; }
     AestraUI::NUIRect swingTrackRect() const {
         const auto sw = swingRect();
-        return {sw.x + 2.0f, sw.y + 15.0f, std::max(1.0f, sw.width - 4.0f), 20.0f};
+        // 16 high and centred on the same line as the Place button (and the cards), so the row reads as one band.
+        constexpr float h = 16.0f;
+        return {sw.x, sw.y + (sw.height - h) * 0.5f, sw.width, h};
     }
     AestraUI::NUIRect placeRect() const { return {m_rect.right() - kPlaceW, m_rect.y + (m_rect.height - 34.0f) * 0.5f, kPlaceW, 34.0f}; }
     float swing() const { return m_swing; }

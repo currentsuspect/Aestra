@@ -4,6 +4,7 @@
 #include "ArsenalRackLayout.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
+#include "../AestraUI/Graphics/NUIDepth.h"
 
 #include <string>
 
@@ -45,11 +46,18 @@ inline void drawArsenalFitToggle(AestraUI::NUIRenderer& renderer, const AestraUI
     if (toggle.width <= 0.0f) return;
     auto& theme = NUIThemeManager::getInstance();
     const float h = std::min(24.0f, toggle.height), y = toggle.y + (toggle.height - h) * 0.5f;
-    renderer.fillRoundedRect({toggle.x, y, toggle.width, h}, h * 0.5f, theme.getColor("backgroundPrimary"));
+    // The same sunk bed and lit thumb as the Arsenal | Timeline | Audition switcher, so the two read as one control.
+    Depth::bed(renderer, {toggle.x, y, toggle.width, h}, h * 0.5f, Depth::Cut::Shallow);
     const auto side = [&](const NUIRect& r, const char* text, bool on) {
         if (r.width <= 0.0f) return;
         const NUIRect thumb{r.x + 3.0f, y + 3.0f, r.width - 6.0f, h - 6.0f};
-        if (on) renderer.fillRoundedRect(thumb, thumb.height * 0.5f, theme.getColor("surfaceRaised"));
+        if (on) {
+            Depth::ObjectLook look;
+            look.base = theme.getCurrentTheme().surfaceRaised;
+            look.lightTop = 0.12f;
+            look.shadeBottom = 0.14f;
+            Depth::object(renderer, thumb, thumb.height * 0.5f, look);
+        }
         renderer.drawTextCentered(text, thumb, 11.0f, theme.getColor(on ? "textPrimary" : "textMuted"));
     };
     side(fitRect, "Fit", fitToWidth);
