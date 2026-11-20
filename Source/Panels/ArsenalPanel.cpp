@@ -1047,8 +1047,16 @@ void ArsenalPanel::layoutUnits() {
         extras.push_back(unit ? m_lanes.extraFor(*m_trackManager, row->getUnitId()) : 0.0f);
     }
     m_rack = Aestra::ArsenalRackLayout::compute(groups, extras);
-    m_kitCard.place(m_trackManager && Aestra::ArsenalRowLanes::noSounds(m_trackManager->getUnitManager()), {startX, rackTop + m_rack.contentHeight, width, Aestra::ArsenalKitCard::kReserve}); if (m_kitCard.shown()) m_rack.contentHeight += Aestra::ArsenalKitCard::kReserve; // empty state: a kit card under the rows
-    m_addUnitButtonRect = {startX + 16.0f, rackTop + m_rack.contentHeight + 8.0f, 112.0f, 32.0f}; m_rack.contentHeight += 48.0f; // "Add unit" ends the rack (the mock)
+    // The kit offer: the full card while the rack is empty; once any row exists it folds into one line under the last row
+    // ("+ Add a sound" at the left, the kit offer at the right) and reserves only that line's height.
+    if (Aestra::ArsenalKitCard::modeFor(m_unitRows.size()) == Aestra::ArsenalKitCard::Mode::Folded) {
+        const NUIRect slot{startX, rackTop + m_rack.contentHeight, width, Aestra::ArsenalKitCard::kFoldedReserve};
+        m_kitCard.placeFolded(slot.y + 8.0f >= m_progressHeaderRect.bottom() && slot.bottom() <= bounds.bottom(), slot);
+        m_addUnitButtonRect = m_kitCard.addRect(); m_rack.contentHeight += Aestra::ArsenalKitCard::kFoldedReserve;
+    } else {
+        m_kitCard.place(m_trackManager != nullptr, {startX, rackTop + m_rack.contentHeight, width, Aestra::ArsenalKitCard::kReserve}); if (m_kitCard.shown()) m_rack.contentHeight += Aestra::ArsenalKitCard::kReserve; // empty state: a kit card under the rows
+        m_addUnitButtonRect = {startX + 16.0f, rackTop + m_rack.contentHeight + 8.0f, 112.0f, 32.0f}; m_rack.contentHeight += 48.0f; // "Add unit" ends the rack (the mock)
+    }
     if (m_addUnitBtn) { m_addUnitBtn->setBounds(m_addUnitButtonRect); m_addUnitBtn->setVisible(m_addUnitButtonRect.y >= m_progressHeaderRect.bottom() && m_addUnitButtonRect.bottom() <= bounds.bottom()); }
     for (const auto& item : m_rack.items) {
         if (item.kind != Aestra::ArsenalRackItem::Kind::Row || !m_unitRows[item.rowIndex]) continue;

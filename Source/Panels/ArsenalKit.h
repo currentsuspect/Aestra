@@ -66,21 +66,41 @@ private:
 class ArsenalKitCard {
 public:
     static constexpr float kW = 340.0f, kH = 130.0f, kReserve = kH + 16.0f;
+    static constexpr float kFoldedH = 32.0f, kFoldedReserve = kFoldedH + 8.0f;
+    enum class Mode { Full, Folded };
+    /// No rows: the full card. Any row at all: one line under the last row (the kit offer shrinks once you have started).
+    static Mode modeFor(size_t rowCount) { return rowCount == 0 ? Mode::Full : Mode::Folded; }
 
     /// @p slot: where the card goes (its top is under the last row); @p shown: no unit has a sound yet.
-    void place(bool shown, const AestraUI::NUIRect& slot) { m_shown = shown; m_slot = slot; }
+    void place(bool shown, const AestraUI::NUIRect& slot) { m_mode = Mode::Full; m_shown = shown; m_slot = slot; }
+    /// The folded line: @p slot is kFoldedReserve tall (an 8 px gap under the last row, then the line); @p visible is false
+    /// while it is scrolled out of the list's viewport, so it neither draws nor takes clicks.
+    void placeFolded(bool visible, const AestraUI::NUIRect& slot) { m_mode = Mode::Folded; m_shown = visible; m_slot = slot; }
     bool shown() const { return m_shown; }
+    bool folded() const { return m_mode == Mode::Folded; }
+    /// Folded line: "+ Add a sound" sits at the left (the panel's own button is placed here), the kit offer at the right.
+    AestraUI::NUIRect addRect() const { return {m_slot.x + 16.0f, m_slot.y + 8.0f, 112.0f, kFoldedH}; }
+    AestraUI::NUIRect browseRect() const { return {m_slot.right() - 16.0f - 112.0f, m_slot.y + 8.0f, 112.0f, kFoldedH}; }
     AestraUI::NUIRect cardRect() const { return {m_slot.x + (m_slot.width - kW) * 0.5f, m_slot.y + 8.0f, kW, kH}; }
     AestraUI::NUIRect buttonRect() const {
         const auto c = cardRect();
         return {c.x + 20.0f, c.bottom() - 48.0f, c.width - 40.0f, 32.0f};
     }
-    bool hitButton(const AestraUI::NUIPoint& p) const { return m_shown && buttonRect().contains(p); }
+    bool hitButton(const AestraUI::NUIPoint& p) const { return m_shown && (m_mode == Mode::Folded ? browseRect() : buttonRect()).contains(p); }
 
     void draw(AestraUI::NUIRenderer& renderer) const {
-        if (!m_shown || m_slot.width < kW) return;
+        if (!m_shown) return;
         auto& theme = AestraUI::NUIThemeManager::getInstance();
         const auto& tp = theme.getCurrentTheme();
+        if (m_mode == Mode::Folded) {
+            // "Start with a kit" (muted) then a text button, right-aligned; no fill, no outline, no hover change.
+            const auto b = browseRect();
+            const AestraUI::NUIColor muted = theme.getColor("textMuted");
+            renderer.drawTextCentered("Browse a folder", b, tp.fontSizeS, theme.getColor("textSecondary"));
+            renderer.drawTextCentered("Start with a kit", {b.x - 120.0f, b.y, 112.0f, b.height}, tp.fontSizeS, muted);
+            return;
+        }
+        if (m_slot.width < kW) return;
         const auto c = cardRect();
         renderer.fillRoundedRect(c, tp.radiusM, theme.getColor("backgroundSecondary").withAlpha(0.97f));
         renderer.strokeRoundedRect(c, tp.radiusM, 1.0f, theme.getColor("borderSubtle").withAlpha(0.5f));
@@ -100,6 +120,7 @@ public:
     }
 
 private:
+    Mode m_mode{Mode::Full};
     bool m_shown{false};
     AestraUI::NUIRect m_slot{};
 };

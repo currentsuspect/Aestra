@@ -57,6 +57,24 @@ int main() {
     card.place(false, slot);
     check(!card.hitButton({b.x + 5, b.y + 5}), "a hidden card takes no clicks");
 
+    std::cout << "[4] the folded line (any row exists)\n";
+    check(ArsenalKitCard::modeFor(0) == ArsenalKitCard::Mode::Full, "no rows: the full card");
+    check(ArsenalKitCard::modeFor(1) == ArsenalKitCard::Mode::Folded && ArsenalKitCard::modeFor(6) == ArsenalKitCard::Mode::Folded,
+          "one row or more: the card folds into one line");
+    ArsenalKitCard folded;
+    const AestraUI::NUIRect fslot{10, 300, 600, ArsenalKitCard::kFoldedReserve};
+    folded.placeFolded(true, fslot);
+    const auto add = folded.addRect(), browse = folded.browseRect();
+    check(ArsenalKitCard::kFoldedReserve == ArsenalKitCard::kFoldedH + 8.0f && ArsenalKitCard::kFoldedReserve < ArsenalKitCard::kReserve,
+          "the folded line reserves its own height, not the 146px card");
+    check(add.y >= fslot.y && add.bottom() <= fslot.bottom() && browse.y >= fslot.y && browse.bottom() <= fslot.bottom(),
+          "both buttons sit inside the reserved line");
+    check(add.x < browse.x && add.right() <= browse.x && browse.right() <= fslot.right(), "add on the left, browse on the right, no overlap");
+    check(folded.hitButton({browse.x + 4, browse.y + 4}) && !folded.hitButton({add.x + 4, add.y + 4}),
+          "folded: Browse a folder is clickable; the add button is the panel's own and is left alone");
+    folded.placeFolded(false, fslot);
+    check(!folded.hitButton({browse.x + 4, browse.y + 4}), "a folded line scrolled out of view takes no clicks");
+
     std::cout << (g_failures == 0 ? "ALL PASSED\n" : "FAILURES\n");
     return g_failures == 0 ? 0 : 1;
 }
