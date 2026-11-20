@@ -36,6 +36,7 @@ set(Aestra_SOURCES
 	Core/AestraContent.h
 	Core/AestraContent.cpp
 	Core/AestraContentBounce.cpp
+	Core/AestraContentEmptyNotice.cpp
 	Core/AestraContentEditorPreview.cpp
 	Core/AestraContentMeters.cpp
 	Panels/DspLoadReadout.h

@@ -73,6 +73,7 @@ public:
     std::function<void(Aestra::Audio::UnitID, const std::string&)> m_onPluginDropped;
     /** @brief Callback fired after the shared pattern backing this row is edited. */
     std::function<void(Aestra::Audio::PatternID)> m_onPatternEdited;
+    std::function<void(Aestra::Audio::UnitID)> m_onStepGestureEnd;
     /** @brief Callback used to open the full Piano Roll editor. */
     std::function<void(Aestra::Audio::PatternID, Aestra::Audio::UnitID)> m_onOpenPatternEditor;
     /** @brief Callback fired when the unit name is renamed. */
@@ -95,6 +96,8 @@ public:
     void setOnSampleDropped(std::function<void(Aestra::Audio::UnitID, const std::string&)> cb) { m_onSampleDropped = cb; }
     void setOnPluginDropped(std::function<void(Aestra::Audio::UnitID, const std::string&)> cb) { m_onPluginDropped = cb; }
     void setOnPatternEdited(std::function<void(Aestra::Audio::PatternID)> cb) { m_onPatternEdited = cb; }
+    /** @brief Called when a press on the step grid is released (a pad was pressed and let go on this row). */
+    void setOnStepGestureEnd(std::function<void(Aestra::Audio::UnitID)> cb) { m_onStepGestureEnd = cb; }
     // The pattern and the unit whose row asked: the piano roll opens on that unit's notes, not the pattern's first unit.
     void setOnOpenPatternEditor(std::function<void(Aestra::Audio::PatternID, Aestra::Audio::UnitID)> cb) { m_onOpenPatternEditor = cb; }
     void setOnRenameUnit(std::function<void(Aestra::Audio::UnitID, const std::string&)> cb) { m_onRenameUnit = cb; }

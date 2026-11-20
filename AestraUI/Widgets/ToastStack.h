@@ -8,6 +8,7 @@
 //   - a fourth message pushes the oldest off the top at once, rather than waiting its turn
 //   - the same text as one already showing moves that one to the bottom and restarts its time,
 //     so a repeated action never stacks copies of itself
+//   - a toast with buttons (ActionToastTimer) stays kActionToastSeconds and holds while the pointer is over it
 
 #include <algorithm>
 #include <cstddef>
@@ -50,6 +51,23 @@ public:
 
 private:
     std::vector<ToastEntry> m_entries;
+};
+
+/// A toast with buttons (the "no sound yet" notice): it stays 6 s, and the time stands still while the pointer is over it.
+inline constexpr double kActionToastSeconds = 6.0;
+
+class ActionToastTimer {
+public:
+    void setHovered(bool hovered) { m_hovered = hovered; }
+    /// Ages the toast unless the pointer is over it. True once it has had its time.
+    bool update(double dt) {
+        if (!m_hovered) m_age += dt;
+        return m_age >= kActionToastSeconds;
+    }
+
+private:
+    double m_age = 0.0;
+    bool m_hovered = false;
 };
 
 } // namespace AestraUI

@@ -1483,6 +1483,7 @@ void AestraContent::setupArsenalPanels() {
             loadSampleIntoUnitAsync(targetUnit, samplePath, false);
         });
     });
+    wireEmptySoundNotice();
     m_sequencerPanel->setOnRequestSampleEditor([this](UnitID id) {
         if (!m_trackManager) return;
         const auto* unit = m_trackManager->getUnitManager().getUnit(id);
@@ -1698,6 +1699,7 @@ void AestraContent::logModeStateIfChanged() {
 
 void AestraContent::onUpdate(double dt) {
     drainMainThreadTasks();
+    updateEmptySoundNotice();
     closeContextualPanels();
     updatePendingCountIn();
     logModeStateIfChanged();
@@ -3440,6 +3442,9 @@ void AestraContent::updatePatternLoopLength(PatternID patternId) {
 }
 
 void AestraContent::handleTransportPlayRequest() {
+    if (m_sequencerPanel && m_sequencerPanel->isVisible() && resolveTransportFocus() == ViewFocus::Arsenal) {
+        noteEmptySounds(m_sequencerPanel->emptyUnits(true)); // Play over a silent sampler that has steps
+    }
     if (resolveTransportFocus() != ViewFocus::Timeline || !m_trackManager) {
         playFromCurrentFocus();
         return;
@@ -4014,6 +4019,15 @@ void AestraContent::showToast(const std::string& message) {
         return;
     }
     m_notificationToast->show(message); // stacks above the ones showing; the oldest of four is pushed off
+    m_notificationToast->setBounds(toastRect(getBounds()));
+    m_notificationToast->bringToFront();
+}
+
+void AestraContent::showActionToast(AestraUI::ActionToastSpec spec) {
+    if (!m_notificationToast) {
+        return;
+    }
+    m_notificationToast->showAction(std::move(spec));
     m_notificationToast->setBounds(toastRect(getBounds()));
     m_notificationToast->bringToFront();
 }

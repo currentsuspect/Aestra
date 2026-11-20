@@ -1,7 +1,9 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "ArsenalPanel.h"
 
+#include "ArsenalEmptyNotice.h"
 #include "ArsenalGridScroll.h"
+#include "ArsenalScrollIntoView.h"
 #include "ArsenalUnitNaming.h"
 #include "../AestraUI/Core/NUIWheel.h"
 #include "ArsenalRackDraw.h"
@@ -394,6 +396,9 @@ void ArsenalPanel::refreshUnits() {
         row->setOnRequestSampleEditor([this](UnitID id) {
             if (m_onRequestSampleEditor) m_onRequestSampleEditor(id);
         });
+        row->setOnStepGestureEnd([this](UnitID id) {
+            if (m_onStepGestureEnd) m_onStepGestureEnd(id);
+        });
 
         row->setOnLoadUnitSample([this](UnitID id) {
             if (m_onRequestLoadSample) m_onRequestLoadSample(id);
@@ -564,6 +569,61 @@ void ArsenalPanel::createUnitOfType(UnitType type, const std::string& nameOverri
     m_showUnitTypePicker = false;
     if (m_addUnitBtn) m_addUnitBtn->setText("+ Add a sound");
     refreshUnits();
+    scrollUnitIntoView(created); // the new row, and the add line under it, in view
+    if (m_onUnitAdded) m_onUnitAdded(created);
+}
+
+void ArsenalPanel::scrollUnitIntoView(UnitID id) {
+    const float contentTop = m_progressHeaderRect.bottom() + 8.0f;
+    const float viewH = std::max(0.0f, m_listViewportRect.bottom() - contentTop);
+    for (size_t i = 0; i < m_rack.items.size(); ++i) {
+        const auto& item = m_rack.items[i];
+        if (item.kind != Aestra::ArsenalRackItem::Kind::Row || !m_unitRows[item.rowIndex] || m_unitRows[item.rowIndex]->getUnitId() != id) continue;
+        // The last row carries the add line with it: that line is the next thing the user reaches for.
+        const bool last = i + 1 == m_rack.items.size();
+        const float bottom = last ? m_rack.contentHeight : item.y + item.h;
+        m_targetScrollY = Aestra::ArsenalScrollIntoView::scrollToShow(m_scrollY, viewH, item.y, bottom, 6.0f, m_rack.contentHeight);
+        m_scrollY = m_targetScrollY; // no glide: the row is there when the user looks
+        layoutUnits();
+        repaint();
+        return;
+    }
+}
+
+bool ArsenalPanel::isUnitEmpty(UnitID id) const {
+    if (!m_trackManager) return false;
+    const auto* u = m_trackManager->getUnitManager().getUnit(id);
+    if (!u) return false;
+    using Kind = Aestra::ArsenalEmptyNotice::Kind;
+    const Kind kind = u->type == UnitType::Sampler ? Kind::Sampler : u->type == UnitType::PitchedSampler ? Kind::PitchedSampler :
+                      u->type == UnitType::Instrument ? Kind::Instrument : Kind::Audio;
+    return Aestra::ArsenalEmptyNotice::isEmpty({kind, !u->audioClipPath.empty(), u->plugin != nullptr});
+}
+
+std::vector<UnitID> ArsenalPanel::emptyUnits(bool withStepsOnly) const {
+    std::vector<UnitID> out;
+    if (!m_trackManager) return out;
+    const auto* pattern = m_activePatternID.isValid() ? m_trackManager->getPatternManager().getPattern(m_activePatternID) : nullptr;
+    const auto* midi = pattern && pattern->isMidi() ? &std::get<MidiPayload>(pattern->payload) : nullptr;
+    for (const UnitID id : m_trackManager->getUnitManager().getAllUnitIDs()) {
+        if (!isUnitEmpty(id)) continue;
+        if (withStepsOnly && (!midi || std::none_of(midi->notes.begin(), midi->notes.end(), [id](const MidiNote& n) { return n.unitId == id; }))) continue;
+        out.push_back(id);
+    }
+    return out;
+}
+
+void ArsenalPanel::openSoundTypePicker() {
+    m_showUnitTypePicker = true;
+    if (m_addUnitBtn) m_addUnitBtn->setText("CLOSE");
+    repaint();
+}
+
+void ArsenalPanel::setKeepClear(const NUIRect& rect) {
+    if (rect.x == m_keepClear.x && rect.y == m_keepClear.y && rect.width == m_keepClear.width && rect.height == m_keepClear.height) return;
+    m_keepClear = rect;
+    layoutUnits();
+    repaint();
 }
 
 bool ArsenalPanel::removeSelectedUnit() {
@@ -1020,6 +1080,10 @@ void ArsenalPanel::layoutUnits() {
     if (!m_listContainer) return;
     
     NUIRect bounds = m_listContainer->getBounds();
+    m_bottomInset = m_keepClear.width > 0.0f
+        ? Aestra::ArsenalEmptyNotice::bottomInset(bounds.bottom() - 6.0f, m_keepClear.y,
+                                                  m_keepClear.x < bounds.right() && m_keepClear.right() > bounds.x, 8.0f)
+        : 0.0f;
     const float horizontalPadding = 8.0f;
     const float width = std::max(0.0f, bounds.width - horizontalPadding * 2.0f);
     const float startX = bounds.x + horizontalPadding;
@@ -1035,7 +1099,7 @@ void ArsenalPanel::layoutUnits() {
     // Rows may only draw / take clicks between the progress header and the
     // panel bottom; anything scrolled past that is clipped by the row itself.
     const float viewportTop = m_progressHeaderRect.bottom() + 4.0f;
-    const float viewportBottom = bounds.bottom() - 6.0f;
+    const float viewportBottom = bounds.bottom() - 6.0f - m_bottomInset; // a toast may hold the bottom of the list clear
     m_listViewportRect = {startX, viewportTop, width, std::max(0.0f, viewportBottom - viewportTop)};
 
     // Units sit under Drums / Synth / Audio headers (FD-27): one layout answers rows, scroll and drops.
@@ -1051,13 +1115,13 @@ void ArsenalPanel::layoutUnits() {
     // ("+ Add a sound" at the left, the kit offer at the right) and reserves only that line's height.
     if (Aestra::ArsenalKitCard::modeFor(m_unitRows.size()) == Aestra::ArsenalKitCard::Mode::Folded) {
         const NUIRect slot{startX, rackTop + m_rack.contentHeight, width, Aestra::ArsenalKitCard::kFoldedReserve};
-        m_kitCard.placeFolded(slot.y + 8.0f >= m_progressHeaderRect.bottom() && slot.bottom() <= bounds.bottom(), slot);
+        m_kitCard.placeFolded(slot.y + 8.0f >= m_progressHeaderRect.bottom() && slot.bottom() <= bounds.bottom() - m_bottomInset, slot);
         m_addUnitButtonRect = m_kitCard.addRect(); m_rack.contentHeight += Aestra::ArsenalKitCard::kFoldedReserve;
     } else {
         m_kitCard.place(m_trackManager != nullptr, {startX, rackTop + m_rack.contentHeight, width, Aestra::ArsenalKitCard::kReserve}); if (m_kitCard.shown()) m_rack.contentHeight += Aestra::ArsenalKitCard::kReserve; // empty state: a kit card under the rows
         m_addUnitButtonRect = {startX + 16.0f, rackTop + m_rack.contentHeight + 8.0f, 112.0f, 32.0f}; m_rack.contentHeight += 48.0f; // "Add unit" ends the rack (the mock)
     }
-    if (m_addUnitBtn) { m_addUnitBtn->setBounds(m_addUnitButtonRect); m_addUnitBtn->setVisible(m_addUnitButtonRect.y >= m_progressHeaderRect.bottom() && m_addUnitButtonRect.bottom() <= bounds.bottom()); }
+    if (m_addUnitBtn) { m_addUnitBtn->setBounds(m_addUnitButtonRect); m_addUnitBtn->setVisible(m_addUnitButtonRect.y >= m_progressHeaderRect.bottom() && m_addUnitButtonRect.bottom() <= bounds.bottom() - m_bottomInset); }
     for (const auto& item : m_rack.items) {
         if (item.kind != Aestra::ArsenalRackItem::Kind::Row || !m_unitRows[item.rowIndex]) continue;
         m_unitRows[item.rowIndex]->setBounds(NUIRect(startX, rackTop + item.y, width, item.h));
@@ -1077,7 +1141,7 @@ void ArsenalPanel::onUpdate(double dt) {
     if (auto folder = m_kitPicker.takeResult()) loadKitFromFolder(*folder); // the kit picker closed
     const float reservedHeight = COMMAND_HEADER_HEIGHT + PROGRESS_HEADER_HEIGHT + 24.0f;
     const float viewportHeight = std::max(0.0f,
-        (m_listContainer ? m_listContainer->getBounds().height : 0.0f) - reservedHeight);
+        (m_listContainer ? m_listContainer->getBounds().height : 0.0f) - reservedHeight - m_bottomInset);
     const float contentHeight = m_rack.contentHeight + kArsenalListBottomPadding;
     const float maxScroll = std::max(0.0f, contentHeight - viewportHeight);
     m_targetScrollY = safeClampPanelScroll(m_targetScrollY, maxScroll);
@@ -1874,7 +1938,7 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
         
         // Fallback: scroll the unit list
         float contentHeight = m_rack.contentHeight + kArsenalListBottomPadding;
-        float viewportHeight = m_listContainer ? m_listContainer->getBounds().height : 100.0f;
+        float viewportHeight = (m_listContainer ? m_listContainer->getBounds().height : 100.0f) - m_bottomInset;
         float maxScroll = std::max(0.0f, contentHeight - viewportHeight);
         
         m_targetScrollY -= event.wheelDelta * AestraUI::kWheelNotchPx;

@@ -855,6 +855,7 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
             m_stepGestureMode = StepGestureMode::None;
             m_stepGestureChanged = false;
             invalidateVisuals();
+            if (m_onStepGestureEnd) m_onStepGestureEnd(m_unitId); // last: the callback may rebuild the rows
             return true;
         }
 

@@ -11,6 +11,9 @@
  */
 
 #pragma once
+
+#include "../AestraUI/Widgets/NotificationToast.h"
+#include "../Panels/ArsenalEmptyNotice.h"
 #include "AuditionHooks.h"
 #include "SamplerEditHistory.h"
 
@@ -474,6 +477,13 @@ public:
     /// A project file was opened from the file browser (double-click, Enter). The app asks about unsaved work, then loads it.
     std::function<void(const std::string&)> onOpenProjectRequested;
     void showToast(const std::string& message); // one wait time for every toast (ToastStack.h)
+    /// A toast with buttons, in the same bottom slot (the "no sound yet" notice; AestraContentEmptyNotice.cpp).
+    void showActionToast(AestraUI::ActionToastSpec spec);
+    /// Queues silent units for the "no sound yet" toast; it shows when the rules allow (once per unit, never while recording).
+    void noteEmptySounds(const std::vector<Aestra::Audio::UnitID>& units);
+    void updateEmptySoundNotice();
+    void wireEmptySoundNotice();
+    Aestra::ArsenalEmptyNotice::Tracker m_emptyNotice;
 
     /** @brief Load an effect plugin onto the selected track. */
     void loadEffectToSelectedTrack(const std::string& pluginId);

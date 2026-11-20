@@ -101,6 +101,22 @@ public:
     void setOnRequestPatternEditor(std::function<void(PatternID, UnitID)> cb) { m_onRequestPatternEditor = cb; }
     /** @brief Set the callback used to request sample loading. */
     void setOnRequestLoadSample(std::function<void(UnitID)> cb) { m_onRequestLoadSample = cb; }
+    /// A pad on this row was pressed and released (the "no sound yet" notice asks whether the unit is silent).
+    void setOnStepGestureEnd(std::function<void(UnitID)> cb) { m_onStepGestureEnd = std::move(cb); }
+    /// A unit was just added with "+ Add a sound" (the app hands the keys to the Arsenal so F2 and Delete act on it).
+    void setOnUnitAdded(std::function<void(UnitID)> cb) { m_onUnitAdded = std::move(cb); }
+    /// True when the unit makes no sound yet (ArsenalEmptyNotice.h defines "empty" per unit type).
+    bool isUnitEmpty(UnitID id) const;
+    /// Empty units; with @p withStepsOnly, only those that have a step in the active pattern (they are the ones that play silence).
+    std::vector<UnitID> emptyUnits(bool withStepsOnly) const;
+    /// The same action as the row's Load Sample menu item.
+    void requestLoadSample(UnitID id) { if (m_onRequestLoadSample) m_onRequestLoadSample(id); }
+    /// Opens the type list under "+ Add a sound" (the only instrument/plugin choice the Arsenal offers).
+    void openSoundTypePicker();
+    /// A window-space rectangle (a toast) the list must not run under: the list's bottom edge rises above it and the
+    /// list scrolls to stay clear. An empty rectangle releases it.
+    void setKeepClear(const AestraUI::NUIRect& rect);
+    float bottomInset() const { return m_bottomInset; }
     /** @brief Set the callback used to open the sample editor. */
     void setOnRequestSampleEditor(std::function<void(UnitID)> cb) { m_onRequestSampleEditor = cb; }
     /** @brief Set the callback used for generic plugin drops. */
@@ -252,6 +268,11 @@ private:
     std::function<void(UnitID)> m_onRequestEditor;
     std::function<void(PatternID, UnitID)> m_onRequestPatternEditor;
     std::function<void(UnitID)> m_onRequestLoadSample;
+    std::function<void(UnitID)> m_onStepGestureEnd;
+    std::function<void(UnitID)> m_onUnitAdded;
+    float m_bottomInset = 0.0f;
+    AestraUI::NUIRect m_keepClear{};
+    void scrollUnitIntoView(UnitID id);
     std::function<void(UnitID)> m_onRequestSampleEditor;
     std::function<void(const std::string&)> m_onPluginDropped;
     std::function<void(UnitID, const std::string&)> m_onPluginDroppedToUnit;

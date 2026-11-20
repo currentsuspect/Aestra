@@ -244,6 +244,24 @@ target_include_directories(ArsenalUnitNamingTest PRIVATE
 add_test(NAME ArsenalUnitNamingTest COMMAND ArsenalUnitNamingTest)
 set_tests_properties(ArsenalUnitNamingTest PROPERTIES LABELS "unit;arsenal;naming;contract:core")
 
+# The "no sound yet" notice: what empty means per unit type, the copy, once per unit per session, the wait while
+# recording, the 6 s hold-under-pointer timer and the room the list gives up. Pure headers, no libraries.
+add_executable(ArsenalEmptyNoticeTest Integration/ArsenalEmptyNoticeTest.cpp)
+target_include_directories(ArsenalEmptyNoticeTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Panels
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME ArsenalEmptyNoticeTest COMMAND ArsenalEmptyNoticeTest)
+set_tests_properties(ArsenalEmptyNoticeTest PROPERTIES LABELS "unit;arsenal;toast;contract:core")
+
+# After "+ Add a sound" the list scrolls so the new row (and the add line under it) is in view. Pure header.
+add_executable(ArsenalScrollIntoViewTest Integration/ArsenalScrollIntoViewTest.cpp)
+target_include_directories(ArsenalScrollIntoViewTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Panels
+)
+add_test(NAME ArsenalScrollIntoViewTest COMMAND ArsenalScrollIntoViewTest)
+set_tests_properties(ArsenalScrollIntoViewTest PROPERTIES LABELS "unit;arsenal;scroll;contract:core")
+
 add_executable(ProjectLifecycleInteractionTest
     Integration/ProjectLifecycleInteractionTest.cpp
     ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
