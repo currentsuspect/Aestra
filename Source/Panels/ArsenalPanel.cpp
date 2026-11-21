@@ -2,6 +2,7 @@
 #include "ArsenalPanel.h"
 
 #include "ArsenalEmptyNotice.h"
+#include "ArsenalResponsive.h"
 #include "UnitGroupMenu.h"
 #include "ArsenalGridScroll.h"
 #include "ArsenalScrollIntoView.h"
@@ -1092,11 +1093,12 @@ void ArsenalPanel::layoutUnits() {
     const float width = std::max(0.0f, bounds.width - horizontalPadding * 2.0f);
     const float startX = bounds.x + horizontalPadding;
     m_commandHeaderRect = {startX, bounds.y, width, COMMAND_HEADER_HEIGHT};
-    constexpr float buttonH = 30.0f, fitW = 108.0f, fitHalfW = 46.0f; // SCROLL is the wider word
+    const auto fit = Aestra::ArsenalResponsive::fitFor(bounds.width); // 108 wide, or the two minimum hit areas when the panel is narrow
+    constexpr float buttonH = 30.0f; const float fitW = fit.width, fitHalfW = fit.fitHalf;
     const float buttonY = m_commandHeaderRect.y + (m_commandHeaderRect.height - buttonH) * 0.5f;
     m_fitToggleRect = {m_commandHeaderRect.right() - 16.0f - fitW, buttonY, fitW, buttonH};
     m_fitModeRect = {m_fitToggleRect.x, m_fitToggleRect.y, fitHalfW, m_fitToggleRect.height}; m_scrollModeRect = {m_fitModeRect.right(), m_fitToggleRect.y, fitW - fitHalfW, m_fitToggleRect.height};
-    m_sceneRect = {startX + 16.0f, m_commandHeaderRect.y + 10.0f, std::max(0.0f, m_fitToggleRect.x - 12.0f - (startX + 16.0f)), Aestra::ArsenalSceneStrip::kHeight};
+    m_sceneRect = {startX + 16.0f, m_commandHeaderRect.y + 10.0f, Aestra::ArsenalResponsive::sceneStripWidth(width, bounds.width), Aestra::ArsenalSceneStrip::kHeight};
     m_progressHeaderRect = {startX, m_commandHeaderRect.bottom() + 6.0f, width, PROGRESS_HEADER_HEIGHT};
     const float rackTop = m_progressHeaderRect.bottom() + 8.0f - m_scrollY;
 
@@ -1119,7 +1121,7 @@ void ArsenalPanel::layoutUnits() {
     // ("+ Add a sound" at the left, the kit offer at the right) and reserves only that line's height.
     if (Aestra::ArsenalKitCard::modeFor(m_unitRows.size()) == Aestra::ArsenalKitCard::Mode::Folded) {
         const NUIRect slot{startX, rackTop + m_rack.contentHeight, width, Aestra::ArsenalKitCard::kFoldedReserve};
-        m_kitCard.placeFolded(slot.y + 8.0f >= m_progressHeaderRect.bottom() && slot.bottom() <= bounds.bottom() - m_bottomInset, slot);
+        m_kitCard.placeFolded(slot.y + 8.0f >= m_progressHeaderRect.bottom() && slot.bottom() <= bounds.bottom() - m_bottomInset, slot, !m_trackManager || Aestra::ArsenalKit::offersKitFor(m_trackManager->getUnitManager(), m_unitRows)); // "Start with a kit" goes once any unit has a sample
         m_addUnitButtonRect = m_kitCard.addRect(); m_rack.contentHeight += Aestra::ArsenalKitCard::kFoldedReserve + kArsenalDropFloor; // then a row's worth of open floor to drop a sound into
     } else {
         m_kitCard.place(m_trackManager != nullptr, {startX, rackTop + m_rack.contentHeight, width, Aestra::ArsenalKitCard::kReserve}); if (m_kitCard.shown()) m_rack.contentHeight += Aestra::ArsenalKitCard::kReserve; // empty state: a kit card under the rows
@@ -1427,26 +1429,27 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
 
     const auto& themeProps = theme.getCurrentTheme();
 
-    const NUIRect leftCard(bounds.x + 4.0f, bounds.y + 1.0f, std::max(272.0f, controlWidth - 10.0f), bounds.height - 2.0f);
+    const NUIRect leftCard(bounds.x + 4.0f, bounds.y + 1.0f, std::max(0.0f, controlWidth - 10.0f), bounds.height - 2.0f); // never wider than the head: it overlapped the ruler
+    const auto st = Aestra::ArsenalResponsive::steppersFor(controlWidth);
 
     const float compactHitArea = themeProps.layout.minimumHitArea;
     m_barsDecrementRect = NUIRect(leftCard.x + 10.0f, leftCard.y + 4.0f, compactHitArea, leftCard.height - 8.0f);
-    m_barsValueRect = NUIRect(m_barsDecrementRect.right() + 4.0f, leftCard.y + 4.0f, 56.0f, leftCard.height - 8.0f);
-    m_barsIncrementRect = NUIRect(m_barsValueRect.right() + 4.0f, leftCard.y + 4.0f, compactHitArea, leftCard.height - 8.0f);
+    m_barsValueRect = NUIRect(m_barsDecrementRect.right() + st.gapInner, leftCard.y + 4.0f, st.barsValueW, leftCard.height - 8.0f);
+    m_barsIncrementRect = NUIRect(m_barsValueRect.right() + st.gapInner, leftCard.y + 4.0f, compactHitArea, leftCard.height - 8.0f);
 
     Aestra::drawArsenalStepper(renderer, m_barsDecrementRect, m_barsValueRect, m_barsIncrementRect,
-                               std::to_string(bars) + (bars == 1 ? " bar" : " bars"), decEnabled, incEnabled);
+                               std::to_string(bars) + (!st.words ? "" : bars == 1 ? " bar" : " bars"), decEnabled, incEnabled);
 
     const bool stepType = selectedType == UnitType::Sampler || selectedType == UnitType::PitchedSampler;
     if (stepType) {
-        m_stepsDecrementRect = NUIRect(m_barsIncrementRect.right() + 8.0f, leftCard.y + 4.0f, compactHitArea,
+        m_stepsDecrementRect = NUIRect(m_barsIncrementRect.right() + st.gapBetween, leftCard.y + 4.0f, compactHitArea,
                                        leftCard.height - 8.0f);
-        m_stepsValueRect = NUIRect(m_stepsDecrementRect.right() + 4.0f, leftCard.y + 4.0f, 66.0f,
+        m_stepsValueRect = NUIRect(m_stepsDecrementRect.right() + st.gapInner, leftCard.y + 4.0f, st.stepsValueW,
                                    leftCard.height - 8.0f);
-        m_stepsIncrementRect = NUIRect(m_stepsValueRect.right() + 4.0f, leftCard.y + 4.0f, compactHitArea,
+        m_stepsIncrementRect = NUIRect(m_stepsValueRect.right() + st.gapInner, leftCard.y + 4.0f, compactHitArea,
                                        leftCard.height - 8.0f);
         Aestra::drawArsenalStepper(renderer, m_stepsDecrementRect, m_stepsValueRect, m_stepsIncrementRect,
-                                   std::to_string(displayedSteps) + " steps",
+                                   std::to_string(displayedSteps) + (st.words ? " steps" : ""),
                                    displayedSteps > kArsenalMinPatternSteps,
                                    displayedSteps < kArsenalMaxPatternSteps);
     } else {

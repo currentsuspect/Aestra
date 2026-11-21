@@ -1699,7 +1699,7 @@ UnitRow::Density UnitRow::densityForWidth(float width) {
 
 float UnitRow::controlFloorForDensity(float width) {
     const Density d = densityForWidth(width);
-    return (d == Density::Minimal)   ? 169.0f
+    return (d == Density::Minimal)   ? 195.0f // 80 px for the name beside the keys, the chip and the stripe (it showed "Sa..." at 54)
            : (d == Density::Compact) ? 262.0f
                                      : 294.0f;
 }

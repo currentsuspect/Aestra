@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUICustomTitleBar.h"
+#include "NUIMenuBar.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 #include "../../AestraCore/include/AestraLog.h"
@@ -287,6 +288,16 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
         renderer.strokeRoundedRect(toggleBg, radius, 1.0f, themeManager.getColor("border").withAlpha(0.24f));
         renderer.drawLine({toggleBg.right() + 16.0f, toggleBg.y}, {toggleBg.right() + 16.0f, toggleBg.bottom()},
                           1.0f, themeManager.getColor("border").withAlpha(0.24f));
+    }
+
+    // The menu bar collapses to one "Menu" button before its items would reach the view switcher (owner, 21 Nov 2026: at 660 px "Help" ran
+    // into it). The switcher is centred, so its left edge is a function of the width alone (NUICustomTitleBar menu rule).
+    for (const auto& child : getChildren()) {
+        if (auto menu = std::dynamic_pointer_cast<NUIMenuBar>(child)) {
+            const auto mb = menu->getBounds();
+            const float toggleLeft = std::round(bounds.x + bounds.width * 0.5f - (static_cast<float>(themeManager.getCurrentTheme().layout.viewToggleWidth) + 4.0f) * 0.5f);
+            menu->setCollapsed(mb.x + mb.width + 12.0f > toggleLeft);
+        }
     }
 
     // Render custom children (NUIMenuBar, view toggle, etc.)

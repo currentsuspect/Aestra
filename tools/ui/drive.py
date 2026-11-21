@@ -18,6 +18,7 @@ Commands run in order:
     raise TITLE          bring a window (a zenity dialog, say) to the front and focus it
     waitwindow SECONDS   wait until an Aestra window is mapped
     fit                  size the Aestra window to the whole display
+    size W H             size the Aestra window to W x H at the top left (to check a narrow layout: size 660 768)
 
 Needs python-xlib (and Pillow for shot).
 """
@@ -142,6 +143,13 @@ def main(argv):
                 w.configure(x=0, y=0, width=g.width, height=g.height)
                 d.sync()
             i += 1
+        elif cmd == "size":
+            w = aestra_window()
+            if w is not None:
+                w.configure(x=0, y=0, width=int(a[0]), height=int(a[1]))
+                d.sync()
+                time.sleep(0.8)  # the app lays out again on the resize
+            i += 3
         else:
             print(f"drive.py: unknown command {cmd!r}", file=sys.stderr)
             return 2
