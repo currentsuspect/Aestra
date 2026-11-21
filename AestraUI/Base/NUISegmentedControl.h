@@ -6,6 +6,7 @@
 #include "NUIRenderer.h"
 #include "NUITypes.h"
 #include "NUIThemeSystem.h"
+#include <algorithm>
 #include <functional>
 #include <string>
 #include <vector>
@@ -65,26 +66,26 @@ public:
     void setAccentColor(const NUIColor& color) { accentColor_ = color; setDirty(true); }
     void setVisualStyle(VisualStyle style) { visualStyle_ = style; setDirty(true); }
     
-    void onRender(NUIRenderer& renderer) override {
-        // Design Spec, Segment switch (locked 12 Nov 2026): one part for every "pick one of a few", tabs included. The
-        // track is sunk; the chosen option sits on a lit thumb that slides to a new choice; unchosen labels are
-        // textMuted and the chosen or hovered one textPrimary. No outline, no underline tabs, quiet hover.
-        auto bounds = getBounds();
+    /// The one look of every "pick one of a few" (the title-bar views, the browser's Sounds | Patterns | Plugins, Fit |
+    /// Scroll). Design Spec, Segment switch (locked 12 Nov 2026): the track is sunk; the chosen option sits on a lit thumb
+    /// that slides to a new choice (@p position, in segment-index space); unchosen labels are textMuted and the chosen or
+    /// hovered one textPrimary. No outline, no underline tabs, quiet hover. Anything that draws such a switch calls this
+    /// rather than keeping a copy of the look.
+    static void paintPill(NUIRenderer& renderer, const NUIRect& bounds, const std::vector<std::string>& labels,
+                          float position, size_t selected, int hovered = -1, bool enabled = true) {
         auto& theme = NUIThemeManager::getInstance();
         const auto& props = theme.getCurrentTheme();
         const float fontSize = props.fontSizeS;
-        const bool enabled = isEnabled();
         const float radius = bounds.height * 0.5f;
 
         Depth::bed(renderer, bounds, radius, Depth::Cut::Shallow);
-        if (segments_.empty()) {
-            NUIComponent::onRender(renderer);
-            return;
-        }
+        if (labels.empty()) return;
 
         constexpr float kPad = 3.0f;
-        const float segmentWidth = (bounds.width - kPad * 2.0f) / static_cast<float>(segments_.size());
-        const NUIRect thumb(bounds.x + kPad + indicator_.position() * segmentWidth, bounds.y + kPad, segmentWidth,
+        const float segmentWidth = (bounds.width - kPad * 2.0f) / static_cast<float>(labels.size());
+        // The thumb can never leave the track, whatever position it is handed.
+        const float clamped = std::clamp(position, 0.0f, static_cast<float>(labels.size() - 1));
+        const NUIRect thumb(bounds.x + kPad + clamped * segmentWidth, bounds.y + kPad, segmentWidth,
                             bounds.height - kPad * 2.0f);
         Depth::ObjectLook look;
         look.base = enabled ? props.surfaceRaised : props.surfaceTertiary;
@@ -92,16 +93,20 @@ public:
         look.shadeBottom = 0.14f;
         Depth::object(renderer, thumb, thumb.height * 0.5f, look);
 
-        for (size_t i = 0; i < segments_.size(); ++i) {
+        for (size_t i = 0; i < labels.size(); ++i) {
             const NUIRect segmentBounds(bounds.x + kPad + static_cast<float>(i) * segmentWidth, bounds.y, segmentWidth,
                                         bounds.height);
-            const bool isSelected = i == selectedIndex_;
-            const bool hovered = enabled && static_cast<int>(i) == hoveredIndex_;
+            const bool isSelected = i == selected;
+            const bool isHovered = enabled && static_cast<int>(i) == hovered;
             const NUIColor textColor = !enabled ? props.textDisabled
-                                       : (isSelected || hovered) ? props.textPrimary
-                                                                 : props.textMuted;
-            renderer.drawTextCentered(segments_[i], segmentBounds, fontSize, textColor);
+                                       : (isSelected || isHovered) ? props.textPrimary
+                                                                   : props.textMuted;
+            renderer.drawTextCentered(labels[i], segmentBounds, fontSize, textColor);
         }
+    }
+
+    void onRender(NUIRenderer& renderer) override {
+        paintPill(renderer, getBounds(), segments_, indicator_.position(), selectedIndex_, hoveredIndex_, isEnabled());
         NUIComponent::onRender(renderer);
     }
     
