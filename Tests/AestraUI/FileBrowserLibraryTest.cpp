@@ -13,6 +13,7 @@
 #include "BrowserLibrary.h"
 #include "BrowserLibraryIndex.h"
 #include "FileBrowser.h"
+#include "NUIThemeSystem.h"
 
 #include <algorithm>
 #include <cmath>
@@ -752,7 +753,37 @@ void testDoubleClickSurvivesPreviewDockReflow() {
     CHECK(!expandedNow(topPath), "a second press after the time window is not a double-click");
 }
 
+// After a theme switch the browser shows the new theme at once, with no scroll or hover (21 Nov 2026: it kept the old
+// theme's colours and its rendered list until something else invalidated them). The window manager tells the root
+// component, which tells the tree; this does the same to the browser.
+bool sameColour(const AestraUI::NUIColor& a, const AestraUI::NUIColor& b) {
+    return std::fabs(a.r - b.r) < 1e-4f && std::fabs(a.g - b.g) < 1e-4f && std::fabs(a.b - b.b) < 1e-4f && std::fabs(a.a - b.a) < 1e-4f;
+}
+
+void testThemeChangeReachesTheBrowser() {
+    Sandbox box("theme");
+    auto& themes = AestraUI::NUIThemeManager::getInstance();
+    themes.setActiveTheme("ink-dark");
+    auto browser = makeBrowser();
+    CHECK(waitForScan(*browser), "initial scan finishes");
+    const auto dark = browser->themeColors();
+    CHECK(sameColour(dark.background, themes.getColor("backgroundPrimary")), "built under ink dark: the list bed is the dark bed");
+
+    themes.setActiveTheme("ink-light");
+    const auto before = browser->themeColors();
+    CHECK(sameColour(before.background, dark.background), "(negative control) until it is told, the browser still holds the dark bed: the bug");
+    browser->onThemeChanged(themes.getCurrentTheme());
+    const auto light = browser->themeColors();
+    CHECK(sameColour(light.background, themes.getColor("backgroundPrimary")), "after the change the list bed is the light bed");
+    CHECK(!sameColour(light.background, dark.background), "and it differs from the dark one");
+    CHECK(sameColour(light.text, themes.getColor("textPrimary")), "text follows the theme");
+    CHECK(sameColour(light.selected, themes.getColor("accentText")), "the current crumb follows the theme's accent text");
+    CHECK(browser->listRedrawQueued(), "the rendered list is queued for a redraw, so no scroll or hover is needed");
+    themes.setActiveTheme("ink-dark");
+}
+
 int main() {
+    testThemeChangeReachesTheBrowser();
     testNaturalCompare();
     testXdgParsing();
     testSystemPlaceDiscovery();
