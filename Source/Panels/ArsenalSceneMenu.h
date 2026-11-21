@@ -41,13 +41,16 @@ public:
         AestraUI::NUIPoint at{};                   ///< where the menu opens
         AestraUI::NUIRect chip{};                  ///< where that pattern's chip is (the rename box covers it)
         std::vector<ArsenalSceneStrip::Scene> scenes; ///< what the strip shows now, in order
-        /// After a verb changed the pattern list: select this pattern (0 = leave the selection alone) and refresh.
-        std::function<void(uint64_t select)> changed;
+        std::vector<uint64_t> selectedIds;          ///< current chip selection, ordered as displayed
+        /// After a verb changed the pattern list: choose the active chip and selection, then refresh.
+        std::function<void(uint64_t active, const std::vector<uint64_t>& selected)> changed;
+        std::function<void(const std::string&, const std::string&, const std::string&, std::function<void(bool)>)> confirm;
     };
 
     ~ArsenalSceneMenu();
 
     void show(const Request& request);
+    void rename(const Request& request) { beginRename(request); }
     /// Drop an open menu or rename without applying it (the panel is going away or switching away).
     void cancel();
     bool renaming() const { return static_cast<bool>(m_input); }
@@ -90,7 +93,8 @@ private:
     AestraUI::NUIComponent* m_inputOwner{nullptr};
     Audio::TrackManager* m_tracks{nullptr};
     uint64_t m_renameId{0};
-    std::function<void(uint64_t)> m_changed;
+    std::function<void(uint64_t, const std::vector<uint64_t>&)> m_changed;
+    std::vector<uint64_t> m_selectedIds;
 };
 
 } // namespace Aestra

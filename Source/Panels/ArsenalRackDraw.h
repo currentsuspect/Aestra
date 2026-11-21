@@ -4,6 +4,7 @@
 #include "ArsenalRackLayout.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
+#include "../AestraUI/Graphics/NUIDepth.h"
 
 #include <string>
 
@@ -21,7 +22,7 @@ inline void drawArsenalGroupHeader(AestraUI::NUIRenderer& renderer, const Aestra
     const std::string n = std::to_string(count);
     renderer.drawText(n, {rect.x + 8.0f + tw + 10.0f, y}, 10.0f, muted.withAlpha(0.5f));
     const float lx = rect.x + 8.0f + tw + 10.0f + renderer.measureText(n, 10.0f).width + 10.0f;
-    renderer.fillRect(AestraUI::NUIRect{lx, y + 6.0f, std::max(0.0f, rect.right() - 8.0f - lx), 1.0f}, theme.getColor("border").withAlpha(0.35f));
+    renderer.fillRect(AestraUI::NUIRect{lx, y + 6.0f, std::max(0.0f, rect.right() - lx), 1.0f}, theme.getColor("border").withAlpha(0.35f));
 }
 
 /// Every header of the rack that is in view, clipped to the list viewport.
@@ -40,20 +41,27 @@ inline void drawArsenalRackHeaders(AestraUI::NUIRenderer& renderer, const Arsena
 
 /// The Fit | Scroll segment switch as the board draws it: a sunk pill track, the chosen side a raised pill thumb.
 inline void drawArsenalFitToggle(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& toggle, const AestraUI::NUIRect& fitRect,
-                                 const AestraUI::NUIRect& scrollRect, bool fitToWidth) {
+                                 const AestraUI::NUIRect& scrollRect, bool fitToWidth, int hover = -1) {
     using namespace AestraUI;
     if (toggle.width <= 0.0f) return;
     auto& theme = NUIThemeManager::getInstance();
     const float h = std::min(24.0f, toggle.height), y = toggle.y + (toggle.height - h) * 0.5f;
-    renderer.fillRoundedRect({toggle.x, y, toggle.width, h}, h * 0.5f, theme.getColor("backgroundPrimary"));
-    const auto side = [&](const NUIRect& r, const char* text, bool on) {
+    // The same sunk bed and lit thumb as the Arsenal | Timeline | Audition switcher, so the two read as one control.
+    Depth::bed(renderer, {toggle.x, y, toggle.width, h}, h * 0.5f, Depth::Cut::Shallow);
+    const auto side = [&](const NUIRect& r, const char* text, bool on, bool hot) {
         if (r.width <= 0.0f) return;
         const NUIRect thumb{r.x + 3.0f, y + 3.0f, r.width - 6.0f, h - 6.0f};
-        if (on) renderer.fillRoundedRect(thumb, thumb.height * 0.5f, theme.getColor("surfaceRaised"));
-        renderer.drawTextCentered(text, thumb, 11.0f, theme.getColor(on ? "textPrimary" : "textMuted"));
+        if (on) {
+            Depth::ObjectLook look;
+            look.base = theme.getCurrentTheme().surfaceRaised;
+            look.lightTop = 0.12f;
+            look.shadeBottom = 0.14f;
+            Depth::object(renderer, thumb, thumb.height * 0.5f, look);
+        }
+        renderer.drawTextCentered(text, thumb, 11.0f, theme.getColor(on || hot ? "textPrimary" : "textMuted")); // hover lights the label, as in the title-bar switcher
     };
-    side(fitRect, "Fit", fitToWidth);
-    side(scrollRect, "Scroll", !fitToWidth);
+    side(fitRect, "Fit", fitToWidth, hover == 0);
+    side(scrollRect, "Scroll", !fitToWidth, hover == 1);
 }
 
 /// A length control as the locked board draws it: one sunk pill (fully rounded, no outline) with the value in the

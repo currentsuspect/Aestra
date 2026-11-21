@@ -44,6 +44,7 @@ PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
     , m_trackManager(trackManager)
     , m_currentPatternId(0)  // Initialize as invalid
 {
+    setKeyOwnerRole(WorkspaceFocusModel::KeyOwner::PianoRoll); // its header carries the key-owner tick while it owns the keys
     // Create piano roll view
     m_pianoRoll = std::make_shared<AestraUI::PianoRollView>();
     m_pianoRoll->setLocalMinimapVisible(true); // the overview strip stays (owner, 31 Oct), above the chord ruler

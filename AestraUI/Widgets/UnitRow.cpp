@@ -4,6 +4,7 @@
 #include "../../AestraCore/include/AestraLog.h"
 #include "AudioEngine.h"
 #include "Commands/AssignUnitToFirstFreeInsertCommand.h"
+#include "Commands/CommandTransaction.h"
 #include "Commands/EditPatternNotesCommand.h"
 #include "Commands/CreateRoleBusCommand.h"
 #include "Commands/SetRoleCommand.h"
@@ -149,8 +150,12 @@ void UnitRow::updateState() {
         layoutNameLabel();
 
         m_nameLabel->m_onOpenEditor = [this]() {
-            if (m_onEditUnit)
+            if ((m_type == Aestra::Audio::UnitType::Sampler ||
+                 m_type == Aestra::Audio::UnitType::PitchedSampler) && m_onRequestSampleEditor) {
+                m_onRequestSampleEditor(m_unitId);
+            } else if (m_onEditUnit) {
                 m_onEditUnit(m_unitId);
+            }
         };
         m_nameLabel->m_onRename = [this](const std::string& name) {
             if (m_onRenameUnit)
@@ -247,17 +252,21 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
         cardBg = theme.getColor("accentPrimary").withAlpha(0.18f);
         border = theme.getColor("accentPrimary").withAlpha(0.95f);
     } else if (m_isSelected) {
-        cardBg = NUIColor::lerp(cardBg, theme.getColor("accentPrimary"), 0.28f); // the locked board's selection wash
-        border = theme.getColor("accentPrimary").withAlpha(0.40f);
+        cardBg = NUIColor::lerp(cardBg, theme.getColor("accentPrimary"), 0.16f); // a quiet wash: selected, not shouting
+        border = theme.getColor("accentPrimary").withAlpha(0.30f);
     } else if (m_isHovered) {
         cardBg = theme.getColor("surfaceRaised");
         border = theme.getColor("accentPrimary").withAlpha(0.22f);
     }
 
     renderer.fillRoundedRect(cardBounds, radius, cardBg);
+    // The unit's colour strip: a short, rounded bar centred on the card's left edge (the mock and the owner's
+    // sketch). It is drawn after the outline and starts at the outline itself, so the two conjoin: the bar reads
+    // as a thick stretch of the edge, not a pill floating inside the card and not a line running across it.
     renderer.strokeRoundedRect(cardBounds, radius, m_isDropHighlighted ? 2.0f : 1.0f, border);
-    renderer.fillRoundedRect({cardBounds.x + 1.0f, cardBounds.y + 8.0f, 4.0f, cardBounds.height - 16.0f}, 2.0f,
-                             unitAccent.withAlpha(m_isEnabled ? 0.95f : 0.35f));
+    constexpr float kStripW = 5.0f, kStripInset = 8.0f;
+    renderer.fillRoundedRect({cardBounds.x, cardBounds.y + kStripInset, kStripW, cardBounds.height - kStripInset * 2.0f},
+                             kStripW * 0.5f, unitAccent.withAlpha(m_isEnabled ? 0.95f : 0.35f));
 
     // Density-derived control floor (responsive contract): narrow rows give
     // the grid the width back instead of clipping it against a fixed 220.
@@ -353,14 +362,17 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
         // A colour dot for the destination, then its name, cut with an ellipsis to fit.
         NUIColor dot = theme.getColor("accentPrimary");
         if (m_mixerRouteColorIndex >= 0) dot = colorFromUnitValue(paletteIndexToARGB(m_mixerRouteColorIndex));
-        renderer.fillRect(NUIRect{routeRect.x + 8.0f, routeRect.y + routeRect.height * 0.5f - 3.0f, 6.0f, 6.0f}, dot);
+        constexpr float kChipPad = 10.0f, kDot = 6.0f, kChev = 3.0f, kTextGap = 6.0f; // the same pad both ends
+        renderer.fillRect(NUIRect{routeRect.x + kChipPad, routeRect.y + routeRect.height * 0.5f - kDot * 0.5f, kDot, kDot}, dot);
         std::string label = m_mixerRouteName;
-        const float room = routeRect.width - 40.0f;
+        const float textX = routeRect.x + kChipPad + kDot + kTextGap;
+        const float chevCenter = routeRect.right() - kChipPad - kChev;
+        const float room = chevCenter - kChev - kTextGap - textX;
         bool cut = false;
         while (label.size() > 1 && renderer.measureText(label, 10.5f).width > room) { label.pop_back(); cut = true; }
         if (cut) label += "\xE2\x80\xA6";
-        renderer.drawText(label, {routeRect.x + 20.0f, routeRect.y + routeRect.height * 0.5f - 6.0f}, 10.5f, routeText);
-        for (float side : {-3.0f, 3.0f}) renderer.drawLine({routeRect.right() - 12.0f + side, routeRect.y + routeRect.height * 0.5f - 1.5f}, {routeRect.right() - 12.0f, routeRect.y + routeRect.height * 0.5f + 1.5f}, 1.4f, theme.getColor("textMuted")); // the board's trailing chevron
+        renderer.drawText(label, {textX, routeRect.y + routeRect.height * 0.5f - 6.0f}, 10.5f, routeText);
+        for (float side : {-kChev, kChev}) renderer.drawLine({chevCenter + side, routeRect.y + routeRect.height * 0.5f - 1.5f}, {chevCenter, routeRect.y + routeRect.height * 0.5f + 1.5f}, 1.4f, theme.getColor("textMuted")); // the board's trailing chevron
     }
     drawMuteIcon(renderer, muteRect, m_isMuted, engaged);
     drawSoloIcon(renderer, soloRect, m_isSolo, engaged);
@@ -845,6 +857,7 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
             m_stepGestureMode = StepGestureMode::None;
             m_stepGestureChanged = false;
             invalidateVisuals();
+            if (m_onStepGestureEnd) m_onStepGestureEnd(m_unitId); // last: the callback may rebuild the rows
             return true;
         }
 
@@ -897,6 +910,9 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
         }
 
         if (event.button == NUIMouseButton::Left) {
+            if (bounds.contains(event.position) && m_onSelectUnit) {
+                m_onSelectUnit(m_unitId, event.modifiers);
+            }
             // Note: NUITextInput handles its own focus loss/commit.
             // We just handle clicks on other elements.
 
@@ -999,6 +1015,9 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
                 // The row menu opens from anywhere on the row except the step grid, where a right-press
                 // is the erase gesture (it used to open only from the name label).
                 if (!localGridRect.contains(localPoint)) {
+                    // A context menu acts on the current selection when its row is already selected. Right-clicking
+                    // an unselected row first makes that row the selection, matching desktop list behavior.
+                    if (!m_isSelected && m_onSelectUnit) m_onSelectUnit(m_unitId, event.modifiers);
                     showRowContextMenu(event.position);
                 }
                 return true;
@@ -1631,9 +1650,8 @@ DropResult UnitRow::onDrop(const DragData& data, const NUIPoint& position) {
             // Remove extension
             filename = filename.substr(0, filename.find_last_of('.'));
 
-            // Update unit name and load sample
+            // Update the display name; sample loading is owned by the panel callback so it can be async and undoable.
             m_manager.setUnitName(m_unitId, filename);
-            m_manager.setUnitAudioClip(m_unitId, path);
 
             // Trigger callback if set
             if (m_onSampleDropped) {
@@ -1684,7 +1702,7 @@ void UnitRow::layoutNameLabel() {
     float labelX = 54.0f; // 42 (control block) + 12 (name indent)
     // The label ends before the pill band; the band width follows the tier.
     const float pillBand = (m_density == Density::Minimal) ? 57.0f : 71.0f; // the M, S and open-lanes keys
-    float labelWidth = std::max(16.0f, (controlWidth - 48.0f) - pillBand - 6.0f);
+    float labelWidth = std::max(16.0f, (controlWidth - 48.0f) - pillBand - 10.0f); // 10 px to the M key, as the chip pads
     m_nameLabel->setBounds(NUIRect(labelX, 7.0f, labelWidth, 30.0f));
     m_nameLabel->setCompact(m_density != Density::Full);
 }
@@ -1807,39 +1825,73 @@ void UnitRow::showRowContextMenu(const NUIPoint& pos) {
     }
 
     m_rowContextMenu->addSeparator();
-    m_rowContextMenu->addItem("Rename", [this]() {
+    auto rename = std::make_shared<NUIContextMenuItem>("Rename");
+    rename->setEnabled(!m_hasMultipleSelection || !m_hasMultipleSelection());
+    rename->setOnClick([this]() {
         if (!m_manager.getUnit(m_unitId))
             return;
         if (m_nameLabel)
             m_nameLabel->beginRename();
     });
+    m_rowContextMenu->addItem(rename);
+
+    auto categoryMenu = std::make_shared<NUIContextMenu>();
+    auto groupMenu = std::make_shared<NUIContextMenu>();
+    const auto addGroup = [this, &groupMenu](const char* label, Aestra::Audio::UnitGroup group) {
+        auto item = std::make_shared<NUIContextMenuItem>(label);
+        item->setOnClick([this, group]() {
+            if (m_onMoveSelectedToGroup) m_onMoveSelectedToGroup(m_unitId, group);
+        });
+        groupMenu->addItem(item);
+    };
+    addGroup("Drums", Aestra::Audio::UnitGroup::Drums);
+    addGroup("Synth", Aestra::Audio::UnitGroup::Synth);
+    addGroup("Audio", Aestra::Audio::UnitGroup::Audio);
+    const size_t selectedCount = m_getSelectedUnitIds ? m_getSelectedUnitIds().size() : 1;
 
     // Category: what this sound is in the song. "Auto" reads it from the name; picking one is the user's own
     // choice, which outranks any name. One undo step.
+    auto roleMenu = std::make_shared<NUIContextMenu>();
     {
         using namespace Aestra::Audio;
         const MusicalRole current = m_manager.unitRole(m_unitId);
-        auto categoryMenu = std::make_shared<NUIContextMenu>();
         const auto choose = [this](const MusicalRole& role) {
             if (!m_trackManager || !m_manager.getUnit(m_unitId)) return;
-            m_trackManager->getCommandHistory().pushAndExecute(
-                std::make_shared<SetUnitRoleCommand>(m_trackManager->getUnitManager(), m_unitId, role));
+            std::vector<UnitID> targets = m_getSelectedUnitIds ? m_getSelectedUnitIds() : std::vector<UnitID>{};
+            if (std::find(targets.begin(), targets.end(), m_unitId) == targets.end()) targets = {m_unitId};
+            if (targets.size() == 1) {
+                m_trackManager->getCommandHistory().pushAndExecute(
+                    std::make_shared<SetUnitRoleCommand>(m_trackManager->getUnitManager(), targets.front(), role));
+                return;
+            }
+            auto transaction = std::make_shared<CommandTransaction>("Set Category for Selected Units");
+            for (const UnitID id : targets)
+                transaction->add(std::make_shared<SetUnitRoleCommand>(m_trackManager->getUnitManager(), id, role));
+            m_trackManager->getCommandHistory().pushAndExecute(transaction);
         };
         auto autoItem = std::make_shared<NUIContextMenuItem>("Auto (from the name)");
         autoItem->setChecked(current.source != RoleSource::User);
         autoItem->setOnClick([choose]() { choose(MusicalRole{}); });
-        categoryMenu->addItem(autoItem);
-        categoryMenu->addSeparator();
-        for (const auto& entry : roleCategoryTable()) {
+        roleMenu->addItem(autoItem);
+        roleMenu->addSeparator();
+        static constexpr RoleCategory roleOrder[] = {
+            RoleCategory::Drums, RoleCategory::Percussion, RoleCategory::Bass, RoleCategory::Keys,
+            RoleCategory::Synth, RoleCategory::Guitar, RoleCategory::Strings, RoleCategory::Vocals,
+            RoleCategory::Fx};
+        for (const RoleCategory orderedCategory : roleOrder) {
+            const auto entryIt = std::find_if(roleCategoryTable().begin(), roleCategoryTable().end(),
+                                              [orderedCategory](const RoleNameEntry& entry) {
+                                                  return entry.category == orderedCategory;
+                                              });
+            if (entryIt == roleCategoryTable().end()) continue;
+            const auto& entry = *entryIt;
             auto item = std::make_shared<NUIContextMenuItem>(entry.label);
-            item->setChecked(current.source == RoleSource::User && current.category == entry.category);
+            item->setChecked(selectedCount <= 1 && current.source == RoleSource::User && current.category == entry.category);
             const RoleCategory category = entry.category;
             const RoleSub keepSub = current.category == category ? current.sub : RoleSub::None; // "Kick 01" chosen as Drums stays Kick
             item->setOnClick([choose, category, keepSub]() { choose(userRole(category, keepSub)); });
-            categoryMenu->addItem(item);
+            roleMenu->addItem(item);
         }
-        m_rowContextMenu->addSubmenu("Category", categoryMenu);
-
         // The offer: sounds that share a role can share a bus. Made on a sound that would go into it, when there
         // are at least two. One undo step; every member keeps its own channel.
         if (m_trackManager && current.known()) {
@@ -1855,13 +1907,25 @@ void UnitRow::showRowContextMenu(const NUIPoint& pos) {
             }
         }
     }
+    categoryMenu->addSubmenu("Move to group", groupMenu);
+    categoryMenu->addSeparator();
+    categoryMenu->addSubmenu("Musical role", roleMenu);
+    m_rowContextMenu->addSubmenu(selectedCount > 1
+        ? "Organize " + std::to_string(selectedCount) + " units"
+        : "Organize unit", categoryMenu);
 
-    m_rowContextMenu->addItem("Duplicate Unit", [this]() { if (m_manager.getUnit(m_unitId) && m_onDuplicateUnit) m_onDuplicateUnit(m_unitId); });
+    m_rowContextMenu->addItem(m_hasMultipleSelection && m_hasMultipleSelection()
+                                  ? "Duplicate Selected Units"
+                                  : "Duplicate Unit", [this]() {
+        if (!m_manager.getUnit(m_unitId))
+            return;
+        if (m_onDuplicateUnit)
+            m_onDuplicateUnit(m_unitId);
+    });
     addUnitGroupMoveItem(*m_rowContextMenu, m_trackManager.get(), m_unitId, m_onGroupChanged); // the first group was a guess
 
-
     m_rowContextMenu->addSeparator();
-    m_rowContextMenu->addItem("Delete Unit", [this, pos]() {
+    m_rowContextMenu->addItem(selectedCount > 1 ? "Delete Selected Units" : "Delete Unit", [this, pos]() {
         if (!m_manager.getUnit(m_unitId))
             return;
         showDeleteConfirmation(pos);
@@ -1872,13 +1936,15 @@ void UnitRow::showRowContextMenu(const NUIPoint& pos) {
 
 void UnitRow::showDeleteConfirmation(const NUIPoint& pos) {
     auto confirm = std::make_shared<NUIContextMenu>();
-    confirm->addItem("Confirm Delete", [this]() {
+    const size_t selectedCount = m_getSelectedUnitIds ? m_getSelectedUnitIds().size() : 1;
+    confirm->addItem(selectedCount > 1 ? "Confirm Delete " + std::to_string(selectedCount) + " Units" : "Confirm Delete",
+      [this]() {
         // Verify unit still exists (defensive check against use-after-free)
         if (!m_manager.getUnit(m_unitId))
             return;
         if (m_onDeleteUnit)
             m_onDeleteUnit(m_unitId);
-    });
+      });
     confirm->addItem("Cancel", []() {});
     attachAndShowContextMenu(this, confirm, pos);
 }

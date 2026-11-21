@@ -7,6 +7,7 @@
 #include "Commands/MuseGrammar.h"
 #include "Commands/MuseService.h"
 #include "Core/AestraContent.h"
+#include "Panels/ArsenalPanel.h"
 #include "Components/TrackManagerUI.h"
 #include "Core/ProjectSerializer.h"
 #include "Models/ProjectReset.h"
@@ -206,6 +207,26 @@ void AestraApp::wireTimelineConfirmations() {
         }
         dialog->showConfirm(title, message, confirmLabel,
                             [onResult](Aestra::DialogResponse response) { onResult(response == Aestra::DialogResponse::Confirm); });
+    });
+}
+
+void AestraApp::wireArsenalConfirmations() {
+    auto panelBase = m_content ? m_content->sequencerWindowFor() : nullptr;
+    auto panel = std::dynamic_pointer_cast<Aestra::Audio::ArsenalPanel>(panelBase);
+    if (!panel) return;
+    panel->setOnConfirmDelete([this](const std::string& title, const std::string& message,
+                                     const std::string& confirmLabel, std::function<void(bool)> onResult) {
+        if (!onResult) return;
+        if (m_windowManager) ensureSettingsAndDialogs();
+        auto dialog = m_windowManager ? m_windowManager->getConfirmationDialog() : nullptr;
+        if (!dialog) { onResult(false); return; }
+        if (auto* root = m_windowManager->getRootComponent()) {
+            dialog->setBounds(root->getBounds());
+            root->removeChild(dialog);
+            root->addChild(dialog);
+        }
+        dialog->showConfirm(title, message, confirmLabel,
+            [onResult](Aestra::DialogResponse response) { onResult(response == Aestra::DialogResponse::Confirm); });
     });
 }
 

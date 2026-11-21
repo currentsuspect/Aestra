@@ -835,6 +835,17 @@ void SampleEditorPanel::requestControlCommit() {
 void SampleEditorPanel::loadSample(const std::string& path) {
     if (!m_trackManager) return;
 
+    if (path.empty()) {
+        m_sampleRate = 0.0;
+        m_sampleLength = 0;
+        m_waveformData.clear();
+        m_waveformDisplay->setWaveformData(m_waveformData);
+        m_waveformDisplay->setDurationSeconds(0.0);
+        m_waveformDisplay->repaint();
+        m_adsrDisplay->repaint();
+        return;
+    }
+
     Log::info("[SampleEditor] Loading sample: " + path);
 
     std::vector<float> decoded;

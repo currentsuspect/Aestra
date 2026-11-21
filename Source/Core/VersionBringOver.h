@@ -53,6 +53,11 @@ inline uint64_t strHash(const std::string& s) { return std::hash<std::string>{}(
 inline uint64_t patternSignature(const PatternSource& p, const SourceManager& sources) {
     uint64_t h = 1469598103934665603ULL;
     mix(h, q(p.lengthBeats));
+    mix(h, q(p.swing));
+    for (const auto& [unitId, amount] : p.unitSwing) {
+        mix(h, unitId);
+        mix(h, q(amount));
+    }
     if (p.isMidi()) {
         for (const auto& n : p.getMidiNotes()) {
             mix(h, static_cast<uint64_t>(n.pitch)); mix(h, q(n.startBeat)); mix(h, q(n.durationBeats)); mix(h, q(n.velocity));

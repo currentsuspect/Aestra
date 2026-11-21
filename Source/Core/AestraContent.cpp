@@ -66,6 +66,7 @@ constexpr int kCountInStartupFrameLimit = 60;
 
 // Audio includes
 #include "../AestraAudio/include/Commands/CommandRegistry.h"
+#include "../AestraAudio/include/Commands/LoadSampleCommand.h"
 #include "../AestraAudio/include/Playback/PlaybackContextController.h"
 #include "../AestraCore/include/AestraLog.h"
 #include "AudioEngine.h"
@@ -1483,15 +1484,24 @@ void AestraContent::setupArsenalPanels() {
             loadSampleIntoUnitAsync(targetUnit, samplePath, false);
         });
     });
+    wireEmptySoundNotice();
+    m_sequencerPanel->setOnUnitAdded([this](UnitID) { applyKeySurfaceEvent(WorkspaceFocusModel::KeySurfaceEvent::UnitAdded); }); // F2 and Delete act on the new row
     m_sequencerPanel->setOnRequestSampleEditor([this](UnitID id) {
         if (!m_trackManager) return;
         const auto* unit = m_trackManager->getUnitManager().getUnit(id);
-        if (unit && !unit->audioClipPath.empty())
+        if (unit)
             openSampleEditorForUnit(id, unit->audioClipPath);
     });
     m_sequencerPanel->setOnPluginDropped([this](const std::string& pluginId) { loadInstrumentToArsenal(pluginId); });
     m_sequencerPanel->setOnPluginDroppedToUnit([this](UnitID unitId, const std::string& pluginId) { loadInstrumentIntoArsenalUnit(unitId, pluginId); });
     m_sequencerPanel->setOnSampleDroppedToUnit([this](UnitID unitId, const std::string& samplePath) { loadSampleIntoUnitAsync(unitId, samplePath, false); });
+    m_sequencerPanel->setOnKitFolderSelected([this](const std::string& folder) {
+        if (m_browserToggle) m_browserToggle->setSelectedIndex(0);
+        if (m_fileBrowser) {
+            m_fileBrowser->setVisible(true);
+            m_fileBrowser->navigateTo(folder);
+        }
+    });
     wireArsenalSoundSets(*m_sequencerPanel, m_fileBrowser, m_trackManager, [this]() { setDirty(true); });
     m_sequencerPanel->setOnSelectedUnitChanged([this](UnitID unitId) {
         if (m_pianoRollPanel) {
@@ -1691,6 +1701,8 @@ void AestraContent::logModeStateIfChanged() {
 
 void AestraContent::onUpdate(double dt) {
     drainMainThreadTasks();
+    syncKeyOwner();
+    updateEmptySoundNotice();
     closeContextualPanels();
     updatePendingCountIn();
     logModeStateIfChanged();
@@ -1964,20 +1976,21 @@ void AestraContent::onRender(AestraUI::NUIRenderer& renderer) {
         m_workspaceLayer->onRender(renderer);
     }
 
+    const bool embeddedPatternVisible =
+        m_fileBrowser && m_fileBrowser->isVisible() &&
+        m_fileBrowser->getActiveNavAction() == AestraUI::FileBrowser::BrowserNavAction::Patterns;
+    if (m_overlayLayer && m_overlayLayer->isVisible()) {
+        m_overlayLayer->onRender(renderer);
+    }
+
+    // Keep the dock divider visible over floating panels such as Arsenal.
     if (m_fileBrowser && m_fileBrowser->isVisible()) {
         drawDividerRail(m_fileBrowser);
     } else if (m_pluginBrowser && m_pluginBrowser->isVisible()) {
         drawDividerRail(m_pluginBrowser);
     }
-    const bool embeddedPatternVisible =
-        m_fileBrowser && m_fileBrowser->isVisible() &&
-        m_fileBrowser->getActiveNavAction() == AestraUI::FileBrowser::BrowserNavAction::Patterns;
     if (m_patternBrowser && m_patternBrowser->isVisible() && !embeddedPatternVisible) {
         drawDividerRail(m_patternBrowser);
-    }
-
-    if (m_overlayLayer && m_overlayLayer->isVisible()) {
-        m_overlayLayer->onRender(renderer);
     }
 }
 
@@ -2261,9 +2274,47 @@ void AestraContent::onResize(int width, int height) {
     AestraUI::NUIComponent::onResize(width, height);
 }
 
+// Keys go to the surface the user is working in (WorkspaceFocusModel::nextKeySurface holds the rules).
+void AestraContent::applyKeySurfaceEvent(WorkspaceFocusModel::KeySurfaceEvent event) {
+    m_keySurface = WorkspaceFocusModel::nextKeySurface(m_keySurface, event);
+    publishKeyOwner();
+}
+
+void AestraContent::publishKeyOwner() {
+    const bool pianoRollShown = m_pianoRollPanel && m_pianoRollPanel->isVisible();
+    const auto owner = WorkspaceFocusModel::keyOwner(m_viewFocus, pianoRollShown, m_keySurface);
+    if (owner == WorkspaceFocusModel::currentKeyOwner()) return;
+    WorkspaceFocusModel::setCurrentKeyOwner(owner);
+    if (m_sequencerPanel) m_sequencerPanel->repaint();
+    if (m_pianoRollPanel) m_pianoRollPanel->repaint();
+}
+
+// The piano roll becoming visible, by any path (button, F7, a double-click on a pattern, a workspace switch that restores
+// it), takes the keys at once; becoming hidden hands them back to the Arsenal.
+void AestraContent::syncKeyOwner() {
+    const bool shown = m_pianoRollPanel && m_pianoRollPanel->isVisible();
+    if (shown != m_pianoRollWasShown) {
+        m_pianoRollWasShown = shown;
+        applyKeySurfaceEvent(shown ? WorkspaceFocusModel::KeySurfaceEvent::PianoRollOpened
+                                   : WorkspaceFocusModel::KeySurfaceEvent::PianoRollClosed);
+        return;
+    }
+    publishKeyOwner(); // the view focus may have changed
+}
+
 bool AestraContent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (!isVisible() || !isEnabled()) {
         return false;
+    }
+    if (m_notificationToast) m_notificationToast->trackPointer(event.position); // a toast with buttons holds its time under the pointer
+
+    // The surface last pressed in owns the selection-level keys. A press inside the visible piano roll makes it
+    // the key surface; a press anywhere else hands the keys back to the workspace.
+    if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
+        const bool inPianoRoll = m_pianoRollPanel && m_pianoRollPanel->isVisible() &&
+                                 m_pianoRollPanel->getBounds().contains(event.position);
+        applyKeySurfaceEvent(inPianoRoll ? WorkspaceFocusModel::KeySurfaceEvent::PressInPianoRoll
+                                         : WorkspaceFocusModel::KeySurfaceEvent::PressElsewhere);
     }
 
     // Any left-press outside the file-browser search box dismisses its caret.
@@ -2310,10 +2361,6 @@ bool AestraContent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         return m_workspaceLayer && m_workspaceLayer->onMouseEvent(event);
     }
 
-    if (!m_browserResizing && event.pressed && m_overlayLayer && m_overlayLayer->onMouseEvent(event)) {
-        return true;
-    }
-
     if (m_browserResizing) {
         if (event.released && event.button == AestraUI::NUIMouseButton::Left) {
             m_browserResizing = false;
@@ -2344,6 +2391,12 @@ bool AestraContent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             m_browserResizeStartPatternWidth = std::max(kMinPatternBrowserWidth, m_patternBrowserWidthPref);
             return true;
         }
+    }
+
+    // Docked browser dividers sit behind floating Arsenal/editor overlays. Let
+    // their edge hit target win before the overlay consumes the press.
+    if (!m_browserResizing && event.pressed && m_overlayLayer && m_overlayLayer->onMouseEvent(event)) {
+        return true;
     }
 
     return AestraUI::NUIComponent::onMouseEvent(event);
@@ -3085,6 +3138,9 @@ AestraUI::NUICursorStyle AestraContent::getPanelResizeCursorStyle(const AestraUI
     if (m_browserResizing && m_browserResizeTarget != BrowserResizeTarget::None) {
         return AestraUI::NUICursorStyle::ResizeEW;
     }
+    if (hitTestBrowserResizeTarget(mouseScreen) != BrowserResizeTarget::None) {
+        return AestraUI::NUICursorStyle::ResizeEW;
+    }
 
     const auto resolveStyle = [&mouseScreen](const auto& panel) {
         if (!panel || !panel->isVisible()) {
@@ -3112,10 +3168,6 @@ AestraUI::NUICursorStyle AestraContent::getPanelResizeCursorStyle(const AestraUI
     const auto mixerStyle = resolveStyle(m_mixerPanel);
     if (mixerStyle != AestraUI::NUICursorStyle::Arrow)
         return mixerStyle;
-
-    if (hitTestBrowserResizeTarget(mouseScreen) != BrowserResizeTarget::None) {
-        return AestraUI::NUICursorStyle::ResizeEW;
-    }
 
     return AestraUI::NUICursorStyle::Arrow;
 }
@@ -3422,6 +3474,9 @@ void AestraContent::updatePatternLoopLength(PatternID patternId) {
 }
 
 void AestraContent::handleTransportPlayRequest() {
+    if (m_sequencerPanel && m_sequencerPanel->isVisible() && resolveTransportFocus() == ViewFocus::Arsenal) {
+        noteEmptySounds(m_sequencerPanel->emptyUnits(true)); // Play over a silent sampler that has steps
+    }
     if (resolveTransportFocus() != ViewFocus::Timeline || !m_trackManager) {
         playFromCurrentFocus();
         return;
@@ -4000,6 +4055,15 @@ void AestraContent::showToast(const std::string& message) {
     m_notificationToast->bringToFront();
 }
 
+void AestraContent::showActionToast(AestraUI::ActionToastSpec spec) {
+    if (!m_notificationToast) {
+        return;
+    }
+    m_notificationToast->showAction(std::move(spec));
+    m_notificationToast->setBounds(toastRect(getBounds()));
+    m_notificationToast->bringToFront();
+}
+
 void AestraContent::loadSampleIntoUnitAsync(UnitID unitId, const std::string& samplePath, bool openEditorWhenReady) {
     if (!m_trackManager || unitId == 0 || samplePath.empty()) {
         return;
@@ -4012,6 +4076,14 @@ void AestraContent::loadSampleIntoUnitAsync(UnitID unitId, const std::string& sa
     }
     auto weakSelf = weak_from_this();
 
+    std::string previousSamplePath;
+    std::string previousUnitName;
+    bool previousUnitEnabled = false;
+    if (const auto* currentUnit = m_trackManager->getUnitManager().getUnit(unitId)) {
+        previousSamplePath = currentUnit->audioClipPath;
+        previousUnitName = currentUnit->name;
+        previousUnitEnabled = currentUnit->isEnabled || currentUnit->enabled;
+    }
     if (m_trackManager->getUnitManager().getUnit(unitId)) {
         std::string filename = std::filesystem::path(samplePath).stem().string();
         if (!filename.empty()) {
@@ -4024,7 +4096,7 @@ void AestraContent::loadSampleIntoUnitAsync(UnitID unitId, const std::string& sa
         m_sequencerPanel->refreshUnits();
     }
 
-    std::thread([weakSelf, generation, unitId, samplePath, openEditorWhenReady]() {
+    std::thread([weakSelf, generation, unitId, samplePath, previousSamplePath, previousUnitName, previousUnitEnabled, openEditorWhenReady]() {
         std::vector<float> decodedData;
         uint32_t sampleRate = 0;
         uint32_t numChannels = 0;
@@ -4058,7 +4130,7 @@ void AestraContent::loadSampleIntoUnitAsync(UnitID unitId, const std::string& sa
             return;
         }
 
-        self->enqueueMainThreadTask([weakSelf, generation, unitId, samplePath, openEditorWhenReady, decoded,
+        self->enqueueMainThreadTask([weakSelf, generation, unitId, samplePath, previousSamplePath, previousUnitName, previousUnitEnabled, openEditorWhenReady, decoded,
                                      decodedData = std::move(decodedData), sampleRate, numChannels,
                                      sampleLength, editorWaveform = std::move(editorWaveform),
                                      previewWaveform = std::move(previewWaveform), durationSeconds]() mutable {
@@ -4078,12 +4150,20 @@ void AestraContent::loadSampleIntoUnitAsync(UnitID unitId, const std::string& sa
             if (!decoded ||
                 !unitManager.setUnitAudioClipFromDecoded(unitId, samplePath, std::move(decodedData), sampleRate,
                                                          numChannels, std::move(previewWaveform), durationSeconds)) {
+                unitManager.setUnitName(unitId, previousUnitName);
+                unitManager.setUnitEnabled(unitId, previousUnitEnabled);
+                if (self->m_sequencerPanel) self->m_sequencerPanel->refreshUnits();
                 AESTRA_LOG_ERROR("Failed to load sample into Unit " + std::to_string(unitId) + ": " + samplePath);
                 self->showToast("Could not load " + std::filesystem::path(samplePath).filename().string());
                 return;
             }
             // A new sample invalidates keep-length renders: re-render the notes already written.
             self->m_trackManager->prewarmSamplerKeepLength(false);
+
+            auto sampleCommand = std::make_shared<Audio::LoadSampleCommand>(
+                unitManager, unitId, samplePath);
+            sampleCommand->markExecuted(previousSamplePath, previousUnitName, previousUnitEnabled);
+            self->m_trackManager->getCommandHistory().pushExecuted(sampleCommand);
 
             if (self->m_sequencerPanel) {
                 self->m_sequencerPanel->setSelectedUnit(unitId);
@@ -4528,6 +4608,7 @@ void AestraContent::toggleTakesPanel() {
 
 // Global Shortcuts
 bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
+    syncKeyOwner(); // a panel opened or closed since the last frame hands the keys over before this key is read
     // A note release must win even if focus moved after its note-on; otherwise
     // an editable field can consume the key-up and leave a stuck voice.
     if (event.released && m_musicalTyping.handleKeyEvent(event)) {
@@ -4560,9 +4641,51 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     }
 
     if (m_sequencerPanel && m_sequencerPanel->isVisible() && m_sequencerPanel->handleDrawerKey(event)) return true; // sound drawer typing
+    if ((event.modifiers & AestraUI::NUIModifiers::Ctrl) &&
+        (event.keyCode == AestraUI::NUIKeyCode::Z || event.keyCode == AestraUI::NUIKeyCode::Y)) {
+        if (auto* input = dynamic_cast<AestraUI::NUITextInput*>(AestraUI::NUIComponent::getFocusedComponent());
+            input && input->isVisible() && input->onKeyEvent(event)) return true;
+    }
     // Takes panel inline rename captures typing while active: it wins over global shortcuts (Ctrl+Z mid-edit).
     if (m_takesPanel && m_takesPanel->isVisible() && m_takesPanel->handleKeyEvent(event))
         return true;
+
+    const bool ctrlA = (event.modifiers & AestraUI::NUIModifiers::Ctrl) &&
+                       event.keyCode == AestraUI::NUIKeyCode::A;
+    if (ctrlA) {
+        auto* focused = AestraUI::NUIComponent::getFocusedComponent();
+        const auto isWithin = [](AestraUI::NUIComponent* child, const AestraUI::NUIComponent* ancestor) {
+            for (auto* current = child; current; current = current->getParent())
+                if (current == ancestor) return true;
+            return false;
+        };
+        if (focused && !isWithin(focused, m_sequencerPanel.get())) {
+            if (m_pianoRollPanel && m_pianoRollPanel->isVisible() &&
+                isWithin(focused, m_pianoRollPanel.get()) && m_pianoRollPanel->handleKeyEvent(event)) {
+                return true;
+            }
+            // The root routes Ctrl shortcuts here before the focused widget.
+            // Yield when another editor or unit owns focus so its own Ctrl+A
+            // handler gets the key on the root's focused-component pass.
+            return false;
+        }
+    }
+
+    // Arsenal owns selection-level shortcuts even when a child row did not
+    // acquire widget focus. Let active text inputs keep Delete/Escape while
+    // editing; the pattern rename input is then handled by its own callback.
+    const bool arsenalPanelKey = event.keyCode == AestraUI::NUIKeyCode::Escape ||
+        event.keyCode == AestraUI::NUIKeyCode::Delete || event.keyCode == AestraUI::NUIKeyCode::Backspace ||
+        event.keyCode == AestraUI::NUIKeyCode::F2 ||
+        ((event.modifiers & AestraUI::NUIModifiers::Ctrl) && event.keyCode == AestraUI::NUIKeyCode::A);
+    const bool pianoRollShown = m_pianoRollPanel && m_pianoRollPanel->isVisible();
+    if (arsenalPanelKey && WorkspaceFocusModel::arsenalOwnsSelectionKeys(m_viewFocus, pianoRollShown, m_keySurface) &&
+        m_sequencerPanel &&
+        m_sequencerPanel->isVisible() &&
+        dynamic_cast<AestraUI::NUITextInput*>(AestraUI::NUIComponent::getFocusedComponent()) == nullptr &&
+        m_sequencerPanel->onKeyEvent(event)) {
+        return true;
+    }
 
     // Global view-toggle shortcuts (the transport view buttons advertise these
     // in their tooltips). F-keys never reach text inputs or musical typing, so

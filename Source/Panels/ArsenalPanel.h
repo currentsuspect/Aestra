@@ -16,6 +16,7 @@
 #include "NUIComponent.h"
 #include "../AestraUI/Core/NUIDragDrop.h"
 #include <optional>
+#include <set>
 #include <utility>
 
 namespace Aestra {
@@ -43,6 +44,10 @@ public:
     void onUpdate(double dt) override;
     /** @brief Handle mouse input routed to the Arsenal panel. */
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
+    bool onKeyEvent(const AestraUI::NUIKeyEvent& event) override;
+    using ConfirmDialogRequest = std::function<void(const std::string&, const std::string&, const std::string&,
+                                                     std::function<void(bool)>)>;
+    void setOnConfirmDelete(ConfirmDialogRequest callback) { m_onConfirmDelete = std::move(callback); }
     /** @brief Handle drag-enter for plugin/sample drops. */
     AestraUI::DropFeedback onDragEnter(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) override;
     /** @brief Handle drag-over for plugin/sample drops. */
@@ -96,6 +101,22 @@ public:
     void setOnRequestPatternEditor(std::function<void(PatternID, UnitID)> cb) { m_onRequestPatternEditor = cb; }
     /** @brief Set the callback used to request sample loading. */
     void setOnRequestLoadSample(std::function<void(UnitID)> cb) { m_onRequestLoadSample = cb; }
+    /// A pad on this row was pressed and released (the "no sound yet" notice asks whether the unit is silent).
+    void setOnStepGestureEnd(std::function<void(UnitID)> cb) { m_onStepGestureEnd = std::move(cb); }
+    /// A unit was just added with "+ Add a sound" (the app hands the keys to the Arsenal so F2 and Delete act on it).
+    void setOnUnitAdded(std::function<void(UnitID)> cb) { m_onUnitAdded = std::move(cb); }
+    /// True when the unit makes no sound yet (ArsenalEmptyNotice.h defines "empty" per unit type).
+    bool isUnitEmpty(UnitID id) const;
+    /// Empty units; with @p withStepsOnly, only those that have a step in the active pattern (they are the ones that play silence).
+    std::vector<UnitID> emptyUnits(bool withStepsOnly) const;
+    /// The same action as the row's Load Sample menu item.
+    void requestLoadSample(UnitID id) { if (m_onRequestLoadSample) m_onRequestLoadSample(id); }
+    /// Opens the type list under "+ Add a sound" (the only instrument/plugin choice the Arsenal offers).
+    void openSoundTypePicker();
+    /// A window-space rectangle (a toast) the list must not run under: the list's bottom edge rises above it and the
+    /// list scrolls to stay clear. An empty rectangle releases it.
+    void setKeepClear(const AestraUI::NUIRect& rect);
+    float bottomInset() const { return m_bottomInset; }
     /** @brief Set the callback used to open the sample editor. */
     void setOnRequestSampleEditor(std::function<void(UnitID)> cb) { m_onRequestSampleEditor = cb; }
     /** @brief Set the callback used for generic plugin drops. */
@@ -110,6 +131,8 @@ public:
     void setSoundSetProviders(std::function<std::vector<std::string>()> names, std::function<std::vector<std::string>(const std::string&)> members,
                               std::function<void(UnitID, const std::string&)> chosen) { m_lanes.setSoundSetProviders(std::move(names), std::move(members), std::move(chosen)); }
     void setOnSampleDroppedToUnit(std::function<void(UnitID, const std::string&)> cb) { m_onSampleDroppedToUnit = cb; }
+    /** @brief Open a selected kit folder in the File Browser without creating Arsenal state. */
+    void setOnKitFolderSelected(std::function<void(const std::string&)> cb) { m_onKitFolderSelected = std::move(cb); }
     /// A short line for the user after an action (a bus created): the app shows it as a toast.
     void setOnNotify(std::function<void(const std::string&)> cb) { m_onNotify = std::move(cb); }
     /** @brief Set the callback fired when unit selection changes. */
@@ -148,7 +171,7 @@ private:
     AestraUI::NUIRect m_sceneRect{};
     Aestra::ArsenalSceneMenu m_sceneMenu; ///< right-click a pattern: Rename, Duplicate, Delete (V82-AR1, FD-52)
     void showSceneMenu(uint64_t patternId, const AestraUI::NUIPoint& at); ///< ArsenalPanelScenes.cpp
-    void sceneMenuChanged(uint64_t select);                                ///< ArsenalPanelScenes.cpp
+    void sceneMenuChanged(uint64_t active, const std::vector<uint64_t>& selected); ///< ArsenalPanelScenes.cpp
     void reconcilePatterns();                                              ///< ArsenalPanelScenes.cpp: after undo/redo, a vanished active pattern and a stale browser
     size_t m_patternSignature{0};                                          ///< ids + names the browser was last refreshed for
     Aestra::ArsenalRackLayout m_rack; ///< groups, headers and row positions (one answer for layout, scroll and drop)
@@ -189,11 +212,6 @@ private:
     // Pattern Progress Visualization
     static constexpr float COMMAND_HEADER_HEIGHT = 64.0f;
     static constexpr float PROGRESS_HEADER_HEIGHT = 34.0f;
-    /// The list's visible height, and how far it can scroll. One answer for the clamp and the wheel:
-    /// with two, the wheel stopped short of the bottom onUpdate allows, so the rack's floor could not be
-    /// scrolled into view.
-    float listViewportHeight() const;
-    float listMaxScrollY() const;
     void drawProgressHeader(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds);
     void drawCommandHeader(AestraUI::NUIRenderer& renderer);
     int calculateCurrentStep(); // Calculate step from TrackManager clock
@@ -207,7 +225,7 @@ private:
     void adjustPatternBars(int deltaBars);
     void adjustPatternSteps(int deltaBars);
     void createUnitOfType(UnitType type, const std::string& nameOverride = {});
-    void loadKitFromFolder(const std::string& folder); ///< each audio file in the folder becomes a unit
+    void loadKitFromFolder(const std::string& folder); ///< selecting a kit opens it in the File Browser; it creates no units
     Aestra::PendingFileDialog m_kitPicker; ///< "Choose a folder" runs off the UI thread, so the app never stops responding
     void drawUnitTypePicker(AestraUI::NUIRenderer& renderer);
 
@@ -223,13 +241,27 @@ private:
         UnitID sourceUnitId;
     };
     std::optional<PatternClipboard> m_clipboard;
-    UnitID m_selectedUnitId = 0; // Currently selected unit for copy/paste
+    UnitID m_selectedUnitId = 0; // Primary selected unit for editing/copy/paste
+    std::vector<UnitID> m_selectedUnitIds; // Desktop-style multi-selection
+    UnitID m_unitSelectionAnchor = 0;
+    std::vector<uint64_t> m_selectedPatternIds; // Desktop-style pattern multi-selection
+    uint64_t m_patternSelectionAnchor = 0;
+    enum class SelectionKind { None, Units, Patterns };
+    SelectionKind m_selectionKind{SelectionKind::None};
     UnitID m_selectionUnitId = 0; // Unit owning the current step selection (survives row rebuilds)
     std::vector<int> m_selectedSteps; // Selected step indices for m_selectionUnitId
+    ConfirmDialogRequest m_onConfirmDelete;
 
     void onAddUnit();
     bool removeSelectedUnit();
+    bool removeSelectedUnits();
+    bool removeSelectedPatterns();
+    bool confirmDeleteSelection();
+    bool beginRenameSelectedPattern();
+    void handleUnitSelection(UnitID unitId, AestraUI::NUIModifiers modifiers);
+    void handlePatternSelection(uint64_t patternId, AestraUI::NUIModifiers modifiers);
     void syncRowSelection();
+
     void removeUnitNotes(UnitID unitId);
     
     // Drag-drop callbacks
@@ -237,16 +269,22 @@ private:
     void onUnitDrop(UnitID unitId, int dropIndex);
     void showColorPicker(UnitID unitId, AestraUI::NUIPoint position);
     
-    bool onKeyEvent(const AestraUI::NUIKeyEvent& event) override;
     
     std::function<void(UnitID)> m_onRequestEditor;
     std::function<void(PatternID, UnitID)> m_onRequestPatternEditor;
     std::function<void(UnitID)> m_onRequestLoadSample;
+    std::function<void(UnitID)> m_onStepGestureEnd;
+    std::function<void(UnitID)> m_onUnitAdded;
+    float m_bottomInset = 0.0f;
+    AestraUI::NUIRect m_keepClear{};
+    void scrollUnitIntoView(UnitID id);
+    float maxScrollY() const; // how far the list can scroll: the one limit for the wheel and the per-frame clamp
     std::function<void(UnitID)> m_onRequestSampleEditor;
     std::function<void(const std::string&)> m_onPluginDropped;
     std::function<void(UnitID, const std::string&)> m_onPluginDroppedToUnit;
     std::function<void(const std::string&)> m_onNotify;
     std::function<void(UnitID, const std::string&)> m_onSampleDroppedToUnit;
+    std::function<void(const std::string&)> m_onKitFolderSelected;
     std::function<void(UnitID)> m_onSelectedUnitChanged;
     std::function<void(double beat, bool active)> m_onPositionScrubbed;
     std::shared_ptr<AestraUI::PianoRollRuler> m_ruler; ///< the bar ruler the piano roll uses (numbers, ticks, playhead marker, scrub)
@@ -260,6 +298,7 @@ private:
     AestraUI::NUIRect m_addUnitButtonRect{};
     AestraUI::NUIRect m_fitToggleRect{};
     AestraUI::NUIRect m_fitModeRect{};
+    int m_fitHover = -1; // 0 = Fit, 1 = Scroll under the pointer: its label lights up, like the title-bar switcher
     AestraUI::NUIRect m_scrollModeRect{};
     float m_scrollIndicatorAlpha = 0.0f;
     std::chrono::steady_clock::time_point m_lastUserGridScroll{};

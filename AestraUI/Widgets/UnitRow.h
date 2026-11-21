@@ -64,6 +64,7 @@ public:
     std::function<void()> m_onRequestColorPicker;
     /** @brief Callback used to open the unit editor. */
     std::function<void(Aestra::Audio::UnitID)> m_onEditUnit;
+    std::function<void(Aestra::Audio::UnitID)> m_onRequestSampleEditor;
     /** @brief Callback used to trigger sample loading for the unit. */
     std::function<void(Aestra::Audio::UnitID)> m_onLoadUnitSample;
     /** @brief Callback fired when a sample path is dropped directly onto the unit. */
@@ -72,25 +73,33 @@ public:
     std::function<void(Aestra::Audio::UnitID, const std::string&)> m_onPluginDropped;
     /** @brief Callback fired after the shared pattern backing this row is edited. */
     std::function<void(Aestra::Audio::PatternID)> m_onPatternEdited;
+    std::function<void(Aestra::Audio::UnitID)> m_onStepGestureEnd;
     /** @brief Callback used to open the full Piano Roll editor. */
     std::function<void(Aestra::Audio::PatternID, Aestra::Audio::UnitID)> m_onOpenPatternEditor;
     /** @brief Callback fired when the unit name is renamed. */
     std::function<void(Aestra::Audio::UnitID, const std::string&)> m_onRenameUnit;
     /** @brief Callback fired when the unit is deleted via context menu. */
+    std::function<void(Aestra::Audio::UnitID, NUIModifiers)> m_onSelectUnit;
     std::function<void(Aestra::Audio::UnitID)> m_onDeleteUnit;
     std::function<void(const std::string&)> m_onNotify;
     /** @brief Callback fired when the unit is duplicated via context menu. */
     std::function<void(Aestra::Audio::UnitID)> m_onDuplicateUnit;
+    std::function<bool()> m_hasMultipleSelection;
+    std::function<std::vector<Aestra::Audio::UnitID>()> m_getSelectedUnitIds;
+    std::function<void(Aestra::Audio::UnitID, Aestra::Audio::UnitGroup)> m_onMoveSelectedToGroup;
     std::function<void(Aestra::Audio::UnitID)> m_onGroupChanged;
 
     void setOnDragStart(std::function<void(Aestra::Audio::UnitID)> cb) { m_onDragStart = cb; }
     void setOnDrop(std::function<void(Aestra::Audio::UnitID, int)> cb) { m_onDrop = cb; }
     void setOnRequestColorPicker(std::function<void()> cb) { m_onRequestColorPicker = cb; }
     void setOnEditUnit(std::function<void(Aestra::Audio::UnitID)> cb) { m_onEditUnit = cb; }
+    void setOnRequestSampleEditor(std::function<void(Aestra::Audio::UnitID)> cb) { m_onRequestSampleEditor = cb; }
     void setOnLoadUnitSample(std::function<void(Aestra::Audio::UnitID)> cb) { m_onLoadUnitSample = cb; }
     void setOnSampleDropped(std::function<void(Aestra::Audio::UnitID, const std::string&)> cb) { m_onSampleDropped = cb; }
     void setOnPluginDropped(std::function<void(Aestra::Audio::UnitID, const std::string&)> cb) { m_onPluginDropped = cb; }
     void setOnPatternEdited(std::function<void(Aestra::Audio::PatternID)> cb) { m_onPatternEdited = cb; }
+    /** @brief Called when a press on the step grid is released (a pad was pressed and let go on this row). */
+    void setOnStepGestureEnd(std::function<void(Aestra::Audio::UnitID)> cb) { m_onStepGestureEnd = cb; }
     // The pattern and the unit whose row asked: the piano roll opens on that unit's notes, not the pattern's first unit.
     void setOnOpenPatternEditor(std::function<void(Aestra::Audio::PatternID, Aestra::Audio::UnitID)> cb) { m_onOpenPatternEditor = cb; }
     void setOnRenameUnit(std::function<void(Aestra::Audio::UnitID, const std::string&)> cb) { m_onRenameUnit = cb; }
@@ -98,6 +107,13 @@ public:
     /// A short line to tell the user what an action just did ("Created Drum Bus with 3 sounds"): the app shows it as a toast.
     void setOnNotify(std::function<void(const std::string&)> cb) { m_onNotify = std::move(cb); }
     void setOnDuplicateUnit(std::function<void(Aestra::Audio::UnitID)> cb) { m_onDuplicateUnit = cb; }
+    void setHasMultipleSelection(std::function<bool()> cb) { m_hasMultipleSelection = std::move(cb); }
+    void setGetSelectedUnitIds(std::function<std::vector<Aestra::Audio::UnitID>()> cb) {
+        m_getSelectedUnitIds = std::move(cb);
+    }
+    void setOnMoveSelectedToGroup(std::function<void(Aestra::Audio::UnitID, Aestra::Audio::UnitGroup)> cb) {
+        m_onMoveSelectedToGroup = std::move(cb);
+    }
     void setOnGroupChanged(std::function<void(Aestra::Audio::UnitID)> cb) { m_onGroupChanged = std::move(cb); } ///< moved to Synth / Drums
     
     /**
@@ -166,6 +182,7 @@ public:
      * @return Backing unit identifier.
      */
     Aestra::Audio::UnitID getUnitId() const { return m_unitId; }
+    void beginRename() { if (m_nameLabel) m_nameLabel->beginRename(); }
     /** @brief The output by name ("Master", "Drum Bus"), as the row's pill reads it. */
     const std::string& outputName() const { return m_mixerRouteName; }
     int outputColorIndex() const { return m_mixerRouteColorIndex; }
@@ -174,6 +191,8 @@ public:
      * @param selected True when the row is currently selected.
      */
     void setSelected(bool selected) { m_isSelected = selected; invalidateVisuals(); }
+    /** @brief Callback fired when the row becomes the current selection target. */
+    void setOnSelectUnit(std::function<void(Aestra::Audio::UnitID, NUIModifiers)> callback) { m_onSelectUnit = std::move(callback); }
     /**
      * @brief Check whether the row is selected.
      * @return True when the row is selected.

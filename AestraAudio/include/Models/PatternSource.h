@@ -2,9 +2,11 @@
 #include "ClipSource.h"
 #include "../Music/ScaleContext.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -99,6 +101,30 @@ public:
     std::optional<ScaleContext> scaleOverride;
     /** Delays every odd 16th step: 0 = straight, 1 = the longest swing (a half step late). */
     float swing{0.0f};
+    /** Per-unit swing overrides. An absent entry inherits the pattern-wide swing. */
+    std::vector<std::pair<uint64_t, float>> unitSwing;
+
+    float swingForUnit(uint64_t unitId) const {
+        for (const auto& [id, amount] : unitSwing) if (id == unitId) return std::clamp(amount, 0.0f, 1.0f);
+        return std::clamp(swing, 0.0f, 1.0f);
+    }
+    std::optional<float> unitSwingOverride(uint64_t unitId) const {
+        for (const auto& [id, amount] : unitSwing) if (id == unitId) return amount;
+        return std::nullopt;
+    }
+    void setUnitSwing(uint64_t unitId, float amount) {
+        amount = std::clamp(amount, 0.0f, 1.0f);
+        for (auto& [id, value] : unitSwing) {
+            if (id == unitId) { value = amount; return; }
+        }
+        unitSwing.emplace_back(unitId, amount);
+        std::sort(unitSwing.begin(), unitSwing.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+    }
+    void restoreUnitSwingOverride(uint64_t unitId, std::optional<float> amount) {
+        unitSwing.erase(std::remove_if(unitSwing.begin(), unitSwing.end(), [unitId](const auto& v) { return v.first == unitId; }), unitSwing.end());
+        if (amount.has_value()) unitSwing.emplace_back(unitId, std::clamp(*amount, 0.0f, 1.0f));
+        std::sort(unitSwing.begin(), unitSwing.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+    }
 
     uint32_t getMixerChannelId() const { return m_mixerChannelId; }
     void setMixerChannelId(uint32_t channelId) { m_mixerChannelId = channelId; }

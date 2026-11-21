@@ -309,6 +309,8 @@ public:
      * @return True when a unit was removed.
      */
     bool removeUnit(UnitID id);
+    /** @brief Restore a previously removed unit at its original display position. */
+    bool restoreUnit(const UnitInfo& info, size_t index);
     /**
      * @brief Remove every unit from the manager.
      */
@@ -400,6 +402,7 @@ public:
 
     /** @brief Set the PatternManager used for auto-creating patterns per unit. */
     void setPatternManager(PatternManager* pm) { m_patternManager = pm; }
+    PatternManager* getPatternManager() const { return m_patternManager; }
 
     /**
      * @brief Publish the current Arsenal state as an immutable snapshot.

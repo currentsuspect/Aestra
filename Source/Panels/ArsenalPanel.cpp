@@ -1,13 +1,23 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "ArsenalPanel.h"
+
+#include "ArsenalEmptyNotice.h"
 #include "UnitGroupMenu.h"
 #include "ArsenalGridScroll.h"
+#include "ArsenalScrollIntoView.h"
+#include "ArsenalUnitNaming.h"
 #include "../AestraUI/Core/NUIWheel.h"
 #include "ArsenalRackDraw.h"
 #include "../App/ServiceLocator.h"
 #include "../Core/UISurfaceStore.h"
 
 #include "Commands/AssignUnitToFirstFreeInsertCommand.h"
+#include "Commands/AddUnitCommand.h"
+#include "Commands/CommandTransaction.h"
+#include "Commands/DeleteUnitCommand.h"
+#include "Commands/PatternMenuCommands.h"
+#include "Commands/SetUnitsGroupCommand.h"
+#include "Commands/SetPatternSwingCommand.h"
 #include "Commands/EditPatternNotesCommand.h"
 #include "Commands/SetPatternLengthCommand.h"
 #include "PatternBrowserPanel.h" // For m_patternBrowser
@@ -17,6 +27,7 @@
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraCore/include/AestraLog.h"
 #include <cstdio>
+#include <limits>
 
 using namespace AestraUI;
 
@@ -152,6 +163,7 @@ ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
     , m_trackManager(std::move(trackManager))
 {
     // setId("ArsenalPanel"); // Handled by WindowPanel title
+    setKeyOwnerRole(WorkspaceFocusModel::KeyOwner::Arsenal); // its title carries the key-owner tick while it owns the keys
     ensureDefaultPattern(); // Auto-create Pattern 1
     if (m_trackManager) {
         m_lanes.setOnSwap([this](UnitID unit, const std::string& path) { if (m_onSampleDroppedToUnit) m_onSampleDroppedToUnit(unit, path); }); // step to a neighbouring sound
@@ -213,16 +225,6 @@ float ArsenalPanel::gridStepWidth() const {
     const float availWidth = std::max(1.0f, gridSpan().second);
     const float groupTotal = static_cast<float>((m_stepCount + 3) / 4) * kGroupGap;
     return std::max(std::max(0.0f, availWidth - groupTotal) / static_cast<float>(std::max(1, m_stepCount)), 20.0f);
-}
-
-float ArsenalPanel::listViewportHeight() const {
-    const float reservedHeight = COMMAND_HEADER_HEIGHT + PROGRESS_HEADER_HEIGHT + 24.0f;
-    return std::max(0.0f, (m_listContainer ? m_listContainer->getBounds().height : 0.0f) - reservedHeight);
-}
-
-float ArsenalPanel::listMaxScrollY() const {
-    const float contentHeight = m_rack.contentHeight + kArsenalListBottomPadding;
-    return std::max(0.0f, contentHeight - listViewportHeight());
 }
 
 float ArsenalPanel::computeGridMaxScrollX() const {
@@ -327,16 +329,18 @@ void ArsenalPanel::refreshUnits() {
         m_selectedSteps.clear();
     }
 
-    if (m_selectedUnitId == 0 || std::find(unitIDs.begin(), unitIDs.end(), m_selectedUnitId) == unitIDs.end()) {
-        m_selectedUnitId = unitIDs.empty() ? 0 : unitIDs.front();
-    }
+    m_selectedUnitIds.erase(std::remove_if(m_selectedUnitIds.begin(), m_selectedUnitIds.end(),
+        [&](UnitID id) { return std::find(unitIDs.begin(), unitIDs.end(), id) == unitIDs.end(); }), m_selectedUnitIds.end());
+    if (std::find(m_selectedUnitIds.begin(), m_selectedUnitIds.end(), m_selectedUnitId) == m_selectedUnitIds.end())
+        m_selectedUnitId = m_selectedUnitIds.empty() ? 0 : m_selectedUnitIds.front();
+    if (m_unitSelectionAnchor == 0 && !m_selectedUnitIds.empty()) m_unitSelectionAnchor = m_selectedUnitIds.front();
     if (m_onSelectedUnitChanged && m_selectedUnitId != 0) {
         m_onSelectedUnitChanged(m_selectedUnitId);
     }
     
     for (size_t i = 0; i < unitIDs.size(); ++i) {
         auto row = std::make_shared<UnitRow>(m_trackManager, unitMgr, unitIDs[i], m_activePatternID);
-        row->setSelected(unitIDs[i] == m_selectedUnitId);
+        row->setSelected(std::find(m_selectedUnitIds.begin(), m_selectedUnitIds.end(), unitIDs[i]) != m_selectedUnitIds.end());
         if (unitIDs[i] == m_selectionUnitId) {
             row->setStepSelection(m_selectedSteps);
         }
@@ -354,6 +358,9 @@ void ArsenalPanel::refreshUnits() {
         });
 
         // Set up callbacks for drag-drop and color picker
+        row->setOnSelectUnit([this](UnitID id, NUIModifiers modifiers) {
+            handleUnitSelection(id, modifiers);
+        });
         row->setOnDragStart([this](UnitID id) {
             onUnitDragStart(id);
         });
@@ -388,6 +395,12 @@ void ArsenalPanel::refreshUnits() {
                 // No sample — open file browser to load one
                 if (m_onRequestLoadSample) m_onRequestLoadSample(id);
             }
+        });
+        row->setOnRequestSampleEditor([this](UnitID id) {
+            if (m_onRequestSampleEditor) m_onRequestSampleEditor(id);
+        });
+        row->setOnStepGestureEnd([this](UnitID id) {
+            if (m_onStepGestureEnd) m_onStepGestureEnd(id);
         });
 
         row->setOnLoadUnitSample([this](UnitID id) {
@@ -429,7 +442,7 @@ void ArsenalPanel::refreshUnits() {
             }
         });
         row->setOnRenameUnit([this](UnitID id, const std::string& name) {
-            if (!m_trackManager) return;
+            if (!m_trackManager || m_selectedUnitIds.size() > 1) return;
             m_trackManager->getUnitManager().setUnitName(id, name); m_trackManager->markModified(); // a rename is a change to save
             refreshUnits();
         });
@@ -441,15 +454,39 @@ void ArsenalPanel::refreshUnits() {
         row->setOnGroupChanged([this](UnitID) { refreshUnits(); }); // moved to Synth / Drums: its new header
         row->setOnDuplicateUnit([this](UnitID id) {
             if (!m_trackManager) return;
-            UnitID newId = m_trackManager->getUnitManager().duplicateUnit(id);
-            if (newId != 0) {
-                if (const auto* unit = m_trackManager->getUnitManager().getUnit(newId)) {
+            std::vector<UnitID> targets = m_selectedUnitIds;
+            if (std::find(targets.begin(), targets.end(), id) == targets.end()) targets = {id};
+            std::vector<UnitID> duplicates;
+            auto& units = m_trackManager->getUnitManager();
+            for (const UnitID source : targets) {
+                const UnitID newId = units.duplicateUnit(source);
+                if (newId == 0) continue;
+                if (const auto* unit = units.getUnit(newId)) {
                     const std::string destinationName = unit->name.empty() ? "Mixer Channel" : unit->name;
                     routeUnitToFirstFreeMixerChannel(*m_trackManager, newId, destinationName, unit->color);
                 }
-                m_selectedUnitId = newId;
-                refreshUnits();
+                duplicates.push_back(newId);
             }
+            if (duplicates.empty()) return;
+            m_selectedUnitIds = duplicates;
+            m_selectedUnitId = duplicates.back();
+            m_unitSelectionAnchor = m_selectedUnitId;
+            m_selectionKind = SelectionKind::Units;
+            m_selectedPatternIds.clear();
+            m_patternSelectionAnchor = 0;
+            m_scenes.setSelectedPatterns({});
+            if (m_onSelectedUnitChanged) m_onSelectedUnitChanged(m_selectedUnitId);
+            refreshUnits();
+        });
+        row->setHasMultipleSelection([this]() { return m_selectedUnitIds.size() > 1; });
+        row->setGetSelectedUnitIds([this]() { return m_selectedUnitIds; });
+        row->setOnMoveSelectedToGroup([this](UnitID clicked, UnitGroup group) {
+            if (!m_trackManager) return;
+            std::vector<UnitID> targets = m_selectedUnitIds;
+            if (std::find(targets.begin(), targets.end(), clicked) == targets.end()) targets = {clicked};
+            auto command = std::make_shared<SetUnitsGroupCommand>(m_trackManager->getUnitManager(), targets, group);
+            m_trackManager->getCommandHistory().pushAndExecute(command);
+            refreshUnits();
         });
 
         m_listContainer->addChild(row);
@@ -491,85 +528,226 @@ void ArsenalPanel::onAddUnit() {
 
 void ArsenalPanel::createUnitOfType(UnitType type, const std::string& nameOverride) {
     if (!m_trackManager) return;
-    const auto count = m_trackManager->getUnitManager().getUnitCount() + 1;
-    std::string name = !nameOverride.empty() ? nameOverride : ((type == UnitType::Sampler ? "Sampler " :
-                        type == UnitType::PitchedSampler ? "808 " :
-                        type == UnitType::Instrument ? "MIDI " : "Audio ") + std::to_string(count));
-    m_selectedUnitId = m_trackManager->getUnitManager().createUnit(name, type);
-    if (const auto* unit = m_trackManager->getUnitManager().getUnit(m_selectedUnitId)) {
-        const std::string destinationName = unit->name.empty() ? "Mixer Channel" : unit->name;
-        routeUnitToFirstFreeMixerChannel(*m_trackManager, m_selectedUnitId, destinationName, unit->color);
+    std::string name = nameOverride;
+    if (name.empty()) {
+        // The lowest free number for this kind, so a delete in the middle never causes a repeated name.
+        auto& units = m_trackManager->getUnitManager();
+        std::vector<std::string> existing;
+        for (const UnitID id : units.getAllUnitIDs()) {
+            if (const auto* unit = units.getUnit(id)) existing.push_back(unit->name);
+        }
+        name = ArsenalUnitNaming::nextUnitName(type == UnitType::Sampler ? "Sampler " :
+                                                type == UnitType::PitchedSampler ? "808 " :
+                                                type == UnitType::Instrument ? "MIDI " : "Audio ", existing);
     }
-    if (m_onSelectedUnitChanged) {
-        m_onSelectedUnitChanged(m_selectedUnitId);
+
+    auto& history = m_trackManager->getCommandHistory();
+    auto transaction = std::make_shared<CommandTransaction>("Create Arsenal Unit");
+    auto add = std::make_shared<AddUnitCommand>(m_trackManager->getUnitManager(), name, type);
+    add->execute();
+    const UnitID created = add->getCreatedUnitId();
+    if (created == 0) return;
+
+    auto route = std::make_shared<AssignUnitToFirstFreeMixerChannelCommand>(
+        *m_trackManager, created, name.empty() ? "Mixer Channel" : name,
+        m_trackManager->getUnitManager().getUnit(created)->color);
+    route->execute();
+    if (!route->isUndoable()) {
+        add->undo();
+        return;
     }
+
+    transaction->add(add);
+    transaction->add(route);
+    transaction->markExecuted();
+    history.pushExecuted(transaction);
+
+    m_selectedUnitId = created;
+    m_selectedUnitIds = {created};
+    m_unitSelectionAnchor = created;
+    m_selectionKind = SelectionKind::Units;
+    m_selectedPatternIds.clear();
+    m_patternSelectionAnchor = 0;
+    m_scenes.setSelectedPatterns({});
+    if (m_onSelectedUnitChanged) m_onSelectedUnitChanged(m_selectedUnitId);
     m_showUnitTypePicker = false;
     if (m_addUnitBtn) m_addUnitBtn->setText("+ Add a sound");
     refreshUnits();
+    scrollUnitIntoView(created); // the new row, and the add line under it, in view
+    if (m_onUnitAdded) m_onUnitAdded(created);
+}
+
+void ArsenalPanel::scrollUnitIntoView(UnitID id) {
+    const float contentTop = m_progressHeaderRect.bottom() + 8.0f;
+    const float viewH = std::max(0.0f, m_listViewportRect.bottom() - contentTop);
+    for (size_t i = 0; i < m_rack.items.size(); ++i) {
+        const auto& item = m_rack.items[i];
+        if (item.kind != Aestra::ArsenalRackItem::Kind::Row || !m_unitRows[item.rowIndex] || m_unitRows[item.rowIndex]->getUnitId() != id) continue;
+        // The last row carries the add line with it: that line is the next thing the user reaches for.
+        const bool last = i + 1 == m_rack.items.size();
+        const float bottom = last ? m_rack.contentHeight : item.y + item.h;
+        m_targetScrollY = Aestra::ArsenalScrollIntoView::scrollToShow(m_scrollY, viewH, item.y, bottom, 6.0f, m_rack.contentHeight);
+        m_scrollY = m_targetScrollY; // no glide: the row is there when the user looks
+        layoutUnits();
+        repaint();
+        return;
+    }
+}
+
+bool ArsenalPanel::isUnitEmpty(UnitID id) const {
+    if (!m_trackManager) return false;
+    const auto* u = m_trackManager->getUnitManager().getUnit(id);
+    if (!u) return false;
+    using Kind = Aestra::ArsenalEmptyNotice::Kind;
+    const Kind kind = u->type == UnitType::Sampler ? Kind::Sampler : u->type == UnitType::PitchedSampler ? Kind::PitchedSampler :
+                      u->type == UnitType::Instrument ? Kind::Instrument : Kind::Audio;
+    return Aestra::ArsenalEmptyNotice::isEmpty({kind, !u->audioClipPath.empty(), u->plugin != nullptr});
+}
+
+std::vector<UnitID> ArsenalPanel::emptyUnits(bool withStepsOnly) const {
+    std::vector<UnitID> out;
+    if (!m_trackManager) return out;
+    const auto* pattern = m_activePatternID.isValid() ? m_trackManager->getPatternManager().getPattern(m_activePatternID) : nullptr;
+    const auto* midi = pattern && pattern->isMidi() ? &std::get<MidiPayload>(pattern->payload) : nullptr;
+    for (const UnitID id : m_trackManager->getUnitManager().getAllUnitIDs()) {
+        if (!isUnitEmpty(id)) continue;
+        if (withStepsOnly && (!midi || std::none_of(midi->notes.begin(), midi->notes.end(), [id](const MidiNote& n) { return n.unitId == id; }))) continue;
+        out.push_back(id);
+    }
+    return out;
+}
+
+void ArsenalPanel::openSoundTypePicker() {
+    m_showUnitTypePicker = true;
+    if (m_addUnitBtn) m_addUnitBtn->setText("CLOSE");
+    repaint();
+}
+
+void ArsenalPanel::setKeepClear(const NUIRect& rect) {
+    if (rect.x == m_keepClear.x && rect.y == m_keepClear.y && rect.width == m_keepClear.width && rect.height == m_keepClear.height) return;
+    m_keepClear = rect;
+    layoutUnits();
+    repaint();
 }
 
 bool ArsenalPanel::removeSelectedUnit() {
-    if (!m_trackManager || m_selectedUnitId == 0) {
-        return false;
-    }
+    return removeSelectedUnits();
+}
+
+bool ArsenalPanel::removeSelectedUnits() {
+    if (!m_trackManager) return false;
 
     auto& unitMgr = m_trackManager->getUnitManager();
-    auto unitIDs = unitMgr.getAllUnitIDs();
-    if (unitIDs.size() <= 1) {
-        // Last unit — reset to fresh default instead of refusing
-        UnitID oldId = m_selectedUnitId;
-        unitMgr.removeUnit(oldId);
-        removeUnitNotes(oldId);
-        UnitID newId = unitMgr.createUnit();
-        if (const auto* unit = unitMgr.getUnit(newId)) {
-            const std::string destinationName = unit->name.empty() ? "Mixer Channel" : unit->name;
-            routeUnitToFirstFreeMixerChannel(*m_trackManager, newId, destinationName, unit->color);
+    const auto unitIDs = unitMgr.getAllUnitIDs();
+    std::vector<UnitID> targets = m_selectedUnitIds;
+    if (targets.empty() && m_selectedUnitId != 0) targets.push_back(m_selectedUnitId);
+    targets.erase(std::remove_if(targets.begin(), targets.end(), [&](UnitID id) {
+        return std::find(unitIDs.begin(), unitIDs.end(), id) == unitIDs.end();
+    }), targets.end());
+    if (targets.empty()) return false;
+
+    std::sort(targets.begin(), targets.end(), [&](UnitID a, UnitID b) {
+        return std::find(unitIDs.begin(), unitIDs.end(), a) < std::find(unitIDs.begin(), unitIDs.end(), b);
+    });
+
+    size_t preferredIndex = unitIDs.size();
+    for (const UnitID id : targets) {
+        const auto it = std::find(unitIDs.begin(), unitIDs.end(), id);
+        if (it != unitIDs.end()) preferredIndex = std::min(preferredIndex, static_cast<size_t>(std::distance(unitIDs.begin(), it)));
+    }
+
+    auto transaction = std::make_shared<CommandTransaction>("Delete Arsenal Unit(s)");
+    std::vector<std::shared_ptr<DeleteUnitCommand>> commands;
+    commands.reserve(targets.size());
+    for (const UnitID id : targets) {
+        const auto it = std::find(unitIDs.begin(), unitIDs.end(), id);
+        const size_t index = static_cast<size_t>(std::distance(unitIDs.begin(), it));
+        commands.push_back(std::make_shared<DeleteUnitCommand>(*m_trackManager, id, index));
+    }
+
+    for (auto& command : commands) {
+        command->execute();
+        if (!command->isUndoable()) {
+            for (auto it = commands.rbegin(); it != commands.rend(); ++it) {
+                if ((*it)->isUndoable()) (*it)->undo();
+            }
+            return false;
         }
-        m_selectedUnitId = newId;
-        refreshUnits();
-        if (m_onSelectedUnitChanged && m_selectedUnitId != 0) {
-            m_onSelectedUnitChanged(m_selectedUnitId);
-        }
-        return true;
+        transaction->add(command);
     }
+    transaction->markExecuted();
+    m_trackManager->getCommandHistory().pushExecuted(transaction);
 
-    auto it = std::find(unitIDs.begin(), unitIDs.end(), m_selectedUnitId);
-    if (it == unitIDs.end()) {
-        return false;
-    }
-
-    const size_t removedIndex = static_cast<size_t>(std::distance(unitIDs.begin(), it));
-    const UnitID removedUnit = m_selectedUnitId;
-    if (!unitMgr.removeUnit(removedUnit)) {
-        return false;
-    }
-
-    removeUnitNotes(removedUnit);
-
-    auto remaining = unitMgr.getAllUnitIDs();
+    const auto remaining = unitMgr.getAllUnitIDs();
+    m_selectedUnitIds.clear();
     if (remaining.empty()) {
         m_selectedUnitId = 0;
-    } else if (removedIndex < remaining.size()) {
-        m_selectedUnitId = remaining[removedIndex];
+        m_unitSelectionAnchor = 0;
     } else {
-        m_selectedUnitId = remaining.back();
+        const size_t index = std::min(preferredIndex, remaining.size() - 1);
+        m_selectedUnitId = remaining[index];
+        m_selectedUnitIds = {m_selectedUnitId};
+        m_unitSelectionAnchor = m_selectedUnitId;
     }
 
     refreshUnits();
-    if (m_onSelectedUnitChanged && m_selectedUnitId != 0) {
-        m_onSelectedUnitChanged(m_selectedUnitId);
-    }
-    if (m_activePatternID.isValid() && m_onPatternEdited) {
-        m_onPatternEdited(m_activePatternID);
-    }
-    Log::info("[Arsenal] Removed Unit " + std::to_string(removedUnit));
+    if (m_onSelectedUnitChanged && m_selectedUnitId != 0) m_onSelectedUnitChanged(m_selectedUnitId);
+    if (m_activePatternID.isValid() && m_onPatternEdited) m_onPatternEdited(m_activePatternID);
+    Log::info("[Arsenal] Removed " + std::to_string(targets.size()) + " unit(s)");
     return true;
+}
+void ArsenalPanel::handleUnitSelection(UnitID unitId, NUIModifiers modifiers) {
+    if (!m_trackManager || unitId == 0) return;
+    m_selectionKind = SelectionKind::Units;
+    m_selectedPatternIds.clear();
+    m_patternSelectionAnchor = 0;
+    m_scenes.setSelectedPatterns({});
+    const auto ids = m_trackManager->getUnitManager().getAllUnitIDs();
+    const auto clicked = std::find(ids.begin(), ids.end(), unitId);
+    if (clicked == ids.end()) return;
+
+    const bool shift = modifiers & NUIModifiers::Shift;
+    const bool ctrl = modifiers & NUIModifiers::Ctrl;
+
+    if (shift && m_unitSelectionAnchor != 0) {
+        const auto anchor = std::find(ids.begin(), ids.end(), m_unitSelectionAnchor);
+        if (anchor != ids.end()) {
+            const size_t a = static_cast<size_t>(std::distance(ids.begin(), anchor));
+            const size_t b = static_cast<size_t>(std::distance(ids.begin(), clicked));
+            const size_t lo = std::min(a, b), hi = std::max(a, b);
+            m_selectedUnitIds.assign(ids.begin() + static_cast<std::ptrdiff_t>(lo),
+                                     ids.begin() + static_cast<std::ptrdiff_t>(hi + 1));
+        } else {
+            m_selectedUnitIds = {unitId};
+        }
+    } else if (ctrl) {
+        const auto selected = std::find(m_selectedUnitIds.begin(), m_selectedUnitIds.end(), unitId);
+        if (selected != m_selectedUnitIds.end()) {
+            if (m_selectedUnitIds.size() > 1) m_selectedUnitIds.erase(selected);
+        } else {
+            m_selectedUnitIds.push_back(unitId);
+        }
+        m_unitSelectionAnchor = unitId;
+    } else {
+        m_selectedUnitIds = {unitId};
+        m_unitSelectionAnchor = unitId;
+    }
+
+    if (std::find(m_selectedUnitIds.begin(), m_selectedUnitIds.end(), unitId) != m_selectedUnitIds.end()) {
+        m_selectedUnitId = unitId;
+    } else if (!m_selectedUnitIds.empty()) {
+        m_selectedUnitId = m_selectedUnitIds.front();
+    }
+    syncRowSelection();
+    if (m_onSelectedUnitChanged && m_selectedUnitId != 0) m_onSelectedUnitChanged(m_selectedUnitId);
+    repaint();
 }
 
 void ArsenalPanel::syncRowSelection() {
     for (auto& row : m_unitRows) {
         if (row) {
-            row->setSelected(row->getUnitId() == m_selectedUnitId);
+            row->setSelected(std::find(m_selectedUnitIds.begin(), m_selectedUnitIds.end(), row->getUnitId()) !=
+                             m_selectedUnitIds.end());
         }
     }
 }
@@ -593,6 +771,163 @@ void ArsenalPanel::removeUnitNotes(UnitID unitId) {
                 [unitId](const MidiNote& note) { return note.unitId == unitId; }),
             midi.notes.end());
     }
+}
+
+void ArsenalPanel::handlePatternSelection(uint64_t patternId, NUIModifiers modifiers) {
+    if (!m_trackManager || patternId == 0) return;
+    m_selectionKind = SelectionKind::Patterns;
+    m_selectedUnitIds.clear();
+    m_unitSelectionAnchor = 0;
+    m_selectedUnitId = 0;
+    m_selectionUnitId = 0;
+    m_selectedSteps.clear();
+    for (const auto& row : m_unitRows) if (row) row->setStepSelection({});
+    syncRowSelection();
+    const auto scenes = m_scenes.scenes();
+    const auto clicked = std::find_if(scenes.begin(), scenes.end(), [patternId](const auto& s) { return s.id == patternId; });
+    if (clicked == scenes.end()) return;
+
+    const bool shift = modifiers & NUIModifiers::Shift;
+    const bool ctrl = modifiers & NUIModifiers::Ctrl;
+
+    if (shift && m_patternSelectionAnchor != 0) {
+        const auto anchor = std::find_if(scenes.begin(), scenes.end(), [&](const auto& s) {
+            return s.id == m_patternSelectionAnchor;
+        });
+        if (anchor != scenes.end()) {
+            const size_t a = static_cast<size_t>(std::distance(scenes.begin(), anchor));
+            const size_t b = static_cast<size_t>(std::distance(scenes.begin(), clicked));
+            const size_t lo = std::min(a, b), hi = std::max(a, b);
+            m_selectedPatternIds.clear();
+            for (size_t i = lo; i <= hi; ++i) m_selectedPatternIds.push_back(scenes[i].id);
+        } else {
+            m_selectedPatternIds = {patternId};
+        }
+    } else if (ctrl) {
+        const auto it = std::find(m_selectedPatternIds.begin(), m_selectedPatternIds.end(), patternId);
+        if (it != m_selectedPatternIds.end()) {
+            if (m_selectedPatternIds.size() > 1) m_selectedPatternIds.erase(it);
+        } else {
+            m_selectedPatternIds.push_back(patternId);
+        }
+        m_patternSelectionAnchor = patternId;
+    } else {
+        m_selectedPatternIds = {patternId};
+        m_patternSelectionAnchor = patternId;
+    }
+
+    m_scenes.setSelectedPatterns(m_selectedPatternIds);
+    setActivePattern(PatternID{patternId});
+    repaint();
+}
+
+bool ArsenalPanel::removeSelectedPatterns() {
+    if (!m_trackManager || m_selectedPatternIds.empty()) return false;
+
+    auto& patterns = m_trackManager->getPatternManager();
+    const auto scenesBeforeDelete = m_scenes.scenes();
+    const uint64_t activeBeforeDelete = m_activePatternID.value;
+    const auto allPatterns = patterns.getAllPatterns();
+    const size_t midiCount = std::count_if(allPatterns.begin(), allPatterns.end(),
+        [](const auto& p) { return p && p->isMidi(); });
+
+    std::vector<uint64_t> targets;
+    for (const uint64_t id : m_selectedPatternIds) {
+        const auto* pattern = patterns.getPattern(PatternID{id});
+        if (!pattern || !pattern->isMidi()) continue;
+        if (m_trackManager->getPlaylistModel().isPatternUsed(PatternID{id})) continue;
+        targets.push_back(id);
+    }
+    if (targets.empty()) return false;
+
+    const size_t keepAtLeast = 1;
+    if (targets.size() >= midiCount && midiCount <= keepAtLeast) return false;
+    if (midiCount - targets.size() < keepAtLeast) targets.resize(midiCount - keepAtLeast);
+
+    auto transaction = std::make_shared<CommandTransaction>("Delete Arsenal Pattern(s)");
+    std::vector<std::shared_ptr<DeletePatternCommand>> commands;
+    commands.reserve(targets.size());
+    for (const uint64_t id : targets)
+        commands.push_back(std::make_shared<DeletePatternCommand>(patterns, PatternID{id}));
+
+    for (auto& command : commands) {
+        command->execute();
+        if (!command->isUndoable()) {
+            for (auto it = commands.rbegin(); it != commands.rend(); ++it)
+                if ((*it)->isUndoable()) (*it)->undo();
+            return false;
+        }
+        transaction->add(command);
+    }
+    transaction->markExecuted();
+    m_trackManager->getCommandHistory().pushExecuted(transaction);
+
+    const auto remaining = patterns.getAllPatterns();
+    const auto isRemainingMidi = [&patterns](uint64_t id) {
+        const auto* pattern = patterns.getPattern(PatternID{id});
+        return pattern && pattern->isMidi();
+    };
+    m_selectedPatternIds.erase(
+        std::remove_if(m_selectedPatternIds.begin(), m_selectedPatternIds.end(),
+                       [&](uint64_t id) { return !isRemainingMidi(id); }),
+        m_selectedPatternIds.end());
+
+    PatternID next = isRemainingMidi(activeBeforeDelete) ? PatternID{activeBeforeDelete} : PatternID{};
+    if (!next.isValid() && !m_selectedPatternIds.empty()) next = PatternID{m_selectedPatternIds.front()};
+    if (!next.isValid()) {
+        const auto oldActive = std::find_if(scenesBeforeDelete.begin(), scenesBeforeDelete.end(),
+                                            [activeBeforeDelete](const auto& scene) {
+                                                return scene.id == activeBeforeDelete;
+                                            });
+        if (oldActive != scenesBeforeDelete.end()) {
+            for (auto it = std::next(oldActive); it != scenesBeforeDelete.end(); ++it) {
+                if (isRemainingMidi(it->id)) { next = PatternID{it->id}; break; }
+            }
+            if (!next.isValid()) {
+                auto it = oldActive;
+                while (it != scenesBeforeDelete.begin()) {
+                    --it;
+                    if (isRemainingMidi(it->id)) { next = PatternID{it->id}; break; }
+                }
+            }
+        }
+    }
+    if (!next.isValid()) {
+        uint64_t lowestId = std::numeric_limits<uint64_t>::max();
+        for (const auto& pattern : remaining)
+            if (pattern && pattern->isMidi()) lowestId = std::min(lowestId, pattern->id.value);
+        if (lowestId != std::numeric_limits<uint64_t>::max()) next = PatternID{lowestId};
+    }
+    m_activePatternID = next;
+    m_patternSelectionAnchor = m_selectedPatternIds.empty() ? 0 : m_selectedPatternIds.back();
+    if (m_selectedPatternIds.empty() && next.isValid()) {
+        m_selectedPatternIds = {next.value};
+        m_patternSelectionAnchor = next.value;
+    }
+    m_scenes.setSelectedPatterns(m_selectedPatternIds);
+    if (next.isValid()) m_trackManager->preparePatternForArsenal(next);
+    refreshUnits();
+    if (m_patternBrowser) m_patternBrowser->refreshPatterns();
+    if (m_onActivePatternChanged && next.isValid()) m_onActivePatternChanged(next);
+    repaint();
+    return true;
+}
+
+bool ArsenalPanel::confirmDeleteSelection() {
+    if (!m_onConfirmDelete) return false;
+    const bool patterns = m_selectionKind == SelectionKind::Patterns && !m_selectedPatternIds.empty();
+    const bool units = !patterns && !m_selectedUnitIds.empty();
+    if (!patterns && !units) return false;
+    const size_t count = patterns ? m_selectedPatternIds.size() : m_selectedUnitIds.size();
+    const std::string noun = patterns ? (count == 1 ? "pattern" : "patterns") : (count == 1 ? "unit" : "units");
+    m_onConfirmDelete("Delete " + noun + "?",
+        "Delete " + std::to_string(count) + " selected " + noun + "? This can be undone.", "Delete",
+        [this, patterns](bool confirmed) {
+            if (!confirmed) return;
+            if (patterns) removeSelectedPatterns();
+            else removeSelectedUnits();
+        });
+    return true;
 }
 
 void ArsenalPanel::setActivePattern(PatternID patternId) {
@@ -621,6 +956,12 @@ void ArsenalPanel::setSelectedUnit(UnitID unitId) {
     }
 
     m_selectedUnitId = unitId;
+    m_selectedUnitIds = {unitId};
+    m_unitSelectionAnchor = unitId;
+    m_selectionKind = SelectionKind::Units;
+    m_selectedPatternIds.clear();
+    m_patternSelectionAnchor = 0;
+    m_scenes.setSelectedPatterns({});
     syncRowSelection();
     if (m_onSelectedUnitChanged) {
         m_onSelectedUnitChanged(m_selectedUnitId);
@@ -692,18 +1033,12 @@ void ArsenalPanel::ensureDefaultPattern() {
 }
 
 void ArsenalPanel::loadKitFromFolder(const std::string& folder) {
-    if (!m_trackManager || folder.empty()) return; // empty = the picker was cancelled
-    auto& units = m_trackManager->getUnitManager();
-    const auto ids = units.getAllUnitIDs();
-    const UnitID reuse = ids.size() == 1 ? ids[0] : 0; // the empty starter unit takes the first sound
-    bool first = true;
-    for (const auto& slot : Aestra::ArsenalKit::plan(Aestra::ArsenalKit::filesIn(folder))) {
-        if (first && reuse) { units.setUnitName(reuse, slot.name); m_selectedUnitId = reuse; }
-        else createUnitOfType(UnitType::Sampler, slot.name);
-        first = false;
-        if (m_onSampleDroppedToUnit) m_onSampleDroppedToUnit(m_selectedUnitId, slot.path);
+    if (folder.empty()) return; // picker cancelled
+    // Choosing a kit is a browsing action, not a musical edit. Never manufacture units,
+    // samples or patterns merely because a folder was selected.
+    if (m_onKitFolderSelected) {
+        m_onKitFolderSelected(folder);
     }
-    refreshUnits();
 }
 
 void ArsenalPanel::onRender(NUIRenderer& renderer) {
@@ -711,6 +1046,8 @@ void ArsenalPanel::onRender(NUIRenderer& renderer) {
     drawCommandHeader(renderer);
     if (m_trackManager && m_listContainer && isVisible()) {
         if (m_trackManager->getUnitManager().getAllUnitIDs().size() != m_unitRows.size()) refreshUnits(); // units added or removed elsewhere (Muse, undo)
+        m_scenes.setSelectedPatterns(m_selectedPatternIds);
+        m_scenes.setSwingTargets(m_selectedUnitIds);
         m_scenes.refresh(m_trackManager->getPatternManager(), m_activePatternID.value, m_sceneRect, ArsenalSceneStrip::quietDefaults(*m_trackManager));
         m_scenes.draw(renderer); m_sceneMenu.draw(renderer);
     }
@@ -740,13 +1077,17 @@ void ArsenalPanel::drawCommandHeader(NUIRenderer& renderer) {
     // One flat band: the scenes on the left, the view toggle on the right (the Arsenal mock).
     renderer.fillRect(m_commandHeaderRect, theme.getColor("backgroundPrimary"));
     renderer.fillRect({m_commandHeaderRect.x, m_commandHeaderRect.bottom() - 1.0f, m_commandHeaderRect.width, 1.0f}, theme.getColor("border").withAlpha(0.6f));
-    Aestra::drawArsenalFitToggle(renderer, m_fitToggleRect, m_fitModeRect, m_scrollModeRect, m_fitToWidth);
+    Aestra::drawArsenalFitToggle(renderer, m_fitToggleRect, m_fitModeRect, m_scrollModeRect, m_fitToWidth, m_fitHover);
 }
 
 void ArsenalPanel::layoutUnits() {
     if (!m_listContainer) return;
     
     NUIRect bounds = m_listContainer->getBounds();
+    m_bottomInset = m_keepClear.width > 0.0f
+        ? Aestra::ArsenalEmptyNotice::bottomInset(bounds.bottom() - 6.0f, m_keepClear.y,
+                                                  m_keepClear.x < bounds.right() && m_keepClear.right() > bounds.x, 8.0f)
+        : 0.0f;
     const float horizontalPadding = 8.0f;
     const float width = std::max(0.0f, bounds.width - horizontalPadding * 2.0f);
     const float startX = bounds.x + horizontalPadding;
@@ -762,7 +1103,7 @@ void ArsenalPanel::layoutUnits() {
     // Rows may only draw / take clicks between the progress header and the
     // panel bottom; anything scrolled past that is clipped by the row itself.
     const float viewportTop = m_progressHeaderRect.bottom() + 4.0f;
-    const float viewportBottom = bounds.bottom() - 6.0f;
+    const float viewportBottom = bounds.bottom() - 6.0f - m_bottomInset; // a toast may hold the bottom of the list clear
     m_listViewportRect = {startX, viewportTop, width, std::max(0.0f, viewportBottom - viewportTop)};
 
     // Units sit under Drums / Synth / Audio headers (FD-27): one layout answers rows, scroll and drops.
@@ -774,10 +1115,17 @@ void ArsenalPanel::layoutUnits() {
         extras.push_back(unit ? m_lanes.extraFor(*m_trackManager, row->getUnitId()) : 0.0f);
     }
     m_rack = Aestra::ArsenalRackLayout::compute(groups, extras);
-    m_kitCard.place(m_trackManager && Aestra::ArsenalRowLanes::noSounds(m_trackManager->getUnitManager()), {startX, rackTop + m_rack.contentHeight, width, Aestra::ArsenalKitCard::kReserve}); if (m_kitCard.shown()) m_rack.contentHeight += Aestra::ArsenalKitCard::kReserve; // empty state: a kit card under the rows
-    // "Add a sound" ends the rack, then a row's worth of open floor: a full rack still has somewhere to drop a sound
-    m_addUnitButtonRect = {startX + 16.0f, rackTop + m_rack.contentHeight + 8.0f, 112.0f, 32.0f}; m_rack.contentHeight += 48.0f + kArsenalDropFloor;
-    if (m_addUnitBtn) { m_addUnitBtn->setBounds(m_addUnitButtonRect); m_addUnitBtn->setVisible(m_addUnitButtonRect.y >= m_progressHeaderRect.bottom() && m_addUnitButtonRect.bottom() <= bounds.bottom()); }
+    // The kit offer: the full card while the rack is empty; once any row exists it folds into one line under the last row
+    // ("+ Add a sound" at the left, the kit offer at the right) and reserves only that line's height.
+    if (Aestra::ArsenalKitCard::modeFor(m_unitRows.size()) == Aestra::ArsenalKitCard::Mode::Folded) {
+        const NUIRect slot{startX, rackTop + m_rack.contentHeight, width, Aestra::ArsenalKitCard::kFoldedReserve};
+        m_kitCard.placeFolded(slot.y + 8.0f >= m_progressHeaderRect.bottom() && slot.bottom() <= bounds.bottom() - m_bottomInset, slot);
+        m_addUnitButtonRect = m_kitCard.addRect(); m_rack.contentHeight += Aestra::ArsenalKitCard::kFoldedReserve + kArsenalDropFloor; // then a row's worth of open floor to drop a sound into
+    } else {
+        m_kitCard.place(m_trackManager != nullptr, {startX, rackTop + m_rack.contentHeight, width, Aestra::ArsenalKitCard::kReserve}); if (m_kitCard.shown()) m_rack.contentHeight += Aestra::ArsenalKitCard::kReserve; // empty state: a kit card under the rows
+        m_addUnitButtonRect = {startX + 16.0f, rackTop + m_rack.contentHeight + 8.0f, 112.0f, 32.0f}; m_rack.contentHeight += 48.0f + kArsenalDropFloor; // "Add unit" ends the rack (the mock), then open floor to drop into
+    }
+    if (m_addUnitBtn) { m_addUnitBtn->setBounds(m_addUnitButtonRect); m_addUnitBtn->setVisible(m_addUnitButtonRect.y >= m_progressHeaderRect.bottom() && m_addUnitButtonRect.bottom() <= bounds.bottom() - m_bottomInset); }
     for (const auto& item : m_rack.items) {
         if (item.kind != Aestra::ArsenalRackItem::Kind::Row || !m_unitRows[item.rowIndex]) continue;
         m_unitRows[item.rowIndex]->setBounds(NUIRect(startX, rackTop + item.y, width, item.h));
@@ -808,10 +1156,17 @@ void ArsenalPanel::onResize(int width, int height) {
     layoutUnits(); // Layout units within the content area
 }
 
+float ArsenalPanel::maxScrollY() const {
+    const float reservedHeight = COMMAND_HEADER_HEIGHT + PROGRESS_HEADER_HEIGHT + 24.0f;
+    const float viewportHeight = std::max(0.0f,
+        (m_listContainer ? m_listContainer->getBounds().height : 0.0f) - reservedHeight - m_bottomInset);
+    return std::max(0.0f, m_rack.contentHeight + kArsenalListBottomPadding - viewportHeight);
+}
+
 void ArsenalPanel::onUpdate(double dt) {
     WindowPanel::onUpdate(dt);
     if (auto folder = m_kitPicker.takeResult()) loadKitFromFolder(*folder); // the kit picker closed
-    const float maxScroll = listMaxScrollY();
+    const float maxScroll = maxScrollY();
     m_targetScrollY = safeClampPanelScroll(m_targetScrollY, maxScroll);
     m_scrollY = safeClampPanelScroll(m_scrollY, maxScroll);
     const float delta = m_targetScrollY - m_scrollY;
@@ -1062,6 +1417,11 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
 
     const int bars = std::clamp(static_cast<int>(std::round(lengthBeats / static_cast<double>(beatsPerBar()))),
                                 kArsenalMinPatternBars, kArsenalMaxPatternBars);
+    // Read the pattern length for the stepper itself. m_stepCount is also the
+    // grid's layout cache, and can lag when a length edit happens before rows
+    // have been rebuilt (for example while the list is not mounted).
+    const int displayedSteps = std::clamp(static_cast<int>(std::lround(std::max(0.25, lengthBeats) / 0.25)),
+                                          kArsenalMinPatternSteps, kArsenalMaxPatternSteps);
     const bool decEnabled = bars > kArsenalMinPatternBars;
     const bool incEnabled = bars < kArsenalMaxPatternBars;
 
@@ -1086,9 +1446,9 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
         m_stepsIncrementRect = NUIRect(m_stepsValueRect.right() + 4.0f, leftCard.y + 4.0f, compactHitArea,
                                        leftCard.height - 8.0f);
         Aestra::drawArsenalStepper(renderer, m_stepsDecrementRect, m_stepsValueRect, m_stepsIncrementRect,
-                                   (m_stepCount % bars == 0 ? std::to_string(m_stepCount / bars) + " per bar" : std::to_string(m_stepCount) + " steps"),
-                                   m_stepCount > kArsenalMinPatternSteps,
-                                   m_stepCount < kArsenalMaxPatternSteps);
+                                   std::to_string(displayedSteps) + " steps",
+                                   displayedSteps > kArsenalMinPatternSteps,
+                                   displayedSteps < kArsenalMaxPatternSteps);
     } else {
         // Clear the step hit rects: the mouse handler gates on width > 0, so
         // stale rects from a previously selected step unit would stay
@@ -1239,7 +1599,6 @@ AestraUI::DropResult ArsenalPanel::onDrop(const AestraUI::DragData& data, const 
             return result;
         }
 
-        auto& unitMgr = m_trackManager->getUnitManager();
         std::string filename = data.filePath.substr(data.filePath.find_last_of("/\\") + 1);
         const auto lastDot = filename.find_last_of('.');
         if (lastDot != std::string::npos) {
@@ -1262,23 +1621,20 @@ AestraUI::DropResult ArsenalPanel::onDrop(const AestraUI::DragData& data, const 
             }
         }
         if (targetUnit == 0) {
-            targetUnit = unitMgr.createUnit(filename, UnitType::Sampler);
+            // Dropping onto empty Arsenal is still an explicit unit creation, so it
+            // must use the same undoable creation path as "+ Add unit".
+            createUnitOfType(UnitType::Sampler, filename);
+            targetUnit = m_selectedUnitId;
             if (targetUnit == 0) {
                 result.accepted = false;
                 result.message = "Could not create an Arsenal unit";
                 return result;
             }
-            unitMgr.setUnitEnabled(targetUnit, true);
-            // Route the fresh unit like every other creation path — otherwise
-            // the dropped sample loads into a unit with no mixer destination.
-            if (const auto* unit = unitMgr.getUnit(targetUnit)) {
-                const std::string destinationName = unit->name.empty() ? "Mixer Channel" : unit->name;
-                routeUnitToFirstFreeMixerChannel(*m_trackManager, targetUnit, destinationName, unit->color);
-            }
+        } else {
+            m_selectedUnitId = targetUnit;
+            m_selectedUnitIds = {targetUnit};
+            m_unitSelectionAnchor = targetUnit;
         }
-
-        unitMgr.setUnitName(targetUnit, filename);
-        unitMgr.setUnitEnabled(targetUnit, true);
         if (m_onSampleDroppedToUnit) {
             m_onSampleDroppedToUnit(targetUnit, data.filePath);
         }
@@ -1418,6 +1774,10 @@ void ArsenalPanel::pastePattern() {
 // === Event Handlers ===
 
 bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
+    {
+        const int fitHover = !m_fitToggleRect.contains(event.position) ? -1 : (m_fitModeRect.contains(event.position) ? 0 : 1);
+        if (fitHover != m_fitHover) { m_fitHover = fitHover; repaint(); }
+    }
     // Handle color picker first if visible
     if (m_colorPicker && m_colorPicker->isShowing()) {
         if (m_colorPicker->onMouseEvent(event)) {
@@ -1462,10 +1822,45 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
     if (m_sceneMenu.mouse(event) || (m_ruler && m_ruler->onMouseEvent(event))) { repaint(); return true; } // rename box first; then a click or drag on the bar ruler cues the playhead // click or drag on the bar ruler cues the playhead
     using SceneKind = Aestra::ArsenalSceneStrip::Action::Kind;
     Aestra::ArsenalSceneStrip::Action scene;
-    if (m_trackManager && m_scenes.onMouse(event, m_trackManager->getPatternManager(), m_activePatternID.value, scene)) {
-        if (scene.kind == SceneKind::Select || scene.kind == SceneKind::PatternAdded) { setActivePattern(PatternID{scene.id}); if (scene.kind == SceneKind::PatternAdded && m_patternBrowser) m_patternBrowser->refreshPatterns(); }
-        if (scene.kind == SceneKind::SwingEdited && m_onPatternEdited) m_onPatternEdited(m_activePatternID);
-        if (scene.kind == SceneKind::PlaceInTimeline && m_onPlaceInTimeline) m_onPlaceInTimeline(m_activePatternID); if (scene.kind == SceneKind::Menu) showSceneMenu(scene.id, scene.at);
+    const bool sceneTook = m_trackManager && m_scenes.onMouse(event, m_trackManager->getPatternManager(), m_activePatternID.value, scene);
+    if (m_scenes.takeHoverDirty()) repaint(); // hover moved on or off a pattern, the "+" or Place
+    if (sceneTook) {
+        if (scene.kind == SceneKind::Select) {
+            handlePatternSelection(scene.id, scene.modifiers);
+        } else if (scene.kind == SceneKind::PatternAdded) {
+            m_selectionKind = SelectionKind::Patterns;
+            m_selectedUnitIds.clear();
+            m_selectedUnitId = 0;
+            syncRowSelection();
+            m_selectedPatternIds = {scene.id};
+            m_patternSelectionAnchor = scene.id;
+            setActivePattern(PatternID{scene.id});
+            if (m_patternBrowser) m_patternBrowser->refreshPatterns();
+        }
+        if (scene.kind == SceneKind::SwingEdited) {
+            if (scene.swingCommit) {
+                auto command = std::make_shared<SetPatternSwingCommand>(
+                    m_trackManager->getPatternManager(), m_activePatternID, m_selectedUnitIds, scene.newSwing);
+                command->markExecuted(scene.oldSwing, scene.oldUnitSwing);
+                m_trackManager->getCommandHistory().pushExecuted(command);
+            }
+            if (m_onPatternEdited) m_onPatternEdited(m_activePatternID);
+        }
+        if (scene.kind == SceneKind::PlaceInTimeline && m_onPlaceInTimeline) m_onPlaceInTimeline(m_activePatternID);
+        if (scene.kind == SceneKind::Menu) {
+            if (std::find(m_selectedPatternIds.begin(), m_selectedPatternIds.end(), scene.id) == m_selectedPatternIds.end()) {
+                m_selectionKind = SelectionKind::Patterns;
+                m_selectedUnitIds.clear();
+                m_selectedUnitId = 0;
+                m_unitSelectionAnchor = 0;
+                syncRowSelection();
+                m_selectedPatternIds = {scene.id};
+                m_patternSelectionAnchor = scene.id;
+                m_scenes.setSelectedPatterns(m_selectedPatternIds);
+                setActivePattern(PatternID{scene.id});
+            }
+            showSceneMenu(scene.id, scene.at);
+        }
         repaint();
         return true;
     }
@@ -1562,12 +1957,11 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
             }
         }
         
-        // Fallback: scroll the unit list, to the same limit onUpdate clamps to (listMaxScrollY), or the
-        // wheel stops short of it and the last row's floor never comes into view.
-        const float maxScroll = listMaxScrollY();
-
+        // Fallback: scroll the unit list
+        // The same limit as onUpdate: the wheel used to clamp against the whole list height (header included), so the
+        // last ~150 px of the list, the add line with it, could not be reached.
         m_targetScrollY -= event.wheelDelta * AestraUI::kWheelNotchPx;
-        m_targetScrollY = safeClampPanelScroll(m_targetScrollY, maxScroll);
+        m_targetScrollY = safeClampPanelScroll(m_targetScrollY, maxScrollY());
         return true;
     }
     
@@ -1578,6 +1972,7 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
         for (size_t i = 0; i < m_unitRows.size(); ++i) {
             if (m_unitRows[i] && m_unitRows[i]->getBounds().contains(event.position)) {
                 m_selectedUnitId = m_unitRows[i]->getUnitId();
+                m_selectionKind = SelectionKind::Units;
                 syncRowSelection();
                 if (m_onSelectedUnitChanged) {
                     m_onSelectedUnitChanged(m_selectedUnitId);
@@ -1593,9 +1988,38 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
 
 bool ArsenalPanel::onKeyEvent(const NUIKeyEvent& event) {
     if (!event.pressed) return false;
+    if (m_sceneMenu.key(event)) return true;
     if (bool relayout = false; m_lanes.onKey(event, m_trackManager.get(), relayout)) { if (relayout) layoutUnits(); repaint(); return true; } // the sound drawer owns the keyboard while open
 
     bool isCtrl = (event.modifiers & NUIModifiers::Ctrl);
+
+    if (isCtrl && event.keyCode == NUIKeyCode::A) {
+        if (!m_trackManager) return false;
+        if (m_selectionKind == SelectionKind::Patterns) {
+            m_selectedPatternIds.clear();
+            for (const auto& scene : m_scenes.scenes()) m_selectedPatternIds.push_back(scene.id);
+            m_patternSelectionAnchor = m_selectedPatternIds.empty() ? 0 : m_selectedPatternIds.front();
+            m_scenes.setSelectedPatterns(m_selectedPatternIds);
+        } else {
+            m_selectedUnitIds = m_trackManager->getUnitManager().getAllUnitIDs();
+            m_selectedUnitId = m_selectedUnitIds.empty() ? 0 : m_selectedUnitIds.front();
+            m_unitSelectionAnchor = m_selectedUnitId;
+            m_selectionKind = SelectionKind::Units;
+            syncRowSelection();
+        }
+        repaint();
+        return true;
+    }
+
+    if (event.keyCode == NUIKeyCode::F2) {
+        if (m_selectionKind == SelectionKind::Units && m_selectedUnitIds.size() == 1) {
+            for (const auto& row : m_unitRows)
+                if (row && row->getUnitId() == m_selectedUnitIds.front()) { row->beginRename(); return true; }
+        }
+        if (m_selectionKind == SelectionKind::Patterns && m_selectedPatternIds.size() == 1)
+            return beginRenameSelectedPattern();
+        return false;
+    }
     
     // Ctrl+C: Copy
     if (isCtrl && (event.keyCode == NUIKeyCode::C)) {
@@ -1621,8 +2045,31 @@ bool ArsenalPanel::onKeyEvent(const NUIKeyEvent& event) {
         return true;
     }
 
+    if (event.keyCode == NUIKeyCode::Escape) {
+        m_selectedUnitId = 0;
+        m_selectedUnitIds.clear();
+        m_unitSelectionAnchor = 0;
+        m_selectedPatternIds.clear();
+        m_patternSelectionAnchor = 0;
+        m_selectionKind = SelectionKind::None;
+        m_scenes.setSelectedPatterns({});
+        m_selectionUnitId = 0;
+        m_selectedSteps.clear();
+        syncRowSelection();
+        for (const auto& row : m_unitRows) if (row) row->setStepSelection({});
+        if (m_onSelectedUnitChanged) m_onSelectedUnitChanged(0);
+        repaint();
+        return true;
+    }
+
     if (event.keyCode == NUIKeyCode::Delete || event.keyCode == NUIKeyCode::Backspace) {
-        return removeSelectedUnit();
+        if (m_selectionUnitId != 0 && !m_selectedSteps.empty()) {
+            for (const auto& row : m_unitRows) {
+                if (row && row->getUnitId() == m_selectionUnitId && row->onKeyEvent(event)) return true;
+            }
+        }
+        if (!m_selectedPatternIds.empty() || !m_selectedUnitIds.empty()) return confirmDeleteSelection();
+        return false;
     }
 
     return false;

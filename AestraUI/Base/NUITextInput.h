@@ -219,6 +219,16 @@ protected:
     virtual bool isValidText(const std::string& text) const;
 
 private:
+    struct EditSnapshot {
+        std::string text;
+        int caret{0};
+        int selectionStart{0};
+        int selectionEnd{0};
+        bool hasSelection{false};
+    };
+    bool undoTextEdit();
+    bool redoTextEdit();
+    void restoreEditSnapshot(const EditSnapshot& snapshot);
     void updateCaretPosition();
     void updateSelection();
     void handleTextInput(const std::string& text);
@@ -238,6 +248,8 @@ private:
 
     // Text content
     std::string text_;
+    std::vector<EditSnapshot> m_undoEdits;
+    std::vector<EditSnapshot> m_redoEdits;
     std::string placeholderText_;
     bool showPlaceholderWhenFocused_ = false;
     InputType inputType_ = InputType::Text;

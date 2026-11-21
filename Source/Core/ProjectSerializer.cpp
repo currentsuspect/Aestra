@@ -868,6 +868,16 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
             }
             pjs.set("notes", notesArray);
             if (p->swing > 0.0f) pjs.set("swing", JSON(static_cast<double>(p->swing)));
+            if (!p->unitSwing.empty()) {
+                JSON unitSwingArray = JSON::array();
+                for (const auto& [unitId, amount] : p->unitSwing) {
+                    JSON entry = JSON::object();
+                    entry.set("unitId", JSON(static_cast<double>(unitId)));
+                    entry.set("amount", JSON(static_cast<double>(amount)));
+                    unitSwingArray.push(entry);
+                }
+                pjs.set("unitSwing", unitSwingArray);
+            }
 
             // Serialize scale context if present
             if (p->scaleOverride.has_value()) {
@@ -1825,7 +1835,18 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                     // Restore serialized pattern identity (#446), as above.
                     PatternID newId = patternManager.createMidiPatternWithId(PatternID{oldId}, name, length, payload);
                     patternMap[oldId] = newId;
-                    if (PatternSource* sp = patternManager.getPattern(newId)) sp->swing = static_cast<float>(finiteNumberOr(pj[i], "swing", 0.0, 0.0, 1.0));
+                    if (PatternSource* sp = patternManager.getPattern(newId)) {
+                        sp->swing = static_cast<float>(finiteNumberOr(pj[i], "swing", 0.0, 0.0, 1.0));
+                        if (pj[i].has("unitSwing") && pj[i]["unitSwing"].isArray()) {
+                            const JSON& unitSwing = pj[i]["unitSwing"];
+                            for (size_t si = 0; si < unitSwing.size(); ++si) {
+                                if (!unitSwing[si].isObject()) continue;
+                                const uint64_t unitId = static_cast<uint64_t>(finiteNumberOr(unitSwing[si], "unitId", 0.0, 0.0, 9007199254740991.0));
+                                const float amount = static_cast<float>(finiteNumberOr(unitSwing[si], "amount", 0.0, 0.0, 1.0));
+                                if (unitId != 0) sp->setUnitSwing(unitId, amount);
+                            }
+                        }
+                    }
 
                     // Deserialize scale context if present
                     if (pj[i].has("scale") && pj[i]["scale"].isObject()) {

@@ -199,6 +199,15 @@ void WindowPanel::setTitle(const std::string& title) {
 void WindowPanel::onRender(AestraUI::NUIRenderer& renderer) {
     auto& theme = AestraUI::NUIThemeManager::getInstance();
     auto bounds = getBounds();
+    // The key-owner tick: 3 x 10 px, rounded, accent, in the padding before the title (or the header's first control).
+    // It is there or it is not, so it reads by shape as well as colour; nothing moves when it appears.
+    const bool ownsKeys = m_keyOwnerRole != WorkspaceFocusModel::KeyOwner::None &&
+                          WorkspaceFocusModel::currentKeyOwner() == m_keyOwnerRole;
+    const auto drawKeyTick = [&]() {
+        if (!ownsKeys) return;
+        const float x = bounds.x + 5.0f, y = bounds.y + (m_titleBarHeight - 10.0f) * 0.5f;
+        renderer.fillRoundedRect({x, y, 3.0f, 10.0f}, 1.5f, theme.getColor("accentPrimary"));
+    };
     
     // Draw title bar
     AestraUI::NUIRect titleBarRect(bounds.x, bounds.y, bounds.width, m_titleBarHeight);
@@ -221,6 +230,7 @@ void WindowPanel::onRender(AestraUI::NUIRenderer& renderer) {
         renderer.drawLine(AestraUI::NUIPoint(bounds.x, bounds.y + m_titleBarHeight - 0.5f),
                           AestraUI::NUIPoint(bounds.right(), bounds.y + m_titleBarHeight - 0.5f), 1.0f, borderColor);
         renderChildren(renderer);
+        drawKeyTick();
         if (m_closeButton && m_closeButton->isVisible()) {
             const auto cb = m_closeButton->getBounds();
             renderer.strokeRect(cb, 1.0f, borderColor);
@@ -262,6 +272,7 @@ void WindowPanel::onRender(AestraUI::NUIRenderer& renderer) {
     float textX = bounds.x + 12.0f;
     float textY = bounds.y + (m_titleBarHeight - titleSize.height) * 0.5f;
     renderer.drawText(caps, AestraUI::NUIPoint(textX, textY), fontSize, textColor);
+    drawKeyTick();
     
     // Render children (content + buttons)
     renderChildren(renderer);

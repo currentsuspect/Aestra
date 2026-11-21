@@ -383,10 +383,17 @@ UnitID UnitManager::duplicateUnit(UnitID sourceId) {
     dst->pluginId         = src->pluginId;
     dst->pluginState      = src->pluginState;
 
-    // Duplicate pattern if source has one
+    // createUnit() minted an empty default pattern for the new unit. Replace
+    // that temporary pattern with the source's cloned pad pattern so a unit
+    // duplicate does not leave an orphan pattern behind.
     if (src->defaultPatternId.isValid() && m_patternManager) {
+        const PatternID generatedPatternId = dst->defaultPatternId;
         PatternID newPatternId = m_patternManager->clonePattern(src->defaultPatternId);
-        dst->defaultPatternId = newPatternId;
+        if (newPatternId.isValid()) {
+            dst->defaultPatternId = newPatternId;
+            if (generatedPatternId.isValid() && generatedPatternId != newPatternId)
+                m_patternManager->removePattern(generatedPatternId);
+        }
     }
 
     // Re-instantiate plugin if source has one
@@ -467,6 +474,19 @@ void UnitManager::setUnitFollowsKey(UnitID id, std::optional<bool> follows) {
     if (!unit || unit->followsKeyOverride == follows) return;
     unit->followsKeyOverride = follows;
     publishSnapshot();
+}
+
+bool UnitManager::restoreUnit(const UnitInfo& info, size_t index) {
+    if (info.id == 0 || m_units.find(info.id) != m_units.end()) {
+        return false;
+    }
+    UnitInfo restored = info;
+    m_units[restored.id] = std::move(restored);
+    index = std::min(index, m_unitOrder.size());
+    m_unitOrder.insert(m_unitOrder.begin() + static_cast<std::ptrdiff_t>(index), info.id);
+    nextId = std::max(nextId, info.id + 1);
+    publishSnapshot();
+    return true;
 }
 
 void UnitManager::clear() {
@@ -621,6 +641,11 @@ void UnitManager::setUnitAudioClip(UnitID id, const std::string& path) {
     u->audioPreviewWaveform.clear();
 
     if (path.empty()) {
+        if (auto sampler = std::dynamic_pointer_cast<Plugins::SamplerPlugin>(u->plugin)) {
+            sampler->clearSample();
+            u->pluginState = sampler->saveState();
+        }
+        publishSnapshot();
         return;
     }
 
@@ -686,6 +711,10 @@ bool UnitManager::setUnitAudioClipFromDecoded(UnitID id, const std::string& path
     u->audioPreviewWaveform = std::move(previewWaveform);
 
     if (path.empty()) {
+        if (auto sampler = std::dynamic_pointer_cast<Plugins::SamplerPlugin>(u->plugin)) {
+            sampler->clearSample();
+            u->pluginState = sampler->saveState();
+        }
         publishSnapshot();
         return true;
     }
@@ -726,7 +755,12 @@ bool UnitManager::setUnitAudioClipFromDecoded(UnitID id, const std::string& path
     return loaded;
 }
 void UnitManager::setUnitColor(UnitID id, uint32_t color) { if (auto* u = getUnit(id)) u->color = color; }
-void UnitManager::setUnitGroup(UnitID id, UnitGroup group) { if (auto* u = getUnit(id)) u->group = std::move(group); }
+void UnitManager::setUnitGroup(UnitID id, UnitGroup group) {
+    if (auto* unit = getUnit(id); unit && unit->group != group) {
+        unit->group = group;
+        publishSnapshot();
+    }
+}
 bool UnitManager::setUnitType(UnitID id, UnitType type) {
     auto* unit = getUnit(id);
     if (!unit) {
@@ -1006,12 +1040,13 @@ void UnitManager::loadFromJSON(const JSON& json) {
             if (category != RoleCategory::Unknown) unit.role = userRole(category, sub); // an unknown id (a newer file) is ignored
         }
 
-        if (ju.has("group")) {
+        const bool hasStoredGroup = ju.has("group");
+        if (hasStoredGroup) {
             unit.group = unitGroupFromJson(ju["group"]);
         }
         unit.type = ju.has("type") ? unitTypeFromJson(ju["type"]) : unitTypeFromGroup(unit.group);
         // A saved group is the user's (or the first guess they kept): only a file without one falls back to the type.
-        if (!ju.has("group") || unit.group == UnitGroup::Unknown) unit.group = unitGroupForType(unit.type);
+        if (!hasStoredGroup || unit.group == UnitGroup::Unknown) unit.group = unitGroupForType(unit.type);
 
         unit.pluginId = ju.has("pluginId") ? ju["pluginId"].asString() : std::string{};
         if (ju.has("pluginStateHex") && ju["pluginStateHex"].isString()) {

@@ -227,6 +227,14 @@ const PluginInfo& SamplerPlugin::getInfo() const {
 
 // ... parameters ...
 
+void SamplerPlugin::clearSample() {
+    requestReleaseAllVoices();
+    auto old = m_data.exchange(std::shared_ptr<SampleData>(nullptr), std::memory_order_acq_rel);
+    publishSample(nullptr);
+    publishToKeepLength(nullptr);
+    retireSample(std::move(old));
+}
+
 bool SamplerPlugin::loadSample(const std::string& path) {
     if (!std::filesystem::exists(path))
         return false;

@@ -23,8 +23,26 @@ void ArsenalPanel::showSceneMenu(uint64_t patternId, const AestraUI::NUIPoint& a
     request.at = at;
     request.chip = m_scenes.chipRectOf(patternId);
     request.scenes = m_scenes.scenes();
-    request.changed = [this](uint64_t select) { sceneMenuChanged(select); };
+    request.selectedIds = m_selectedPatternIds;
+    request.changed = [this](uint64_t active, const std::vector<uint64_t>& selected) { sceneMenuChanged(active, selected); };
+    request.confirm = m_onConfirmDelete;
     m_sceneMenu.show(request);
+}
+
+bool ArsenalPanel::beginRenameSelectedPattern() {
+    if (!m_trackManager || m_selectedPatternIds.size() != 1) return false;
+    const uint64_t id = m_selectedPatternIds.front();
+    ArsenalSceneMenu::Request request;
+    request.tracks = m_trackManager.get();
+    request.owner = this;
+    request.id = id;
+    request.activeId = m_activePatternID.value;
+    request.chip = m_scenes.chipRectOf(id);
+    request.scenes = m_scenes.scenes();
+    request.selectedIds = m_selectedPatternIds;
+    request.changed = [this](uint64_t active, const std::vector<uint64_t>& selected) { sceneMenuChanged(active, selected); };
+    m_sceneMenu.rename(request);
+    return m_sceneMenu.renaming();
 }
 
 void ArsenalPanel::reconcilePatterns() {
@@ -36,6 +54,10 @@ void ArsenalPanel::reconcilePatterns() {
         signature += std::hash<std::string>{}(p.name) * 31u + static_cast<size_t>(p.id.value); // order-free: the store is unordered
         if (p.isMidi()) midi.push_back({p.id.value, std::get<MidiPayload>(p.payload).notes.size()});
     });
+    m_selectedPatternIds.erase(std::remove_if(m_selectedPatternIds.begin(), m_selectedPatternIds.end(),
+        [&](uint64_t id) { return !patterns.getPattern(PatternID{id}); }), m_selectedPatternIds.end());
+    if (m_selectedPatternIds.empty()) m_patternSelectionAnchor = 0;
+
     const uint64_t toShow = ArsenalPatternPick::patternToShow(midi);
     if (!patterns.getPattern(m_activePatternID) && toShow != 0) {
         // Nothing on show (a project just opened, undoing a duplicate, a delete elsewhere): show a pattern with notes
@@ -51,10 +73,18 @@ void ArsenalPanel::reconcilePatterns() {
     }
 }
 
-void ArsenalPanel::sceneMenuChanged(uint64_t select) {
+void ArsenalPanel::sceneMenuChanged(uint64_t active, const std::vector<uint64_t>& selected) {
     if (m_patternBrowser) m_patternBrowser->refreshPatterns();
-    // After Duplicate the copy becomes active (as in the browser); after deleting the active pattern its neighbour does.
-    if (select != 0) setActivePattern(PatternID{select});
+    m_selectionKind = SelectionKind::Patterns;
+    m_selectedUnitIds.clear();
+    m_selectedUnitId = 0;
+    m_unitSelectionAnchor = 0;
+    syncRowSelection();
+    m_selectedPatternIds = selected;
+    m_patternSelectionAnchor = selected.empty() ? 0 : selected.back();
+    m_scenes.setSelectedPatterns(m_selectedPatternIds);
+    // After Duplicate the copy becomes active; deleting the active pattern picks a surviving neighbour.
+    if (active != 0) setActivePattern(PatternID{active});
     refreshUnits();
     repaint();
 }
