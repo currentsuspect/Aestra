@@ -108,10 +108,10 @@ void testInk() {
             check(std::string(k.name) == "Ink", std::string(k.key) + " is named simply Ink");
         }
     check(inkRows == 3, "Ink has dark, light and high contrast");
-    check(same(dark.timelineBed, hex(0x000000)) && same(dark.editorWell, hex(0x030303)) &&
-              same(dark.meterBackground, hex(0x030303)),
-          "Ink dark: bed, editor well and meter background are the near-blacks");
-    check(same(dark.backgroundPrimary, hex(0x0a0a0a)) && same(dark.backgroundSecondary, hex(0x1e1e1e)) &&
+    check(same(dark.timelineBed, hex(0x000000)) && same(dark.editorWell, hex(0x000000)) &&
+              same(dark.meterBackground, hex(0x000000)),
+          "Ink dark: the bed, editor well and meter background are pure black (owner pick V2)");
+    check(same(dark.backgroundPrimary, hex(0x000000)) && same(dark.backgroundSecondary, hex(0x1e1e1e)) &&
               same(dark.surfaceTertiary, hex(0x303030)) && same(dark.surfaceRaised, hex(0x3e3e3e)),
           "Ink dark surfaces are exact neutral greys");
     check(same(dark.mixerStripBg, hex(0x1e1e1e)) && same(dark.editorCard, hex(0x1e1e1e)) &&

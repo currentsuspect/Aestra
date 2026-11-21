@@ -53,7 +53,7 @@ struct Site {
 
 int main() {
     // Part 1: the order of the surfaces, every theme.
-    constexpr float kCardStep = 1.10f; // the card over the bed, as a contrast ratio (Ink dark is about 1.19)
+    constexpr float kCardStep = 1.10f; // the card over the bed, as a contrast ratio (Ink dark with the pure-black bed: 1.26)
     for (const auto& kit : NUIThemePresets::kitThemes()) {
         const std::string key = kit.key;
         const NUIThemeProperties t = NUIThemePresets::createKitTheme(key);
@@ -62,6 +62,10 @@ int main() {
         const std::string at = key + ": ";
         check(ratio(t.backgroundSecondary, t.backgroundPrimary) >= kCardStep, at + "the card rises from the bed by the design step");
         check(luma(t.backgroundSecondary) > luma(t.backgroundPrimary), at + "the card is lighter than the bed");
+        if (key == "ink-dark") { // owner pick V2 (21 Nov): the bed is true black and the card keeps #1e1e1e
+            check(t.backgroundPrimary.r == 0.0f && t.backgroundPrimary.g == 0.0f && t.backgroundPrimary.b == 0.0f, at + "the bed is #000000");
+            check(ratio(t.backgroundSecondary, t.backgroundPrimary) >= 1.25f && ratio(t.backgroundSecondary, t.backgroundPrimary) <= 1.27f, at + "card over bed is 1.26:1");
+        }
         for (const NUIColor* control : {&t.surfaceTertiary, &t.surfaceRaised}) {
             if (dark) { // on dark the control greys climb past the card; on light they step down from the bed instead
                 check(luma(*control) > luma(t.backgroundSecondary), at + "a control grey is lighter than the card");
