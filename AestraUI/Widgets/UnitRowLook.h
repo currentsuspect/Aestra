@@ -110,6 +110,38 @@ inline Pads pads(const NUIThemeProperties& t) {
 /// The part of an active pad above its velocity bar: opaque, so it never depends on what is behind the pad.
 inline NUIColor velocityBase(const Pads& p, const NUIColor& rest) { return NUIColor::lerp(rest, p.active, 0.40f); }
 
+/// The output chip on a row ("[] Channel 1 v"): a colour dot, the destination's name and a chevron. The three are one
+/// group, centred in the chip: the same space to the chip's left and right edge, and the same gap between the parts
+/// whatever the name's length (it used to be pinned to the left edge, so a short name left a hole before the chevron).
+constexpr float kRouteDot = 6.0f;      ///< the colour square
+constexpr float kRouteGap = 6.0f;      ///< dot to name, and name to chevron
+constexpr float kRouteChevHalf = 3.0f; ///< the chevron is 2 * this wide
+constexpr float kRouteMinPad = 8.0f;   ///< the least space the group keeps to either edge
+
+/// The widest name that fits a chip of this width.
+inline float routeChipTextRoom(float chipWidth) {
+    return std::max(0.0f, chipWidth - 2.0f * kRouteMinPad - kRouteDot - 2.0f * kRouteGap - 2.0f * kRouteChevHalf);
+}
+
+struct RouteChip {
+    float dotX = 0.0f;   ///< left edge of the dot
+    float textX = 0.0f;  ///< left edge of the name
+    float chevX = 0.0f;  ///< centre of the chevron
+    float leftPad = 0.0f, rightPad = 0.0f;
+};
+
+/// Places the group for a name of @p textWidth pixels (already cut to routeChipTextRoom) in a chip.
+inline RouteChip routeChip(float chipX, float chipWidth, float textWidth) {
+    const float group = kRouteDot + kRouteGap + textWidth + kRouteGap + 2.0f * kRouteChevHalf;
+    RouteChip c;
+    c.leftPad = std::max(0.0f, (chipWidth - group) * 0.5f);
+    c.rightPad = c.leftPad;
+    c.dotX = chipX + c.leftPad;
+    c.textX = c.dotX + kRouteDot + kRouteGap;
+    c.chevX = c.textX + textWidth + kRouteGap + kRouteChevHalf;
+    return c;
+}
+
 /// A scene card in the strip above the rack.
 struct SceneTile {
     NUIColor fill;

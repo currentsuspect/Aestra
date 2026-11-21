@@ -352,17 +352,16 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
         // A colour dot for the destination, then its name, cut with an ellipsis to fit.
         NUIColor dot = theme.getColor("textMuted"); // no channel colour yet: neutral, never the selection violet
         if (m_mixerRouteColorIndex >= 0) dot = colorFromUnitValue(paletteIndexToARGB(m_mixerRouteColorIndex));
-        constexpr float kChipPad = 10.0f, kDot = 6.0f, kChev = 3.0f, kTextGap = 6.0f; // the same pad both ends
-        renderer.fillRect(NUIRect{routeRect.x + kChipPad, routeRect.y + routeRect.height * 0.5f - kDot * 0.5f, kDot, kDot}, dot);
         std::string label = m_mixerRouteName;
-        const float textX = routeRect.x + kChipPad + kDot + kTextGap;
-        const float chevCenter = routeRect.right() - kChipPad - kChev;
-        const float room = chevCenter - kChev - kTextGap - textX;
+        const float room = UnitRowLook::routeChipTextRoom(routeRect.width);
         bool cut = false;
         while (label.size() > 1 && renderer.measureText(label, 10.5f).width > room) { label.pop_back(); cut = true; }
         if (cut) label += "\xE2\x80\xA6";
-        renderer.drawText(label, {textX, routeRect.y + routeRect.height * 0.5f - 6.0f}, 10.5f, routeText);
-        for (float side : {-kChev, kChev}) renderer.drawLine({chevCenter + side, routeRect.y + routeRect.height * 0.5f - 1.5f}, {chevCenter, routeRect.y + routeRect.height * 0.5f + 1.5f}, 1.4f, theme.getColor("textMuted")); // the board's trailing chevron
+        const auto chip = UnitRowLook::routeChip(routeRect.x, routeRect.width, renderer.measureText(label, 10.5f).width); // dot, name and chevron as one centred group
+        const float cy = routeRect.y + routeRect.height * 0.5f;
+        renderer.fillRect(NUIRect{chip.dotX, cy - UnitRowLook::kRouteDot * 0.5f, UnitRowLook::kRouteDot, UnitRowLook::kRouteDot}, dot);
+        renderer.drawText(label, {chip.textX, cy - 6.0f}, 10.5f, routeText);
+        for (float side : {-UnitRowLook::kRouteChevHalf, UnitRowLook::kRouteChevHalf}) renderer.drawLine({chip.chevX + side, cy - 1.5f}, {chip.chevX, cy + 1.5f}, 1.4f, theme.getColor("textMuted")); // the board's trailing chevron
     }
     drawMuteIcon(renderer, muteRect, m_isMuted, engaged);
     drawSoloIcon(renderer, soloRect, m_isSolo, engaged);
