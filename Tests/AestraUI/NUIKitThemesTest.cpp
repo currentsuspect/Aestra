@@ -9,6 +9,8 @@
 #include "NUIThemeSystem.h"
 
 #include <algorithm>
+#include <cstdio>
+#include <fstream>
 #include <cmath>
 #include <iostream>
 #include <string>
@@ -195,6 +197,32 @@ void testSelectionFamily() {
     }
 }
 
+// A key that is an alias of a property (accent for primary, selection for selected) loses to the property's own key when a
+// file supplies both (owner's note in applyJSONThemeOverrides, 21 Nov 2026). accent/accentHover/accentPressed used to win.
+void testCanonicalKeyBeatsAlias() {
+    std::cout << "canonical keys beat their aliases\n";
+    const std::string path = "theme_alias_test.json";
+    {
+        std::ofstream out(path);
+        out << R"({"colors": {
+            "accent": "#aa0000", "primary": "#00aa00", "accentHover": "#bb0000", "primaryHover": "#00bb00",
+            "accentPressed": "#cc0000", "primaryPressed": "#00cc00", "selection": "#dd0000", "selected": "#00dd00",
+            "recessedPanel": "#110000", "backgroundSecondary": "#001100"}})";
+    }
+    const auto hex = [](unsigned v) { return NUIColor::fromHex(v); };
+    auto& manager = NUIThemeManager::getInstance();
+    check(manager.loadThemeFromFile("alias-test", path, "ink-dark"), "the theme file loads over Ink dark");
+    manager.setActiveTheme("alias-test");
+    const auto& t = manager.getCurrentTheme();
+    check(same(t.primary, hex(0x00aa00)), "primary beats accent");
+    check(same(t.primaryHover, hex(0x00bb00)), "primaryHover beats accentHover");
+    check(same(t.primaryPressed, hex(0x00cc00)), "primaryPressed beats accentPressed");
+    check(same(t.selected, hex(0x00dd00)), "selected beats selection");
+    check(same(t.backgroundSecondary, hex(0x001100)), "backgroundSecondary beats recessedPanel");
+    manager.setActiveTheme("ink-dark");
+    std::remove(path.c_str());
+}
+
 void testAliases() {
     std::cout << "old names resolve to Ink\n";
     const auto ink = NUIThemePresets::createKitTheme("ink-dark");
@@ -268,6 +296,7 @@ int main() {
     testAllKitThemes();
     testInk();
     testSelectionFamily();
+    testCanonicalKeyBeatsAlias();
     testAliases();
     testDepth();
     std::cout << (gFailures == 0 ? "ALL PASS\n" : "FAILURES: " + std::to_string(gFailures) + "\n");
