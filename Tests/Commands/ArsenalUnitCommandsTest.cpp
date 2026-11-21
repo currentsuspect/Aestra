@@ -24,6 +24,7 @@ void check(bool ok, const std::string& what) {
 int main() {
     {
         TrackManager manager;
+        manager.getUnitManager().setPatternManager(&manager.getPatternManager()); // the app wires this (AestraContent)
         CommandHistory& history = manager.getCommandHistory();
         auto add = std::make_shared<AddUnitCommand>(manager.getUnitManager(), "Hi-Hat", UnitType::Sampler);
         history.pushAndExecute(add);
@@ -44,6 +45,7 @@ int main() {
 
     {
         TrackManager manager;
+        manager.getUnitManager().setPatternManager(&manager.getPatternManager()); // the app wires this (AestraContent)
         auto& units = manager.getUnitManager();
         const UnitID id = units.createUnit("Snare", UnitType::Sampler);
         const PatternID pattern = units.getUnit(id)->defaultPatternId;

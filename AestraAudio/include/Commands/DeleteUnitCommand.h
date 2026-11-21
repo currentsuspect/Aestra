@@ -32,12 +32,11 @@ public:
         auto& patterns = m_manager.getPatternManager();
         for (const auto& pattern : patterns.getAllPatterns()) {
             if (!pattern || !pattern->isMidi()) continue;
-            auto notes = std::get<MidiPayload>(pattern->payload).notes;
-            auto it = std::remove_if(notes.begin(), notes.end(), [unitId](const MidiNote& n) { return n.unitId == unitId; });
-            if (it != notes.end()) {
-                notes.erase(it, notes.end());
-                m_notes.emplace_back(pattern->id, std::move(notes));
-            }
+            // Snapshot the unit's own notes (what undo must put back) before anything is erased.
+            std::vector<MidiNote> owned;
+            for (const auto& note : std::get<MidiPayload>(pattern->payload).notes)
+                if (note.unitId == unitId) owned.push_back(note);
+            if (!owned.empty()) m_notes.emplace_back(pattern->id, std::move(owned));
         }
     }
 
