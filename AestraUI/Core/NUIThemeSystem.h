@@ -154,6 +154,18 @@ struct NUIThemeProperties {
     NUIColor controlEdge;       ///< legacy outline colour: high contrast only, never a control at rest
     NUIColor controlSelected;
     NUIColor controlGuide;
+
+    // The selection family (21 Nov 2026). Every draw site that marks something selected, highlighted, hovered-while-
+    // selected, or draws the accent as text reads one of these instead of tinting `primary` with an alpha. All are
+    // opaque, so a fill is drawn under the content it marks and never washes over it. Kit themes state them
+    // (tools/theme gen); older presets and JSON overrides derive them in deriveSelectionFamily().
+    NUIColor selectedText;    ///< a label on a solid `selected` fill (textOnPrimary when solid, else textPrimary)
+    NUIColor selectionFill;   ///< a broad opaque selection area: loop range, ruler/scale highlight, selected row; text on it is textPrimary
+    NUIColor selectionTint;   ///< a quiet opaque tint: hover on a row, a scale-highlight lane, a drop target, a chip at rest
+    NUIColor selectionEdge;   ///< the outline of a selected thing
+    NUIColor hoverSelected;   ///< the selected fill under the pointer
+    NUIColor accentText;      ///< the accent as text or a hairline (key names, links, chips): 4.5:1 on the bed and cards
+    NUIColor playhead;        ///< the playhead line / pad fill: first of hover accent, primary, text that reads 3:1 on every surface
     NUIColor textOnStatus;
 
     // Depth (Design Spec rule 1: three depths, light from above). A well is shaded on its top-left inner edge
@@ -462,6 +474,8 @@ public:
     static NUIThemeProperties createKitTheme(const std::string& key);
     /// Fills the surface and depth tokens an older preset does not state, from its polarity.
     static void finishDerivedTokens(NUIThemeProperties& theme);
+    /// Fills the selection family (selectedText ... playhead) from primary, selected, secondary and the surfaces.
+    static void deriveSelectionFamily(NUIThemeProperties& theme);
 };
 
 // ---------------------------------------------------------------------------
