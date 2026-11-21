@@ -281,8 +281,9 @@ public:
         const auto lineTop = [&](const AestraUI::NUIRect& r) { return r.y + (r.height - renderer.getFontMetrics(font).lineHeight) * 0.5f; };
         // The label, level with the slider and the button.
         renderer.drawText("Swing", {lay.label.x, lineTop(lay.label)}, font, theme.getColor("textSecondary"));
-        // The slider: the sunk bed of every pill, its fill a thumb in the selection colour, the value centred over both.
-        AestraUI::Depth::bed(renderer, track, track.height * 0.5f, AestraUI::Depth::Cut::Shallow);
+        // The slider: a card-coloured capsule (the panel body is the bed, so a sunk bed would vanish on it), its fill a thumb in the
+        // selection colour, the value centred over both.
+        renderer.fillRoundedRect(track, track.height * 0.5f, theme.getColor("backgroundSecondary"));
         constexpr float inset = 3.0f; // the pill inset (TransportPillLook / the switcher's pad)
         const float full = std::max(0.0f, track.width - inset * 2.0f);
         const float fillW = full * std::clamp(m_swing, 0.0f, 1.0f);
