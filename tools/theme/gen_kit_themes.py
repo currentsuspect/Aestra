@@ -27,7 +27,7 @@ DEPTH = {
 # Ink dark is a cool-slate family: its depth and glass tokens use the same slate light and slate black as its washes, so no
 # neutral grey is left in it (owner pick S, 21 Nov 2026).
 DEPTH_BY_KEY = {
-    "ink-dark": {"neuHi": "#c8d8e80e", "neuLo": "#02040ad9", "neuEdge": "#00000000",
+    "ink-dark": {"neuHi": "#c8d8e80e", "neuLo": "#02040a80", "neuEdge": "#00000000",
                  "glassHi": "#c8d8e81a", "glassEdge": "#c8d8e826", "glassShade": "#02040ab3"},
 }
 

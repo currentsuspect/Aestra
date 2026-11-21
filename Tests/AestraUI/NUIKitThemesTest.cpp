@@ -88,7 +88,7 @@ void testAllKitThemes() {
         check(t.neuLo.a > 0.0f && t.neuHi.a > 0.0f, key + " has depth light and shade");
         check(t.glassEdge.a > 0.0f, key + " has a glass edge");
         if (k.mode != 1)
-            check(same(t.timelineBed, key == "ink-dark" ? NUIColor::fromHex(0x050709) : NUIColor::black()), key + " keeps its outer bed (pure black, or Ink dark's slate near-black)");
+            check(same(t.timelineBed, key == "ink-dark" ? NUIColor::fromHex(0x181a1c) : NUIColor::black()), key + " keeps its outer bed (pure black, or Ink dark's Platinum #181a1c)");
         if (k.mode == 2)
             check(t.neuEdge.a > 0.0f, key + " keeps an inner edge on controls");
         else
@@ -110,12 +110,12 @@ void testInk() {
             check(std::string(k.name) == "Ink", std::string(k.key) + " is named simply Ink");
         }
     check(inkRows == 3, "Ink has dark, light and high contrast");
-    check(same(dark.timelineBed, hex(0x050709)) && same(dark.editorWell, hex(0x050709)) &&
-              same(dark.meterBackground, hex(0x050709)),
-          "Ink dark: the outer bed, editor well and meter background are the slate near-black (owner pick S)");
-    check(same(dark.backgroundPrimary, hex(0x151a1f)) && same(dark.backgroundSecondary, hex(0x1b2025)) &&
+    check(same(dark.timelineBed, hex(0x181a1c)) && same(dark.editorWell, hex(0x181a1c)) &&
+              same(dark.meterBackground, hex(0x181a1c)),
+          "Ink dark: the bed, editor well and meter background are the Platinum surface #181a1c (owner lock, 21 Nov)");
+    check(same(dark.backgroundPrimary, hex(0x181a1c)) && same(dark.backgroundSecondary, hex(0x1b2025)) &&
               same(dark.surfaceTertiary, hex(0x272c32)) && same(dark.surfaceRaised, hex(0x32373d)),
-          "Ink dark surfaces are the slate charcoal ladder: panel, card, control, raised");
+          "Ink dark surfaces are the Platinum panel #181a1c, then the slate card, control and raised steps");
     check(same(dark.mixerStripBg, hex(0x1b2025)) && same(dark.editorCard, hex(0x1b2025)) &&
               same(dark.editorControl, hex(0x151a1f)),
           "Ink dark mixer strip, editor card and control");
@@ -142,8 +142,9 @@ void testInk() {
         check(!tinted(NUIColor::fromHex(0x1e1e1e)) && !tinted(NUIColor::fromHex(0x303030)), "(negative control) the old neutral greys fail the check");
         // The steps: outer < panel < card < control < raised, each at least 1.07, panel to card the compromise that keeps
         // the selected violet 3:1 on a card; outer to panel and control steps are 1.15 or more.
-        check(contrast(dark.backgroundPrimary, dark.timelineBed) >= 1.15f, "outer to panel is at least 1.15:1");
-        check(contrast(dark.backgroundSecondary, dark.backgroundPrimary) >= 1.065f, "panel to card is 1.07:1 (the 3:1 selected-on-card compromise)");
+        check(same(dark.backgroundPrimary, dark.timelineBed), "the outer bed and the panel are the one Platinum surface");
+        check(contrast(dark.backgroundSecondary, dark.backgroundPrimary) >= 1.06f, "panel to card is 1.06:1 (a card is a quiet step; the selected violet stays 3:1 on it)");
+        check(contrast(dark.surfaceTertiary, dark.backgroundPrimary) >= 1.2f, "a control reads against the panel at 1.2:1 or more");
         check(contrast(dark.surfaceTertiary, dark.backgroundSecondary) >= 1.15f && contrast(dark.surfaceRaised, dark.surfaceTertiary) >= 1.15f,
               "card to control and control to raised are at least 1.15:1");
         check(contrast(dark.selected, dark.backgroundSecondary) >= 3.0f && contrast(dark.selected, dark.backgroundPrimary) >= 3.0f &&
@@ -157,8 +158,8 @@ void testInk() {
     check(same(dark.textPrimary, hex(0xf5f5f5)) && same(dark.textSecondary, hex(0xc7c7c7)) &&
               same(dark.textMuted, hex(0x9e9e9e)) && same(dark.textDisabled, hex(0x717171)),
           "Ink dark text greys");
-    check(same(dark.primary, hex(0x764bdf)) && same(dark.primaryHover, hex(0x8a66ea)) &&
-              same(dark.primaryPressed, hex(0x6538c5)) && same(dark.textOnPrimary, hex(0xffffff)),
+    check(same(dark.primary, hex(0x7b53e8)) && same(dark.primaryHover, hex(0x8c67fd)) &&
+              same(dark.primaryPressed, hex(0x6b3fd3)) && same(dark.textOnPrimary, hex(0xffffff)),
           "Ink dark accent (option C: deep violet, white labels)");
     check(contrast(dark.primaryHover, dark.primary) > 1.0f && contrast(dark.primaryPressed, dark.backgroundPrimary) > 1.0f &&
               (dark.primaryHover.r + dark.primaryHover.g + dark.primaryHover.b) >
@@ -175,9 +176,29 @@ void testInk() {
           "selected is the solid deep-violet primary, no alpha");
     check(same(dark.focusRing, dark.primary) && dark.focusRing.a == 1.0f, "the focus ring is opaque");
     check(contrast(dark.textOnPrimary, dark.selected) >= 4.5f, "textOnPrimary reads on the selected fill");
-    check(same(dark.success, hex(0x3fc168)) && same(dark.warning, hex(0xfcab00)) && same(dark.error, hex(0xfd7468)) &&
+    check(same(dark.success, hex(0x89d298)) && same(dark.warning, hex(0xd4bd67)) && same(dark.error, hex(0xfda19e)) &&
+              same(dark.accentCyan, hex(0x5ecad6)) && same(dark.accentLime, hex(0xa5c47e)) &&
               same(dark.meterSafe, hex(0x00deaa)) && same(dark.textOnStatus, hex(0x0a0a0a)),
           "Ink dark status colours");
+    {
+        // Platinum (owner lock, 21 Nov): the logo violet with white labels, the pastel status colours as marks and as text-on-status.
+        check(contrast(dark.textOnPrimary, dark.selected) >= 4.9f, "white on the logo violet #7B53E8 is 4.95:1");
+        check(contrast(dark.accentText, dark.backgroundPrimary) >= 7.0f && contrast(dark.accentText, dark.backgroundSecondary) >= 7.0f &&
+                  contrast(dark.accentText, dark.surfaceTertiary) >= 4.5f,
+              "accent text #b19fff reads 7:1 on the panel and the card and 4.5:1 on a control");
+        for (const NUIColor* st : {&dark.success, &dark.warning, &dark.error, &dark.accentCyan, &dark.accentLime}) {
+            check(contrast(*st, dark.backgroundPrimary) >= 3.0f && contrast(*st, dark.backgroundSecondary) >= 3.0f, "a status colour is a 3:1 mark on the panel and the card");
+            check(contrast(dark.textOnStatus, *st) >= 4.5f, "textOnStatus reads on every status colour");
+        }
+        check(contrast(dark.selected, dark.backgroundPrimary) >= 3.0f && contrast(dark.selected, dark.backgroundSecondary) >= 3.0f,
+              "the logo violet is a 3:1 mark on the panel and the card");
+        check(std::fabs(dark.neuLo.a - 128.0f / 255.0f) < 1e-3f, "the inner shade is half strength (0x80), so a sunk bed on the panel stays soft");
+        check(same(dark.focusRing, dark.primary) && std::fabs(dark.focused.a - 56.0f / 255.0f) < 1e-3f && std::fabs(dark.dragTarget.a - 117.0f / 255.0f) < 1e-3f &&
+                  same(NUIColor(dark.focused.r, dark.focused.g, dark.focused.b, 1.0f), dark.primary) &&
+                  same(NUIColor(dark.dragTarget.r, dark.dragTarget.g, dark.dragTarget.b, 1.0f), dark.primary),
+              "the focus ring, focused and drag-target colours are the logo violet");
+        check(same(dark.secondary, hex(0xb19fff)) && same(dark.accentText, hex(0xb19fff)), "secondary and accent text are the light logo violet");
+    }
     check(std::fabs(dark.hover.a - 15.0f / 255.0f) < 1e-3f,
           "the hover overlay stays an alpha for now");
     check(same(light.backgroundPrimary, hex(0xede9e1)) && same(light.backgroundSecondary, hex(0xfffbf4)) &&
