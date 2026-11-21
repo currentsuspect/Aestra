@@ -118,6 +118,17 @@ constexpr float kRouteGap = 6.0f;      ///< dot to name, and name to chevron
 constexpr float kRouteChevHalf = 3.0f; ///< the chevron is 2 * this wide
 constexpr float kRouteMinPad = 8.0f;   ///< the least space the group keeps to either edge
 
+/// Where the output chip sits in the right column of a row (owner, 21 Nov: "it's the component, not the inside"). Measured on
+/// the screenshot the chip hugged the pad lane (2.6 px from it) and stood 16 px from the card's right edge. The chip keeps
+/// its right edge at the card margin, which lines up with the Fit | Scroll button above, and the lane now stops the same
+/// distance before it, so the gap to the lane equals the gap to the card edge.
+constexpr float kRouteMargin = 16.0f;    ///< chip to card edge, and lane to chip
+constexpr float kLaneInsetAdjust = 6.0f; ///< the lane well is cut 8 px after the head divider but measured from 2 px (UnitRow::draw)
+inline float routeChipX(float rowRight, float routeW) { return rowRight - kRouteMargin - routeW; }
+inline float routeColumnWidth(float routeW) { return routeW + 2.0f * kRouteMargin + kLaneInsetAdjust; }
+/// The lane well's right edge for a row whose right edge is @p rowRight (UnitRow::drawContextBlock's rect).
+inline float laneRight(float rowRight, float routeW) { return rowRight + kLaneInsetAdjust - routeColumnWidth(routeW); }
+
 /// The widest name that fits a chip of this width.
 inline float routeChipTextRoom(float chipWidth) {
     return std::max(0.0f, chipWidth - 2.0f * kRouteMinPad - kRouteDot - 2.0f * kRouteGap - 2.0f * kRouteChevHalf);

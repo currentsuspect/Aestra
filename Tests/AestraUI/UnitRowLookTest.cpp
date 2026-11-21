@@ -127,6 +127,25 @@ int main() {
         check(std::fabs((chevLeft - (textX + textW)) - Look::kRouteGap) > 1.0f, "(negative control) the old pinned layout leaves an uneven gap");
     }
 
+    // The chip's slot: as far from the pad lane as from the card edge, for every density's chip width and any row width, and
+    // the same x and width on every row of a rack.
+    for (const float routeW : {24.0f, 64.0f, 96.0f}) {
+        for (const float rowRight : {440.0f, 620.0f, 900.0f, 1358.0f}) {
+            const float chipX = Look::routeChipX(rowRight, routeW);
+            const float gapToLane = chipX - Look::laneRight(rowRight, routeW);
+            const float gapToCard = rowRight - (chipX + routeW);
+            const std::string at = "chip " + std::to_string(static_cast<int>(routeW)) + " px, row right " + std::to_string(static_cast<int>(rowRight)) + ": ";
+            check(std::fabs(gapToLane - gapToCard) < 0.01f, at + "gap to the lane equals gap to the card edge");
+            check(std::fabs(gapToCard - Look::kRouteMargin) < 0.01f, at + "and it is the standard margin");
+        }
+    }
+    {
+        // The old column (routeW + 24) left 2 px to the lane and 16 to the card: the lean the owner saw.
+        const float rowRight = 1358.0f, routeW = 96.0f;
+        const float oldLane = rowRight + 6.0f - (routeW + 24.0f);
+        check(std::fabs((Look::routeChipX(rowRight, routeW) - oldLane) - Look::kRouteMargin) > 10.0f, "(negative control) the old column's gaps were unequal");
+    }
+
     std::cout << g_checks << " contrast checks, " << g_failures << " failure(s)\n";
     std::cout << (g_failures == 0 ? "ALL PASS\n" : "FAILURES\n");
     return g_failures == 0 ? 0 : 1;

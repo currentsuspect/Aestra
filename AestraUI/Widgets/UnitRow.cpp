@@ -317,7 +317,7 @@ std::array<NUIRect, 3> UnitRow::controlPillRects(const NUIRect& controlBounds) c
     const float bandRight = controlBounds.right() - 8.0f - (minimal ? 19.0f : 23.0f); // the open-lanes key sits after S
     const float rowRight = controlBounds.x - 42.0f + getBounds().width;
     return {
-        NUIRect(rowRight - 16.0f - routeW, pillY, routeW, 20.0f), // output chip, row's right end
+        NUIRect(UnitRowLook::routeChipX(rowRight, routeW), pillY, routeW, 20.0f), // output chip: as far from the lane as from the card edge
         NUIRect(bandRight - keyW - 3.0f - keyW, pillY, keyW, 20.0f), // mute
         NUIRect(bandRight - keyW, pillY, keyW, 20.0f),               // solo
     };
