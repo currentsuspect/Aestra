@@ -111,6 +111,14 @@ void applyJSONThemeOverrides(const NUITheme& source, NUIThemeProperties& target)
     color("gridMinor", target.gridMinor);
     color("mixerStripBg", target.mixerStripBg);
     color("mixerMasterBorder", target.mixerMasterBorder);
+    // The kit's surface tokens, so a preview can move a whole layer (theme_preview.sh --set timelineBed=#000000).
+    color("timelineBed", target.timelineBed);
+    color("editorCard", target.editorCard);
+    color("editorWell", target.editorWell);
+    color("editorControl", target.editorControl);
+    color("controlEdge", target.controlEdge);
+    color("controlSelected", target.controlSelected);
+    color("controlGuide", target.controlGuide);
 
     const auto hasColor = [&](const char* primaryName, const char* alias = nullptr) {
         return source.hasColorOverride(primaryName) || (alias && source.hasColorOverride(alias));
