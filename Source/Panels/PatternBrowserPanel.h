@@ -68,6 +68,7 @@ protected:
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
     void onResize(int width, int height) override;
     void onUpdate(double deltaTime) override;
+    void onThemeChanged(const AestraUI::NUIThemeProperties& theme) override;
 
 private:
     TrackManager* m_trackManager = nullptr;

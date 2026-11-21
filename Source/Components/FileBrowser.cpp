@@ -199,14 +199,7 @@ FileBrowser::FileBrowser()
     navHistory_.push_back(currentPath_);
     navHistoryIndex_ = 0;
 
-    // Load Theme Colors (Consistent with AestraTheme)
-    backgroundColor_ = themeManager.getColor("backgroundPrimary"); // Deep Void from theme
-    textColor_ = themeManager.getColor("textPrimary");
-
-    // Use theme accent for selection (consistent with the rest of the app)
-    selectedColor_ = themeManager.getColor("accentPrimary");
-
-    hoverColor_ = themeManager.getColor("buttonBgHover").withAlpha(0.72f);
+    applyThemeColors(); // FileBrowserTheme.cpp: also what a theme change runs
     // Perform initial layout now that all members (icons, search input) are initialized
     // This initializes scrollbarTrackHeight_ and other layout vars needed by updateScrollbarVisibility
     onResize(static_cast<int>(getWidth()), static_cast<int>(getHeight()));
@@ -1797,15 +1790,6 @@ void FileBrowser::openFolder(const std::string& path) {
 // User collections
 // -----------------------------------------------------------------------------
 
-
-NUIColor FileBrowser::collectionColor(const std::string& name) const {
-    static constexpr uint32_t kPalette[] = {0x7c3aed, 0xf97316, 0x22c55e, 0x3b82f6,
-                                            0xec4899, 0x14b8a6, 0xeab308, 0xef4444};
-    const auto it = std::find(collections_.begin(), collections_.end(), name);
-    if (it == collections_.end()) return NUIColor(0.42f, 0.42f, 0.42f, 1.0f); // a plain tag
-    const size_t index = static_cast<size_t>(it - collections_.begin());
-    return NUIColor::fromHex(kPalette[index % (sizeof(kPalette) / sizeof(kPalette[0]))]);
-}
 
 void FileBrowser::addTaggingSubmenus(const std::string& path) {
     auto collectionsMenu = std::make_shared<NUIContextMenu>();

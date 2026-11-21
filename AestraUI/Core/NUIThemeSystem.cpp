@@ -379,6 +379,7 @@ void NUIThemeManager::unsubscribeFromThemeChanges(ThemeSubscriptionId subscripti
 }
 
 void NUIThemeManager::notifyThemeChanged() {
+    ++themeGeneration_; // before any subscriber runs, so they see the new generation
     const auto& theme = getCurrentTheme();
     if (onThemeChanged_)
         onThemeChanged_(theme);

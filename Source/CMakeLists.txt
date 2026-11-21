@@ -130,6 +130,7 @@ set(Aestra_SOURCES
 	Components/FileBrowser.cpp
 	Components/FileBrowserNavigation.cpp
 	Components/FileBrowserChrome.cpp
+	Components/FileBrowserTheme.cpp
 	Components/FileBrowserLibrary.cpp
 	Components/FileBrowserScan.cpp
 	Components/FileBrowserInternal.h

@@ -1048,6 +1048,24 @@ void PatternBrowserPanel::renderClipItem(AestraUI::NUIRenderer& renderer, const 
     }
 }
 
+// A theme change re-reads every colour this panel keeps (the constructor reads them once); the rendered rows are
+// redrawn by the render cache when the theme generation moves on.
+void PatternBrowserPanel::onThemeChanged(const AestraUI::NUIThemeProperties& theme) {
+    auto& tm = AestraUI::NUIThemeManager::getInstance();
+    m_backgroundColor = tm.getColor("backgroundPrimary");
+    m_textColor = tm.getColor("textPrimary");
+    m_borderColor = tm.getColor("borderSubtle").withAlpha(0.075f);
+    m_selectedColor = tm.getColor("selected");
+    if (m_addIcon) m_addIcon->setColor(m_textColor);
+    if (m_copyIcon) m_copyIcon->setColor(m_textColor);
+    if (m_trashIcon) m_trashIcon->setColor(tm.getColor("error").withAlpha(0.9f));
+    if (m_midiIcon) m_midiIcon->setColor(m_selectedColor);
+    if (m_audioIcon) m_audioIcon->setColor(m_selectedColor);
+    if (m_playIcon) m_playIcon->setColor(tm.getColor("textPrimary").withAlpha(0.92f));
+    if (m_modeToggle) m_modeToggle->setAccentColor(tm.getColor("accentPrimary"));
+    AestraUI::NUIComponent::onThemeChanged(theme);
+}
+
 void PatternBrowserPanel::onResize(int width, int height) {
     using namespace AestraUI::Layout;
     const auto bounds = getBounds();

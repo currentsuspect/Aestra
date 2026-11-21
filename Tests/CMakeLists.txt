@@ -3881,6 +3881,25 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(InkSurfaceStepTest PROPERTIES LABELS "ui;theme;contrast;contract:application")
 endif()
 
+# A theme change reaches every cache: the generation, the render-cache stale rule, the component dispatch, and a source
+# check that a panel copying theme colours into members has an onThemeChanged.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(ThemeChangeCacheTest AestraUI_Core)
+    add_executable(ThemeChangeCacheTest AestraUI/ThemeChangeCacheTest.cpp)
+    target_link_libraries(ThemeChangeCacheTest PRIVATE AestraUI_Core)
+    target_compile_definitions(ThemeChangeCacheTest PRIVATE AESTRA_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+    target_include_directories(ThemeChangeCacheTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Graphics
+        ${CMAKE_SOURCE_DIR}/AestraUI/Graphics/OpenGL
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ThemeChangeCacheTest COMMAND ThemeChangeCacheTest)
+    set_tests_properties(ThemeChangeCacheTest PROPERTIES LABELS "ui;theme;cache;regression;contract:application")
+endif()
+
 # Ink theme: no assignable unit/track colour is in the violet family; saved violet colours still decode.
 if(AESTRA_ENABLE_UI)
     aestra_require_ui_targets(TrackPaletteVioletTest AestraUI_Core)

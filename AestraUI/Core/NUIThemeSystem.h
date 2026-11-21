@@ -397,6 +397,11 @@ public:
     NUIColor getPressedColor(const NUIColor& baseColor) const;
     NUIColor getDisabledColor(const NUIColor& baseColor) const;
     
+    /// Counts theme changes (every notifyThemeChanged: a switch, or an edit of the active theme). Anything built from theme
+    /// colours and kept (a rendered cache, a cached colour set) records the generation it was built in and is stale
+    /// when this has moved on.
+    uint64_t themeGeneration() const { return themeGeneration_; }
+
     // Animation utilities
     std::shared_ptr<NUIAnimation> createColorTransition(
         const NUIColor& from, const NUIColor& to, float durationMs = -1.0f) const;
@@ -413,6 +418,7 @@ private:
     std::function<void(const NUIThemeProperties&)> onThemeChanged_;
     std::map<ThemeSubscriptionId, std::function<void(const NUIThemeProperties&)>> themeSubscribers_;
     ThemeSubscriptionId nextSubscriptionId_ = 1;
+    uint64_t themeGeneration_ = 1;
     
     // Animation for theme switching
     std::shared_ptr<NUIAnimation> themeTransitionAnimation_;
