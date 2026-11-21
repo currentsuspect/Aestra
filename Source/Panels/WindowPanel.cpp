@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios – All Rights Reserved. Licensed for personal & educational use only.
 #include "WindowPanel.h"
+#include "PanelFrame.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
 #include "../AestraUI/Layout/NUILayoutAlgorithms.h"
@@ -66,23 +67,16 @@ WindowPanel::WindowPanel(const std::string& title)
         </svg>
     )";
 
-    const auto iconColor = theme.getColor("textPrimary").withAlpha(0.92f);
     m_minimizeIcon = std::make_shared<AestraUI::NUIIcon>(minimizeSvg);
-    m_minimizeIcon->setColor(iconColor);
     m_maximizeIcon = std::make_shared<AestraUI::NUIIcon>(maximizeSvg);
-    m_maximizeIcon->setColor(iconColor);
     m_restoreIcon = std::make_shared<AestraUI::NUIIcon>(restoreSvg);
-    m_restoreIcon->setColor(iconColor);
     m_closeIcon = std::make_shared<AestraUI::NUIIcon>(closeSvg);
-    m_closeIcon->setColor(iconColor);
 
     // Create close button (X)
     m_closeButton = std::make_shared<AestraUI::NUIButton>();
     m_closeButton->setStyle(AestraUI::NUIButton::Style::Text);
     m_closeButton->setText("");
     m_closeButton->setBackgroundColor(AestraUI::NUIColor::transparent());
-    m_closeButton->setHoverColor(theme.getColor("error").withAlpha(0.24f));
-    m_closeButton->setPressedColor(theme.getColor("error").withAlpha(0.16f));
     m_closeButton->setTextColor(AestraUI::NUIColor::transparent());
     m_closeButton->setOnClick([this]() {
         onCloseClicked();
@@ -94,8 +88,6 @@ WindowPanel::WindowPanel(const std::string& title)
     m_maximizeButton->setStyle(AestraUI::NUIButton::Style::Text);
     m_maximizeButton->setText("");
     m_maximizeButton->setBackgroundColor(AestraUI::NUIColor::transparent());
-    m_maximizeButton->setHoverColor(theme.getColor("selectionFill"));
-    m_maximizeButton->setPressedColor(theme.getColor("selectionTint"));
     m_maximizeButton->setTextColor(AestraUI::NUIColor::transparent());
     m_maximizeButton->setOnClick([this]() {
         onMaximizeClicked();
@@ -107,13 +99,33 @@ WindowPanel::WindowPanel(const std::string& title)
     m_minimizeButton->setStyle(AestraUI::NUIButton::Style::Text);
     m_minimizeButton->setText("");
     m_minimizeButton->setBackgroundColor(AestraUI::NUIColor::transparent());
-    m_minimizeButton->setHoverColor(theme.getColor("selectionFill"));
-    m_minimizeButton->setPressedColor(theme.getColor("selectionTint"));
     m_minimizeButton->setTextColor(AestraUI::NUIColor::transparent());
     m_minimizeButton->setOnClick([this]() {
         onMinimizeClicked();
     });
     addChild(m_minimizeButton);
+    applyThemeColors();
+}
+
+void WindowPanel::applyThemeColors() {
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
+    const auto iconColor = theme.getColor("textPrimary").withAlpha(0.92f);
+    for (const auto& icon : {m_minimizeIcon, m_maximizeIcon, m_restoreIcon, m_closeIcon})
+        if (icon) icon->setColor(iconColor);
+    if (m_closeButton) {
+        m_closeButton->setHoverColor(theme.getColor("error").withAlpha(0.24f));
+        m_closeButton->setPressedColor(theme.getColor("error").withAlpha(0.16f));
+    }
+    for (const auto& b : {m_maximizeButton, m_minimizeButton}) {
+        if (!b) continue;
+        b->setHoverColor(theme.getColor("selectionFill"));
+        b->setPressedColor(theme.getColor("selectionTint"));
+    }
+}
+
+void WindowPanel::onThemeChanged(const AestraUI::NUIThemeProperties& themeProps) {
+    applyThemeColors();
+    AestraUI::NUIComponent::onThemeChanged(themeProps);
 }
 
 void WindowPanel::setContent(std::shared_ptr<AestraUI::NUIComponent> content) {
@@ -256,20 +268,15 @@ void WindowPanel::onRender(AestraUI::NUIRenderer& renderer) {
     // Draw content background
     if (!m_minimized) {
         renderer.fillRect(bounds, bodyColor);
-        renderer.strokeRect(bounds, 1.0f, borderColor);
         renderer.fillRect(titleBarRect, titleBarColor);
-        
-        // Separator for title bar
-        renderer.drawLine(
-            AestraUI::NUIPoint(bounds.x + 1, bounds.y + m_titleBarHeight),
-            AestraUI::NUIPoint(bounds.x + bounds.width - 1, bounds.y + m_titleBarHeight),
-            1.0f, 
-            borderColor.withAlpha(0.72f)
-        );
+        // The divider runs the full width inside the frame, and the frame is drawn last, as one closed rectangle of whole-pixel lines:
+        // nothing is painted over it, so no corner shows a stub (PanelFrame.h).
+        renderer.fillRect(Aestra::PanelFrame::divider(bounds, m_titleBarHeight), borderColor.withAlpha(0.72f));
+        Aestra::PanelFrame::draw(renderer, bounds, borderColor);
     } else {
         // Minimized: titlebar only
         renderer.fillRect(titleBarRect, titleBarColor);
-        renderer.strokeRect(titleBarRect, 1.0f, borderColor);
+        Aestra::PanelFrame::draw(renderer, titleBarRect, borderColor);
     }
     
     // Draw title text

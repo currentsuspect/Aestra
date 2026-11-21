@@ -3946,6 +3946,22 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(PlayheadHeadClipTest PROPERTIES LABELS "ui;layout;geometry;regression;contract:application")
 endif()
 
+# A panel frame is one closed rectangle with no orphan segments (Source/Panels/PanelFrame.h, rasterised headless).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(PanelFrameTest AestraUI_Core)
+    add_executable(PanelFrameTest AestraUI/PanelFrameTest.cpp)
+    target_link_libraries(PanelFrameTest PRIVATE AestraUI_Core)
+    target_include_directories(PanelFrameTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Graphics
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PanelFrameTest COMMAND PanelFrameTest)
+    set_tests_properties(PanelFrameTest PROPERTIES LABELS "ui;layout;geometry;regression;contract:application")
+endif()
+
 # Selection tokens guard: the accent / selection colours come from the theme's named tokens. Fails on a primary tinted
 # with an alpha, a lerp toward it, a violet literal, or a local given an alpha after being assigned from the accent.
 if(AESTRA_ENABLE_UI)
