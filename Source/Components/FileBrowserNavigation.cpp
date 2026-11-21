@@ -83,7 +83,7 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     // One shared, compact navigation row. The browser no longer spends a full
     // second row on item counts and duplicate structural rules.
     const NUIRect& navHeader = layout.navHeader;
-    renderer.fillRect(navHeader, themeManager.getColor("backgroundSecondary").darkened(0.03f));
+    renderer.fillRect(navHeader, themeManager.getColor("backgroundSecondary")); // the card itself, not a darker shade
     renderer.drawLine({navHeader.x, navHeader.bottom()}, {navHeader.right(), navHeader.bottom()},
                       1.0f, themeManager.getColor("border").withAlpha(0.42f));
 

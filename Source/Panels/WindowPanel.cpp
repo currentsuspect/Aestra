@@ -250,7 +250,7 @@ void WindowPanel::onRender(AestraUI::NUIRenderer& renderer) {
     if (!m_minimized) {
         renderer.fillRoundedRect(bounds, windowRadius, bodyColor);
         renderer.strokeRoundedRect(bounds, windowRadius, 1.0f, borderColor);
-        renderer.fillRect(titleBarRect, titleBarColor.withAlpha(0.98f));
+        renderer.fillRect(titleBarRect, titleBarColor);
         
         // Separator for title bar
         renderer.drawLine(
@@ -261,7 +261,7 @@ void WindowPanel::onRender(AestraUI::NUIRenderer& renderer) {
         );
     } else {
         // Minimized: titlebar only
-        renderer.fillRoundedRect(titleBarRect, windowRadius, titleBarColor.withAlpha(0.98f));
+        renderer.fillRoundedRect(titleBarRect, windowRadius, titleBarColor);
         renderer.strokeRoundedRect(titleBarRect, windowRadius, 1.0f, borderColor);
     }
     

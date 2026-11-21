@@ -1679,8 +1679,8 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
     const AestraUI::NUIRect controlAreaBounds(bounds.x, bounds.y, controlAreaWidth, bounds.height);
     if (m_isAutomationRow) return renderAutomationRowHeader(renderer, controlAreaBounds); // V82-T1
 
-    // Quiet control slab overlay (recedes so clips stay Level 1).
-    renderer.fillRect(controlAreaBounds, themeManager.getColor("surfaceRaised").withAlpha(isHovered() ? 0.12f : 0.04f));
+    // The header is the bed at rest (a 4% raised wash made a grey that was neither bed nor card); hover lifts it.
+    if (isHovered()) renderer.fillRect(controlAreaBounds, themeManager.getColor("surfaceRaised").withAlpha(0.12f));
 
     AestraUI::NUIRect highlightRect = controlAreaBounds;
     highlightRect.height = 1.0f;

@@ -517,7 +517,7 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
     auto b = getBounds();
     auto& themeManager = NUIThemeManager::getInstance();
 
-    const auto toolbarBg = themeManager.getColor("backgroundSecondary").darkened(0.015f);
+    const auto toolbarBg = themeManager.getColor("backgroundSecondary"); // exactly the card, not a shade of it
     const auto border = themeManager.getColor("border");
     const auto text = themeManager.getColor("textPrimary");
 

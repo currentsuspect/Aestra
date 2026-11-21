@@ -88,6 +88,9 @@ int main() {
         {"Source/Panels/WindowPanel.cpp", "auto bodyColor = theme.getColor(\"backgroundPrimary\");", "backgroundPrimary", "docked and floating panel body"},
         {"AestraUI/Widgets/RumblePluginEditor.cpp", "b.height - headerHeight()}, token(\"backgroundPrimary\"));", "backgroundPrimary", "Rumble editor body"},
         {"Source/Components/TrackManagerUIRender.cpp", "themeManager.getColor(\"backgroundPrimary\"));\n    renderer.drawLine({rulerBounds.x, rulerBounds.bottom()}, {gridStartX", "backgroundPrimary", "timeline ruler corner"},
+        {"Source/Components/TrackManagerUIToolbar.cpp", "renderer.fillRect(row, theme.getColor(\"backgroundPrimary\"));", "backgroundPrimary", "timeline toolbar strip"},
+        {"Source/Panels/WindowPanel.cpp", "auto titleBarColor = theme.getColor(\"backgroundSecondary\");", "backgroundSecondary", "panel title strip (opaque)"},
+        {"AestraUI/Widgets/PianoRollToolbar.cpp", "toolbarBg = themeManager.getColor(\"backgroundSecondary\");", "backgroundSecondary", "piano roll toolbar strip"},
         {"Source/Settings/MissingAssetsDialog.cpp", "theme.radiusL, theme.backgroundSecondary)", "backgroundSecondary", "Missing assets dialog card"},
     };
     for (const auto& s : sites) {
