@@ -236,7 +236,13 @@ void WindowPanel::onRender(AestraUI::NUIRenderer& renderer) {
         drawKeyTick();
         if (m_closeButton && m_closeButton->isVisible()) {
             const auto cb = m_closeButton->getBounds();
-            renderer.strokeRect(cb, 1.0f, borderColor);
+            // Four whole-pixel lines, so every corner is closed: the renderer's 1 px strokeRect left one corner of this outline
+            // open at a fractional position (a broken stub on the piano roll's close button, owner 21 Nov).
+            const float ox = std::round(cb.x), oy = std::round(cb.y), ow = std::round(cb.width), oh = std::round(cb.height);
+            renderer.fillRect({ox, oy, ow, 1.0f}, borderColor);
+            renderer.fillRect({ox, oy + oh - 1.0f, ow, 1.0f}, borderColor);
+            renderer.fillRect({ox, oy + 1.0f, 1.0f, oh - 2.0f}, borderColor);
+            renderer.fillRect({ox + ow - 1.0f, oy + 1.0f, 1.0f, oh - 2.0f}, borderColor);
             if (m_closeIcon) {
                 const float iconSize = 12.0f;
                 m_closeIcon->setBounds({cb.x + (cb.width - iconSize) * 0.5f, cb.y + (cb.height - iconSize) * 0.5f,
