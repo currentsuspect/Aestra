@@ -13,6 +13,7 @@
 #include "../Components/TransportModuleStyle.h"
 #include "../AestraUI/Graphics/NUIDepth.h"
 #include "DspLoadReadout.h"
+#include "TransportPillLook.h"
 #include "Commands/SetProjectKeyCommand.h"
 #include "Music/KeyPillText.h"
 
@@ -45,9 +46,9 @@ constexpr float TRANSPORT_PRIMARY_ICON = 18.0f;
 constexpr const char* TRANSPORT_LABEL_COUNT_IN = "Count-in";
 constexpr const char* TRANSPORT_LABEL_WAIT = "Wait";
 constexpr const char* TRANSPORT_LABEL_LOOP_REC = "Loop record";
-constexpr float CHIP_H = 22.0f;
+constexpr float CHIP_H = TransportPill::kHeight; // one height for every pill
 constexpr float CHIP_FONT = 11.0f;
-constexpr float CHIP_PAD_X = 8.0f;
+constexpr float CHIP_PAD_X = 10.0f; // bed edge to lamp: the 3 px inset plus 7, as on both sides of the label
 constexpr float CHIP_LAMP = 6.0f;
 constexpr float CHIP_LAMP_GAP = 6.0f;
 constexpr float CHIP_GAP = 4.0f;
@@ -58,7 +59,7 @@ constexpr float CHIP_METRONOME_W = CHIP_PAD_X * 2.0f + CHIP_LAMP + CHIP_LAMP_GAP
 
 // Panel switches (mixer / Arsenal / piano roll): icon keys with tooltips.
 constexpr float PANEL_BTN_W = 28.0f;
-constexpr float PANEL_BTN_H = 24.0f;
+constexpr float PANEL_BTN_H = TransportPill::kHeight;
 constexpr float PANEL_GAP = 4.0f;
 constexpr float PANEL_ICON = 15.0f;
 
@@ -76,7 +77,7 @@ constexpr float KEY_VALUE_SIZE = 13.0f;
 inline float chipTextWidth(const char* text) {
     float w = 0.0f;
     for (const char* p = text; *p != '\0'; ++p) {
-        w += (*p == ' ') ? CHIP_FONT * 0.30f : CHIP_FONT * 0.60f;
+        w += (*p == ' ') ? CHIP_FONT * 0.30f : CHIP_FONT * 0.54f;
     }
     return w;
 }
@@ -700,10 +701,10 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
     const AestraUI::NUIColor lampOff = theme.getColor("textDisabled");
 
     const auto drawIcon = [&](const std::shared_ptr<AestraUI::NUIIcon>& icon, const AestraUI::NUIRect& area,
-                              float size, const AestraUI::NUIColor& color) {
+                              float size, const AestraUI::NUIColor& color, float opticalDy = 0.0f) {
         if (!icon) return;
         icon->setBounds(AestraUI::NUIRect(std::round(area.x + (area.width - size) * 0.5f),
-                                          std::round(area.y + (area.height - size) * 0.5f), size, size));
+                                          std::round(area.y + (area.height - size) * 0.5f + opticalDy), size, size));
         icon->setColor(color);
         icon->onRender(renderer);
     };
@@ -741,26 +742,49 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
         primaryKey(m_recordButton, m_recordIcon, m_recordButton->isToggled(), true);
     }
 
-    // Record aids: pill keys with a lamp. The lamp is the state; the word is the meaning. A lit aid is sunk.
+    // One look for every pill (TransportPillLook.h): the sunk bed of the title bar's view switcher, and a raised thumb
+    // inset 3 px when engaged. `lit` makes the thumb the selection colour (an open panel); otherwise it is the raised
+    // surface (a record aid that is on). Hover is a quiet fill of the thumb's footprint.
+    const AestraUI::NUIColor selectedFill = theme.getColor("selected");
+    const auto pillFace = [&](const AestraUI::NUIRect& pill, const AestraUI::NUIRect& cell, bool engaged, bool hovered, bool lit) {
+        namespace TP = Aestra::TransportPill;
+        if (engaged) {
+            AestraUI::Depth::ObjectLook look;
+            look.base = lit ? selectedFill : raised;
+            look.lightTop = 0.12f;
+            look.shadeBottom = 0.14f;
+            const AestraUI::NUIRect t = TP::thumb(cell);
+            AestraUI::Depth::object(renderer, t, TP::radius(t), look);
+        } else if (hovered) {
+            const AestraUI::NUIRect t = TP::thumb(cell);
+            renderer.fillRoundedRect(t, TP::radius(t), control);
+        }
+        (void)pill;
+    };
+
+    // Record aids: pills with a lamp. The lamp is the state; the word is the meaning. A lit aid is the raised thumb.
     const auto lampChip = [&](const std::shared_ptr<AestraUI::NUIButton>& btn, bool on, const char* label,
                               const std::shared_ptr<AestraUI::NUIIcon>& icon) {
         if (!btn || !btn->isVisible()) return;
         const AestraUI::NUIRect rect = btn->getBounds();
         const bool hovered = btn->isHovered() && btn->isEnabled();
-        keyFace(rect, rect.height * 0.5f, on || btn->isPressed(), hovered, false);
+        AestraUI::Depth::bed(renderer, rect, Aestra::TransportPill::radius(rect), AestraUI::Depth::Cut::Shallow);
+        pillFace(rect, rect, on || btn->isPressed(), hovered, false);
 
-        const AestraUI::NUIPoint lampCenter(rect.x + CHIP_PAD_X + CHIP_LAMP * 0.5f, rect.y + rect.height * 0.5f);
+        const float wordW = label ? renderer.measureText(label, CHIP_FONT).width : CHIP_ICON;
+        const float startX = Aestra::TransportPill::groupStartX(rect, CHIP_LAMP + CHIP_LAMP_GAP + wordW); // equal space either side
+        const AestraUI::NUIPoint lampCenter(startX + CHIP_LAMP * 0.5f, rect.y + rect.height * 0.5f);
         if (on) renderer.fillCircle(lampCenter, CHIP_LAMP, lampOn.withAlpha(0.22f));
         renderer.fillCircle(lampCenter, CHIP_LAMP * 0.5f, on ? lampOn : lampOff);
 
-        const float contentX = rect.x + CHIP_PAD_X + CHIP_LAMP + CHIP_LAMP_GAP;
+        const float contentX = startX + CHIP_LAMP + CHIP_LAMP_GAP;
         const AestraUI::NUIColor text = (on || hovered) ? ink : inkQuiet;
         if (label) {
             // Caps: centred by cap height, level with the lamp (SPEC 3 §3.2).
             renderer.drawText(label,
                               {contentX, std::round(renderer.calculateOpticalTextY(rect, CHIP_FONT))}, CHIP_FONT, text);
         } else {
-            drawIcon(icon, AestraUI::NUIRect(contentX, rect.y, CHIP_ICON, rect.height), CHIP_ICON, text);
+            drawIcon(icon, AestraUI::NUIRect(contentX, rect.y, CHIP_ICON, rect.height), CHIP_ICON, text, Aestra::TransportPill::kGlyphOpticalDy);
         }
     };
     lampChip(m_countInButton, m_countInActive, TRANSPORT_LABEL_COUNT_IN, nullptr);
@@ -768,17 +792,20 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
     lampChip(m_loopRecordButton, m_loopRecordActive, TRANSPORT_LABEL_LOOP_REC, nullptr);
     lampChip(m_metronomeButton, m_metronomeActive, nullptr, m_metronomeIcon);
 
-    // Panel switches: quiet at rest (a dense row), sunk with an accent glyph while the panel is open.
+    // Panel switches: the three share one sunk bed, like the view switcher; an open panel is a thumb in the selection
+    // colour with the selected-text glyph, so a token swap changes it. The glyph is centred in its cell.
+    if (m_mixerButton && m_mixerButton->isVisible() && m_pianoRollButton) {
+        const AestraUI::NUIRect bed = Aestra::TransportPill::groupBed(m_mixerButton->getBounds(), m_pianoRollButton->getBounds());
+        AestraUI::Depth::bed(renderer, bed, Aestra::TransportPill::radius(bed), AestraUI::Depth::Cut::Shallow);
+    }
+    const AestraUI::NUIColor selectedInk = theme.getColor("selectedText");
     const auto panelKey = [&](const std::shared_ptr<AestraUI::NUIButton>& btn,
                               const std::shared_ptr<AestraUI::NUIIcon>& icon, bool open) {
         if (!btn || !btn->isVisible()) return;
         const AestraUI::NUIRect rect = btn->getBounds();
         const bool hovered = btn->isHovered() && btn->isEnabled();
-        if (open || btn->isPressed())
-            AestraUI::Depth::bed(renderer, rect, 8.0f, AestraUI::Depth::Cut::Shallow);
-        else if (hovered)
-            renderer.fillRoundedRect(rect, 8.0f, control);
-        drawIcon(icon, rect, PANEL_ICON, open ? accentInk : (hovered ? ink : inkQuiet));
+        pillFace(rect, rect, open || btn->isPressed(), hovered, true);
+        drawIcon(icon, rect, PANEL_ICON, open ? selectedInk : (hovered ? ink : inkQuiet), Aestra::TransportPill::kGlyphOpticalDy);
     };
     panelKey(m_mixerButton, m_mixerIcon, m_mixerActive);
     panelKey(m_sequencerButton, m_sequencerIcon, m_sequencerActive);

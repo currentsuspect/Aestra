@@ -3900,6 +3900,17 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(ThemeChangeCacheTest PROPERTIES LABELS "ui;theme;cache;regression;contract:application")
 endif()
 
+# Transport pills: one height, one inset, glyphs centred in their cells (TransportPillLook.h, headless).
+if(AESTRA_ENABLE_UI)
+    add_executable(TransportPillGeometryTest AestraUI/TransportPillGeometryTest.cpp)
+    target_include_directories(TransportPillGeometryTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+    )
+    add_test(NAME TransportPillGeometryTest COMMAND TransportPillGeometryTest)
+    set_tests_properties(TransportPillGeometryTest PROPERTIES LABELS "ui;layout;geometry;regression;contract:application")
+endif()
+
 # Selection tokens guard: the accent / selection colours come from the theme's named tokens. Fails on a primary tinted
 # with an alpha, a lerp toward it, a violet literal, or a local given an alpha after being assigned from the accent.
 if(AESTRA_ENABLE_UI)
