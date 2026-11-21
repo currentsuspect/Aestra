@@ -61,6 +61,27 @@ Kind:       planned
 Reversal:   —
 EOF
 
+expect pass "a three-digit decision number" <<'EOF'
+Objective:  A1 — example objective
+Decision:   FD-100 @ a30696a
+Kind:       planned
+Reversal:   —
+EOF
+
+expect pass "a three-digit reversal authorisation" <<'EOF'
+Objective:  A1 — example objective
+Decision:   FD-100 @ a30696a
+Kind:       unparked
+Reversal:   FD-101 — authorised by decision entry
+EOF
+
+expect fail "a one-digit decision number is still not a citation" <<'EOF'
+Objective:  A1 — example objective
+Decision:   FD-4 @ a30696a
+Kind:       planned
+Reversal:   —
+EOF
+
 expect pass "corrective work needs no objective" <<'EOF'
 Objective:  —
 Decision:   FD-06 @ a30696a858b2f723030c3732e7a9deb80bb103c5
