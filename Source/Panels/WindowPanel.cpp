@@ -215,7 +215,9 @@ void WindowPanel::onRender(AestraUI::NUIRenderer& renderer) {
     
     // Unified panel shell + flat titlebar treatment
     const float windowRadius = std::min(theme.getRadius("m"), 2.0f); // 2 px, as the clips, pads and mixer strips
-    auto bodyColor = theme.getColor("surfaceTertiary");
+    // The body is the bed (backgroundPrimary, the page's #0a0a0a in Ink): rows, cards and keys rise from it as lighter
+    // surfaces instead of sitting inside a flat mid-grey slab. The border keeps the frame.
+    auto bodyColor = theme.getColor("backgroundPrimary");
     // Title bar shares the transport bar's charcoal (backgroundSecondary) so all
     // docked-panel chrome reads as one consistent surface.
     auto titleBarColor = theme.getColor("backgroundSecondary");

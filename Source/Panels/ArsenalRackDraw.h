@@ -74,7 +74,8 @@ inline void drawArsenalStepper(AestraUI::NUIRenderer& renderer, const AestraUI::
     const NUIColor glyph = theme.getColor("textSecondary").withAlpha(0.85f);
     const NUIColor off = theme.getColor("textDisabled");
     const float pillH = std::min(24.0f, dec.height), pillY = dec.y + (dec.height - pillH) * 0.5f;
-    renderer.fillRoundedRect(NUIRect(dec.x, pillY, inc.right() - dec.x, pillH), pillH * 0.5f, theme.getColor("backgroundPrimary"));
+    // The same sunk bed as the Fit | Scroll track beside it: it carries its own edge, so it still reads on the near-black panel body.
+    Depth::bed(renderer, NUIRect(dec.x, pillY, inc.right() - dec.x, pillH), pillH * 0.5f, Depth::Cut::Shallow);
     renderer.drawTextCentered("\xE2\x88\x92", dec, tp.fontSizeS, decEnabled ? glyph : off);
     renderer.drawTextCentered(text, value, tp.fontSizeXS, theme.getColor("textPrimary").withAlpha(0.92f));
     renderer.drawTextCentered("+", inc, tp.fontSizeS, incEnabled ? glyph : off);
