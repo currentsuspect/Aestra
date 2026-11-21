@@ -74,26 +74,6 @@ struct StartupTimer {
     }
 };
 
-/** @brief True when @p filePath's text contains @p needle (generic path form).
- *
- *  Project/autosave JSON stores recording paths as generic (forward-slash)
- *  strings. A contains-check is deliberately permissive: a false positive
- *  merely keeps a recording file, never deletes one. */
-bool pathAppearsInFile(const std::string& filePath, const std::string& needle) {
-    std::error_code ec;
-    if (!std::filesystem::exists(filePath, ec)) {
-        return false;
-    }
-    std::ifstream in(filePath, std::ios::in | std::ios::binary);
-    if (!in) {
-        return false;
-    }
-    std::ostringstream buffer;
-    buffer << in.rdbuf();
-    const std::string generic = std::filesystem::path(needle).generic_string();
-    return buffer.str().find(generic) != std::string::npos;
-}
-
 }
 
 // =============================================================================
@@ -1580,8 +1560,29 @@ void AestraApp::cleanupUnreferencedRecordings(const std::string& keeperProjectPa
     const std::string projectPath = !keeperProjectPath.empty() ? keeperProjectPath : m_documentState.canonicalPath();
     std::function<bool(const std::string&)> keepCheck;
     if (!projectPath.empty()) {
-        keepCheck = [projectPath](const std::string& path) {
-            return pathAppearsInFile(projectPath, path);
+        // Everything the project can still be reopened onto owns its recordings: the project file itself, and
+        // every version snapshot beside it. An alt can hold a recording the open project file never mentions,
+        // and cleaning it up would leave that version pointing at a file that is gone. Each owner is read once;
+        // the check itself runs per candidate file.
+        std::vector<std::string> owners{projectPath};
+        for (const auto& take : TakeManager::loadManifest(projectPath).takes) {
+            const std::string snapshot = TakeManager::resolveSnapshotPath(projectPath, take);
+            if (!snapshot.empty()) owners.push_back(snapshot);
+        }
+        std::vector<std::string> bodies;
+        for (const auto& file : owners) {
+            std::ifstream in(file, std::ios::in | std::ios::binary);
+            if (!in) continue;
+            std::ostringstream buffer;
+            buffer << in.rdbuf();
+            bodies.push_back(buffer.str());
+        }
+        keepCheck = [bodies](const std::string& path) {
+            const std::string needle = std::filesystem::path(path).generic_string();
+            for (const auto& body : bodies) {
+                if (body.find(needle) != std::string::npos) return true;
+            }
+            return false;
         };
     }
     const auto removed = trackManager->cleanupOrphanedRecordings(keepCheck);
@@ -1975,6 +1976,11 @@ ProjectSerializer::LoadResult AestraApp::applyLoadedProject(const std::string& p
             trackManager->setPosition(result.playhead);
             trackManager->setPlayStartPosition(result.playhead);
             trackManager->getCommandHistory().clear();
+            // The stack no longer holds the version's own commands: nothing on it is chronicled, and the rows
+            // come from whichever version is open (refreshVersionChip reads them).
+            m_versionBaseline = Aestra::VersionEdits::Baseline{};
+            m_versionManifestKnown = false; // the open version moved: read the manifest again
+            m_versionEditsStale = true;
             // Only an in-memory transformation requires a save. Merely
             // advancing an older no-op schema stamp must not create a false
             // dirty prompt (#662).
@@ -2167,7 +2173,23 @@ bool AestraApp::saveActiveTakeSnapshot(const ProjectSerializer::UIState* uiState
         Log::warning("[Takes] Could not save active Take: " + result.errorMessage);
         return false;
     }
-    TakeManager::setVersionSteps(m_documentState.canonicalPath(), result.take.id, collectVersionSteps(m_content->getTrackManager()->getCommandHistory()));
+    // The version's own rows, then the commands made since: opening a version clears the history, so writing the
+    // stack alone would erase the log the Versions dock shows (and a save one step after a reopen would leave it
+    // holding that single step).
+    const auto& history = m_content->getTrackManager()->getCommandHistory();
+    const auto rows = VersionEdits::stepsToRecord(history, m_versionBaseline);
+    const auto stepResult = TakeManager::setVersionSteps(m_documentState.canonicalPath(), result.take.id, rows);
+    if (!stepResult.ok) {
+        // The project file and the snapshot are on disk but the log is not. Leave the save point where it was so
+        // the next save writes these rows again, and say so: reporting success here would start the next save
+        // past the commands whose rows never landed.
+        Log::warning("[Takes] Version snapshot saved, but its step log did not: " + stepResult.errorMessage);
+        m_versionEditsStale = true;
+        return false;
+    }
+    m_versionBaseline = VersionEdits::saved(history, m_versionBaseline, rows);
+    refreshVersionChip(); // this version just wrote the steps the unsaved count measures against
+    m_versionEditsStale = true;
     return true;
 }
 
@@ -2176,10 +2198,9 @@ bool AestraApp::createTakeFromCurrentProject(bool newBranch) {
         return false;
     }
 
-    if (!saveProject()) {
-        return false;
-    }
-
+    // No save-into-the-open-version first: "Save as an alt" (and the switch prompt's answer of the same name)
+    // keeps the working state in the new version only. Writing it into the source take first changed that take
+    // even when creating the alt then failed.
     const auto uiState = captureUIState();
     auto ser = serializeCurrentProject(2, &uiState);
     if (!ser.ok || ser.contents.empty()) {
@@ -2190,13 +2211,38 @@ bool AestraApp::createTakeFromCurrentProject(bool newBranch) {
     const auto manifest = TakeManager::loadManifest(m_documentState.canonicalPath());
     const std::string takeName = "Version " + std::to_string(manifest.ok ? manifest.takes.size() + 1 : 2);
     const std::string branchName = newBranch ? "Alt " + std::to_string(manifest.ok ? manifest.branches().size() : 1) : ""; // empty continues the open branch
-    auto result = TakeManager::createVersion(m_documentState.canonicalPath(), ser.contents, takeName, "", branchName, TakeManager::TakeEntry::Kind::Saved, collectVersionSteps(m_content->getTrackManager()->getCommandHistory()));
+    const std::string previousActive = manifest.ok ? manifest.activeTakeId : std::string{};
+    const auto& history = m_content->getTrackManager()->getCommandHistory();
+    const auto rows = VersionEdits::stepsToRecord(history, m_versionBaseline);
+    auto result = TakeManager::createVersion(m_documentState.canonicalPath(), ser.contents, takeName, "", branchName,
+                                             TakeManager::TakeEntry::Kind::Saved, rows);
     if (!result.ok) { Log::warning("[Takes] Could not create version: " + result.errorMessage); return false; }
+    m_versionBaseline = VersionEdits::saved(history, m_versionBaseline, rows);
+    m_versionManifestKnown = false;
+    refreshVersionChip(); // the new version is open, and its steps are the ones the unsaved count measures against
+    m_versionEditsStale = true;
+
+    // Reopening a project loads the canonical file, so the open version has to match it: without this the next
+    // open shows the previous version's contents under this one's name. Only the canonical project is written;
+    // the source version's snapshot is left alone.
+    if (!saveProjectToPath(m_documentState.canonicalPath())) {
+        Log::warning("[Takes] New version created, but the project file could not follow it");
+        // Do not leave a version published as open that a reopen cannot load.
+        if (!previousActive.empty()) {
+            const auto reverted = TakeManager::setActiveTake(m_documentState.canonicalPath(), previousActive);
+            if (!reverted.ok) {
+                Log::error("[Takes] Could not put the previous version back as open: " + reverted.errorMessage);
+            }
+            m_versionManifestKnown = false;
+            refreshVersionChip();
+        }
+        return false;
+    }
 
     Log::info("[Takes] Active version: " + result.take.name); return true;
 }
 
-ProjectSerializer::LoadResult AestraApp::switchToTake(const std::string& takeId) {
+ProjectSerializer::LoadResult AestraApp::switchToTake(const std::string& takeId, bool saveCurrent) {
     ProjectSerializer::LoadResult result;
     if (takeId.empty()) {
         result.errorMessage = "Take id is empty";
@@ -2207,7 +2253,9 @@ ProjectSerializer::LoadResult AestraApp::switchToTake(const std::string& takeId)
         return result;
     }
 
-    if (!saveProject()) {
+    // The save-before-switch rule lives here and nowhere else. `saveCurrent` is false only when the user
+    // answered Discard in the switch prompt, which is the one path allowed to leave the working state behind.
+    if (saveCurrent && !saveProject()) {
         result.errorMessage = "Could not save the current Take before switching";
         return result;
     }
@@ -2230,34 +2278,97 @@ ProjectSerializer::LoadResult AestraApp::switchToTake(const std::string& takeId)
         return result;
     }
 
-    result = loadProjectFromPath(snapshotPath, ProjectLoadSource::Snapshot, m_documentState.canonicalPath());
-    if (!result.ok) {
-        return result;
-    }
-
-    auto activeResult = TakeManager::setActiveTake(m_documentState.canonicalPath(), takeId);
+    // The manifest's active selection moves before the working session is replaced: from here on nothing can
+    // fail in a way that loses work, and only a version that will open is published as open.
+    const std::string previousActive = manifest.activeTakeId;
+    const auto activeResult = TakeManager::setActiveTake(m_documentState.canonicalPath(), takeId);
     if (!activeResult.ok) {
-        auto rollback = loadProjectFromPath(m_documentState.canonicalPath());
-        if (!rollback.ok) {
-            Log::error("[Takes] CRITICAL: Failed to rollback after failed Take switch: " + rollback.errorMessage);
-        }
-        result.ok = false;
         result.errorMessage = activeResult.errorMessage;
         return result;
     }
+    m_versionManifestKnown = false;
 
-    if (!saveProject()) {
-        auto rollback = loadProjectFromPath(m_documentState.canonicalPath());
-        if (!rollback.ok) {
-            Log::error("[Takes] CRITICAL: Failed to rollback after failed mirror save: " + rollback.errorMessage);
+    // With Discard nothing on disk holds the working session any more, so a failure below would leave nothing to
+    // hand back. Keep a copy of it first; a switch that succeeds drops the copy.
+    const std::string staged = saveCurrent ? std::string{} : stageWorkingState();
+
+    result = loadProjectFromPath(snapshotPath, ProjectLoadSource::Snapshot, m_documentState.canonicalPath());
+    if (!result.ok) {
+        // The version did not open: unpublish it and leave the project as it was.
+        if (!previousActive.empty() && !TakeManager::setActiveTake(m_documentState.canonicalPath(), previousActive).ok) {
+            Log::error("[Takes] Could not put the previous version back as open");
         }
+        m_versionManifestKnown = false;
+        restoreWorkingState(staged);
+        return result;
+    }
+
+    // The loaded snapshot is now the open version: read its own log before the mirror save below writes it back,
+    // or the mirror would append this version's new steps onto the previous version's log.
+    refreshVersionChip();
+    if (!saveProject()) {
+        // The version loaded but the canonical file did not follow it. Put the working session back — a Discard
+        // switch that fails must not take the work with it — and unpublish the version.
+        if (!previousActive.empty() && !TakeManager::setActiveTake(m_documentState.canonicalPath(), previousActive).ok) {
+            Log::error("[Takes] Could not put the previous version back as open");
+        }
+        m_versionManifestKnown = false;
+        restoreWorkingState(staged);
         result.ok = false;
         result.errorMessage = "Switched Take but could not mirror it to the canonical project file";
         return result;
     }
 
+    if (!staged.empty()) {
+        std::error_code ec;
+        std::filesystem::remove(staged, ec);
+    }
+
     Log::info("[Takes] Switched to Take: " + activeResult.take.name);
+    refreshVersionChip(); // the open version moved: the chip and the unsaved count follow it
     return result;
+}
+
+std::string AestraApp::stageWorkingState() {
+    if (!m_content || !m_content->getTrackManager()) return {};
+    const auto uiState = captureUIState();
+    const auto ser = serializeCurrentProject(2, &uiState);
+    if (!ser.ok || ser.contents.empty()) {
+        Log::warning("[Takes] Could not stage the working state before a switch");
+        return {};
+    }
+    std::error_code ec;
+    const auto dir = std::filesystem::temp_directory_path(ec);
+    if (ec) return {};
+    const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
+    const std::string path = (dir / ("aestra-switch-" + std::to_string(stamp) + ".aes")).string();
+    if (!ProjectSerializer::writeAtomically(path, ser.contents)) {
+        Log::warning("[Takes] Could not write the staged working state: " + path);
+        return {};
+    }
+    return path;
+}
+
+void AestraApp::restoreWorkingState(const std::string& stagedPath) {
+    // The staged copy is the session as it was; the canonical file lags it whenever the switch was discarding.
+    // It is read as a recovered session, then handed back to the canonical document it belongs to, still unsaved.
+    if (!stagedPath.empty()) {
+        auto restored = loadProjectFromPath(stagedPath, ProjectLoadSource::Recovery, m_documentState.canonicalPath());
+        std::error_code ec;
+        std::filesystem::remove(stagedPath, ec);
+        if (restored.ok) {
+            m_documentState.openCanonical(m_documentState.canonicalPath());
+            if (m_content && m_content->getTrackManager()) m_content->getTrackManager()->setModified(true);
+            updateWindowTitle();
+            return;
+        }
+        Log::error("[Takes] Could not restore the working session: " + restored.errorMessage);
+    }
+    // Nothing staged (the work was saved before the switch): the canonical file is the session.
+    const auto rolledBack = loadProjectFromPath(m_documentState.canonicalPath());
+    if (!rolledBack.ok) {
+        Log::error("[Takes] CRITICAL: Failed to roll back after a failed Take switch: " + rolledBack.errorMessage);
+    }
 }
 
 bool AestraApp::branchFromTake(const std::string& takeId) {
@@ -2326,13 +2437,7 @@ void AestraApp::wireTakesPanel() {
     takesPanel->setOnSaveToNewBranch([this]() { return createTakeFromCurrentProject(true); });
     wireVersionsPanel(*takesPanel); wireAudition();
     takesPanel->setOnSaveActiveTake([this]() { return saveProject(); });
-    takesPanel->setOnOpenTake([this](const std::string& takeId) {
-        auto result = switchToTake(takeId);
-        if (!result.ok) {
-            Log::error("[Takes] Failed to open Take: " + takeId + " (" + result.errorMessage + ")");
-        }
-        return result.ok;
-    });
+    takesPanel->setOnOpenTake([this](const std::string& takeId) { return requestSwitchToTake(takeId); });
 
     takesPanel->setOnRenameTake([this](const std::string& takeId, const std::string& name) {
         if (m_documentState.canonicalPath().empty()) return false;

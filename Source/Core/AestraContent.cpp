@@ -704,7 +704,7 @@ void AestraContent::setupTransportBar() {
     // Create transport bar (Moved to Workspace Layer and Early Init for correct Z-Order behind Sidebars)
     m_transportBar = std::make_shared<Aestra::TransportBar>();
     m_transportBar->setOnToggleView([this](Audio::ViewType view) { toggleView(view); });
-
+    wireKeyModule(); // the KEY module: song key (undoable) and the typing keyboard root
     // Wire Transport to AudioEngine (timeline playback)
     m_transportBar->setOnPlay([this]() { handleTransportPlayRequest(); });
     m_transportBar->setOnPause([this]() {
@@ -1424,6 +1424,7 @@ void AestraContent::setupArsenalPanels() {
             }
         }
     });
+    m_sequencerPanel->setOnNotify([this](const std::string& message) { showToast(message); });
     m_sequencerPanel->setOnRequestPatternEditor([this](PatternID patternId, Aestra::Audio::UnitID unitId) { openPatternInPianoRoll(patternId, unitId); });
 
     m_sequencerPanel->setOnRequestLoadSample([this](UnitID id) {

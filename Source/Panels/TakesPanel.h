@@ -3,6 +3,7 @@
 
 #include "WindowPanel.h"
 #include "../Core/TakeManager.h"
+#include "../Core/VersionEdits.h"
 #include "../Core/VersionBounce.h"
 #include "BringOverCard.h"
 #include "VersionsTimeline.h"
@@ -39,6 +40,20 @@ public:
         std::string label;  ///< Human-readable label (timestamp).
     };
 
+    /**
+     * @brief How many steps the open version is missing, and whether that number is exact.
+     *
+     * The app measures this (VersionEdits). After steps are taken back the count describes work that is no
+     * longer applied, so the dock says "Edited" instead of claiming a number the title bar already declines.
+     */
+    struct UnsavedInfo {
+        int steps{0};
+        bool counted{false};
+    };
+
+    /// What asking for a version came to (VersionEdits::OpenOutcome): declining is not failing.
+    using OpenVersionResult = Aestra::VersionEdits::OpenOutcome;
+
     using TakesProvider = std::function<TakeManager::Manifest()>;
     using SnapshotsProvider = std::function<std::vector<SnapshotEntry>()>;
 
@@ -63,7 +78,7 @@ public:
     /** @brief Save the current state into the active take's snapshot. */
     void setOnSaveActiveTake(std::function<bool()> cb) { m_onSaveActiveTake = std::move(cb); }
     /** @brief Open (restore) a take after safely saving the current one. */
-    void setOnOpenTake(std::function<bool(const std::string& takeId)> cb) { m_onOpenTake = std::move(cb); }
+    void setOnOpenTake(std::function<OpenVersionResult(const std::string& takeId)> cb) { m_onOpenTake = std::move(cb); }
     /** @brief Rename a take. */
     void setOnRenameTake(std::function<bool(const std::string& takeId, const std::string& name)> cb) {
         m_onRenameTake = std::move(cb);
@@ -90,7 +105,7 @@ public:
     /// A step in the dock was clicked: go back (or forward) to it.
     void setOnStepActivated(std::function<void(const StepEntry&)> cb) { m_onStepActivated = std::move(cb); }
     /// How many steps have been made since the open version was saved (the timeline's dashed tail).
-    void setUnsavedProvider(std::function<int()> provider) { m_unsavedProvider = std::move(provider); }
+    void setUnsavedProvider(std::function<UnsavedInfo()> provider) { m_unsavedProvider = std::move(provider); }
     /// A version's bounce, when it has one: its file and what the card shows. Read once per refresh, not per frame.
     struct BounceCard {
         std::string path;
@@ -251,13 +266,13 @@ private:
     int m_bouncePending{0};  ///< frames to draw the "bouncing" status before the render blocks the UI
     std::function<bool(const std::string&)> m_bouncePlaying;
     std::unordered_map<std::string, BounceCard> m_bounces;  ///< by version id, rebuilt with the rows
-    std::function<int()> m_unsavedProvider;
+    std::function<UnsavedInfo()> m_unsavedProvider;
     std::function<std::string()> m_projectNameProvider;
 
     std::function<bool()> m_onCreateTake;
     std::function<bool()> m_onSaveToNewBranch;
     std::function<bool()> m_onSaveActiveTake;
-    std::function<bool(const std::string&)> m_onOpenTake;
+    std::function<OpenVersionResult(const std::string&)> m_onOpenTake;
     std::function<bool(const std::string&, const std::string&)> m_onRenameTake;
     std::function<bool(const std::string&)> m_onDuplicateTake;
     std::function<bool(const std::string&)> m_onDeleteTake;
@@ -268,7 +283,7 @@ private:
     std::vector<TakeRow> m_takeRows;
     std::vector<SnapshotEntry> m_snapshotRows;
     std::vector<StepEntry> m_steps;
-    int m_unsaved{0};
+    UnsavedInfo m_unsaved;
     float m_timelineScroll{0.0f};
     bool m_timelineScrollPlaced{false};  ///< the first layout scrolls so the open version is in view
     unsigned m_stepTick{0};

@@ -649,6 +649,9 @@ private:
     /// Per-frame services that live outside this (size-pinned) file: the DSP load readout and, every two seconds, a
     /// MIDI port rescan so a controller plugged in after startup is picked up (#456). AestraContentMeters.cpp.
     void updateFrameServices(double dt);
+    /** @brief Connect the transport bar's KEY module (AestraContentKey.cpp); showKeyModule() keeps it in step each frame. */
+    void wireKeyModule();
+    void showKeyModule();
     double m_midiPortPollSeconds = 0.0;
     Aestra::DspLoadReadout m_dspLoad;
     float m_dspDrawn = -1.0f;      ///< the DSP percent last handed to the transport bar (-1: none yet)

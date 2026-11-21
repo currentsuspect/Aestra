@@ -133,6 +133,8 @@ public:
     void setOnSampleDroppedToUnit(std::function<void(UnitID, const std::string&)> cb) { m_onSampleDroppedToUnit = cb; }
     /** @brief Open a selected kit folder in the File Browser without creating Arsenal state. */
     void setOnKitFolderSelected(std::function<void(const std::string&)> cb) { m_onKitFolderSelected = std::move(cb); }
+    /// A short line for the user after an action (a bus created): the app shows it as a toast.
+    void setOnNotify(std::function<void(const std::string&)> cb) { m_onNotify = std::move(cb); }
     /** @brief Set the callback fired when unit selection changes. */
     void setOnSelectedUnitChanged(std::function<void(UnitID)> cb) { m_onSelectedUnitChanged = std::move(cb); }
 
@@ -162,6 +164,8 @@ private:
     std::shared_ptr<AestraUI::NUIComponent> m_listContainer;
     std::vector<std::shared_ptr<AestraUI::UnitRow>> m_unitRows;
     Aestra::ArsenalKitCard m_kitCard; ///< the empty state (FD-27 point 6)
+    Aestra::Audio::UnitGroup m_dropGroup{Aestra::Audio::UnitGroup::Unknown}; ///< the group under a dragged row (groupAtY)
+    size_t m_lastRowCount{0}; ///< rows at the last refresh: more now means a unit was added, so scroll to it
     Aestra::ArsenalRowLanes m_lanes; ///< which rows are open into step lanes (FD-27 point 4)
     Aestra::ArsenalSceneStrip m_scenes; ///< pattern chips under the command header (FD-27 point 1)
     AestraUI::NUIRect m_sceneRect{};
@@ -196,6 +200,7 @@ private:
     bool m_fitToWidth = true; // Fit whole loop to width vs readable-min + scroll
     int m_stepCount = 16; // Default step count
     void layoutUnits();
+    void revealRowsFrom(size_t firstNewRow); // Scroll just far enough that the added row is in the viewport
     void scrollGridBy(float deltaPx, bool userScroll = true); // Clamp + broadcast the shared grid scroll
     float computeGridMaxScrollX() const;
     float gridStepWidth() const; // One step's width in the grid: fit-to-width, or the readable 20 px minimum
@@ -277,6 +282,7 @@ private:
     std::function<void(UnitID)> m_onRequestSampleEditor;
     std::function<void(const std::string&)> m_onPluginDropped;
     std::function<void(UnitID, const std::string&)> m_onPluginDroppedToUnit;
+    std::function<void(const std::string&)> m_onNotify;
     std::function<void(UnitID, const std::string&)> m_onSampleDroppedToUnit;
     std::function<void(const std::string&)> m_onKitFolderSelected;
     std::function<void(UnitID)> m_onSelectedUnitChanged;

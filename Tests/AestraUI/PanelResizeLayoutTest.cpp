@@ -244,11 +244,47 @@ void testStretchToTargetFitRow() {
 
 } // namespace
 
+// A sound added to a full rack is scrolled into view, not scrolled to the bottom of the rack: a
+// Synth or Drums row lands above the Audio block, so "scroll to the end" leaves it above the fold.
+void testAddedSoundIsRevealed() {
+    std::cout << "[PanelResizeLayoutTest] added sound reveal...\n";
+    auto tm = std::make_shared<Aestra::Audio::TrackManager>();
+    auto& units = tm->getUnitManager();
+    ArsenalPanel panel(tm);
+    panel.setBounds({0.0f, 0.0f, 520.0f, 360.0f});
+    for (int i = 0; i < 8; ++i) units.createUnit("Audio " + std::to_string(i), Aestra::Audio::UnitGroup::Audio);
+    panel.refreshUnits();
+    panel.onUpdate(0.05); // settle the first layout: opening a project never scrolls
+
+    const auto container = panel.getContent();
+    expect(container != nullptr, "the Arsenal has no list container");
+    if (!container) return;
+    const NUIRect viewport = container->getBounds();
+    const auto rowBounds = [&](Aestra::Audio::UnitID unit) {
+        for (const auto& child : container->getChildren()) {
+            if (auto* row = dynamic_cast<AestraUI::UnitRow*>(child.get()); row && row->getUnitId() == unit) return row->getBounds();
+        }
+        return NUIRect{0.0f, 0.0f, 0.0f, 0.0f};
+    };
+
+    const auto added = units.createUnit("Fresh 808", Aestra::Audio::UnitGroup::Drums);
+    panel.refreshUnits();
+    for (int frame = 0; frame < 60; ++frame) panel.onUpdate(0.05); // ease to the new scroll target
+
+    const NUIRect row = rowBounds(added);
+    std::cout << "  added row " << row.y << ".." << row.bottom() << " in " << viewport.y << ".."
+              << viewport.bottom() << "\n";
+    expect(row.height > 0.0f, "the added sound has no row");
+    expect(row.y >= viewport.y, "the added row sits above the top of the rack");
+    expect(row.bottom() <= viewport.bottom() + 1.0f, "the added row is out of view below the rack");
+}
+
 int main() {
     std::cout << "=== PanelResizeLayoutTest (resize/layout triage 2026-08-14) ===\n";
     testAudioClipEditorLayout();
     testArsenalRowLabelLayout();
     testStretchToTargetFitRow();
+    testAddedSoundIsRevealed();
 
     if (g_failures == 0) {
         std::cout << "=== PanelResizeLayoutTest: all checks passed ===\n";

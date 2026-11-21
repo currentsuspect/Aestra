@@ -81,11 +81,13 @@ public:
     /** @brief Callback fired when the unit is deleted via context menu. */
     std::function<void(Aestra::Audio::UnitID, NUIModifiers)> m_onSelectUnit;
     std::function<void(Aestra::Audio::UnitID)> m_onDeleteUnit;
+    std::function<void(const std::string&)> m_onNotify;
     /** @brief Callback fired when the unit is duplicated via context menu. */
     std::function<void(Aestra::Audio::UnitID)> m_onDuplicateUnit;
     std::function<bool()> m_hasMultipleSelection;
     std::function<std::vector<Aestra::Audio::UnitID>()> m_getSelectedUnitIds;
     std::function<void(Aestra::Audio::UnitID, Aestra::Audio::UnitGroup)> m_onMoveSelectedToGroup;
+    std::function<void(Aestra::Audio::UnitID)> m_onGroupChanged;
 
     void setOnDragStart(std::function<void(Aestra::Audio::UnitID)> cb) { m_onDragStart = cb; }
     void setOnDrop(std::function<void(Aestra::Audio::UnitID, int)> cb) { m_onDrop = cb; }
@@ -102,6 +104,8 @@ public:
     void setOnOpenPatternEditor(std::function<void(Aestra::Audio::PatternID, Aestra::Audio::UnitID)> cb) { m_onOpenPatternEditor = cb; }
     void setOnRenameUnit(std::function<void(Aestra::Audio::UnitID, const std::string&)> cb) { m_onRenameUnit = cb; }
     void setOnDeleteUnit(std::function<void(Aestra::Audio::UnitID)> cb) { m_onDeleteUnit = cb; }
+    /// A short line to tell the user what an action just did ("Created Drum Bus with 3 sounds"): the app shows it as a toast.
+    void setOnNotify(std::function<void(const std::string&)> cb) { m_onNotify = std::move(cb); }
     void setOnDuplicateUnit(std::function<void(Aestra::Audio::UnitID)> cb) { m_onDuplicateUnit = cb; }
     void setHasMultipleSelection(std::function<bool()> cb) { m_hasMultipleSelection = std::move(cb); }
     void setGetSelectedUnitIds(std::function<std::vector<Aestra::Audio::UnitID>()> cb) {
@@ -110,6 +114,7 @@ public:
     void setOnMoveSelectedToGroup(std::function<void(Aestra::Audio::UnitID, Aestra::Audio::UnitGroup)> cb) {
         m_onMoveSelectedToGroup = std::move(cb);
     }
+    void setOnGroupChanged(std::function<void(Aestra::Audio::UnitID)> cb) { m_onGroupChanged = std::move(cb); } ///< moved to Synth / Drums
     
     /**
      * @brief Set the visible step count for the sequencer section.

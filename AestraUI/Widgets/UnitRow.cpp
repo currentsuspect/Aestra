@@ -6,8 +6,10 @@
 #include "Commands/AssignUnitToFirstFreeInsertCommand.h"
 #include "Commands/CommandTransaction.h"
 #include "Commands/EditPatternNotesCommand.h"
+#include "Commands/CreateRoleBusCommand.h"
 #include "Commands/SetRoleCommand.h"
 #include "Commands/SetUnitMixerChannelCommand.h"
+#include "UnitGroupMenu.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 #include "PluginBrowserPanel.h"
@@ -1890,6 +1892,20 @@ void UnitRow::showRowContextMenu(const NUIPoint& pos) {
             item->setOnClick([choose, category, keepSub]() { choose(userRole(category, keepSub)); });
             roleMenu->addItem(item);
         }
+        // The offer: sounds that share a role can share a bus. Made on a sound that would go into it, when there
+        // are at least two. One undo step; every member keeps its own channel.
+        if (m_trackManager && current.known()) {
+            const RoleBusPlan plan = planRoleBus(*m_trackManager, current.category);
+            if (plan.worthOffering() && planIncludesUnit(plan, *m_trackManager, m_unitId)) {
+                m_rowContextMenu->addItem("Create " + plan.name + " (" + std::to_string(plan.members.size()) + " sounds)", [this, plan]() {
+                    if (!m_trackManager) return;
+                    auto command = std::make_shared<CreateRoleBusCommand>(*m_trackManager, plan);
+                    m_trackManager->getCommandHistory().pushAndExecute(command);
+                    if (command->busChannelId() != 0 && m_onNotify)
+                        m_onNotify("Created " + plan.name + " with " + std::to_string(command->memberCount()) + " sounds. Undo takes it back.");
+                });
+            }
+        }
     }
     categoryMenu->addSubmenu("Move to group", groupMenu);
     categoryMenu->addSeparator();
@@ -1906,6 +1922,7 @@ void UnitRow::showRowContextMenu(const NUIPoint& pos) {
         if (m_onDuplicateUnit)
             m_onDuplicateUnit(m_unitId);
     });
+    addUnitGroupMoveItem(*m_rowContextMenu, m_trackManager.get(), m_unitId, m_onGroupChanged); // the first group was a guess
 
     m_rowContextMenu->addSeparator();
     m_rowContextMenu->addItem(selectedCount > 1 ? "Delete Selected Units" : "Delete Unit", [this, pos]() {

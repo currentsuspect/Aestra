@@ -234,6 +234,9 @@ struct AudioArsenalSnapshot {
 /**
  * @brief Unit manager for Arsenal system
  */
+/// A sampled sound's first group, from its name: melodic one-shots under Synth, the rest under Drums (#1400).
+UnitGroup unitGroupForSample(UnitType type, const std::string& name);
+
 class UnitManager {
 public:
     /**

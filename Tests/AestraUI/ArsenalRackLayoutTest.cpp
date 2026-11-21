@@ -100,6 +100,17 @@ int main() {
         check(ArsenalRackLayout::finalIndexAfterMove(order, 30, 2) == 2 && ArsenalRackLayout::finalIndexAfterMove(order, 30, 3) == 2, "dropped on or just after itself: it stays");
     }
 
+    {   // #1400: a row dragged under another group's header lands in that group
+        const auto two = ArsenalRackLayout::compute({UnitGroup::Drums, UnitGroup::Drums, UnitGroup::Synth});
+        float synthHeaderY = -1.0f;
+        for (const auto& item : two.items) if (item.kind == ArsenalRackItem::Kind::Header && item.group == UnitGroup::Synth) synthHeaderY = item.y;
+        check(two.groupAtY(-20.0f) == UnitGroup::Drums, "above the first header: the first group");
+        check(two.groupAtY(40.0f) == UnitGroup::Drums, "among the drum rows: Drums");
+        check(synthHeaderY > 0.0f && two.groupAtY(synthHeaderY + 1.0f) == UnitGroup::Synth, "under the Synth header: Synth");
+        check(two.groupAtY(two.contentHeight + 200.0f) == UnitGroup::Synth, "below the last row: the last group");
+        check(ArsenalRackLayout::compute({}).groupAtY(10.0f) == UnitGroup::Unknown, "an empty rack has no group");
+    }
+
     std::cout << "[8] a wheel notch lands on a bar line, and reversing never skips one\n";
     {
         // A 4-bar loop in a 2.75-bar viewport: the clamp stops at 1.25 bars, not on a bar line.

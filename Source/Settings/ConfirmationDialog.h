@@ -16,7 +16,8 @@ enum class DialogResponse {
     Save,       // User chose to save
     DontSave,   // User chose to discard changes
     Cancel,     // User cancelled the action
-    Confirm     // User confirmed a generic destructive action
+    Confirm,    // User confirmed a generic destructive action
+    SaveAsBranch // User chose to keep the work as a new version on a new branch (Versions switch)
 };
 
 /**
@@ -56,6 +57,16 @@ public:
      */
     void showConfirm(const std::string& title, const std::string& message, const std::string& confirmLabel,
                      ResponseCallback callback);
+
+    /**
+     * @brief Show the four-answer version switch prompt (SPEC-017 scope 5)
+     *
+     * - Save: write the working state into the open version, then switch
+     * - Save as an alt: keep it as a new version on a new branch, then switch
+     * - Discard: switch without saving
+     * - Cancel: stay where you are (also Escape and a click outside)
+     */
+    void showVersionSwitch(const std::string& title, const std::string& message, ResponseCallback callback);
     
     /**
      * @brief Hide the dialog
@@ -80,13 +91,15 @@ private:
     bool m_isVisible;
     bool m_isConfirmMode{false};
     std::string m_confirmLabel{"Delete"};
+    bool m_isVersionMode{false};
     
     // Button hover states
     bool m_saveHovered;
     bool m_dontSaveHovered;
+    bool m_saveAsBranchHovered;
     bool m_cancelHovered;
 
-    // Keyboard focus across the button row (0 = Cancel, 1 = Don't Save, 2 = Save).
+    // Keyboard focus across the button row (0 = Cancel, 1 = Don't Save, 2 = Save; 4 buttons in version mode).
     // Left/Right move it; Enter activates the focused button.
     int m_focusIndex{2};
     // Button the mouse press landed on; the response fires on release so the
@@ -96,6 +109,7 @@ private:
     // Button rectangles (calculated during render)
     AestraUI::NUIRect m_saveButtonRect;
     AestraUI::NUIRect m_dontSaveButtonRect;
+    AestraUI::NUIRect m_saveAsBranchButtonRect;
     AestraUI::NUIRect m_cancelButtonRect;
     AestraUI::NUIRect m_dialogRect;
     float m_messageCentreY = 0.0f; // the message line (and its dot) centre on this
