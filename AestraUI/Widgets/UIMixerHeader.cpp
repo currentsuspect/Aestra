@@ -214,7 +214,8 @@ bool UIMixerHeader::onMouseEvent(const NUIMouseEvent& event)
             m_colorMenu->addSeparator();
         }
 
-        for (int i = 0; i < PALETTE_SIZE; ++i) {
+        for (int k = 0; k < ASSIGNABLE_COUNT; ++k) {
+            const int i = ASSIGNABLE_ORDER[k]; // the legacy violet slots are not offered
             const bool selected = (i == m_colorIndex);
             m_colorMenu->addRadioItem(PALETTE_NAMES[i], "color", selected, [this, i]() {
                 m_colorIndex = i;

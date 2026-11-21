@@ -65,7 +65,7 @@ public:
             const auto c = caretRect(row);
             const float cx = c.x + c.width * 0.5f, cy = c.y + c.height * 0.5f;
             // The board's quiet chevron: no box, muted until the row is open.
-            const auto col = theme.getColor(open ? "textPrimary" : "textMuted");
+            const auto col = row.isSelected() ? theme.getColor("textOnPrimary") : theme.getColor(open ? "textPrimary" : "textMuted"); // a selected row is the lit primary
             const float d = open ? -2.0f : 2.0f; // open points up
             r.drawLine({cx - 3.5f, cy - d}, {cx, cy + d}, 1.6f, col);
             r.drawLine({cx, cy + d}, {cx + 3.5f, cy - d}, 1.6f, col);

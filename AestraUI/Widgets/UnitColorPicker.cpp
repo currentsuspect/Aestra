@@ -59,7 +59,7 @@ void UnitColorPicker::onRender(NUIRenderer& renderer) {
         NUIRect swatchRect(x, y, SWATCH_SIZE, SWATCH_SIZE);
         
         // Extract color components
-        uint32_t color = TRACK_PALETTE[i];
+        uint32_t color = TRACK_PALETTE[ASSIGNABLE_ORDER[i]];
         float r = ((color >> 16) & 0xFF) / 255.0f;
         float g = ((color >> 8) & 0xFF) / 255.0f;
         float b = (color & 0xFF) / 255.0f;
@@ -122,7 +122,7 @@ bool UnitColorPicker::onMouseEvent(const NUIMouseEvent& event) {
     
     // Handle click on swatch
     if (event.pressed && event.button == NUIMouseButton::Left && m_hoveredIndex >= 0) {
-        uint32_t selectedColor = TRACK_PALETTE[m_hoveredIndex];
+        uint32_t selectedColor = TRACK_PALETTE[ASSIGNABLE_ORDER[m_hoveredIndex]];
         if (m_onColorSelected) {
             m_onColorSelected(selectedColor);
         }

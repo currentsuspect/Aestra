@@ -2335,11 +2335,8 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         const bool primarySelected = i == selectedIndex_;
         const bool selected = primarySelected ||
                               std::find(selectedIndices_.begin(), selectedIndices_.end(), i) != selectedIndices_.end();
-        renderer.fillRect(itemRect, evenRow);
-        if (selected) renderer.fillRect(itemRect, primarySelected ? selectedRow : secondarySelectedRow);
-        // A solid selection (Ink: the lit primary) takes textOnPrimary on the row; the paler secondary rows keep light text.
-        const bool lit = primarySelected && selectedIsSolid();
-        const NUIColor onLit = themeProps.textOnPrimary;
+        renderer.fillRect(itemRect, evenRow); if (selected) renderer.fillRect(itemRect, primarySelected ? selectedRow : secondarySelectedRow);
+        const bool lit = primarySelected && selectedIsSolid(); const NUIColor onLit = themeProps.textOnPrimary; // solid selection: ink on the lit row; paler secondary rows keep light text
         // Hover wash is drawn by renderHoverOverlays() OUTSIDE the FBO cache —
         // hover must never invalidate the cache (rebuilding the whole list per
         // row crossing cost ~11 ms/frame of the mouse-active render budget).
