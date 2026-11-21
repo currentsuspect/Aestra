@@ -167,7 +167,7 @@ ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
     ensureDefaultPattern(); // Auto-create Pattern 1
     if (m_trackManager) {
         m_lanes.setOnSwap([this](UnitID unit, const std::string& path) { if (m_onSampleDroppedToUnit) m_onSampleDroppedToUnit(unit, path); }); // step to a neighbouring sound
-        m_trackManager->getUnitManager().setDefaultColorProvider([](size_t n) { return AestraUI::paletteIndexToARGB(static_cast<int>(n % AestraUI::PALETTE_SIZE)); }); // new units rotate the Ember hues
+        m_trackManager->getUnitManager().setDefaultColorProvider([](size_t n) { return AestraUI::paletteIndexToARGB(AestraUI::assignablePaletteIndex(n)); }); // new units rotate the Ember hues
     }
     ensureDefaultUnit(); // Sampler 1, so a fresh project plays straight away
     // Fit or Scroll is how this user works the grid, so it is remembered like the mixer's density and the

@@ -205,7 +205,7 @@ NUIResolvedControlColors resolveControlColors(const NUIThemeProperties& theme,
     } else if (state.selected) {
         colors.background = theme.selected;
         colors.border = theme.borderActive.withAlpha(0.64f);
-        colors.text = theme.buttonTextActive;
+        colors.text = theme.selected.a >= 0.9f ? theme.textOnPrimary : theme.buttonTextActive; // solid selection: ink on the lit fill
     } else if (state.hovered) {
         colors.background = theme.buttonBgHover;
         colors.border = theme.borderStrong;
@@ -233,13 +233,14 @@ NUIThemeManager::NUIThemeManager()
 }
 
 void NUIThemeManager::initializeDefaultThemes() {
-    // The twelve Aestra Kit variants (FD-79). The older names are kept as aliases so saved preferences still
-    // load: "Aestra-dark" is Ember dark, "Aestra-light" Ember light, "high-contrast-dark" Ember high contrast.
+    // The fifteen Aestra Kit variants (FD-79; Ink added 21 Nov 2026). Ink is the default: the older names are kept as
+    // aliases so saved preferences still load: "Aestra-dark" is Ink dark, "Aestra-light" Ink light,
+    // "high-contrast-dark" Ink high contrast. Ember stays in the menu under its own keys.
     for (const auto& kit : NUIThemePresets::kitThemes())
         themes_[kit.key] = NUIThemePresets::createKitTheme(kit.key);
-    themes_["Aestra-dark"] = themes_["ember-dark"];
-    themes_["aestra-dark"] = themes_["ember-dark"];  // Alias for lowercase preference key
-    themes_["Aestra-light"] = themes_["ember-light"];
+    themes_["Aestra-dark"] = themes_["ink-dark"];
+    themes_["aestra-dark"] = themes_["ink-dark"];  // Alias for lowercase preference key
+    themes_["Aestra-light"] = themes_["ink-light"];
     
     // Material Themes
     themes_["material-light"] = NUIThemePresets::createMaterialLight();
@@ -255,7 +256,7 @@ void NUIThemeManager::initializeDefaultThemes() {
     
     // High Contrast Themes
     themes_["high-contrast-light"] = NUIThemePresets::createHighContrastLight();
-    themes_["high-contrast-dark"] = themes_["ember-hc"];
+    themes_["high-contrast-dark"] = themes_["ink-hc"];
 }
 
 void NUIThemeManager::setThemeVariant(NUIThemeVariant variant) {
@@ -1113,8 +1114,8 @@ NUIThemeProperties NUIThemePresets::createFluentLight() { return createAestraLig
 NUIThemeProperties NUIThemePresets::createFluentDark() { return createAestraDark(); }
 NUIThemeProperties NUIThemePresets::createCupertinoLight() { return createAestraLight(); }
 NUIThemeProperties NUIThemePresets::createCupertinoDark() { return createAestraDark(); }
-NUIThemeProperties NUIThemePresets::createAestraDark() { return createKitTheme("ember-dark"); }
-NUIThemeProperties NUIThemePresets::createAestraLight() { return createKitTheme("ember-light"); }
+NUIThemeProperties NUIThemePresets::createAestraDark() { return createKitTheme("ink-dark"); }
+NUIThemeProperties NUIThemePresets::createAestraLight() { return createKitTheme("ink-light"); }
 
 NUIThemeProperties NUIThemePresets::createHighContrastLight() {
     auto theme = createAestraLight();

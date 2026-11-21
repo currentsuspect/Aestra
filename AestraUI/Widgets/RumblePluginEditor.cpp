@@ -375,7 +375,7 @@ void RumblePluginEditor::drawShelf(NUIRenderer& r) {
             r.fillRoundedRect(row, Depth::Radius::medium, token("hover"));
         }
         textLeft(r, std::string(Aestra::Plugins::kRumbleFactoryPresets[i].name), {row.x + 10.0f, row.y, row.width - 12.0f, row.height},
-                 12.0f, token(on || hovered ? "textPrimary" : "textSecondary"));
+                 12.0f, on ? labelOnSelected(token("textPrimary")) : token(hovered ? "textPrimary" : "textSecondary"));
     }
     const float y = m_shelfRows.back().bottom() + 18.0f;
     label(r, "YOUR 808S", {m_shelf.x + 2.0f, y, m_shelf.width, 16.0f});
@@ -397,7 +397,7 @@ void RumblePluginEditor::drawShelf(NUIRenderer& r) {
             r.fillRoundedRect(row, Depth::Radius::medium, token("hover"));
         }
         textLeft(r, m_kept[i].name, {row.x + 10.0f, row.y, row.width - 12.0f, row.height}, 12.0f,
-                 token(on || hovered ? "textPrimary" : "textSecondary"));
+                 on ? labelOnSelected(token("textPrimary")) : token(hovered ? "textPrimary" : "textSecondary"));
     }
     if (m_kept.size() > m_keptRows.size()) {
         const std::string more = std::to_string(m_kept.size() - m_keptRows.size()) + " more in the preset bar";
@@ -491,13 +491,13 @@ void RumblePluginEditor::drawCard(NUIRenderer& r, const NUIRect& rect, int index
     if (parent) {
         Depth::bed(r, rect, Depth::Radius::medium);
         if (selected) r.fillRoundedRect(rect, Depth::Radius::medium, token("selected"));
-        r.drawText("FROM", {rect.right() - 34.0f, rect.y + 6.0f}, 9.0f, token("textMuted"));
+        r.drawText("FROM", {rect.right() - 34.0f, rect.y + 6.0f}, 9.0f, selected ? labelOnSelected(token("textMuted")) : token("textMuted"));
     } else {
         r.fillRoundedRect(rect, Depth::Radius::medium, token(hovered && !selected ? "surfaceRaised" : "surfaceTertiary"));
         if (selected) r.fillRoundedRect(rect, Depth::Radius::medium, token("selected"));
     }
     const NUIRect art{rect.x + 8.0f, rect.y + 10.0f, rect.width - 16.0f, 46.0f};
-    if (!drawOutline(r, art, sound, token(selected ? "primary" : "textMuted"), false)) {
+    if (!drawOutline(r, art, sound, selected ? labelOnSelected(token("primary")) : token("textMuted"), false)) {
         // Still being made: a sunk slot with a sweep, since how long it takes is not known.
         const NUIRect slot{art.x, art.y + art.height * 0.5f - 3.0f, art.width, 6.0f};
         Depth::bed(r, slot, 3.0f, token("meterBackground"), Depth::Cut::Slot);
@@ -510,10 +510,10 @@ void RumblePluginEditor::drawCard(NUIRenderer& r, const NUIRect& rect, int index
     }
     const std::string name = m_session->nameOf(index);
     const NUIRect nameRect{rect.x + 8.0f, rect.bottom() - 24.0f, rect.width - 16.0f, 16.0f};
-    textLeft(r, name, nameRect, 11.0f, token(selected || hovered ? "textPrimary" : "textSecondary"));
+    textLeft(r, name, nameRect, 11.0f, selected ? labelOnSelected(token("textPrimary")) : token(hovered ? "textPrimary" : "textSecondary"));
     if (m_session->shaped(index)) {
         const float nx = nameRect.x + r.measureText(name, 11.0f).width + 7.0f;
-        r.fillCircle({nx, nameRect.y + nameRect.height * 0.5f}, 2.5f, token("secondary"));
+        r.fillCircle({nx, nameRect.y + nameRect.height * 0.5f}, 2.5f, selected ? labelOnSelected(token("secondary")) : token("secondary"));
     }
 }
 

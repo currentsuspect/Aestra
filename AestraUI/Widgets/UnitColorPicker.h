@@ -43,7 +43,7 @@ private:
     
     // The picker offers the Ember identity hues (TRACK_PALETTE), the same ones the mixer and timeline use,
     // so a unit's colour and its channel's colour are one colour.
-    static constexpr size_t PRESET_COUNT = static_cast<size_t>(PALETTE_SIZE);
+    static constexpr size_t PRESET_COUNT = static_cast<size_t>(ASSIGNABLE_COUNT); // not the legacy violet slots
 
     static constexpr int COLUMNS = 4;
     static constexpr int ROWS = 2;

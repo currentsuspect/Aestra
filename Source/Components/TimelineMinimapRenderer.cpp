@@ -240,7 +240,7 @@ void TimelineMinimapRenderer::render(NUIRenderer& renderer, const TimelineMinima
                  // fallback when the timeline supplied none (a lane with no clips yet).
                  const bool known = model.laneColors && i < model.laneColorCount && model.laneColors[i].a > 0.0f;
                  const NUIColor laneColour = known ? model.laneColors[i]
-                                                   : NUIColor::fromARGB(paletteIndexToARGB(static_cast<int>(i % PALETTE_SIZE)));
+                                                   : NUIColor::fromARGB(paletteIndexToARGB(assignablePaletteIndex(i)));
                  const NUIColor lineTint = restrainLaneIdentityColor(laneColour, 0.9f);
 
                  NUIRect lineRect(x, currentY, 1.0f, trackH);

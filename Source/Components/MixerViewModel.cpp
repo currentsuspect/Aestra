@@ -308,7 +308,7 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
             } else {
                 channel->trackColorIndex = AestraUI::nearestPaletteIndex(info.color);
                 if (channel->trackColorIndex < 0) {
-                    channel->trackColorIndex = static_cast<int>(newChannels.size()) % AestraUI::PALETTE_SIZE;
+                    channel->trackColorIndex = AestraUI::assignablePaletteIndex(newChannels.size());
                 }
                 if (channel->channel) {
                     channel->channel->setTrackColorIndex(channel->trackColorIndex);

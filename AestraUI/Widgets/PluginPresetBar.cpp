@@ -452,7 +452,7 @@ void PluginPresetBar::renderOverlay(NUIRenderer& r, const NUIRect& window) {
             const NUIRect chip = filterChipRect(p, i);
             const bool on = m_filter == i;
             if (on) r.fillRoundedRect(chip, kChipH * 0.5f, NUIThemeManager::getInstance().getColor("selected"));
-            r.drawTextCentered(kFilterNames[i], chip, 11.0f, on ? c.text : c.text2);
+            r.drawTextCentered(kFilterNames[i], chip, 11.0f, on ? labelOnSelected(c.text) : c.text2);
         }
 
         // rows
@@ -478,21 +478,23 @@ void PluginPresetBar::renderOverlay(NUIRenderer& r, const NUIRect& window) {
             else if (wasCurrent || (m_hoverRow && *m_hoverRow == idx))
                 r.fillRoundedRect(row, kRowRadius, tm.getColor("hover"));
             const float by = r.calculateTextY(row, 12.0f);
+            const NUIColor rowText = isHeard ? labelOnSelected(c.text) : c.text, rowText2 = isHeard ? labelOnSelected(c.text2) : c.text2;
+            const NUIColor rowAccent = isHeard ? labelOnSelected(c.accent) : c.accent;
             if (isHeard) {
                 // a small speaker: this is the one on the track now
                 const float sx = row.x + 12.0f, cy = row.y + row.height * 0.5f;
-                r.fillRect({sx, cy - 2.0f, 3.0f, 4.0f}, c.accent);
-                r.drawLine({sx + 3.0f, cy - 2.0f}, {sx + 6.0f, cy - 5.0f}, 1.3f, c.accent);
-                r.drawLine({sx + 3.0f, cy + 2.0f}, {sx + 6.0f, cy + 5.0f}, 1.3f, c.accent);
-                r.drawLine({sx + 6.0f, cy - 5.0f}, {sx + 6.0f, cy + 5.0f}, 1.3f, c.accent);
+                r.fillRect({sx, cy - 2.0f, 3.0f, 4.0f}, rowAccent);
+                r.drawLine({sx + 3.0f, cy - 2.0f}, {sx + 6.0f, cy - 5.0f}, 1.3f, rowAccent);
+                r.drawLine({sx + 3.0f, cy + 2.0f}, {sx + 6.0f, cy + 5.0f}, 1.3f, rowAccent);
+                r.drawLine({sx + 6.0f, cy - 5.0f}, {sx + 6.0f, cy + 5.0f}, 1.3f, rowAccent);
             }
-            drawMatched(r, fit(r, pr.name, 12.0f, 150.0f), {row.x + 28.0f, by}, 12.0f, c.text,
-                        NUIThemeManager::getInstance().getColor("secondary"), m_search);
+            drawMatched(r, fit(r, pr.name, 12.0f, 150.0f), {row.x + 28.0f, by}, 12.0f, rowText,
+                        isHeard ? labelOnSelected(NUIThemeManager::getInstance().getColor("secondary")) : NUIThemeManager::getInstance().getColor("secondary"), m_search);
             const std::string desc = !pr.description.empty() ? pr.description : pr.category;
             if (!desc.empty())
-                r.drawText(fit(r, desc, 11.0f, p.width - 28.0f - 160.0f - 90.0f), {row.x + 188.0f, by}, 11.0f, c.text2);
+                r.drawText(fit(r, desc, 11.0f, p.width - 28.0f - 160.0f - 90.0f), {row.x + 188.0f, by}, 11.0f, rowText2);
             const char* src = presetSourceName(pr.source);
-            r.drawText(src, {row.right() - 14.0f - r.measureText(src, 10.5f).width, by}, 10.5f, c.text2);
+            r.drawText(src, {row.right() - 14.0f - r.measureText(src, 10.5f).width, by}, 10.5f, rowText2);
         }
 
         // footer

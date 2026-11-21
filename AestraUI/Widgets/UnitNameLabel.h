@@ -26,6 +26,8 @@ public:
     void setUnitType(Aestra::Audio::UnitType type);
     /** @brief What the sound is in the song, shown beside its type: dim when read from the name, brighter when the user chose it. */
     void setRole(const Aestra::Audio::MusicalRole& role) { if (role != m_role) { m_role = role; repaint(); } }
+    /** @brief The colours the row (UnitRowLook) wants the name and type line drawn in: on a lit row they are ink, not light text. */
+    void setInk(const NUIColor& name, const NUIColor& kind, const NUIColor& kindGuess) { m_ink = {name, kind, kindGuess, true}; }
     /** @brief True while an inline rename is active (row key handling must not steal Delete/Backspace). */
     bool isRenaming() const { return m_isRenaming; }
 
@@ -49,6 +51,7 @@ private:
     std::string m_unitName;
     Aestra::Audio::UnitType m_unitType;
     Aestra::Audio::MusicalRole m_role;
+    struct Ink { NUIColor name, kind, kindGuess; bool set = false; } m_ink;
     bool m_isRenaming = false;
     bool m_compact = false;
     long long m_lastClickTimeMs = 0;

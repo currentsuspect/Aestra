@@ -246,27 +246,18 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
     const auto& themeProps = theme.getCurrentTheme();
     const float radius = 6.0f; // the board's row radius
     const NUIColor unitAccent = identityColor();
-    NUIColor cardBg = theme.getColor("backgroundSecondary");
-    NUIColor border = theme.getColor("border").withAlpha(0.08f);
-    if (m_isDropHighlighted) {
-        cardBg = theme.getColor("accentPrimary").withAlpha(0.18f);
-        border = theme.getColor("accentPrimary").withAlpha(0.95f);
-    } else if (m_isSelected) {
-        cardBg = NUIColor::lerp(cardBg, theme.getColor("accentPrimary"), 0.16f); // a quiet wash: selected, not shouting
-        border = theme.getColor("accentPrimary").withAlpha(0.30f);
-    } else if (m_isHovered) {
-        cardBg = theme.getColor("surfaceRaised");
-        border = theme.getColor("accentPrimary").withAlpha(0.22f);
-    }
-
-    renderer.fillRoundedRect(cardBounds, radius, cardBg);
+    // Ink, variant B: a selected row is the solid lit primary with ink on it (UnitRowLook.h owns every colour here).
+    m_look = UnitRowLook::row(themeProps, {m_isSelected, m_isHovered, m_isDropHighlighted, m_isEnabled}, unitAccent);
+    if (m_nameLabel) m_nameLabel->setInk(m_look.name, m_look.kind, m_look.kindGuess);
+    renderer.fillRoundedRect(cardBounds, radius, m_look.fill);
     // The unit's colour strip: a short, rounded bar centred on the card's left edge (the mock and the owner's
     // sketch). It is drawn after the outline and starts at the outline itself, so the two conjoin: the bar reads
     // as a thick stretch of the edge, not a pill floating inside the card and not a line running across it.
-    renderer.strokeRoundedRect(cardBounds, radius, m_isDropHighlighted ? 2.0f : 1.0f, border);
+    if (m_look.edge.a > 0.0f) renderer.strokeRoundedRect(cardBounds, radius, m_look.edgeWidth, m_look.edge);
     constexpr float kStripW = 5.0f, kStripInset = 8.0f;
-    renderer.fillRoundedRect({cardBounds.x, cardBounds.y + kStripInset, kStripW, cardBounds.height - kStripInset * 2.0f},
-                             kStripW * 0.5f, unitAccent.withAlpha(m_isEnabled ? 0.95f : 0.35f));
+    const NUIRect strip{cardBounds.x, cardBounds.y + kStripInset, kStripW, cardBounds.height - kStripInset * 2.0f};
+    renderer.fillRoundedRect(strip, kStripW * 0.5f, unitAccent.withAlpha(m_isEnabled ? 0.95f : 0.35f));
+    if (m_look.stripRingWidth > 0.0f) renderer.strokeRoundedRect(strip, kStripW * 0.5f, m_look.stripRingWidth, m_look.stripRing); // the colour strip stays findable on the lit card
 
     // Density-derived control floor (responsive contract): narrow rows give
     // the grid the width back instead of clipping it against a fixed 220.
@@ -291,7 +282,7 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
 
 void UnitRow::drawDragHandle(NUIRenderer& renderer, const NUIRect& bounds) {
     auto& theme = NUIThemeManager::getInstance();
-    const NUIColor gripColor = theme.getColor("textSecondary").withAlpha(m_isHovered || m_isSelected ? 0.70f : 0.28f);
+    const NUIColor gripColor = m_look.grip;
     const float clusterX = bounds.x + bounds.width * 0.5f - 3.0f;
     const float clusterY = bounds.y + bounds.height * 0.5f - 6.0f;
     for (int row = 0; row < 3; ++row) {
@@ -303,18 +294,18 @@ void UnitRow::drawDragHandle(NUIRenderer& renderer, const NUIRect& bounds) {
 }
 
 // A lettered key as the board draws it: a filled surfaceTertiary key, no outline, solid in its colour when on.
-static void drawKey(NUIRenderer& renderer, const NUIRect& bounds, const char* label, bool active, bool engaged, const char* activeToken) {
+static void drawKey(NUIRenderer& renderer, const NUIRect& bounds, const char* label, bool active, const UnitRowLook::Row& look, const char* activeToken) {
     auto& theme = NUIThemeManager::getInstance();
     const NUIColor on = theme.getColor(activeToken);
     const float radius = theme.getRadius("xs");
     if (active) renderer.fillRoundedRect(bounds, radius, on);
-    else renderer.fillRoundedRect(bounds, radius, theme.getColor("surfaceTertiary"));
-    renderer.drawTextCentered(label, bounds, 10.0f, active ? theme.getContrastColor(on) : theme.getColor("textSecondary"));
+    else renderer.fillRoundedRect(bounds, radius, look.keyFill);
+    renderer.drawTextCentered(label, bounds, 10.0f, active ? theme.getContrastColor(on) : look.keyLabel);
 }
 
-void UnitRow::drawMuteIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active, bool engaged) { drawKey(renderer, bounds, "M", active, engaged, "warning"); }
+void UnitRow::drawMuteIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active, bool engaged) { drawKey(renderer, bounds, "M", active, m_look, "warning"); }
 
-void UnitRow::drawSoloIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active, bool engaged) { drawKey(renderer, bounds, "S", active, engaged, "success"); }
+void UnitRow::drawSoloIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active, bool engaged) { drawKey(renderer, bounds, "S", active, m_look, "success"); }
 
 std::array<NUIRect, 3> UnitRow::controlPillRects(const NUIRect& controlBounds) const {
     // The mock: M and S close the row's head; the output chip ends the row. The control rect starts 42 px in, in
@@ -335,7 +326,6 @@ std::array<NUIRect, 3> UnitRow::controlPillRects(const NUIRect& controlBounds) c
 void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     auto& theme = NUIThemeManager::getInstance();
     const float nameX = bounds.x + 12.0f;
-    const NUIColor unitAccent = identityColor();
     const bool engaged = m_isHovered || m_isSelected;
 
     // Center the status dot on the primary name line ("Sampler 2"), using the
@@ -344,7 +334,7 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     const float nameTopY = m_nameLabel ? m_nameLabel->getBounds().y + 3.0f : bounds.y + 11.0f;
     const float nameLineCenterY = nameTopY + renderer.getFontMetrics(12.0f).lineHeight * 0.5f;
     renderer.fillCircle(NUIPoint(nameX, nameLineCenterY), 3.0f,
-                        m_isEnabled ? unitAccent : theme.getColor("textDisabled").withAlpha(0.45f));
+                        m_look.dot);
 
     // Name + type label are rendered by the UnitNameLabel child component.
 
@@ -360,7 +350,7 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
         renderer.drawTextCentered(m_mixerRouteShortLabel, routeRect, 7.5f, routeText);
     } else {
         // A colour dot for the destination, then its name, cut with an ellipsis to fit.
-        NUIColor dot = theme.getColor("accentPrimary");
+        NUIColor dot = theme.getColor("textMuted"); // no channel colour yet: neutral, never the selection violet
         if (m_mixerRouteColorIndex >= 0) dot = colorFromUnitValue(paletteIndexToARGB(m_mixerRouteColorIndex));
         constexpr float kChipPad = 10.0f, kDot = 6.0f, kChev = 3.0f, kTextGap = 6.0f; // the same pad both ends
         renderer.fillRect(NUIRect{routeRect.x + kChipPad, routeRect.y + routeRect.height * 0.5f - kDot * 0.5f, kDot, kDot}, dot);
@@ -453,15 +443,15 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     // transport is currently over so the user can track it and time their edits.
     const double playBeat = playheadBeatInPattern();
     const int playStep = (playBeat >= 0.0) ? static_cast<int>(std::floor(playBeat / 0.25)) : -1;
-    const NUIColor playheadAccent = theme.getColor("accentPrimary");
+    const auto pads = UnitRowLook::pads(themeProps); // neutral pads: violet is only ever the selection and the playhead
 
     // Design Spec, Arsenal (locked 13 Nov): resting pads come in beat groups of four that alternate shade (beats 1, 3
     // surfaceTertiary; 2, 4 surfaceRaised), so "the 2" is a place you see, not count to. No pad outlines.
-    const NUIColor restEven = theme.getColor("surfaceTertiary"), restOdd = theme.getColor("surfaceRaised").lightened(0.10f);
+    const NUIColor restEven = pads.restEven, restOdd = pads.restOdd;
     const auto restFill = [&](int step) { return ((step / 4) & 1) != 0 ? restOdd : restEven; };
 
     if (m_type == Aestra::Audio::UnitType::Sampler && !noteRollMode) {
-        const NUIColor activeFill = identityColor();
+        const NUIColor activeFill = pads.active;
         const float cellGap = padGap(stepWidth);
         const float cellRadius = 2.0f; // flat pads (the Arsenal mock: sharp, opaque)
         const float cellHeight = std::max(10.0f, timelineStrip.height - 6.0f);
@@ -481,9 +471,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
             const bool isSelected = isStepSelected(step);
             NUIRect cellRect(cellX, cellY, cellWidth, cellHeight);
             NUIColor cellFill = isActive ? activeFill : restFill(step);
-            if (isPlayhead && isActive) {
-                cellFill = activeFill.lightened(0.35f); // note lights up under the playhead
-            }
+            if (isPlayhead && isActive) cellFill = pads.playheadFill; // the note under the playhead fills with the primary
             if (isSelected) {
                 cellFill = cellFill.lightened(0.28f); // selection brightens the note
             }
@@ -491,8 +479,8 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                 // Velocity meter: dim base + a brighter bar rising from the
                 // bottom to the note's velocity, so accents read at a glance
                 // and vertical drag has an obvious target.
-                renderer.fillRoundedRect(cellRect, cellRadius, cellFill.withAlpha(0.26f));
-                const float v = std::clamp(stepVelocity[step], kMinStepVelocity, 1.0f);
+                renderer.fillRoundedRect(cellRect, cellRadius, isPlayhead ? cellFill : UnitRowLook::velocityBase(pads, restFill(step))); // opaque base, never an alpha wash
+                const float v = isPlayhead ? 1.0f : std::clamp(stepVelocity[step], kMinStepVelocity, 1.0f);
                 const float fillH = std::max(2.0f, cellHeight * v);
                 const NUIRect velRect(cellX, cellY + cellHeight - fillH, cellWidth, fillH);
                 renderer.fillRoundedRect(velRect, cellRadius, cellFill);
@@ -514,12 +502,11 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                                            theme.getColor("textPrimary").withAlpha(0.9f));
             }
             if (isPlayhead) {
-                renderer.strokeRoundedRect(cellRect, cellRadius, 1.5f,
-                                           playheadAccent.withAlpha(isActive ? 0.95f : 0.45f));
+                renderer.strokeRoundedRect(cellRect, cellRadius, 1.5f, pads.playhead);
             }
         }
     } else if (m_type == Aestra::Audio::UnitType::PitchedSampler) {
-        const NUIColor activeFill = identityColor();
+        const NUIColor activeFill = pads.active;
         const NUIColor pitchText = theme.getColor("textSecondary").withAlpha(0.72f);
         const float cellGap = padGap(stepWidth);
         const float topHeight = std::max(8.0f, timelineStrip.height * 0.58f);
@@ -543,9 +530,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
             const bool isSelected = isStepSelected(step);
             NUIRect cellRect(cellX, topY, cellWidth, topHeight);
             NUIColor cellFill = isActive ? activeFill : restFill(step);
-            if (isPlayhead && isActive) {
-                cellFill = activeFill.lightened(0.35f);
-            }
+            if (isPlayhead && isActive) cellFill = pads.playheadFill;
             if (isSelected) {
                 cellFill = cellFill.lightened(0.28f); // selection brightens the note
             }
@@ -557,7 +542,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                                            theme.getColor("textPrimary").withAlpha(0.9f));
             }
             if (isPlayhead) {
-                renderer.strokeRoundedRect(cellRect, 3.0f, 1.5f, playheadAccent.withAlpha(isActive ? 0.95f : 0.45f));
+                renderer.strokeRoundedRect(cellRect, 3.0f, 1.5f, pads.playhead);
             }
 
             const NUIRect pitchRect(cellX, pitchY, cellWidth, pitchLaneHeight);
@@ -599,7 +584,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
         minPitch = std::max(0, minPitch - 2);
         maxPitch = std::min(127, maxPitch + 2);
         const int pitchRange = std::max(12, maxPitch - minPitch);
-        const NUIColor noteFill = identityColor().withAlpha(0.95f);
+        const NUIColor noteFill = pads.active;
         const NUIColor noteStroke = theme.getColor("border").withAlpha(0.10f);
         const float noteHeight = 4.0f;
 
@@ -619,8 +604,8 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                           (normalizedPitch * (timelineStrip.height - noteHeight - 4.0f)) - noteHeight;
             NUIRect noteRect(startX, noteY, width, noteHeight);
             const bool isPlaying = (playBeat >= 0.0 && playBeat >= span.startBeat && playBeat < span.endBeat);
-            renderer.fillRoundedRect(noteRect, 2.0f, isPlaying ? playheadAccent : noteFill);
-            renderer.strokeRoundedRect(noteRect, 2.0f, 1.0f, isPlaying ? playheadAccent : noteStroke);
+            renderer.fillRoundedRect(noteRect, 2.0f, isPlaying ? pads.playheadFill : noteFill);
+            renderer.strokeRoundedRect(noteRect, 2.0f, 1.0f, isPlaying ? pads.playhead : noteStroke);
         }
     } else if (m_type == Aestra::Audio::UnitType::Audio) {
         if (!m_audioPreviewWaveform.empty()) {
