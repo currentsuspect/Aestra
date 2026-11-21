@@ -265,7 +265,7 @@ void drawToggleButton(NUIRenderer& renderer, const NUIRect& rect, const std::str
     if (on)
         Depth::bed(renderer, rect, Depth::Radius::small, Depth::Cut::Deep);
     else
-        renderer.fillRect(rect, hovered ? c.raised : c.body);
+        Depth::hoverFill(renderer, rect, Depth::Radius::small, hovered ? c.raised : c.body); // the same 3 px shape as the sunk state
     const NUIRect mark(rect.x + 8.0f, rect.y + rect.height * 0.5f - 3.0f, 6.0f, 6.0f);
     if (on) renderer.fillRect(mark, bypassed ? c.inkOff : c.primary);
     else renderer.strokeRect(mark, 1.0f, c.inkMuted);

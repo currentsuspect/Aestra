@@ -41,6 +41,17 @@ void object(NUIRenderer& renderer, const NUIRect& rect, float radius, const Obje
 /// The default object: surfaceRaised, not held.
 void object(NUIRenderer& renderer, const NUIRect& rect, float radius, bool held = false);
 
+/// A hover or pressed fill that follows the shape of the thing hovered (owner, 21 Nov: the hovers were plain rectangles that
+/// ignored the rounded pills, chips and panels under them, so their corners poked out). @p radius is the hovered component's own
+/// corner radius (clamped to half its shorter side, so a capsule stays a capsule). Every hover and pressed fill goes through
+/// this, or fillRoundedRect with the component's radius; none uses fillRect over a rounded component (HoverShapeGuardTest).
+void hoverFill(NUIRenderer& renderer, const NUIRect& rect, float radius, const NUIColor& color);
+
+/// The same for a row that fills the width of a rounded container (a list row, a panel row): the row keeps square corners where
+/// it meets other rows, and takes the container's corner radius at the edge it shares with the container's top or bottom, so the
+/// fill follows the panel's corner instead of poking out of it. @p container is the rounded surface, @p containerRadius its radius.
+void rowHoverFill(NUIRenderer& renderer, const NUIRect& row, const NUIRect& container, float containerRadius, const NUIColor& color);
+
 /// A surface resting on a bed (Design Spec, Mixer: a strip on the mixer bed): a flat fill of @p fill, set apart by
 /// a soft shadow under it, never by a line.
 void restingPanel(NUIRenderer& renderer, const NUIRect& rect, float radius, const NUIColor& fill);

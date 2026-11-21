@@ -82,6 +82,8 @@ void FileBrowser::renderKindTabs(NUIRenderer& renderer, const BrowserLayout& lay
         const NUIRect& tab = layout.kinds[static_cast<size_t>(i)];
         ChromeHit hit;
         hit.bounds = tab;
+        hit.shape = NUISegmentedControl::segmentThumb(well, 3, static_cast<float>(i)); // the capsule the thumb would be
+        hit.radius = hit.shape.height * 0.5f;
         hit.kind = i;
         chromeHits_.push_back(hit);
     }
@@ -230,6 +232,7 @@ void FileBrowser::renderTagChips(NUIRenderer& renderer, const BrowserLayout& lay
                           on ? theme.getColor("backgroundPrimary") : theme.getColor("textSecondary"));
         ChromeHit hit;
         hit.bounds = r;
+        hit.radius = 10.0f; // the chip is a capsule (stroked with this radius)
         hit.hasTag = true;
         hit.tag = tag;
         chromeHits_.push_back(hit);

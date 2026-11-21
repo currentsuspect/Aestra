@@ -71,6 +71,15 @@ public:
     /// that slides to a new choice (@p position, in segment-index space); unchosen labels are textMuted and the chosen or
     /// hovered one textPrimary. No outline, no underline tabs, quiet hover. Anything that draws such a switch calls this
     /// rather than keeping a copy of the look.
+    /// The thumb's footprint for segment position @p position in a pill of @p count segments: also the shape a hover over that
+    /// segment takes (a capsule inset by the pad), so a hover never pokes out of the pill.
+    static NUIRect segmentThumb(const NUIRect& bounds, size_t count, float position) {
+        constexpr float kPad = 3.0f;
+        const float segmentWidth = (bounds.width - kPad * 2.0f) / static_cast<float>(std::max<size_t>(1, count));
+        const float clamped = std::clamp(position, 0.0f, static_cast<float>(std::max<size_t>(1, count) - 1));
+        return NUIRect(bounds.x + kPad + clamped * segmentWidth, bounds.y + kPad, segmentWidth, bounds.height - kPad * 2.0f);
+    }
+
     static void paintPill(NUIRenderer& renderer, const NUIRect& bounds, const std::vector<std::string>& labels,
                           float position, size_t selected, int hovered = -1, bool enabled = true) {
         auto& theme = NUIThemeManager::getInstance();
@@ -84,9 +93,7 @@ public:
         constexpr float kPad = 3.0f;
         const float segmentWidth = (bounds.width - kPad * 2.0f) / static_cast<float>(labels.size());
         // The thumb can never leave the track, whatever position it is handed.
-        const float clamped = std::clamp(position, 0.0f, static_cast<float>(labels.size() - 1));
-        const NUIRect thumb(bounds.x + kPad + clamped * segmentWidth, bounds.y + kPad, segmentWidth,
-                            bounds.height - kPad * 2.0f);
+        const NUIRect thumb = segmentThumb(bounds, labels.size(), position);
         Depth::ObjectLook look;
         look.base = enabled ? props.surfaceRaised : props.surfaceTertiary;
         look.lightTop = 0.12f;
