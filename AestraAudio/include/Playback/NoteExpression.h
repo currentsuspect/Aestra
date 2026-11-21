@@ -96,7 +96,6 @@ inline std::vector<MidiNote> expandForPlayback(const std::vector<MidiNote>& note
             MidiNote m = n;
             m.startBeat = start + span * i;
             m.durationBeats = span;
-            m.gate = n.gate / static_cast<float>(hits);
             m.slide = n.slide && i == hits - 1;
             m.ratchet = 1;
             out.push_back(m);

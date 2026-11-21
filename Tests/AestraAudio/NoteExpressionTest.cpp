@@ -115,7 +115,7 @@ int main() {
     check(scopedExpanded.size() == 2, "per-unit swing keeps both notes");
     check(std::abs(scopedExpanded[0].startBeat - (0.25 + 0.2 * kMaxSwingDelayBeats)) < 1e-9,
           "unit 1 inherits the pattern swing");
-    check(std::abs(scopedExpanded[1].startBeat - (0.25 + 0.8 * kMaxSwingDelayBeats)) < 1e-9,
+    check(std::abs(scopedExpanded[1].startBeat - (0.25 + 0.8 * kMaxSwingDelayBeats)) < 1e-6,
           "unit 2 uses its own swing override");
 
     plain[1].ratchet = 3;

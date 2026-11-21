@@ -4896,6 +4896,7 @@ if(AESTRA_ENABLE_UI)
         UIRoutingMapGraphTest
         ArsenalRackLayoutTest
         ArsenalSceneStripTest
+        ArsenalKeyTickContrastTest
         ArsenalStepLanesTest
         ArsenalSoundStripTest
         ArsenalSoundDrawerTest
