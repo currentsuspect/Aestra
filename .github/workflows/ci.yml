@@ -384,7 +384,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/ci/measure-build.py -- \
-            cmake --build build-plugins --config ${{env.BUILD_TYPE}}
+            cmake --build build-plugins --config ${{env.BUILD_TYPE}} --parallel 2
           test -x build-plugins/bin/AestraPluginHost \
             || { echo "::error::AestraPluginHost was not produced"; exit 1; }
 
