@@ -21,16 +21,16 @@ namespace AestraUI {
 // as legacy slots and an old project loads exactly as it was; they are never offered or handed out again. Gold (8)
 // and Cyan (9) take their places in the eight assignable colours.
 static constexpr uint32_t TRACK_PALETTE[] = {
-    0xFF06C49D, // 0 — Teal      oklch(0.73 0.18 172)
+    0xFF6ECCB0, // 0 — Teal      oklch(0.73 0.18 172)
     0xFFB88EFC, // 1 — Purple    LEGACY (hue 300): decodes saved projects, never assigned
-    0xFFFB8304, // 2 — Amber     oklch(0.73 0.18  55)
-    0xFFFF7A66, // 3 — Coral     oklch(0.73 0.18  30)
-    0xFF10B6F3, // 4 — Sky Blue  oklch(0.73 0.18 232)
-    0xFF86BC23, // 5 — Sage      oklch(0.73 0.18 128)
-    0xFFFB70AD, // 6 — Pink      oklch(0.73 0.18 355)
+    0xFFE9A679, // 2 — Amber     oklch(0.73 0.18  55)
+    0xFFF19F91, // 3 — Coral     oklch(0.73 0.18  30)
+    0xFF71C3EC, // 4 — Sky Blue  oklch(0.73 0.18 232)
+    0xFFA5C47E, // 5 — Sage      oklch(0.73 0.18 128)
+    0xFFEB9DBB, // 6 — Pink      oklch(0.73 0.18 355)
     0xFF8AA1FC, // 7 — Indigo    LEGACY (hue 272): decodes saved projects, never assigned
-    0xFFC9A300, // 8 — Gold      oklch(0.73 0.15  92)
-    0xFF00BECD, // 9 — Cyan      oklch(0.73 0.12 205)
+    0xFFCDB66E, // 8 — Gold      oklch(0.73 0.15  92)
+    0xFF5ECAD6, // 9 — Cyan      oklch(0.73 0.12 205)
 };
 /// Every entry a saved colour index may name (legacy slots included).
 static constexpr int PALETTE_SIZE = 10;

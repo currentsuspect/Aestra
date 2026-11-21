@@ -199,8 +199,9 @@ void PianoRollRuler::onRender(NUIRenderer& renderer) {
     const float playheadX =
         snapVerticalLineX(beatToScreenX(playheadBeat_, pixelsPerBeat_, scrollX_, bounds.x));
     if (playheadX >= bounds.x && playheadX <= bounds.right()) {
-        Playhead::drawHead(renderer, playheadX, bounds.bottom(), theme.getColor("playhead"),
-                           isScrubbing_ ? 1.25f : 1.0f);
+        const float headScale = isScrubbing_ ? 1.25f : 1.0f;
+        renderer.setClipRect(Playhead::headClip(bounds, headScale)); // widened sideways: a head at the edge is whole
+        Playhead::drawHead(renderer, playheadX, bounds.bottom(), theme.getColor("playhead"), headScale);
     }
 
     renderer.clearClipRect();

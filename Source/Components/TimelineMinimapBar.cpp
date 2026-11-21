@@ -183,11 +183,11 @@ void TimelineMinimapBar::cacheThemeColors_()
     auto& theme = NUIThemeManager::getInstance();
     // Match the ruler's recessed material so the band remains continuous in
     // every theme.
-    colors_.glassFill = theme.getColor("recessedPanel");
+    colors_.glassFill = theme.getColor("backgroundPrimary");
     // These were literal RGB, so the minimap sat outside the palette entirely —
     // it could not follow a theme change and had no relationship to any other
     // chrome. Structural edges are borders; the view handles are a text tier.
-    colors_.glassBorder = theme.getColor("borderSubtle");
+    colors_.glassBorder = theme.getColor("backgroundSecondary");
     colors_.cornerSeparator = theme.getColor("borderSubtle");
 
     colors_.audioTint = theme.getColor("accentAmber");

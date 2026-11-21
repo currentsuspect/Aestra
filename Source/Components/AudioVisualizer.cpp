@@ -425,16 +425,8 @@ void AudioVisualizer::renderWaveform(NUIRenderer& renderer) {
     float centerY = bounds.y + bounds.height / 2.0f;
     
     // Liminal Dark v2.0 background gradient - top: #121214 â†’ bottom: #18181b
-    NUIColor topColor = backgroundColor_;  // #121214 - Deep charcoal
-    NUIColor bottomColor = AestraUI::NUIThemeManager::getInstance().getColor("backgroundSecondary");
-    
-    // Draw gradient background
-    for (int i = 0; i < static_cast<int>(bounds.height); ++i) {
-        float t = static_cast<float>(i) / bounds.height;
-        NUIColor gradientColor = NUIColor::lerp(topColor, bottomColor, t);
-        NUIRect lineRect(bounds.x, bounds.y + i, bounds.width, 1);
-        renderer.fillRect(lineRect, gradientColor);
-    }
+    // The surface, flat: a gradient to the card colour made a strip of another colour on the transport bar.
+    renderer.fillRoundedRect(bounds, 4.0f, backgroundColor_);
     
     // Render subtle grid lines
     renderer.drawLine(NUIPoint(bounds.x, centerY), NUIPoint(bounds.x + bounds.width, centerY), 1, gridColor_.withAlpha(0.2f));
@@ -621,14 +613,7 @@ void AudioVisualizer::renderVU(NUIRenderer& renderer) {
     NUIRect meter(bounds.x + 10, bounds.y + 20, meterWidth, meterHeight);
     
     // Enhanced background with gradient
-    NUIColor topBg = backgroundColor_.darkened(0.25f);
-    NUIColor bottomBg = backgroundColor_.darkened(0.15f);
-    for (int i = 0; i < static_cast<int>(meter.height); ++i) {
-        float t = static_cast<float>(i) / meter.height;
-        NUIColor gradientColor = NUIColor::lerp(topBg, bottomBg, t);
-        NUIRect lineRect(meter.x, meter.y + i, meter.width, 1);
-        renderer.fillRect(lineRect, gradientColor);
-    }
+    renderer.fillRoundedRect(meter, 4.0f, backgroundColor_); // the surface, flat
     
     // Add subtle inner glow
     renderer.strokeRoundedRect(meter, 4, 1, NUIColor::white().withAlpha(0.1f));
@@ -696,14 +681,7 @@ void AudioVisualizer::renderOscilloscope(NUIRenderer& renderer) {
     float centerY = bounds.y + bounds.height / 2.0f;
     
     // Enhanced background with subtle gradient
-    NUIColor topBg = backgroundColor_.darkened(0.2f);
-    NUIColor bottomBg = backgroundColor_.lightened(0.05f);
-    for (int i = 0; i < static_cast<int>(bounds.height); ++i) {
-        float t = static_cast<float>(i) / bounds.height;
-        NUIColor gradientColor = NUIColor::lerp(topBg, bottomBg, t);
-        NUIRect lineRect(bounds.x, bounds.y + i, bounds.width, 1);
-        renderer.fillRect(lineRect, gradientColor);
-    }
+    renderer.fillRoundedRect(bounds, 4.0f, backgroundColor_); // the surface, flat
     
     // Render enhanced grid with glow
     for (int i = 0; i <= 10; ++i) {
