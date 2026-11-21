@@ -245,6 +245,7 @@ nav:
       - Bug Reports: developer/bug-reports.md
       - Debugging: developer/debugging.md
       - Performance Tuning: developer/performance-tuning.md
+      - Theme Previews: developer/ui-theme-preview.md
   - ⚙️ Technical Reference:
       - FAQ: technical/faq.md
       - Glossary: technical/glossary.md
