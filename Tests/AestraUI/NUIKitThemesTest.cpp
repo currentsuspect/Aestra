@@ -1,7 +1,8 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 //
-// FD-79: the twelve Aestra Kit themes load with every token, the old theme names still resolve to Ember, and the
-// depth helper draws the Design Spec's three depths with the theme's own light and shade.
+// FD-79: the Aestra Kit themes load with every token, the old theme names resolve to Ink (the default since the
+// Ink theme, 21 Nov 2026; Ember stays in the menu), and the depth helper draws the Design Spec's three depths with
+// the theme's own light and shade.
 
 #include "../Support/NullRenderer.h"
 #include "NUIDepth.h"
@@ -70,10 +71,10 @@ public:
     }
 };
 
-void testTwelveThemes() {
-    std::cout << "twelve kit themes\n";
+void testAllKitThemes() {
+    std::cout << "fifteen kit themes\n";
     const auto& kit = NUIThemePresets::kitThemes();
-    check(kit.size() == 12, "the kit has twelve variants");
+    check(kit.size() == 15, "the kit has fifteen variants (Ink, Ember, Obsidian Moss, Solace, Monolith)");
     auto& manager = NUIThemeManager::getInstance();
     for (const auto& k : kit) {
         const std::string key = k.key;
@@ -94,20 +95,90 @@ void testTwelveThemes() {
     }
 }
 
-void testAliases() {
-    std::cout << "old names resolve to Ember\n";
+void testInk() {
+    std::cout << "Ink\n";
+    const auto dark = NUIThemePresets::createKitTheme("ink-dark");
+    const auto light = NUIThemePresets::createKitTheme("ink-light");
+    const auto hc = NUIThemePresets::createKitTheme("ink-hc");
+    const auto hex = [](unsigned v) { return NUIColor::fromHex(v); };
+    int inkRows = 0;
+    for (const auto& k : NUIThemePresets::kitThemes())
+        if (std::string(k.key).rfind("ink-", 0) == 0) {
+            ++inkRows;
+            check(std::string(k.name) == "Ink", std::string(k.key) + " is named simply Ink");
+        }
+    check(inkRows == 3, "Ink has dark, light and high contrast");
+    check(same(dark.timelineBed, hex(0x000000)) && same(dark.editorWell, hex(0x030303)) &&
+              same(dark.meterBackground, hex(0x030303)),
+          "Ink dark: bed, editor well and meter background are the near-blacks");
+    check(same(dark.backgroundPrimary, hex(0x0a0a0a)) && same(dark.backgroundSecondary, hex(0x1e1e1e)) &&
+              same(dark.surfaceTertiary, hex(0x303030)) && same(dark.surfaceRaised, hex(0x3e3e3e)),
+          "Ink dark surfaces are exact neutral greys");
+    check(same(dark.mixerStripBg, hex(0x1e1e1e)) && same(dark.editorCard, hex(0x1e1e1e)) &&
+              same(dark.editorControl, hex(0x141414)),
+          "Ink dark mixer strip, editor card and control");
+    check(same(dark.borderSubtle, hex(0x3e3e3e)) && same(dark.border, hex(0x525252)) &&
+              same(dark.borderStrong, hex(0x747474)) && same(dark.divider, hex(0x3e3e3e)) &&
+              same(dark.controlEdge, hex(0x747474)),
+          "Ink dark borders");
+    check(same(dark.textPrimary, hex(0xf5f5f5)) && same(dark.textSecondary, hex(0xc7c7c7)) &&
+              same(dark.textMuted, hex(0x9e9e9e)) && same(dark.textDisabled, hex(0x717171)),
+          "Ink dark text greys");
+    check(same(dark.primary, hex(0x9f63fd)) && same(dark.primaryHover, hex(0xab7cff)) &&
+              same(dark.primaryPressed, hex(0x8e4fe8)) && same(dark.textOnPrimary, hex(0x070707)),
+          "Ink dark accent");
+    check(same(dark.selected, dark.primary) && dark.selected.a == 1.0f,
+          "variant B: selected is the solid lit primary, no alpha");
+    check(same(dark.focusRing, dark.primary) && dark.focusRing.a == 1.0f, "the focus ring is opaque");
+    check(contrast(dark.textOnPrimary, dark.selected) >= 4.5f, "textOnPrimary reads on the selected fill");
+    check(same(dark.success, hex(0x3fc168)) && same(dark.warning, hex(0xfcab00)) && same(dark.error, hex(0xfd7468)) &&
+              same(dark.meterSafe, hex(0x00deaa)) && same(dark.textOnStatus, hex(0x0a0a0a)),
+          "Ink dark status colours");
+    check(std::fabs(dark.hover.a - 15.0f / 255.0f) < 1e-3f,
+          "the hover overlay stays an alpha for now");
+    check(same(light.backgroundPrimary, hex(0xede9e1)) && same(light.backgroundSecondary, hex(0xfffbf4)) &&
+              same(light.timelineBed, hex(0xf2f0eb)) && same(light.primary, hex(0x8f50ea)) &&
+              same(light.textOnPrimary, hex(0xffffff)),
+          "Ink light is Paper's surfaces under Ink's accent");
+    check(same(light.selected, light.primary) && contrast(light.textOnPrimary, light.selected) >= 4.5f,
+          "Ink light selection is solid and its label reads");
+    check(contrast(light.borderStrong, light.backgroundSecondary) >= 3.0f &&
+              contrast(light.borderStrong, light.backgroundPrimary) >= 3.0f,
+          "Ink light strong border reads at 3:1");
+    check(hc.mode == 2 && same(hc.timelineBed, NUIColor::black()), "Ink high contrast is a high-contrast theme");
+    check(same(hc.primary, NUIThemePresets::createKitTheme("ember-hc").primary), "Ink high contrast copies Ember's");
+
+    // Ember stays exactly as it was: the warm black and the thin selection wash.
     const auto ember = NUIThemePresets::createKitTheme("ember-dark");
-    check(same(NUIThemePresets::createAestraDark().primary, ember.primary), "createAestraDark is Ember dark");
-    check(same(ember.primary, NUIColor::fromHex(0x8a3ff0)), "Ember dark carries the 12 Nov violet");
+    check(same(ember.primary, hex(0x8a3ff0)) && same(ember.backgroundPrimary, hex(0x0a0908)),
+          "Ember dark is unchanged");
+    check(ember.selected.a < 0.5f, "Ember dark keeps its alpha selection");
+}
+
+void testAliases() {
+    std::cout << "old names resolve to Ink\n";
+    const auto ink = NUIThemePresets::createKitTheme("ink-dark");
+    check(same(NUIThemePresets::createAestraDark().primary, ink.primary), "createAestraDark is Ink dark");
+    check(same(NUIThemePresets::createAestraDark().backgroundSecondary, ink.backgroundSecondary),
+          "createAestraDark carries Ink's panels");
+    check(same(NUIThemePresets::createAestraLight().backgroundPrimary,
+               NUIThemePresets::createKitTheme("ink-light").backgroundPrimary),
+          "createAestraLight is Ink light");
     auto& manager = NUIThemeManager::getInstance();
     check(manager.setActiveTheme("Aestra-dark"), "Aestra-dark still loads");
-    check(same(manager.getCurrentTheme().backgroundPrimary, ember.backgroundPrimary), "Aestra-dark is Ember dark");
+    check(same(manager.getCurrentTheme().backgroundPrimary, ink.backgroundPrimary), "Aestra-dark is Ink dark");
+    check(manager.setActiveTheme("aestra-dark") && same(manager.getCurrentTheme().primary, ink.primary),
+          "aestra-dark is Ink dark");
+    check(manager.setActiveTheme("Aestra-light") &&
+              same(manager.getCurrentTheme().backgroundPrimary,
+                   NUIThemePresets::createKitTheme("ink-light").backgroundPrimary),
+          "Aestra-light is Ink light");
     check(manager.setActiveTheme("high-contrast-dark"), "high-contrast-dark still loads");
-    check(manager.getCurrentTheme().mode == 2, "high-contrast-dark is Ember high contrast");
-    check(same(manager.getColor("editorWell"), NUIThemePresets::createKitTheme("ember-hc").editorWell),
+    check(manager.getCurrentTheme().mode == 2, "high-contrast-dark is a high-contrast theme");
+    check(same(manager.getColor("editorWell"), NUIThemePresets::createKitTheme("ink-hc").editorWell),
           "getColor reads stated editor tokens");
-    check(same(NUIThemePresets::createKitTheme("no-such-theme").primary, ember.primary),
-          "an unknown key falls back to Ember dark");
+    check(same(NUIThemePresets::createKitTheme("no-such-theme").primary, ink.primary),
+          "an unknown key falls back to Ink dark");
     manager.setActiveTheme("Aestra-dark");
 }
 
@@ -154,7 +225,8 @@ void testDepth() {
 } // namespace
 
 int main() {
-    testTwelveThemes();
+    testAllKitThemes();
+    testInk();
     testAliases();
     testDepth();
     std::cout << (gFailures == 0 ? "ALL PASS\n" : "FAILURES: " + std::to_string(gFailures) + "\n");

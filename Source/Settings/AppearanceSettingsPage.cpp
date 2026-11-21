@@ -9,14 +9,14 @@
 namespace Aestra {
 
 namespace {
-/// The twelve Aestra Kit variants (FD-79), in the kit's order: Ember first, as the default.
+/// The fifteen Aestra Kit variants (FD-79), in the kit's order: Ink first, as the default, then Ember.
 const std::vector<AestraUI::NUIThemePresets::KitTheme>& themeList() { return AestraUI::NUIThemePresets::kitThemes(); }
 
-/// Older preference values name Ember by its earlier keys.
+/// Older preference values name the default theme by its earlier keys (Ink since 21 Nov 2026; Ember has its own keys).
 std::string canonicalTheme(const std::string& name) {
-    if (name == "Aestra-dark" || name == "aestra-dark") return "ember-dark";
-    if (name == "Aestra-light") return "ember-light";
-    if (name == "high-contrast-dark") return "ember-hc";
+    if (name == "Aestra-dark" || name == "aestra-dark") return "ink-dark";
+    if (name == "Aestra-light") return "ink-light";
+    if (name == "high-contrast-dark") return "ink-hc";
     return name;
 }
 
@@ -24,7 +24,7 @@ std::string themeLabel(const AestraUI::NUIThemePresets::KitTheme& kit) {
     std::string mode = kit.modeName;
     if (!mode.empty()) mode[0] = static_cast<char>(mode[0] - 'A' + 'a');
     std::string label = std::string(kit.name) + " " + mode;
-    if (std::string(kit.key) == "ember-dark") label += " (default)";
+    if (std::string(kit.key) == "ink-dark") label += " (default)";
     return label;
 }
 }
