@@ -5667,3 +5667,12 @@ add_executable(StandardMidiFileTest AestraAudio/StandardMidiFileTest.cpp
 target_include_directories(StandardMidiFileTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)
 add_test(NAME StandardMidiFileTest COMMAND StandardMidiFileTest)
 set_tests_properties(StandardMidiFileTest PROPERTIES LABELS "unit;midi;io;contract:audio")
+
+# MIDI file <-> pattern bridge and the one-step import command (header-only plus the SMF reader).
+add_executable(MidiPatternBridgeTest AestraAudio/MidiPatternBridgeTest.cpp
+    ${CMAKE_SOURCE_DIR}/AestraAudio/src/Midi/StandardMidiFile.cpp
+    ${CMAKE_SOURCE_DIR}/AestraAudio/src/Commands/CommandHistory.cpp
+    ${CMAKE_SOURCE_DIR}/AestraAudio/src/Commands/CommandTransaction.cpp)
+target_include_directories(MidiPatternBridgeTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include ${CMAKE_SOURCE_DIR}/AestraCore/include)
+add_test(NAME MidiPatternBridgeTest COMMAND MidiPatternBridgeTest)
+set_tests_properties(MidiPatternBridgeTest PROPERTIES LABELS "unit;midi;pattern;command;contract:audio")
