@@ -606,7 +606,7 @@ void UIMixerPanel::renderGroupBands(NUIRenderer& renderer)
     if (m_groupBands.empty()) return;
     auto& theme = NUIThemeManager::getInstance();
     for (const auto& band : m_groupBands) {
-        NUIColor color = theme.getColor("accentPrimary");
+        NUIColor color = theme.getColor("textSecondary"); // a group without a colour is a neutral band
         if (!band.master && band.colorIndex >= 0) {
             const uint32_t argb = paletteIndexToARGB(band.colorIndex);
             color = NUIColor(((argb >> 16) & 0xFF) / 255.0f, ((argb >> 8) & 0xFF) / 255.0f, (argb & 0xFF) / 255.0f, 1.0f);
@@ -797,7 +797,7 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
     // Drop-target highlight for channel strips (#395) — inside the clip so it
     // never bleeds into the inspector/master area.
     if (m_dropHoverChannelId >= 0) {
-        const NUIColor accent = NUIThemeManager::getInstance().getColor("accentPrimary");
+        const NUIColor accent = NUIThemeManager::getInstance().getColor("selectionEdge");
         for (const auto& strip : m_strips) {
             if (strip && strip->isVisible() && static_cast<int64_t>(strip->getChannelId()) == m_dropHoverChannelId) {
                 renderer.strokeRoundedRect(strip->getBounds(), 6.0f, 2.0f, accent);
@@ -826,7 +826,7 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
         // rail still accepts the click (it records intent) but must not look
         // like it will open the panel right now, or it feels broken.
         const NUIColor railColor = m_inspectorToggleHovered
-            ? theme.getColor("accentPrimary").withAlpha(forced ? 0.18f : 0.34f)
+            ? theme.getColor(forced ? "selectionTint" : "selectionFill")
             : theme.getColor("surfaceTertiary").withAlpha(collapsed ? 0.72f : 0.34f);
         renderer.fillRoundedRect(rail, 3.0f, railColor);
 
@@ -854,7 +854,7 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
     // Drop-target highlight for the master strip (rendered outside the clip).
     if (m_dropHoverChannelId >= 0 && m_masterStrip && m_masterStrip->isVisible() &&
         static_cast<int64_t>(m_masterStrip->getChannelId()) == m_dropHoverChannelId) {
-        const NUIColor accent = NUIThemeManager::getInstance().getColor("accentPrimary");
+        const NUIColor accent = NUIThemeManager::getInstance().getColor("selectionEdge");
         renderer.strokeRoundedRect(m_masterStrip->getBounds(), 6.0f, 2.0f, accent);
     }
 

@@ -126,6 +126,7 @@ public:
     // Component interface
     void onRender(NUIRenderer& renderer) override;
     void onUpdate(double deltaTime) override;
+    void onThemeChanged(const NUIThemeProperties& theme) override; ///< FileBrowserTheme.cpp
     void onResize(int width, int height) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
     bool onKeyEvent(const NUIKeyEvent& event) override;
@@ -506,6 +507,7 @@ public:
         std::string createUntitledCollection();
         void finishCollectionRename(bool accept);
         NUIColor collectionColor(const std::string& name) const;
+        void applyThemeColors(); ///< reads every cached colour from the active theme (FileBrowserTheme.cpp)
         std::vector<std::string> collections_{"Purple", "Drums", "Instruments", "Vocals"};
         std::function<std::vector<std::string>()> projectFilesProvider_;
         // Inline collection-name editor. A finished editor is parked in

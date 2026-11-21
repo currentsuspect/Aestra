@@ -18,6 +18,7 @@ namespace AestraUI {
         uint32_t rendererTextureId;
         NUISize size;
         bool valid;
+        uint64_t themeGeneration = 0; ///< the NUIThemeManager generation this was drawn under (RenderCacheTheme.h)
         uint64_t lastUsedFrame;
         bool ownsTexture;
 

@@ -250,7 +250,7 @@ void BPMDisplay::onRender(AestraUI::NUIRenderer& renderer) {
         ss << std::fixed << std::setprecision(2) << m_displayBPM;
         const std::string value = ss.str();
         AestraUI::NUIColor bpmColor =
-            m_isHovered ? themeManager.getColor("secondary") : themeManager.getColor("textPrimary");
+            m_isHovered ? themeManager.getColor("accentText") : themeManager.getColor("textPrimary");
         const float valueY = renderer.calculateTextY(bounds, kValueSize);
         renderer.drawText(value, {bounds.x, valueY}, kValueSize, bpmColor);
         const float valueW = renderer.measureText(value, kValueSize).width;
@@ -546,7 +546,7 @@ std::string TimeSignatureDisplay::getDisplayText() const {
 void TimeSignatureDisplay::onRender(AestraUI::NUIRenderer& renderer) {
     AestraUI::NUIRect bounds = getBounds();
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    AestraUI::NUIColor textColor = m_isHovered ? themeManager.getColor("secondary") : themeManager.getColor("textSecondary");
+    AestraUI::NUIColor textColor = m_isHovered ? themeManager.getColor("accentText") : themeManager.getColor("textSecondary");
     std::string text = getDisplayText();
     constexpr float kMeterSize = 13.0f;
     renderer.drawText(text, {bounds.x, renderer.calculateTextY(bounds, kMeterSize)}, kMeterSize, textColor);

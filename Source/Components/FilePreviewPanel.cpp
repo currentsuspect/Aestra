@@ -266,9 +266,9 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     if (bounds.isEmpty()) return;
 
     const bool hasSelection = hasCurrentFile_;
-    NUIColor bgColor = theme.getColor("surfaceRaised");
+    NUIColor bgColor = theme.getColor("backgroundSecondary"); // a card at the foot of the browser, not a grey slab
     NUIColor borderColor = theme.getColor("borderSubtle").withAlpha(0.62f);
-    NUIColor accent = theme.getColor("accentPrimary");
+    NUIColor accent = theme.getColor("accentText");
 
     // Background fill
     renderer.fillRect(bounds, bgColor);
@@ -306,7 +306,7 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
         if (folderIcon_) {
             NUIRect iconRect(startX, centerY - iconSize * 0.5f, iconSize, iconSize);
             folderIcon_->setBounds(iconRect);
-            folderIcon_->setColor(accent.withAlpha(0.75f));
+            folderIcon_->setColor(accent);
             folderIcon_->onRender(renderer);
         }
 
@@ -432,8 +432,8 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
         const float w = renderer.measureText(t, xs).width + 18.0f;
         addBounds_ = NUIRect(bounds.right() - padX - w, rowY, w, 22.0f);
         if (addBounds_.x > autoPlayBounds_.right() + 6.0f) {
-            renderer.fillRoundedRect(addBounds_, 3.0f, theme.getColor("accentPrimary"));
-            renderer.drawTextCentered(t, addBounds_, xs, NUIColor::white());
+            renderer.fillRoundedRect(addBounds_, 3.0f, theme.getColor("selected"));
+            renderer.drawTextCentered(t, addBounds_, xs, theme.getColor("selectedText"));
         } else {
             addBounds_ = NUIRect();
         }

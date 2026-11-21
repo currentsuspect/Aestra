@@ -516,13 +516,13 @@ void PianoRollNoteLayer::renderNoteProperties(NUIRenderer& renderer) {
     renderer.fillRoundedRect(r, 8.0f, theme.getColor("backgroundSecondary").withAlpha(0.98f));
     renderer.strokeRoundedRect(r, 8.0f, 1.0f, theme.getColor("border").withAlpha(0.85f));
 
-    const auto accent = theme.getColor("accentPrimary");
+    const auto accent = theme.getColor("accentText");
     const auto labelColor = theme.getColor("textSecondary").withAlpha(0.85f);
     const auto valueColor = theme.getColor("textPrimary").withAlpha(0.96f);
 
     const std::string title = "Note Properties - " + MusicTheory::getPitchName(n.pitch);
     renderer.drawText(title, NUIPoint(r.x + kPropPad + 2.0f, r.y + kPropPad + 2.0f), 10.5f,
-                      accent.withAlpha(0.95f));
+                      accent);
 
     // Row values
     const int velMidi = static_cast<int>(std::lround(std::clamp(n.velocity, 0.0f, 1.0f) * 127.0f));
@@ -557,14 +557,14 @@ void PianoRollNoteLayer::renderNoteProperties(NUIRenderer& renderer) {
     for (int i = 0; i < kPropRowCount; ++i) {
         const NUIRect rowRect(r.x + 4.0f, rowsTop + i * kPropRowH, r.width - 8.0f, kPropRowH);
         if (i == propDragField_) {
-            renderer.fillRoundedRect(rowRect, 4.0f, accent.withAlpha(0.16f));
+            renderer.fillRoundedRect(rowRect, 4.0f, theme.getColor("selectionTint"));
         }
         const float textY = rowRect.y + 5.0f;
         renderer.drawText(rows[i].label, NUIPoint(r.x + kPropPad + 2.0f, textY), 10.0f, labelColor);
         const auto valDim = renderer.measureText(rows[i].value, 10.0f);
         renderer.drawText(rows[i].value,
                           NUIPoint(r.right() - kPropPad - 2.0f - valDim.width, textY), 10.0f,
-                          i == propDragField_ ? accent.withAlpha(0.98f) : valueColor);
+                          i == propDragField_ ? accent : valueColor);
     }
 
     // Footer buttons
@@ -573,8 +573,8 @@ void PianoRollNoteLayer::renderNoteProperties(NUIRenderer& renderer) {
     const NUIRect acceptRect(r.right() - kPropPad - 88.0f, btnY, 88.0f, 22.0f);
     renderer.fillRoundedRect(resetRect, 5.0f, theme.getColor("surfaceRaised").withAlpha(0.9f));
     renderer.strokeRoundedRect(resetRect, 5.0f, 1.0f, theme.getColor("border").withAlpha(0.7f));
-    renderer.fillRoundedRect(acceptRect, 5.0f, accent.withAlpha(0.28f));
-    renderer.strokeRoundedRect(acceptRect, 5.0f, 1.0f, accent.withAlpha(0.8f));
+    renderer.fillRoundedRect(acceptRect, 5.0f, theme.getColor("selectionFill"));
+    renderer.strokeRoundedRect(acceptRect, 5.0f, 1.0f, theme.getColor("selectionEdge"));
     const auto resetDim = renderer.measureText("Reset", 10.0f);
     renderer.drawText("Reset",
                       NUIPoint(resetRect.x + (resetRect.width - resetDim.width) * 0.5f,
@@ -650,12 +650,10 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
     // earliest selected start, preserving the phrase's internal rhythm.
     const NUIRect selectionBounds = selectionTimeBoundsRect();
     if (selectionBounds.width > 0.0f && selectionBounds.height > 0.0f) {
-        const auto accent = themeManager.getColor("accentSecondary");
-        renderer.strokeRoundedRect(selectionBounds, 3.0f, 1.0f, accent.withAlpha(0.68f));
+        renderer.strokeRoundedRect(selectionBounds, 3.0f, 1.0f, themeManager.getColor("selectionEdge"));
         const NUIRect handle = selectionStretchHandleRect();
         renderer.fillRoundedRect(handle, 3.0f,
-                                 accent.lightened(m_hoverOnSelectionStretch ? 0.24f : 0.10f)
-                                     .withAlpha(m_hoverOnSelectionStretch ? 1.0f : 0.88f));
+                                 themeManager.getColor(m_hoverOnSelectionStretch ? "hoverSelected" : "selected"));
         renderer.strokeRoundedRect(handle, 3.0f, 1.0f, NUIColor::white().withAlpha(0.82f));
     }
 
@@ -727,7 +725,7 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
         const float bubbleX = std::clamp(ax, b.x + 2.0f, b.right() - bubbleW - 2.0f);
         const NUIRect bubble(bubbleX, bubbleY, bubbleW, bubbleH);
         renderer.fillRoundedRect(bubble, 4.0f, NUIColor::black().withAlpha(0.92f));
-        renderer.strokeRoundedRect(bubble, 4.0f, 1.0f, themeManager.getColor("accentPrimary").withAlpha(0.80f));
+        renderer.strokeRoundedRect(bubble, 4.0f, 1.0f, themeManager.getColor("selectionEdge"));
         renderer.drawText(label,
                           NUIPoint(bubble.x + 6.0f, bubble.y + (bubble.height - measured.height) * 0.5f),
                           kFontSize,
@@ -751,7 +749,7 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
         const float bubbleX = std::clamp(vx, b.x + 2.0f, b.right() - bubbleW - 2.0f);
         const NUIRect bubble(bubbleX, bubbleY, bubbleW, bubbleH);
         renderer.fillRoundedRect(bubble, 4.0f, NUIColor::black().withAlpha(0.92f));
-        renderer.strokeRoundedRect(bubble, 4.0f, 1.0f, themeManager.getColor("accentPrimary").withAlpha(0.80f));
+        renderer.strokeRoundedRect(bubble, 4.0f, 1.0f, themeManager.getColor("selectionEdge"));
         renderer.drawText(label,
                           NUIPoint(bubble.x + 6.0f, bubble.y + (bubble.height - measured.height) * 0.5f),
                           kFontSize,
@@ -760,8 +758,8 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
 
     // Rubber-band selection rectangle (already normalized during drag)
     if (state_ == State::SelectingBox && selectionRect_.width > 0 && selectionRect_.height > 0) {
-        renderer.fillRoundedRect(selectionRect_, 2.0f, NUIThemeManager::getInstance().getColor("accentPrimary").withAlpha(0.15f));
-        renderer.strokeRoundedRect(selectionRect_, 2.0f, 1.0f, NUIThemeManager::getInstance().getColor("accentPrimary").withAlpha(0.55f));
+        // Drawn over the notes it selects, so an outline: a fill here would wash them out.
+        renderer.strokeRoundedRect(selectionRect_, 2.0f, 1.0f, NUIThemeManager::getInstance().getColor("selectionEdge"));
     }
 
     renderNoteProperties(renderer);

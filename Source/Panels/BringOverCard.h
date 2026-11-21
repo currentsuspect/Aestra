@@ -143,9 +143,9 @@ struct BringOverCard {
         renderer.drawText("Arrives as one step in " + into + ", so a single undo takes it back out. Tracks come in routed to Master.",
                           {l.card.x + kPad, l.bringButton.y - 26.0f}, 10.5f, muted.withAlpha(0.8f));
         const auto button = [&](const NUIRect& b, const std::string& label, bool primary, bool dim, const std::string& id) {
-            NUIColor fill = primary ? theme.getColor("accentPrimary") : theme.getColor("surfaceTertiary");
+            NUIColor fill = primary ? theme.getColor("selected") : theme.getColor("surfaceTertiary");
             if (dim) fill = theme.getColor("surfaceTertiary").withAlpha(0.5f);
-            else if (hovered == id) fill = fill.lightened(0.08f);
+            else if (hovered == id) fill = primary ? theme.getColor("hoverSelected") : theme.getColor("surfaceRaised");
             renderer.fillRect(b, fill);
             const float tw = renderer.measureText(label, 12.5f).width;
             renderer.drawText(label, {b.x + (b.width - tw) * 0.5f, std::round(renderer.calculateTextY(b, 12.5f))}, 12.5f,

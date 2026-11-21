@@ -214,7 +214,6 @@ void PianoRollView::onRender(NUIRenderer& renderer) {
     if (m_grid && m_ruler) {
         const auto gridBounds = m_grid->getBounds();
         const auto rulerBounds = m_ruler->getBounds();
-        const auto accent = theme.getColor("accentPrimary");
         const double visibleStartBeat = getViewStartBeat();
         const double visibleEndBeat = visibleStartBeat + getViewDurationBeats();
         const float playheadX = snapVerticalLineX(
@@ -224,9 +223,8 @@ void PianoRollView::onRender(NUIRenderer& renderer) {
             playheadX >= gridBounds.x && playheadX <= gridBounds.right()) {
             const float playheadStartY = rulerBounds.bottom();
             const float playheadEndY = gridBounds.bottom();
-            (void)accent;
-            // FD-63 board: a 1 px line in the text colour, over the grid only.
-            renderer.fillRect(NUIRect(playheadX, playheadStartY, 1.0f, playheadEndY - playheadStartY), theme.getColor("textPrimary"));
+            // FD-63 board: a 1 px line in the playhead colour (text ink in Ink), over the grid only.
+            renderer.fillRect(NUIRect(playheadX, playheadStartY, 1.0f, playheadEndY - playheadStartY), theme.getColor("playhead"));
         }
     }
 
@@ -237,10 +235,9 @@ void PianoRollView::onRender(NUIRenderer& renderer) {
                                    controlBounds.y - 2.0f,
                                    gripWidth,
                                    4.0f);
-        renderer.fillRoundedRect(splitterGrip,
-                                 2.0f,
-                                 theme.getColor("accentPrimary").withAlpha(
-                                     m_isResizingPanel ? 0.92f : (m_splitterHovered ? 0.52f : 0.0f))); // shown on hover only
+        if (m_isResizingPanel || m_splitterHovered) // shown on hover only
+            renderer.fillRoundedRect(splitterGrip, 2.0f,
+                                     theme.getColor(m_isResizingPanel ? "selectionEdge" : "controlGuide"));
     }
 
     if (m_toolbar) {
@@ -311,7 +308,7 @@ void PianoRollView::renderShortcutHelp(NUIRenderer& renderer) {
     renderer.fillRoundedRect(panel, 10.0f, theme.getColor("backgroundSecondary").withAlpha(0.98f));
     renderer.strokeRoundedRect(panel, 10.0f, 1.0f, theme.getColor("border").withAlpha(0.7f));
 
-    const auto accent = theme.getColor("accentPrimary");
+    const auto accent = theme.getColor("accentText");
     const auto keyColor = theme.getColor("textPrimary").withAlpha(0.95f);
     const auto actionColor = theme.getColor("textSecondary").withAlpha(0.92f);
 
@@ -321,7 +318,7 @@ void PianoRollView::renderShortcutHelp(NUIRenderer& renderer) {
     renderer.drawText(title,
                       NUIPoint(panel.x + (panel.width - titleSize.width) * 0.5f, y),
                       11.0f,
-                      accent.withAlpha(0.95f));
+                      accent);
     y += titleH + 12.0f;
 
     const float colW = (panelW - padX * 2.0f - colGap) * 0.5f;
@@ -925,13 +922,14 @@ void PianoRollView::renderMusePreview(NUIRenderer& renderer) {
     if (m_previewIdea < 0 || m_previewIdea >= static_cast<int>(m_ideas.size()) || !m_grid) return;
     const auto& idea = m_ideas[static_cast<size_t>(m_previewIdea)];
     const NUIRect g = m_grid->getBounds();
-    const auto violet = NUIColor::fromHex(0x7c3aed);
-    const auto line = NUIColor::fromHex(0xa78bfa);
+    auto& theme = NUIThemeManager::getInstance();
+    const auto barFill = theme.getColor("selectionTint");
+    const auto noteFill = theme.getColor("selectionFill");
+    const auto line = theme.getColor("selectionEdge");
     renderer.setClipRect(g);
     const float bx = g.x + static_cast<float>(m_ideaBar * m_pixelsPerBeat) - m_scrollX;
     const float bw = static_cast<float>(m_beatsPerBar) * m_pixelsPerBeat;
-    renderer.fillRect(NUIRect(bx, g.y, bw * 0.5f, g.height), violet.withAlpha(0.10f));
-    renderer.fillRect(NUIRect(bx + bw * 0.5f, g.y, bw * 0.5f, g.height), violet.withAlpha(0.05f));
+    renderer.fillRect(NUIRect(bx, g.y, bw, g.height), barFill);
     const auto dashed = [&](const NUIRect& r) {
         for (float x = r.x; x < r.right(); x += 7.0f) {
             const float w = std::min(4.0f, r.right() - x);
@@ -950,7 +948,7 @@ void PianoRollView::renderMusePreview(NUIRenderer& renderer) {
         const float x = g.x + static_cast<float>(n.startBeat * m_pixelsPerBeat) - m_scrollX;
         const float y = g.y + (127 - n.pitch) * m_keyHeight - m_scrollY;
         const NUIRect r(x, y + 1.0f, std::max(4.0f, static_cast<float>(n.durationBeats * m_pixelsPerBeat) - 1.0f), m_keyHeight - 2.0f);
-        renderer.fillRect(r, violet.withAlpha(0.22f));
+        renderer.fillRect(r, noteFill);
         dashed(r);
         if (y < topY) { topY = y; top = n.pitch; }
     }
@@ -964,15 +962,15 @@ void PianoRollView::renderMusePreview(NUIRenderer& renderer) {
     if (px + w > bx && bx - w - 8.0f < g.x) px = std::min(bx + 8.0f, g.right() - w - 4.0f);
     const float py = std::clamp(top >= 0 ? topY - 30.0f : g.y + 8.0f, g.y + 4.0f, g.bottom() - 30.0f);
     const NUIRect pill(px, py, w, 26.0f);
-    renderer.fillRect(pill, NUIColor::fromHex(0x1c1530));
-    renderer.strokeRect(pill, 1.0f, violet);
+    renderer.fillRect(pill, theme.getColor("selectionTint"));
+    renderer.strokeRect(pill, 1.0f, line);
     float tx = pill.x + 10.0f;
     const float ty = renderer.calculateTextY(pill, fs);
-    renderer.drawText(head, NUIPoint(tx, ty), fs, line);
+    renderer.drawText(head, NUIPoint(tx, ty), fs, theme.getColor("accentText"));
     tx += renderer.measureText(head, fs).width + 20.0f;
-    renderer.drawText(idea.label, NUIPoint(tx, ty), fs, NUIColor::fromHex(0xeee9e1));
+    renderer.drawText(idea.label, NUIPoint(tx, ty), fs, theme.getColor("textPrimary"));
     tx += renderer.measureText(idea.label, fs).width + 20.0f;
-    renderer.drawText(keys, NUIPoint(tx, ty), fs, NUIColor::fromHex(0xaca397));
+    renderer.drawText(keys, NUIPoint(tx, ty), fs, theme.getColor("textSecondary"));
     renderer.clearClipRect();
 }
 

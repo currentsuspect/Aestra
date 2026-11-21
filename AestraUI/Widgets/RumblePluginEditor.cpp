@@ -347,7 +347,7 @@ void RumblePluginEditor::drawContent(NUIRenderer& renderer, const NUIRect& conte
     followInstrument();
     layout();
     const NUIRect b = getBounds();
-    renderer.fillRect({b.x, b.y + headerHeight(), b.width, b.height - headerHeight()}, token("backgroundSecondary"));
+    renderer.fillRect({b.x, b.y + headerHeight(), b.width, b.height - headerHeight()}, token("backgroundPrimary")); // the body is the bed, as every plugin editor's is
     drawShelf(renderer);
     drawTrail(renderer);
     drawRow(renderer);

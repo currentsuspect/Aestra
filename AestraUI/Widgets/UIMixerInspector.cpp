@@ -203,7 +203,7 @@ void UIMixerInspector::cacheThemeColors()
     m_text = theme.getColor("textPrimary");
     m_textSecondary = theme.getColor("textSecondary");
     m_tabBg = theme.getColor("buttonBgDefault").withAlpha(0.98f);
-    m_tabActive = theme.getColor("buttonBgActive").withAlpha(0.99f);
+    m_tabActive = theme.getColor("selected");
     m_tabHover = theme.getColor("buttonBgHover").withAlpha(0.99f);
     m_addBg = theme.getColor("surfaceTertiary");
     m_addHover = theme.getColor("controlHover");
@@ -515,7 +515,7 @@ void UIMixerInspector::rebuildSendWidgets(const Aestra::ChannelViewModel* channe
     for (size_t i = 0; i < channel->sends.size(); ++i) {
         auto& sendData = channel->sends[i];
         auto widget = std::make_shared<UIMixerSend>();
-        widget->setAccentColor(NUIThemeManager::getInstance().getColor("primary").withAlpha(0.92f));
+        widget->setAccentColor(NUIThemeManager::getInstance().getColor("selected"));
         
         widget->setSendIndex(static_cast<int>(i));
         widget->setLevel(sendData.gain);
