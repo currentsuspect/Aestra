@@ -3862,6 +3862,25 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(UnitRowLookTest PROPERTIES LABELS "ui;theme;contrast;arsenal;contract:application")
 endif()
 
+# Ink theme: the bed, card and control greys keep their order, and the big areas the 21 Nov sweep corrected stay on the bed or card.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(InkSurfaceStepTest AestraUI_Core)
+    add_executable(InkSurfaceStepTest AestraUI/InkSurfaceStepTest.cpp)
+    target_link_libraries(InkSurfaceStepTest PRIVATE AestraUI_Core)
+    target_compile_definitions(InkSurfaceStepTest PRIVATE AESTRA_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+    target_include_directories(InkSurfaceStepTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Graphics
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME InkSurfaceStepTest COMMAND InkSurfaceStepTest)
+    set_tests_properties(InkSurfaceStepTest PROPERTIES LABELS "ui;theme;contrast;contract:application")
+endif()
+
 # Ink theme: no assignable unit/track colour is in the violet family; saved violet colours still decode.
 if(AESTRA_ENABLE_UI)
     aestra_require_ui_targets(TrackPaletteVioletTest AestraUI_Core)

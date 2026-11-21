@@ -66,7 +66,7 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     navHits_.clear();
     if (!placesOpen_ || layout.navPane.isEmpty()) return;
 
-    const NUIColor paneBg = themeManager.getColor("surfaceRaised");
+    const NUIColor paneBg = themeManager.getColor("backgroundSecondary"); // a card over the browser, not a grey slab
     const NUIColor sectionColor = themeManager.getColor("textSecondary").withAlpha(0.58f);  // Stronger section headers
     const NUIColor rowText = themeManager.getColor("textPrimary").withAlpha(0.78f);
     const NUIColor muted = themeManager.getColor("textSecondary").withAlpha(0.48f);

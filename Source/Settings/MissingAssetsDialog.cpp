@@ -108,7 +108,7 @@ void MissingAssetsDialog::onRender(AestraUI::NUIRenderer& renderer) {
 
     renderer.fillRect(AestraUI::NUIRect(0, 0, bounds.width, bounds.height), theme.overlay);
 
-    renderer.fillRoundedRect(m_dialogRect, theme.radiusL, theme.surfaceTertiary);
+    renderer.fillRoundedRect(m_dialogRect, theme.radiusL, theme.backgroundSecondary); // a dialog is a card (Design Spec, Dialog)
     renderer.strokeRoundedRect(m_dialogRect, theme.radiusL, theme.layout.dividerWidth, theme.borderStrong);
 
     const float contentX = m_dialogRect.x + theme.spacingM;

@@ -317,13 +317,13 @@ void AuditionHub::onRender(NUIRenderer& r) {
 
 void AuditionHub::renderNav(NUIRenderer& r, const AuditionHubLayout::Frame& f) {
     auto& theme = NUIThemeManager::getInstance();
-    r.fillRect(f.nav, theme.getColor("backgroundSecondary"));
+    r.fillRect(f.nav, theme.getColor("backgroundPrimary")); // the sidebar is the bed; the open page is a card on it
     r.fillRect({f.nav.right() - 1.0f, f.nav.y, 1.0f, f.nav.height}, theme.getColor("borderSubtle"));
     r.drawText("Audition", {f.nav.x + 24.0f, f.nav.y + 26.0f}, 20.0f, theme.getColor("textPrimary"));
     for (int i = 0; i < AuditionHubLayout::kPages; ++i) {
         const NUIRect& rect = f.navItems[static_cast<size_t>(i)];
         const bool active = static_cast<int>(m_page) == i;
-        if (active) r.fillRect(rect, theme.getColor("surfaceRaised"));
+        if (active) r.fillRect(rect, theme.getColor("backgroundSecondary"));
         else if (m_hoverNav == i) r.fillRect(rect, theme.getColor("surfaceTertiary"));
         r.drawText(pageName(static_cast<Page>(i)), {rect.x + 20.0f, std::round(r.calculateTextY(rect, 13.0f))}, 13.0f,
                    active ? theme.getColor("textPrimary") : theme.getColor("textSecondary"));

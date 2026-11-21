@@ -136,7 +136,7 @@ PatternBrowserPanel::PatternBrowserPanel(TrackManager* trackManager)
     const auto& themeProps = themeManager.getCurrentTheme();
 
     // Cache theme colors
-    m_backgroundColor = themeManager.getColor("backgroundSecondary");
+    m_backgroundColor = themeManager.getColor("backgroundPrimary"); // the list is the bed, as the Sounds and Plugins lists are
     m_textColor = themeManager.getColor("textPrimary");
     m_borderColor = themeManager.getColor("borderSubtle").withAlpha(0.075f);
     m_selectedColor = themeManager.getColor("accentPrimary");
@@ -578,7 +578,7 @@ void PatternBrowserPanel::renderContent(AestraUI::NUIRenderer& renderer) {
                     "Use Clips as an optional bin"};
         }
         if (compactRail) {
-            renderer.fillRect(listRect, theme.getColor("backgroundSecondary"));
+            renderer.fillRect(listRect, theme.getColor("backgroundPrimary"));
             const AestraUI::NUIRect chip{
                 bounds.x + 10.0f,
                 bounds.y + m_headerHeight + 16.0f,

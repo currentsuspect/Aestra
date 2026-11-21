@@ -252,7 +252,7 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
     if (m_playlistVisible) {
         // Background for control area (always visible)
         AestraUI::NUIRect controlBg(bounds.x, bounds.y, controlAreaWidth, bounds.height);
-        renderer.fillRect(controlBg, themeManager.getColor("recessedPanel"));
+        renderer.fillRect(controlBg, themeManager.getColor("backgroundPrimary")); // the track list is the bed; each header is a card on it
 
         // Background for grid area (match track background; zebra grid provides contrast)
         float scrollbarWidth = kTimelineScrollbarWidth;
@@ -902,7 +902,7 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
     // grid area gets no shell of its own — the numbers are labels attached to
     // the grid. Only the left corner cell (the toolbar dock) gets material.
     renderer.fillRect(AestraUI::NUIRect(rulerBounds.x, rulerBounds.y, gridStartX - rulerBounds.x, rulerBounds.height),
-                      themeManager.getColor("recessedPanel"));
+                      themeManager.getColor("backgroundPrimary"));
     renderer.drawLine({rulerBounds.x, rulerBounds.bottom()}, {gridStartX, rulerBounds.bottom()}, 1.0f,
                       borderColor.withAlpha(0.24f));
 
@@ -1022,7 +1022,7 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
 
     // 2. Draw SOLID background for CONTROL AREA (left side - DRAWN LAST to fully cover any bleed)
     //    Use backgroundPrimary to match minimap's left section exactly
-    auto controlBg = themeManager.getColor("backgroundSecondary");
+    auto controlBg = themeManager.getColor("backgroundPrimary");
     AestraUI::NUIRect controlRect(rulerBounds.x, rulerBounds.y, controlAreaWidth + kTimelineGridInsetX, rulerBounds.height);
     renderer.fillRect(controlRect, controlBg);
     renderer.drawLine(AestraUI::NUIPoint(controlRect.x, controlRect.bottom() - 1.0f),

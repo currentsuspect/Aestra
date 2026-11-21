@@ -509,7 +509,7 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
     const uint64_t now = nowMs();
     const int shown = getDockVersion();
 
-    renderer.fillRect(NUIRect(bounds.x, layout.bar.y, bounds.width, bounds.bottom() - layout.bar.y), theme.getColor("backgroundSecondary"));
+    renderer.fillRect(NUIRect(bounds.x, layout.bar.y, bounds.width, bounds.bottom() - layout.bar.y), theme.getColor("backgroundPrimary")); // the panel body is the bed
     // Design Spec, "Panels: Versions": the map sits in the bed; branches are lanes, time runs left to right.
     Depth::bed(renderer, layout.timeline, 0.0f, Depth::Cut::Deep);
 

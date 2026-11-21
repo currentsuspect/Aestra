@@ -266,7 +266,7 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     if (bounds.isEmpty()) return;
 
     const bool hasSelection = hasCurrentFile_;
-    NUIColor bgColor = theme.getColor("surfaceRaised");
+    NUIColor bgColor = theme.getColor("backgroundSecondary"); // a card at the foot of the browser, not a grey slab
     NUIColor borderColor = theme.getColor("borderSubtle").withAlpha(0.62f);
     NUIColor accent = theme.getColor("accentPrimary");
 

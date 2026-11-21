@@ -134,7 +134,7 @@ public:
 
         // One panel colour, then rules: a line above the three columns, one between each, and one under each title.
         // No cards inside the panel; the waveform and the envelope sit on the darker bed they draw themselves.
-        renderer.fillRect(b, theme.getColor("backgroundSecondary"));
+        renderer.fillRect(b, theme.getColor("backgroundPrimary"));
         const NUIColor rule = theme.getColor("borderSubtle");
         const float top = b.bottom() - kSampleEditorColumnsH;
         renderer.fillRect({b.x, top, b.width, 1.0f}, rule);

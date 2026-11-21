@@ -99,7 +99,7 @@ inline void drawArsenalUnitTypePicker(AestraUI::NUIRenderer& renderer, const Aes
                                   {UnitType::Audio, "◫", "Audio", "Drop a clip directly"}};
     for (int i = 0; i < 4; ++i) {
         const NUIRect cell(card.x + padding + (i % 2) * (cellW + gap), card.y + padding + (i / 2) * (cellH + gap), cellW, cellH);
-        renderer.fillRoundedRect(cell, tp.radiusM, theme.getColor("surfaceTertiary").withAlpha(0.8f));
+        renderer.fillRoundedRect(cell, tp.radiusM, theme.getColor("backgroundPrimary")); // a choice is a well in the tray, not a grey slab
         renderer.strokeRoundedRect(cell, tp.radiusM, 1.0f, theme.getColor("borderSubtle").withAlpha(0.5f));
         renderer.drawText(kinds[i].icon, NUIPoint(cell.x + 10.0f, cell.y + 11.0f), tp.fontSizeS - 1.0f, theme.getColor("accentPrimary").withAlpha(0.9f));
         renderer.drawText(kinds[i].name, NUIPoint(cell.x + 32.0f, cell.y + 10.0f), tp.fontSizeXS - 1.0f, theme.getColor("textPrimary").withAlpha(0.95f));
