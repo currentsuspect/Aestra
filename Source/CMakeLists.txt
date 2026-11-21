@@ -25,6 +25,7 @@ set(Aestra_SOURCES
     App/MuseProjectLoadReport.cpp
     App/ProjectLifecycle.h
     App/ProjectLifecycle.cpp
+    App/MidiFileMenu.cpp
 	
 	# Core
 	Core/AestraAudioController.h
@@ -37,6 +38,7 @@ set(Aestra_SOURCES
 	Core/AestraContent.cpp
 	Core/AestraContentBounce.cpp
 	Core/AestraContentEmptyNotice.cpp
+	Core/AestraContentMidiFile.cpp
 	Core/AestraContentEditorPreview.cpp
 	Core/AestraContentMeters.cpp
 	Core/AestraContentKey.cpp

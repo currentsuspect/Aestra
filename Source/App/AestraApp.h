@@ -158,6 +158,8 @@ private:
     /// File > Open Recent listing them (newest first, missing files left out).
     void rememberRecentProject(const std::string& path);
     void addOpenRecentMenu(AestraUI::NUIContextMenu& menu);
+    /// File > Import MIDI File..., Export Audio..., Export Selected Pattern as MIDI... (MidiFileMenu.cpp).
+    void addImportExportMenu(AestraUI::NUIContextMenu& menu);
     /// The timeline's view in the project's UI state: track heights (ProjectLifecycle.cpp).
     void captureTimelineView(ProjectSerializer::UIState& state) const;
     /// Destructive timeline actions (Delete Lane, Delete Track on rows with clips) ask through the app's dialog.
