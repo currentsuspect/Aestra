@@ -436,11 +436,11 @@ void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& boun
 
     NUIRect fileBrowserBounds(bounds.x, bounds.y, bounds.width, bounds.height);
 
-    renderer.fillRect(fileBrowserBounds, themeManager.getColor("backgroundPrimary"));
+    renderer.fillRect(fileBrowserBounds, themeManager.getColor("timelineBed"));
     // Search row sits ON the surface (DESIGN.md rule 4: no recessed dark
     // well); the single quiet divider below it explains the boundary.
     renderer.fillRect(NUIRect(bounds.x, bounds.y, bounds.width, browserLayout.searchBar.bottom() - bounds.y),
-                      themeManager.getColor("backgroundSecondary"));
+                      themeManager.getColor("timelineBed"));
     renderer.drawLine({browserLayout.searchBar.x, browserLayout.searchBar.bottom() - 1.0f},
                       {browserLayout.searchBar.right(), browserLayout.searchBar.bottom() - 1.0f},
                       1.0f, themeManager.getColor("border").withAlpha(0.30f));

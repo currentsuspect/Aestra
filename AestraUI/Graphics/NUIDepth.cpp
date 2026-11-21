@@ -16,6 +16,10 @@ const NUIThemeProperties& theme() { return NUIThemeManager::getInstance().getCur
 
 NUIColor mix(const NUIColor& a, const NUIColor& b, float t) { return NUIColor::lerp(a, b, std::clamp(t, 0.0f, 1.0f)); }
 
+// The light and the shade that lift or sink a surface are the theme's own (neuHi / neuLo, opaque): white and black in the
+// plain themes, slate light and slate black in Ink dark, so the family has no neutral grey in it.
+NUIColor lightInk() { return theme().neuHi.withAlpha(1.0f); }
+NUIColor shadeInk() { return theme().neuLo.withAlpha(1.0f); }
 NUIColor scaledAlpha(const NUIColor& c, float k) { return c.withAlpha(std::clamp(c.a * k, 0.0f, 1.0f)); }
 
 } // namespace
@@ -62,12 +66,12 @@ void object(NUIRenderer& renderer, const NUIRect& rect, float radius, const Obje
         const float gx = rect.width * 0.025f, gy = rect.height * 0.025f;
         face = NUIRect{rect.x - gx, rect.y - gy, rect.width + gx * 2.0f, rect.height + gy * 2.0f};
     }
-    const NUIColor top = mix(look.base, NUIColor::white(), look.lightTop);
-    const NUIColor bottom = mix(look.base, NUIColor::black(), look.shadeBottom);
+    const NUIColor top = mix(look.base, lightInk(), look.lightTop);
+    const NUIColor bottom = mix(look.base, shadeInk(), look.shadeBottom);
     renderer.fillRoundedRectVertical(face, radius, top, bottom);
     // Lit top edge and shaded bottom edge (inset 0 1px 0 white 24%, inset 0 -1px 0 black 32%).
-    renderer.drawInnerShadow(face, radius, 1.0f, 0.5f, NUIColor::white().withAlpha(0.24f), true);
-    renderer.drawInnerShadow(face, radius, -1.0f, 0.5f, NUIColor::black().withAlpha(0.32f), true);
+    renderer.drawInnerShadow(face, radius, 1.0f, 0.5f, lightInk().withAlpha(0.24f), true);
+    renderer.drawInnerShadow(face, radius, -1.0f, 0.5f, shadeInk().withAlpha(0.32f), true);
 }
 
 void object(NUIRenderer& renderer, const NUIRect& rect, float radius, bool held) {
@@ -112,7 +116,7 @@ void sliderCap(NUIRenderer& renderer, const NUIPoint& centre, bool held) {
     // Grip ridges either side of the centre line, and the line itself.
     for (float dx : {-6.0f, -4.0f, 4.0f, 6.0f})
         renderer.drawLine({cap.x + 11.0f + dx, cap.y + 4.0f}, {cap.x + 11.0f + dx, cap.bottom() - 4.0f}, 1.0f,
-                          NUIColor::black().withAlpha(0.26f));
+                          shadeInk().withAlpha(0.26f));
     renderer.fillRect({cap.x + 10.0f, cap.y + 2.0f, 2.0f, cap.height - 4.0f}, th.textPrimary);
 }
 
@@ -129,9 +133,9 @@ void faderCap(NUIRenderer& renderer, const NUIRect& cap, bool master, bool held)
     for (float dy : {-6.0f, -4.0f, 4.0f, 6.0f}) {
         if (std::fabs(dy) + 1.0f >= cap.height * 0.5f)
             continue;
-        renderer.fillRect({cap.x + inset, cy + dy, cap.width - inset * 2.0f, 1.0f}, NUIColor::black().withAlpha(0.26f));
+        renderer.fillRect({cap.x + inset, cy + dy, cap.width - inset * 2.0f, 1.0f}, shadeInk().withAlpha(0.26f));
         renderer.fillRect({cap.x + inset, cy + dy + 1.0f, cap.width - inset * 2.0f, 1.0f},
-                          NUIColor::white().withAlpha(0.10f));
+                          lightInk().withAlpha(0.10f));
     }
     const float lineH = master ? 3.0f : 2.0f;
     renderer.fillRect({cap.x + 2.0f, cy - lineH * 0.5f, cap.width - 4.0f, lineH}, master ? th.primary : th.textPrimary);

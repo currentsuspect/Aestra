@@ -957,7 +957,7 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
     const AestraUI::NUIRect bounds = getBounds();
     auto& theme = AestraUI::NUIThemeManager::getInstance();
 
-    renderer.fillRect(bounds, theme.getColor("backgroundSecondary"));
+    renderer.fillRect(bounds, theme.getColor("timelineBed"));
     renderer.drawLine({bounds.x, bounds.bottom() - 1.0f}, {bounds.right(), bounds.bottom() - 1.0f}, 1.0f,
                       theme.getColor("border"));
 
