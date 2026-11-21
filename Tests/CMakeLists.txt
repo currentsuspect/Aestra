@@ -5660,3 +5660,10 @@ target_include_directories(AsyncFileDialogTest PRIVATE ${CMAKE_SOURCE_DIR}/Aestr
 add_test(NAME AsyncFileDialogTest COMMAND AsyncFileDialogTest)
 set_tests_properties(AsyncFileDialogTest PROPERTIES LABELS "platform;dialog;threading;regression;contract:application" TIMEOUT 30
     SKIP_RETURN_CODE 77)
+
+# Standard MIDI File reader/writer: pure data, compiled straight from source (no engine link).
+add_executable(StandardMidiFileTest AestraAudio/StandardMidiFileTest.cpp
+    ${CMAKE_SOURCE_DIR}/AestraAudio/src/Midi/StandardMidiFile.cpp)
+target_include_directories(StandardMidiFileTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)
+add_test(NAME StandardMidiFileTest COMMAND StandardMidiFileTest)
+set_tests_properties(StandardMidiFileTest PROPERTIES LABELS "unit;midi;io;contract:audio")

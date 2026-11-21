@@ -226,6 +226,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Models/ClipSource.cpp
     src/Models/RoutingModel.cpp
     src/Models/ClipRenderService.cpp
+    src/Midi/StandardMidiFile.cpp
     src/Models/AudioClip.cpp
 
     # DSP
@@ -409,6 +410,7 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Core/MixerChannel.h
     include/Models/TrackManager.h
     include/Models/PatternSource.h
+    include/Midi/StandardMidiFile.h
     include/Models/ClipInstance.h
     include/Models/PatternManager.h
     include/IO/MiniAudioDecoder.h
