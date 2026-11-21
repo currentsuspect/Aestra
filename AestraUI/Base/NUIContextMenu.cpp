@@ -779,7 +779,7 @@ void NUIContextMenu::drawItem(NUIRenderer& renderer, std::shared_ptr<NUIContextM
     {
         auto checkIcon = NUIIcon::createCheckIcon();
         checkIcon->setIconSize(iconSize_, iconSize_);
-        checkIcon->setColor(themeManager.getColor("secondary"));
+        checkIcon->setColor(index == submenuItemIndex_ && activeSubmenu_ && activeSubmenu_->isVisible() ? labelOnSelected(themeManager.getColor("secondary")) : themeManager.getColor("secondary"));
         checkIcon->setPosition(x, itemRect.y + (itemRect.height - iconSize_) * 0.5f);
         checkIcon->onRender(renderer);
     }
@@ -793,8 +793,10 @@ void NUIContextMenu::drawItem(NUIRenderer& renderer, std::shared_ptr<NUIContextM
     }
 
     // Draw text
+    const bool litRow = index == submenuItemIndex_ && activeSubmenu_ && activeSubmenu_->isVisible() && index != pressedItemIndex_;
     NUIColor textColor = !item->isEnabled() ? themeManager.getColor("textDisabled")
                        : item->isDestructive() ? themeManager.getColor("error")
+                       : litRow ? labelOnSelected(textColor_)
                        : textColor_;
     renderer.drawText(item->getText(), NUIPoint(x, y), itemFontSize, textColor);
     
@@ -807,7 +809,7 @@ void NUIContextMenu::drawItem(NUIRenderer& renderer, std::shared_ptr<NUIContextM
         float shortcutX = itemRect.right() - itemPadding_ -
                           renderer.measureText(item->getShortcut(), shortcutFontSize).width;
         float shortcutY = std::round(renderer.calculateTextY(itemRect, shortcutFontSize));
-        renderer.drawText(item->getShortcut(), NUIPoint(shortcutX, shortcutY), shortcutFontSize, shortcutColor_);
+        renderer.drawText(item->getShortcut(), NUIPoint(shortcutX, shortcutY), shortcutFontSize, litRow ? labelOnSelected(shortcutColor_) : shortcutColor_);
     }
     
     // Draw submenu arrow using NUIIcon
@@ -839,7 +841,8 @@ void NUIContextMenu::drawSubmenuArrow(NUIRenderer& renderer, int index)
     // Use chevron right icon for submenu arrow
     auto chevronIcon = NUIIcon::createChevronRightIcon();
     chevronIcon->setIconSize(arrowSize, arrowSize);
-    chevronIcon->setColor(shortcutColor_);
+    const bool litRow = index == submenuItemIndex_ && activeSubmenu_ && activeSubmenu_->isVisible() && index != pressedItemIndex_;
+    chevronIcon->setColor(litRow ? labelOnSelected(shortcutColor_) : shortcutColor_);
     chevronIcon->setPosition(arrowX, arrowY);
     chevronIcon->onRender(renderer);
 }
