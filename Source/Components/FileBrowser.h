@@ -619,6 +619,8 @@ public:
         BrowserNavAction lastSoundsAction_ = BrowserNavAction::Sounds; // what Sounds returns to
         struct ChromeHit {
             NUIRect bounds;
+            NUIRect shape;          //!< what a hover paints, when it is not the whole hit rect (a tab is a capsule inside its segment)
+            float radius = 3.0f;    //!< the corner radius of the thing drawn here: the hover follows it (Depth::hoverFill)
             int kind = -1;          //!< a kind tab
             bool placeChip = false; //!< the chip that opens Places
             bool scopeChip = false; //!< Here / Everywhere in the search row
