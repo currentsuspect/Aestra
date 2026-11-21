@@ -48,6 +48,7 @@ public:
     void onRender(AestraUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
     void onUpdate(double deltaTime) override;
+    void onThemeChanged(const AestraUI::NUIThemeProperties& theme) override; ///< re-reads the Reset button's fills
 
 private:
     std::shared_ptr<TrackManager> m_trackManager;

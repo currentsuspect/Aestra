@@ -666,6 +666,18 @@ void TransportBar::setMusicalTypingStatus(bool enabled, int octave) {
     setDirty(true);
 }
 
+void TransportBar::onThemeChanged(const AestraUI::NUIThemeProperties& themeProps) {
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
+    for (const auto& b : {m_playButton, m_stopButton, m_recordButton, m_metronomeButton, m_countInButton, m_waitButton,
+                          m_loopRecordButton, m_mixerButton, m_sequencerButton, m_pianoRollButton}) {
+        if (!b) continue;
+        b->setHoverColor(theme.getColor("selectionTint"));
+        b->setPressedColor(theme.getColor("selectionFill"));
+    }
+    if (m_musicalTypingLabel) m_musicalTypingLabel->setTextColor(theme.getColor("accentText"));
+    AestraUI::NUIComponent::onThemeChanged(themeProps);
+}
+
 void TransportBar::updateButtonStates() {
     // Clear textual fallbacks (we render SVG icons instead)
     if (m_playButton) {

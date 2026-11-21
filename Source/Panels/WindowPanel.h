@@ -85,6 +85,9 @@ public:
     // Component overrides
     void onRender(AestraUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
+    /// A theme change re-reads every colour the header keeps (the icons, and the buttons' hover and pressed fills): they were built once
+    /// in the constructor, so after a switch to another theme they kept the old one's colours (near-black icons on a dark panel).
+    void onThemeChanged(const AestraUI::NUIThemeProperties& theme) override;
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
 
     /**
@@ -127,6 +130,7 @@ public:
     AestraUI::NUICursorStyle getResizeCursorStyleForPoint(const AestraUI::NUIPoint& point) const;
 
 private:
+    void applyThemeColors(); ///< the header icons and button fills, from the active theme
     enum ResizeEdge : int {
         ResizeNone   = 0,
         ResizeLeft   = 1 << 0,
