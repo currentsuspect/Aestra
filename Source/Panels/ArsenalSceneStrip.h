@@ -5,6 +5,7 @@
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 #include "NUIDoubleClick.h"
+#include "UnitRowLook.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -233,15 +234,16 @@ public:
             const auto& scene = m_scenes[p.index];
             const bool selected = std::find(m_selectedPatterns.begin(), m_selectedPatterns.end(), scene.id) != m_selectedPatterns.end();
             const bool hovered = !selected && m_hover.kind == Hit::Kind::Scene && m_hover.id == scene.id; // the unit rows' hover: raised fill, faint accent line
-            renderer.fillRoundedRect(r, tileRadius, selected ? AestraUI::NUIColor::lerp(theme.getColor("backgroundSecondary"), theme.getColor("accentPrimary"), 0.32f) : hovered ? theme.getColor("surfaceRaised") : theme.getColor("backgroundSecondary"));
-            renderer.strokeRoundedRect(r, tileRadius, 1.0f, selected ? theme.getColor("accentPrimary").withAlpha(0.55f) : hovered ? theme.getColor("accentPrimary").withAlpha(0.22f) : theme.getColor("borderSubtle").withAlpha(0.7f));
+            const auto look = AestraUI::UnitRowLook::sceneTile(theme.getCurrentTheme(), selected, hovered); // selected = the lit primary, ink label
+            renderer.fillRoundedRect(r, tileRadius, look.fill);
+            renderer.strokeRoundedRect(r, tileRadius, 1.0f, look.edge);
             renderer.setClipRect(AestraUI::intersectRects(view, r));
-            renderer.drawText(fitName(renderer, scene.name, tp.fontSizeXS + 1.0f, r.width - 24.0f), {r.x + 12.0f, r.y + 8.0f}, tp.fontSizeXS + 1.0f, theme.getColor("textPrimary").withAlpha(selected ? 1.0f : 0.9f));
+            renderer.drawText(fitName(renderer, scene.name, tp.fontSizeXS + 1.0f, r.width - 24.0f), {r.x + 12.0f, r.y + 8.0f}, tp.fontSizeXS + 1.0f, look.label);
             const float tw = r.width - 24.0f, bw = tw / static_cast<float>(kThumbBars), maxH = 8.0f;
             for (size_t i = 0; i < scene.thumb.size(); ++i) {
                 const float h = scene.thumb[i] > 0.0f ? std::max(1.0f, maxH * scene.thumb[i]) : 1.0f;
                 renderer.fillRect({r.x + 12.0f + static_cast<float>(i) * bw, r.bottom() - 9.0f - h, std::max(1.0f, bw - 1.0f), h},
-                                  theme.getColor(selected ? "textSecondary" : "textDisabled").withAlpha(scene.thumb[i] > 0.0f ? 0.9f : 0.35f));
+                                  scene.thumb[i] > 0.0f ? look.thumbOn : look.thumbOff.withAlpha(0.6f));
             }
             renderer.setClipRect(view);
         }
