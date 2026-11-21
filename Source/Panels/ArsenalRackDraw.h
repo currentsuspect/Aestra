@@ -101,7 +101,7 @@ inline void drawArsenalUnitTypePicker(AestraUI::NUIRenderer& renderer, const Aes
         const NUIRect cell(card.x + padding + (i % 2) * (cellW + gap), card.y + padding + (i / 2) * (cellH + gap), cellW, cellH);
         renderer.fillRoundedRect(cell, tp.radiusM, theme.getColor("backgroundPrimary")); // a choice is a well in the tray, not a grey slab
         renderer.strokeRoundedRect(cell, tp.radiusM, 1.0f, theme.getColor("borderSubtle").withAlpha(0.5f));
-        renderer.drawText(kinds[i].icon, NUIPoint(cell.x + 10.0f, cell.y + 11.0f), tp.fontSizeS - 1.0f, theme.getColor("accentPrimary").withAlpha(0.9f));
+        renderer.drawText(kinds[i].icon, NUIPoint(cell.x + 10.0f, cell.y + 11.0f), tp.fontSizeS - 1.0f, theme.getColor("accentText"));
         renderer.drawText(kinds[i].name, NUIPoint(cell.x + 32.0f, cell.y + 10.0f), tp.fontSizeXS - 1.0f, theme.getColor("textPrimary").withAlpha(0.95f));
         renderer.drawText(kinds[i].text, NUIPoint(cell.x + 10.0f, cell.y + 28.0f), tp.fontSizeMicro, theme.getColor("textSecondary").withAlpha(0.68f));
     }
@@ -111,7 +111,7 @@ inline void drawArsenalUnitTypePicker(AestraUI::NUIRenderer& renderer, const Aes
 inline void drawArsenalDropGhost(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& ghost, const std::string& label) {
     using namespace AestraUI;
     auto& theme = NUIThemeManager::getInstance();
-    const auto outline = theme.getColor("accentPrimary").withAlpha(0.85f);
+    const auto outline = theme.getColor("selectionEdge");
     constexpr float kDash = 7.0f, kGap = 5.0f;
     for (float x = ghost.x; x < ghost.right(); x += kDash + kGap) {
         const float x1 = std::min(x + kDash, ghost.right());

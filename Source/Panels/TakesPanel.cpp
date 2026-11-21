@@ -537,8 +537,8 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
     }
     const auto drawButton = [&](const NUIRect& r, const std::string& label, bool primary, bool danger, bool hot) {
         // Soft pills; Save version is the panel's one accent action.
-        NUIColor fill = primary ? theme.getColor("primary") : theme.getColor(hot ? "surfaceRaised" : "surfaceTertiary");
-        if (hot && primary) fill = fill.lightened(0.08f);
+        const NUIColor fill = primary ? theme.getColor(hot ? "hoverSelected" : "selected")
+                                      : theme.getColor(hot ? "surfaceRaised" : "surfaceTertiary");
         renderer.fillRoundedRect(r, Depth::Radius::pill(r.height), fill);
         const float tw = renderer.measureText(label, 12.0f).width;
         renderer.drawText(label, {r.x + (r.width - tw) * 0.5f, std::round(renderer.calculateTextY(r, 12.0f))}, 12.0f,
@@ -587,7 +587,7 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
         const std::string when = n.open ? std::string("Open now")
                                         : VersionsTimeline::timeLabel(v.updatedAtMs ? v.updatedAtMs : v.createdAtMs, now);
         const float ww = renderer.measureText(when, 10.0f).width;
-        renderer.drawText(when, {n.x - ww * 0.5f, labelY + 16.0f}, 10.0f, n.open ? theme.getColor("secondary") : quiet);
+        renderer.drawText(when, {n.x - ww * 0.5f, labelY + 16.0f}, 10.0f, n.open ? theme.getColor("accentText") : quiet);
         if (n.open) {
             if (unsaved.steps > 0 || !unsaved.counted) { // the dashed tail: what has been done since the version was saved
                 const NUIPoint tailEnd{std::min(layout.timeline.right() - 24.0f, n.x + 150.0f), n.y};
@@ -674,7 +674,7 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
             Depth::bed(renderer, c, Depth::Radius::medium);
             const bool playing = m_bouncePlaying && m_bouncePlaying(bounce->path);
             const NUIRect& pb = layout.bouncePlay;
-            renderer.fillCircle({pb.x + pb.width * 0.5f, pb.y + pb.height * 0.5f}, pb.width * 0.5f, m_hoveredButton == "bounce-play" ? theme.getColor("accentPrimary").lightened(0.1f) : theme.getColor("accentPrimary"));
+            renderer.fillCircle({pb.x + pb.width * 0.5f, pb.y + pb.height * 0.5f}, pb.width * 0.5f, theme.getColor(m_hoveredButton == "bounce-play" ? "hoverSelected" : "selected"));
             const NUIPoint pc{pb.x + pb.width * 0.5f, pb.y + pb.height * 0.5f};
             if (playing) {
                 renderer.fillRect({pc.x - 6.0f, pc.y - 6.0f, 4.0f, 12.0f}, NUIColor::white());

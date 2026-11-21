@@ -114,9 +114,9 @@ public:
         renderer.drawTextCentered("Nothing is added until you choose a sound.",
                                   {c.x + 20.0f, c.y + 58.0f, c.width - 40.0f, 18.0f}, tp.fontSizeXS, body);
         const auto b = buttonRect();
-        renderer.fillRoundedRect(b, tp.radiusS, theme.getColor("accentPrimary").withAlpha(0.22f));
-        renderer.strokeRoundedRect(b, tp.radiusS, 1.0f, theme.getColor("accentPrimary").withAlpha(0.8f));
-        renderer.drawTextCentered("Browse a folder", b, tp.fontSizeS, theme.getColor("accentPrimary"));
+        renderer.fillRoundedRect(b, tp.radiusS, theme.getColor("selectionFill"));
+        renderer.strokeRoundedRect(b, tp.radiusS, 1.0f, theme.getColor("selectionEdge"));
+        renderer.drawTextCentered("Browse a folder", b, tp.fontSizeS, theme.getColor("textPrimary"));
     }
 
 private:

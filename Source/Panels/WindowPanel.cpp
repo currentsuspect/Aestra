@@ -94,8 +94,8 @@ WindowPanel::WindowPanel(const std::string& title)
     m_maximizeButton->setStyle(AestraUI::NUIButton::Style::Text);
     m_maximizeButton->setText("");
     m_maximizeButton->setBackgroundColor(AestraUI::NUIColor::transparent());
-    m_maximizeButton->setHoverColor(theme.getColor("primary").withAlpha(0.20f));
-    m_maximizeButton->setPressedColor(theme.getColor("primary").withAlpha(0.14f));
+    m_maximizeButton->setHoverColor(theme.getColor("selectionFill"));
+    m_maximizeButton->setPressedColor(theme.getColor("selectionTint"));
     m_maximizeButton->setTextColor(AestraUI::NUIColor::transparent());
     m_maximizeButton->setOnClick([this]() {
         onMaximizeClicked();
@@ -107,8 +107,8 @@ WindowPanel::WindowPanel(const std::string& title)
     m_minimizeButton->setStyle(AestraUI::NUIButton::Style::Text);
     m_minimizeButton->setText("");
     m_minimizeButton->setBackgroundColor(AestraUI::NUIColor::transparent());
-    m_minimizeButton->setHoverColor(theme.getColor("primary").withAlpha(0.20f));
-    m_minimizeButton->setPressedColor(theme.getColor("primary").withAlpha(0.14f));
+    m_minimizeButton->setHoverColor(theme.getColor("selectionFill"));
+    m_minimizeButton->setPressedColor(theme.getColor("selectionTint"));
     m_minimizeButton->setTextColor(AestraUI::NUIColor::transparent());
     m_minimizeButton->setOnClick([this]() {
         onMinimizeClicked();
@@ -206,7 +206,7 @@ void WindowPanel::onRender(AestraUI::NUIRenderer& renderer) {
     const auto drawKeyTick = [&]() {
         if (!ownsKeys) return;
         const float x = bounds.x + 5.0f, y = bounds.y + (m_titleBarHeight - 10.0f) * 0.5f;
-        renderer.fillRoundedRect({x, y, 3.0f, 10.0f}, 1.5f, theme.getColor("accentPrimary"));
+        renderer.fillRoundedRect({x, y, 3.0f, 10.0f}, 1.5f, theme.getColor("selected"));
     };
     
     // Draw title bar

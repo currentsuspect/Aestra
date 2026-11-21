@@ -469,7 +469,7 @@ void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& boun
     renderNavigationPane(renderer, browserLayout);
     if (isFocused() && (!searchInput_ || !searchInput_->isFocused())) {
         renderer.strokeRoundedRect(browserLayout.list, 2.0f, 1.0f,
-                                   themeManager.getColor("accentPrimary").withAlpha(0.28f));
+                                   themeManager.getColor("focusRing"));
     }
 }
 
@@ -2302,7 +2302,7 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
 
     const NUIColor evenRow = themeManager.getColor("backgroundPrimary"); // flat rows: no zebra
     const NUIColor selectedRow = themeManager.getColor("selected"); // selection is the wash, never an edge
-    const NUIColor secondarySelectedRow = selectedRow.withAlpha(selectedRow.a * 0.6f);
+    const NUIColor secondarySelectedRow = themeManager.getColor("selectionFill"); // opaque: the other selected rows
     const NUIColor text = themeManager.getColor("textSecondary"); // files secondary, folders primary
     const NUIColor folderText = themeManager.getColor("textPrimary");
     const NUIColor muted = themeManager.getColor("textSecondary").withAlpha(0.56f);
@@ -2330,7 +2330,7 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         if (playbackActive) {
             // FD-47: the sound that is playing is tinted, with teal bars where the
             // play glyph would be — teal is what "live" means everywhere in Aestra.
-            renderer.fillRect(itemRect, themeManager.getColor("accentPrimary").withAlpha(0.14f));
+            if (!selected) renderer.fillRect(itemRect, themeManager.getColor("selectionTint")); // opaque, under the row text
             const NUIColor live = lit ? onLit : themeManager.getColor("accentCyan");
             const float bx = itemRect.x + 5.0f, cy = itemRect.y + itemRect.height * 0.5f;
             renderer.fillRect({bx, cy - 3.0f, 2.0f, 6.0f}, live);
@@ -3422,8 +3422,8 @@ void FileBrowser::renderInteractiveBreadcrumbs(NUIRenderer& renderer) {
              renderer.fillRoundedRect(partRect, chipRadius, hoverColor_);
              renderer.strokeRoundedRect(partRect, chipRadius, 1, hoverColor_.lightened(0.2f));
         } else if (isLast) {
-             renderer.fillRoundedRect(partRect, chipRadius, selectedColor_.withAlpha(0.15f));
-             renderer.strokeRoundedRect(partRect, chipRadius, 1, selectedColor_.withAlpha(0.3f));
+             renderer.fillRoundedRect(partRect, chipRadius, NUIThemeManager::getInstance().getColor("selectionTint"));
+             renderer.strokeRoundedRect(partRect, chipRadius, 1, NUIThemeManager::getInstance().getColor("controlGuide"));
          } else {
              renderer.fillRoundedRect(partRect, chipRadius, NUIThemeManager::getInstance().getColor("hover").withAlpha(0.44f));
         }
@@ -3513,8 +3513,8 @@ void FileBrowser::renderInteractiveBreadcrumbs(NUIRenderer& renderer) {
             renderer.fillRoundedRect(partRect, chipRadius, hoverColor_);
             renderer.strokeRoundedRect(partRect, chipRadius, 1, hoverColor_.lightened(0.2f));
         } else if (isLast) {
-            renderer.fillRoundedRect(partRect, chipRadius, selectedColor_.withAlpha(0.15f));
-            renderer.strokeRoundedRect(partRect, chipRadius, 1, selectedColor_.withAlpha(0.3f));
+            renderer.fillRoundedRect(partRect, chipRadius, NUIThemeManager::getInstance().getColor("selectionTint"));
+            renderer.strokeRoundedRect(partRect, chipRadius, 1, NUIThemeManager::getInstance().getColor("controlGuide"));
         } else {
             renderer.fillRoundedRect(partRect, chipRadius, NUIThemeManager::getInstance().getColor("hover").withAlpha(0.44f));
         }

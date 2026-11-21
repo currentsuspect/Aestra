@@ -344,7 +344,7 @@ void AuditionHub::renderPage(NUIRenderer& r, const AuditionHubLayout::Frame& f) 
     if (m_page == Page::Home || m_page == Page::Search) {
         const NUIRect box{content.right() - AuditionHubLayout::kPad - 320.0f, content.y + 34.0f, 320.0f, 36.0f};
         r.fillRect(box, theme.getColor("surfaceTertiary"));
-        if (m_page == Page::Search) r.strokeRect(box, 1.0f, theme.getColor("accentPrimary").withAlpha(0.7f));
+        if (m_page == Page::Search) r.strokeRect(box, 1.0f, theme.getColor("selectionEdge"));
         const std::string shown = m_search.empty() ? "Search bounces, references" : m_search + (m_page == Page::Search ? "|" : "");
         r.drawText(shown, {box.x + 14.0f, std::round(r.calculateTextY(box, 12.0f))}, 12.0f, m_search.empty() ? muted.withAlpha(0.7f) : text);
     }
@@ -414,7 +414,7 @@ void AuditionHub::renderPage(NUIRenderer& r, const AuditionHubLayout::Frame& f) 
                     sub = m_bounceTile.message;
                     using S = AuditionBounceTile::State;
                     subColor = m_bounceTile.state == S::Failed ? theme.getColor("warning")
-                               : m_bounceTile.state == S::Done ? theme.getColor("accentPrimary") : text;
+                               : m_bounceTile.state == S::Done ? theme.getColor("accentText") : text;
                     if (m_bounceTile.busy()) renderBounceFill(r, cover);
                 }
                 r.drawText(sub, {cover.x, cover.bottom() + 12.0f}, 11.0f, subColor);
@@ -430,7 +430,7 @@ void AuditionHub::renderBounceFill(NUIRenderer& r, const NUIRect& cover) {
     // The render fills the tile from the bottom as it goes (owner, 2026-11-08: "an animation filling up the render").
     // Loading the song comes first and reports no progress, so until then a soft band sweeps across instead.
     auto& theme = NUIThemeManager::getInstance();
-    const NUIColor accent = theme.getColor("accentPrimary");
+    const NUIColor accent = theme.getColor("selectionEdge");
     r.fillRect(cover, theme.getColor("surfaceTertiary"));
     const float progress = std::clamp(m_bounceTile.progress(), 0.0f, 1.0f);
     const float wave = static_cast<float>(m_tick % 90) / 90.0f; // ~1.5 s per sweep at 60 fps
@@ -438,13 +438,13 @@ void AuditionHub::renderBounceFill(NUIRenderer& r, const NUIRect& cover) {
         const float band = cover.width * 0.35f;
         const float x = cover.x - band + (cover.width + band) * wave;
         const float left = std::max(cover.x, x), right = std::min(cover.right(), x + band);
-        if (right > left) r.fillRect({left, cover.y, right - left, cover.height}, accent.withAlpha(0.18f));
+        if (right > left) r.fillRect({left, cover.y, right - left, cover.height}, theme.getColor("selectionFill"));
     } else {
         const float h = cover.height * progress;
-        r.fillRect({cover.x, cover.bottom() - h, cover.width, h}, accent.withAlpha(0.32f));
+        r.fillRect({cover.x, cover.bottom() - h, cover.width, h}, theme.getColor("selectionFill"));
         // The rising edge breathes a little, so a slow render still looks alive between progress updates.
         const float glow = 0.65f + 0.35f * std::sin(wave * 6.2831853f);
-        r.fillRect({cover.x, cover.bottom() - h, cover.width, 2.0f}, accent.withAlpha(glow));
+        r.fillRect({cover.x, cover.bottom() - h, cover.width, 2.0f}, NUIColor::lerp(theme.getColor("selectionFill"), accent, glow));
     }
     const std::string label = progress <= 0.0f ? "Loading the song..." : "Bouncing... " + std::to_string(static_cast<int>(progress * 100.0f)) + "%";
     const float lw = r.measureText(label, 12.0f).width;

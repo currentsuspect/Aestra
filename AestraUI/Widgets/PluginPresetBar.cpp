@@ -489,7 +489,7 @@ void PluginPresetBar::renderOverlay(NUIRenderer& r, const NUIRect& window) {
                 r.drawLine({sx + 6.0f, cy - 5.0f}, {sx + 6.0f, cy + 5.0f}, 1.3f, rowAccent);
             }
             drawMatched(r, fit(r, pr.name, 12.0f, 150.0f), {row.x + 28.0f, by}, 12.0f, rowText,
-                        isHeard ? labelOnSelected(NUIThemeManager::getInstance().getColor("secondary")) : NUIThemeManager::getInstance().getColor("secondary"), m_search);
+                        isHeard ? labelOnSelected(NUIThemeManager::getInstance().getColor("accentText")) : NUIThemeManager::getInstance().getColor("accentText"), m_search);
             const std::string desc = !pr.description.empty() ? pr.description : pr.category;
             if (!desc.empty())
                 r.drawText(fit(r, desc, 11.0f, p.width - 28.0f - 160.0f - 90.0f), {row.x + 188.0f, by}, 11.0f, rowText2);

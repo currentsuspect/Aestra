@@ -3900,6 +3900,15 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(ThemeChangeCacheTest PROPERTIES LABELS "ui;theme;cache;regression;contract:application")
 endif()
 
+# Selection tokens guard: the accent / selection colours come from the theme's named tokens. Fails on a primary tinted
+# with an alpha, a lerp toward it, a violet literal, or a local given an alpha after being assigned from the accent.
+if(AESTRA_ENABLE_UI)
+    add_executable(SelectionTokenGuardTest AestraUI/SelectionTokenGuardTest.cpp)
+    target_compile_definitions(SelectionTokenGuardTest PRIVATE AESTRA_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+    add_test(NAME SelectionTokenGuardTest COMMAND SelectionTokenGuardTest)
+    set_tests_properties(SelectionTokenGuardTest PROPERTIES LABELS "ui;theme;guard;contract:application" TIMEOUT 120)
+endif()
+
 # Ink theme: no assignable unit/track colour is in the violet family; saved violet colours still decode.
 if(AESTRA_ENABLE_UI)
     aestra_require_ui_targets(TrackPaletteVioletTest AestraUI_Core)

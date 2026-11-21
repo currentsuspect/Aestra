@@ -70,7 +70,7 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     const NUIColor sectionColor = themeManager.getColor("textSecondary").withAlpha(0.58f);  // Stronger section headers
     const NUIColor rowText = themeManager.getColor("textPrimary").withAlpha(0.78f);
     const NUIColor muted = themeManager.getColor("textSecondary").withAlpha(0.48f);
-    const NUIColor selectedBg = themeManager.getColor("accentPrimary").withAlpha(0.16f);
+    const NUIColor selectedBg = themeManager.getColor("selectionFill");
     const NUIColor divider = themeManager.getColor("divider");
     const bool compact = false;
 

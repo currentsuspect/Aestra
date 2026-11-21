@@ -157,11 +157,11 @@ void TrackManagerUI::renderSongMarkers(::AestraUI::NUIRenderer& renderer,
 
     auto& theme = ::AestraUI::NUIThemeManager::getInstance();
     const RulerGeometry geo = rulerGeometry(getBounds().width);
-    const ::AestraUI::NUIColor accent = theme.getColor("accentPrimary");
+    const ::AestraUI::NUIColor accent = theme.getColor("selected");
     const ::AestraUI::NUIColor labelInk = theme.getColor("textPrimary");
     const ::AestraUI::NUIColor chipFill = theme.getColor("surfaceRaised");
     const ::AestraUI::NUIColor chipEdge = theme.getColor("borderStrong");
-    const ::AestraUI::NUIColor selectedInk = theme.getColor("textOnPrimary");
+    const ::AestraUI::NUIColor selectedInk = theme.getColor("selectedText");
     const float tickBottom = rulerBounds.bottom();
 
     const float gridStartWindowX = getBounds().x + geo.gridStartX;
@@ -183,7 +183,7 @@ void TrackManagerUI::renderSongMarkers(::AestraUI::NUIRenderer& renderer,
         // its neighbour must still point at the right bar.
         const float tickX = std::round(chip.x) + 0.5f;
         renderer.drawLine({tickX, chip.y + kChipHeight}, {tickX, tickBottom}, selected ? 1.5f : 1.0f,
-                          accent.withAlpha(selected ? 0.95f : 0.55f));
+                          selected ? theme.getColor("selectionEdge") : theme.getColor("controlGuide"));
 
         renderer.fillRoundedRect(chip, 3.0f, selected ? accent : chipFill);
         // In the light theme the raised surface sits a hair above the ruler bed,

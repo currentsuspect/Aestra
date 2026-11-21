@@ -23,7 +23,7 @@ PanKnob::PanKnob()
 }
 
 TrackLabel::TrackLabel()
-    : text_("Insert"), color_(NUIColor::fromHex(0xff6633ff))
+    : text_("Insert"), color_(NUIThemeManager::getInstance().getColor("selected"))
 {
 }
 
@@ -273,8 +273,8 @@ void UIMixerSend::onRender(NUIRenderer& renderer)
                                NUIColor::white().withAlpha(0.02f));
 
     const NUIRect indexChip{b.x + 10.0f, b.y + 8.0f, 22.0f, 16.0f};
-    renderer.fillRoundedRect(indexChip, 8.0f, m_accentColor.withAlpha(0.12f));
-    renderer.strokeRoundedRect(indexChip, 8.0f, 1.0f, m_accentColor.withAlpha(0.20f));
+    renderer.fillRoundedRect(indexChip, 8.0f, theme.getColor("selectionTint"));
+    renderer.strokeRoundedRect(indexChip, 8.0f, 1.0f, theme.getColor("controlGuide"));
     renderer.drawTextCentered(std::to_string(index_ + 1), indexChip, 9.0f, theme.getColor("textSecondary").withAlpha(0.94f));
 
     const char* sendKind = m_muted ? "Muted" : (m_sidechainOnly ? "SC" : "Audio");

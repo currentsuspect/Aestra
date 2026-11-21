@@ -520,7 +520,6 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
     const auto toolbarBg = themeManager.getColor("backgroundSecondary").darkened(0.015f);
     const auto border = themeManager.getColor("border");
     const auto text = themeManager.getColor("textPrimary");
-    const auto accent = themeManager.getColor("accentPrimary");
 
     // Hosted in a title bar, the strip draws no surface of its own: the bar already is one.
     if (!m_hostedInTitleBar) {
@@ -668,7 +667,7 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
         }
         // "Muse" names the switch; the switch is the accent kind, so the chosen mode sits on the primary thumb.
         const NUIRect seg(b.right() - 28.0f - 10.0f - segW, sy, segW, segH);
-        renderer.drawText("Muse", NUIPoint(seg.x - labelW, textY(seg, fs)), fs, themeManager.getColor("secondary"));
+        renderer.drawText("Muse", NUIPoint(seg.x - labelW, textY(seg, fs)), fs, themeManager.getColor("accentText"));
         segTrack(seg);
         float mx = seg.x + 3.0f;
         for (int i = 0; i < 2; ++i) {
@@ -698,7 +697,6 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
             m_menuIcon->onRender(renderer);
         }
     }
-    (void)accent;
 }
 
 void PianoRollToolbar::setGrid(std::shared_ptr<PianoRollGrid> grid) {

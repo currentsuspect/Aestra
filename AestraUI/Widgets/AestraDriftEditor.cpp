@@ -84,7 +84,7 @@ void AestraDriftEditor::drawRuler(NUIRenderer& renderer, bool bypassed) {
     }
     renderer.fillRect(NUIRect(sx(-12.0f), ry, sx(12.0f) - sx(-12.0f), 1.0f), c.edge);
     if (mot > 0.0f)
-        renderer.fillRect(NUIRect(sx(st - mot), ry - 26.0f, sx(st + mot) - sx(st - mot), 26.0f), c.primary.withAlpha(0.12f));
+        renderer.fillRect(NUIRect(sx(st - mot), ry - 26.0f, sx(st + mot) - sx(st - mot), 26.0f), c.selected);
     const float mx = std::round(sx(std::clamp(st, -12.0f, 12.0f)));
     const NUIColor marker = bypassed ? c.inkOff : c.secondary;
     renderer.fillRect(NUIRect(mx - 1.0f, ry - 30.0f, 3.0f, 30.0f), marker);
