@@ -212,16 +212,16 @@ main() {
     if is_placeholder "${decision}"; then
         fail "Decision is empty. Cite the governing entry as 'FD-NN @ <sha>'."
     elif ! printf '%s' "${decision}" \
-        | grep -qiE '^FD-[0-9]{2}[[:space:]]*@[[:space:]]*[0-9a-f]{7,40}$'; then
+        | grep -qiE '^FD-[0-9]{2,}[[:space:]]*@[[:space:]]*[0-9a-f]{7,40}$'; then
         fail "Decision is '${decision}', which is not of the form 'FD-NN @ <sha>'."
-        if printf '%s' "${decision}" | grep -qiE '^FD-[0-9]{2}[[:space:]]*$'; then
+        if printf '%s' "${decision}" | grep -qiE '^FD-[0-9]{2,}[[:space:]]*$'; then
             note "An entry id alone is not enough. The strategic record is a living file,"
             note "so 'FD-04' does not say which FD-04. The SHA is what makes staleness visible."
         fi
         note "Example: FD-04 @ a30696a"
     else
         local decision_id decision_sha
-        decision_id="$(printf '%s' "${decision}" | sed -E 's/^([Ff][Dd]-[0-9]{2}).*/\1/' | tr '[:lower:]' '[:upper:]')"
+        decision_id="$(printf '%s' "${decision}" | sed -E 's/^([Ff][Dd]-[0-9]{2,}).*/\1/' | tr '[:lower:]' '[:upper:]')"
         decision_sha="$(printf '%s' "${decision}" | sed -E 's/.*@[[:space:]]*//' | tr '[:upper:]' '[:lower:]')"
         note "Cited: ${decision_id} @ ${decision_sha}"
         if [ -n "${GITHUB_OUTPUT:-}" ]; then
@@ -242,7 +242,7 @@ main() {
             fail "Kind is unparked, so Reversal must name the decision entry authorising it."
             note "Unparking work a decision forbids requires a NEW entry in the strategic"
             note "record, cited by id. Without one, the deferral has no force."
-        elif ! printf '%s' "${reversal}" | grep -qiE '^FD-[0-9]{2}([[:space:]]|$)'; then
+        elif ! printf '%s' "${reversal}" | grep -qiE '^FD-[0-9]{2,}([[:space:]]|$)'; then
             # Anchored, not "contains". An unanchored match accepts "approved
             # verbally, maybe see FD-13 sometime" — prose with an id somewhere in
             # it, which is the thing this field exists to stop being sufficient.
@@ -254,7 +254,7 @@ main() {
             # existed, which is precisely the state this kind exists to surface.
             local reversal_id
             reversal_id="$(printf '%s' "${reversal}" \
-                | sed -E 's/^([Ff][Dd]-[0-9]{2}).*/\1/' | tr '[:lower:]' '[:upper:]')"
+                | sed -E 's/^([Ff][Dd]-[0-9]{2,}).*/\1/' | tr '[:lower:]' '[:upper:]')"
             if [ -n "${decision_id:-}" ] && [ "${reversal_id}" = "${decision_id}" ]; then
                 fail "Reversal cites ${reversal_id}, which is the governing decision itself."
                 note "A decision cannot authorise its own reversal. Unparking requires a NEW"
