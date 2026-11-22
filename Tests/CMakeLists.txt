@@ -5057,6 +5057,14 @@ if(AESTRA_ENABLE_UI)
         UIScenarioTest
         TextCentringTest
         AdaptiveFPSIdleTest
+        UnitRowLookTest
+        TrackPaletteVioletTest
+        InkSurfaceStepTest
+        ThemeChangeCacheTest
+        SelectionTokenGuardTest
+        TransportPillGeometryTest
+        HoverShapeGuardTest
+        HoverFillShapeTest
     )
     foreach(_t IN LISTS AESTRA_REQUIRED_UI_TESTS)
         if(NOT TARGET ${_t})
