@@ -34,7 +34,10 @@ public:
     using RelinkRequestedCallback = std::function<void(const MissingEntry&)>;
     using DismissedCallback = std::function<void(std::size_t stillMissing)>;
 
-    MissingAssetsDialog() = default;
+    MissingAssetsDialog() {
+        // Own m_isVisible shadows the base flag: start hidden at the base level too.
+        setVisible(false);
+    }
     ~MissingAssetsDialog() override = default;
 
     // NUIComponent interface

@@ -17,6 +17,9 @@ ConfirmationDialog::ConfirmationDialog()
     , m_saveAsBranchHovered(false)
     , m_cancelHovered(false)
 {
+    // Own m_isVisible shadows the base flag: start hidden at the base level too, or a never-shown dialog
+    // sits in the tree as a full-window, drawn, drop-less cover (drops 'land nowhere').
+    setVisible(false);
 }
 
 void ConfirmationDialog::show(const std::string& title, const std::string& message, ResponseCallback callback) {
