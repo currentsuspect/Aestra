@@ -138,7 +138,11 @@ float UIMixerFader::normFromDb(float db) const
 float UIMixerFader::dbFromNorm(float norm) const
 {
     norm = std::clamp(norm, 0.0f, 1.0f);
-    return norm <= 0.004f ? m_minDb : MixerScale::db(norm);
+    if (norm <= 0.004f)
+        return m_minDb;
+    const float db = MixerScale::db(norm);
+    return std::isfinite(db) ? db : m_minDb; // the scale's bottom reads minus infinity: the fader's own floor
+
 }
 
 float UIMixerFader::overlayHandleHeight() { return kOverlayHandleH; }

@@ -48,19 +48,19 @@ NUIMouseEvent move(float x, float y) { return mouse(NUIMouseEventType::Move, x, 
 int main() {
     std::cout << "[1] the shared dB scale\n";
     {
-        check(MixerScale::norm(MixerScale::kFloorDb) == 0.0f && MixerScale::norm(MixerScale::kTopDb) == 1.0f,
-              "-60 dB is the bottom, +6 dB the top");
+        check(std::fabs(MixerScale::norm(MixerScale::kFloorDb) - 0.02f) < 1e-4f && MixerScale::norm(MixerScale::kTopDb) == 1.0f,
+              "-80 dB is the floor (0.02), +6 dB the top");
         check(MixerScale::norm(-120.0f) == 0.0f && MixerScale::norm(20.0f) == 1.0f, "outside the range clamps");
         bool monotone = true;
         float last = -1.0f;
-        for (float db = -60.0f; db <= 6.0f; db += 0.5f) {
+        for (float db = -80.0f; db <= 6.0f; db += 0.5f) {
             const float n = MixerScale::norm(db);
             monotone = monotone && n > last - 1e-6f;
             last = n;
         }
         check(monotone, "louder is always higher");
         bool roundTrip = true;
-        for (float db = -59.0f; db <= 5.5f; db += 0.7f)
+        for (float db = -79.0f; db <= 5.5f; db += 0.7f)
             roundTrip = roundTrip && std::fabs(MixerScale::db(MixerScale::norm(db)) - db) < 0.02f;
         check(roundTrip, "norm() and db() are inverses");
         check(MixerScale::norm(0.0f) > MixerScale::norm(-6.0f) + 0.1f, "the 6 dB below 0 take real height (mixing happens there)");
@@ -194,7 +194,7 @@ int main() {
         fader.onMouseEvent(up(110, yMinus12));
         pauseBetweenGestures();
         fader.onMouseEvent(down(110, trackBottom + 8.0f));
-        check(fader.getValueDb() <= -60.0f, "the very bottom is minus infinity");
+        check(fader.getValueDb() <= -60.0f, "the very bottom is minus infinity (the fader range floor)");
         fader.onMouseEvent(up(110, trackBottom + 8.0f));
         (void)seen;
     }

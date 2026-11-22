@@ -236,6 +236,14 @@ target_include_directories(WorkspaceFocusModelTest PRIVATE
 add_test(NAME WorkspaceFocusModelTest COMMAND WorkspaceFocusModelTest)
 set_tests_properties(WorkspaceFocusModelTest PROPERTIES LABELS "unit;workspace;focus;contract:core")
 
+# Mixer rework slice 1: the board's dB scale knots and the meter's height-fraction colour zones. Pure headers.
+add_executable(MixerScaleRulesTest AestraUI/MixerScaleRulesTest.cpp)
+target_include_directories(MixerScaleRulesTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME MixerScaleRulesTest COMMAND MixerScaleRulesTest)
+set_tests_properties(MixerScaleRulesTest PROPERTIES LABELS "unit;mixer;scale;contract:core")
+
 # Arsenal unit naming: pure header, no libraries. A new unit takes the lowest free number for its kind.
 add_executable(ArsenalUnitNamingTest Integration/ArsenalUnitNamingTest.cpp)
 target_include_directories(ArsenalUnitNamingTest PRIVATE
