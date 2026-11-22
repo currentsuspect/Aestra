@@ -5,6 +5,7 @@
 #include "../Core/NUIThemeSystem.h"
 #include "../Graphics/NUIRenderer.h"
 #include "../Platform/NUIPlatformBridge.h"
+#include "EditorSurfacePlacement.h"
 
 #include <algorithm>
 #include <cmath>
@@ -180,6 +181,12 @@ void NativePluginPanel::drawContent(NUIRenderer& renderer, const NUIRect& conten
     // Behind the plugin's window: the bed, in case the plugin is slow to draw its first frame.
     const auto& t = NUIThemeManager::getInstance().getCurrentTheme();
     renderer.fillRect(contentRect, t.backgroundPrimary);
+}
+
+bool NativePluginPanel::isInsideForOutsideClick(const NUIPoint& p) const {
+    const NUIRect b = getBounds();
+    const NUIRect v = viewRect();
+    return EditorPlacement::pressInsidePanel(p.x, p.y, b.x, b.y, b.width, b.height, true, v.x, v.y, v.width, v.height);
 }
 
 bool NativePluginPanel::onMouseEvent(const NUIMouseEvent& event) {

@@ -20,7 +20,7 @@ std::vector<const AestraPanelWindow*>& livePanels() {
 
 const AestraPanelWindow* AestraPanelWindow::panelContaining(const NUIPoint& p) {
     for (const auto* panel : livePanels())
-        if (panel->isVisible() && panel->getBounds().contains(p)) return panel;
+        if (panel->isVisible() && panel->isInsideForOutsideClick(p)) return panel;
     return nullptr;
 }
 
@@ -309,7 +309,7 @@ bool AestraPanelWindow::onMouseEvent(const NUIMouseEvent& event)
 
     // Close on outside click
     if (m_closeOnOutsideClick && event.pressed && event.button == NUIMouseButton::Left
-        && !b.contains(event.position) && !m_isDraggingWindow) {
+        && !isInsideForOutsideClick(event.position) && !m_isDraggingWindow) {
         if (Aestra::InputTrace::enabled())
             Aestra::InputTrace::log("panel auto-close fired by press at (" + std::to_string(event.position.x) + "," +
                             std::to_string(event.position.y) + ") outside panel bounds (" + std::to_string(b.x) + "," +
