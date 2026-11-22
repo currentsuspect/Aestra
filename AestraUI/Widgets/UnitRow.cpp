@@ -1614,12 +1614,13 @@ DropResult UnitRow::onDrop(const DragData& data, const NUIPoint& position) {
         }
 
         if (m_onPluginDropped) {
-            m_onPluginDropped(m_unitId, data.sourceClipIdString);
+            const PluginLoadResult loaded = m_onPluginDropped(m_unitId, data.sourceClipIdString);
             updateState();
             invalidateVisuals();
-            result.accepted = true;
-            result.message = "Instrument loaded into Arsenal";
-            Aestra::Log::info("[UnitRow] Plugin dropped: " + data.sourceClipIdString);
+            result.accepted = loaded.ok;
+            result.message = loaded.ok ? "Instrument loaded into Arsenal" : loaded.message;
+            Aestra::Log::info("[UnitRow] Plugin dropped: " + data.sourceClipIdString +
+                              (loaded.ok ? "" : " (refused: " + loaded.message + ")"));
         }
         return result;
     }

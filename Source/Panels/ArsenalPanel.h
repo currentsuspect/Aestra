@@ -120,9 +120,9 @@ public:
     /** @brief Set the callback used to open the sample editor. */
     void setOnRequestSampleEditor(std::function<void(UnitID)> cb) { m_onRequestSampleEditor = cb; }
     /** @brief Set the callback used for generic plugin drops. */
-    void setOnPluginDropped(std::function<void(const std::string&)> cb) { m_onPluginDropped = cb; }
+    void setOnPluginDropped(std::function<AestraUI::PluginLoadResult(const std::string&)> cb) { m_onPluginDropped = cb; }
     /** @brief Set the callback used for plugin drops onto a specific unit. */
-    void setOnPluginDroppedToUnit(std::function<void(UnitID, const std::string&)> cb) { m_onPluginDroppedToUnit = cb; }
+    void setOnPluginDroppedToUnit(std::function<AestraUI::PluginLoadResult(UnitID, const std::string&)> cb) { m_onPluginDroppedToUnit = cb; }
     /** @brief Set the callback used when an audio sample is dropped onto a unit. */
     /// While a sound drawer is open the app routes typing here first, before global shortcuts and musical typing.
     /// Typing the sound drawer or a pattern rename owns: the app asks here before its global shortcuts (Space plays!).
@@ -280,8 +280,8 @@ private:
     void scrollUnitIntoView(UnitID id);
     float maxScrollY() const; // how far the list can scroll: the one limit for the wheel and the per-frame clamp
     std::function<void(UnitID)> m_onRequestSampleEditor;
-    std::function<void(const std::string&)> m_onPluginDropped;
-    std::function<void(UnitID, const std::string&)> m_onPluginDroppedToUnit;
+    std::function<AestraUI::PluginLoadResult(const std::string&)> m_onPluginDropped;
+    std::function<AestraUI::PluginLoadResult(UnitID, const std::string&)> m_onPluginDroppedToUnit;
     std::function<void(const std::string&)> m_onNotify;
     std::function<void(UnitID, const std::string&)> m_onSampleDroppedToUnit;
     std::function<void(const std::string&)> m_onKitFolderSelected;

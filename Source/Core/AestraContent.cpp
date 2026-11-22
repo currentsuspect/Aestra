@@ -40,6 +40,7 @@ constexpr int kCountInStartupFrameLimit = 60;
 #include "Plugin/AestraDelay.h"
 #include "Plugin/AestraLFO.h"
 #include "PluginManager.h"
+#include "Plugin/PluginHostStatus.h"
 #include "SampleEditorPanel.h"
 #include "AudioClipEditorPanel.h"
 
@@ -1492,8 +1493,8 @@ void AestraContent::setupArsenalPanels() {
         if (unit)
             openSampleEditorForUnit(id, unit->audioClipPath);
     });
-    m_sequencerPanel->setOnPluginDropped([this](const std::string& pluginId) { loadInstrumentToArsenal(pluginId); });
-    m_sequencerPanel->setOnPluginDroppedToUnit([this](UnitID unitId, const std::string& pluginId) { loadInstrumentIntoArsenalUnit(unitId, pluginId); });
+    m_sequencerPanel->setOnPluginDropped([this](const std::string& pluginId) { return loadInstrumentToArsenal(pluginId); });
+    m_sequencerPanel->setOnPluginDroppedToUnit([this](UnitID unitId, const std::string& pluginId) { return loadInstrumentIntoArsenalUnit(unitId, pluginId); });
     m_sequencerPanel->setOnSampleDroppedToUnit([this](UnitID unitId, const std::string& samplePath) { loadSampleIntoUnitAsync(unitId, samplePath, false); });
     m_sequencerPanel->setOnKitFolderSelected([this](const std::string& folder) {
         if (m_browserToggle) m_browserToggle->setSelectedIndex(0);
@@ -4393,10 +4394,22 @@ void AestraContent::setPluginTempo(float bpm) {
     }
 }
 
-void AestraContent::loadInstrumentToArsenal(const std::string& pluginId) {
+AestraUI::PluginLoadResult AestraContent::reportPluginLoadFailure(const std::string& pluginName,
+                                                                  const std::string& fallbackReason) {
+    // The helper says why an external plugin failed (missing helper, VST3 not built in, ...); internal plugins don't.
+    std::string reason = Aestra::Audio::lastPluginHostLoadFailure();
+    if (reason.empty()) {
+        reason = fallbackReason;
+    }
+    const std::string message = "Couldn't load " + pluginName + ": " + reason;
+    showToast(message);
+    return {false, message};
+}
+
+AestraUI::PluginLoadResult AestraContent::loadInstrumentToArsenal(const std::string& pluginId) {
     // 1. Get UnitManager from TrackManager
     if (!m_trackManager)
-        return;
+        return {false, "No project open"};
     auto& unitManager = m_trackManager->getUnitManager();
 
     // 2. Find plugin info to get the name
@@ -4408,15 +4421,16 @@ void AestraContent::loadInstrumentToArsenal(const std::string& pluginId) {
     }
 
     // 3. Create and initialize plugin instance
+    Aestra::Audio::recordPluginHostLoadFailure({});
     auto instance = pm.createInstanceById(pluginId);
     if (!instance) {
         AESTRA_LOG_ERROR("Failed to create instrument instance for Arsenal: " + pluginId);
-        return;
+        return reportPluginLoadFailure(unitName, "plugin not found or could not be created");
     }
 
     if (!instance->initialize(pm.getDefaultSampleRate(), pm.getDefaultBlockSize())) {
         AESTRA_LOG_ERROR("Failed to initialize instrument instance for Arsenal: " + pluginId);
-        return;
+        return reportPluginLoadFailure(unitName, "plugin failed to start");
     }
 
     // 4. Create new Unit with the plugin name and attach plugin for audio processing
@@ -4432,34 +4446,36 @@ void AestraContent::loadInstrumentToArsenal(const std::string& pluginId) {
     }
 
     AESTRA_LOG_DEBUG("Loaded instrument '" + unitName + "' to Arsenal as Unit " + std::to_string(newUnit));
+    return {};
 }
 
-void AestraContent::loadInstrumentIntoArsenalUnit(UnitID unitId, const std::string& pluginId) {
+AestraUI::PluginLoadResult AestraContent::loadInstrumentIntoArsenalUnit(UnitID unitId, const std::string& pluginId) {
     if (!m_trackManager)
-        return;
+        return {false, "No project open"};
     auto& unitManager = m_trackManager->getUnitManager();
 
     auto* unit = unitManager.getUnit(unitId);
     if (!unit) {
         AESTRA_LOG_ERROR("Cannot attach instrument to missing Arsenal Unit " + std::to_string(unitId));
-        return;
+        return {false, "That Arsenal unit no longer exists"};
     }
 
     auto& pm = Aestra::Audio::PluginManager::getInstance();
     const auto* pluginInfo = pm.findPlugin(pluginId);
     std::string unitName = pluginInfo ? pluginInfo->name : "Plugin Synth";
 
+    Aestra::Audio::recordPluginHostLoadFailure({});
     auto instance = pm.createInstanceById(pluginId);
     if (!instance) {
         AESTRA_LOG_ERROR("Failed to create instrument instance for Arsenal Unit " + std::to_string(unitId) + ": " +
                          pluginId);
-        return;
+        return reportPluginLoadFailure(unitName, "plugin not found or could not be created");
     }
 
     if (!instance->initialize(pm.getDefaultSampleRate(), pm.getDefaultBlockSize())) {
         AESTRA_LOG_ERROR("Failed to initialize instrument instance for Arsenal Unit " + std::to_string(unitId) + ": " +
                          pluginId);
-        return;
+        return reportPluginLoadFailure(unitName, "plugin failed to start");
     }
 
     unitManager.setUnitName(unitId, unitName);
@@ -4470,6 +4486,7 @@ void AestraContent::loadInstrumentIntoArsenalUnit(UnitID unitId, const std::stri
     unitManager.captureUnitPluginState(unitId);
 
     AESTRA_LOG_DEBUG("Attached instrument '" + unitName + "' to Arsenal Unit " + std::to_string(unitId));
+    return {};
 }
 
 std::vector<Aestra::Components::MixerPluginEntry> AestraContent::buildMixerCatalogEntries() const {

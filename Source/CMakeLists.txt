@@ -223,6 +223,16 @@ set_target_properties(Aestra PROPERTIES
 	CXX_STANDARD_REQUIRED ON
 )
 
+# VST3 and CLAP plugins load only through AestraPluginHost, found next to the Aestra binary. Without this a
+# UI-only build tree (--target Aestra) shipped no helper and every external plugin drop failed.
+if(TARGET AestraPluginHost)
+	add_dependencies(Aestra AestraPluginHost)
+	add_custom_command(TARGET Aestra POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -DAESTRA_EXE=$<TARGET_FILE:Aestra> -DHELPER=$<TARGET_FILE:AestraPluginHost>
+			-P ${CMAKE_SOURCE_DIR}/cmake/CheckPluginHostBesideApp.cmake
+		VERBATIM)
+endif()
+
 # Link against AESTRA libraries
 # --start-group around audio libs so GNU ld resolves RegisterPlatformDrivers
 # (Core calls it, Linux provides it — circular dependency)

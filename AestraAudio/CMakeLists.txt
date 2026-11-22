@@ -320,6 +320,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Plugin/PluginScanner.cpp
     src/Plugin/PluginManager.cpp
     src/Plugin/PluginFactory.cpp
+    src/Plugin/PluginHostStatus.cpp
     src/Plugin/OutOfProcessPluginInstance.cpp
     src/Plugin/OutOfProcessPluginInstanceRt.cpp
     src/Plugin/InternalPluginRegistry.cpp
@@ -474,6 +475,7 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Plugin/PluginScanner.h
     include/Plugin/PluginManager.h
     include/Plugin/PluginFactory.h
+    include/Plugin/PluginHostStatus.h
     include/Plugin/OutOfProcessPluginInstance.h
     include/Plugin/InternalPluginRegistry.h
     include/Plugin/BuiltInPlugins.h
