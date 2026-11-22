@@ -214,13 +214,14 @@ void WindowPanel::onRender(AestraUI::NUIRenderer& renderer) {
     m_titleBarBounds = titleBarRect;
     
     // Unified panel shell + flat titlebar treatment
-    const float windowRadius = std::min(theme.getRadius("m"), 2.0f); // 2 px, as the clips, pads and mixer strips
+    // The frame is square (owner, 21 Nov): a 2 px rounded corner clipped by the window or its neighbour left a curved stub of the
+    // border at the corner, a line that curves in and is not complete. Square corners make every edge a whole line.
     // The body is the bed (backgroundPrimary, the page's #0a0a0a in Ink): rows, cards and keys rise from it as lighter
     // surfaces instead of sitting inside a flat mid-grey slab. The border keeps the frame.
     auto bodyColor = theme.getColor("backgroundPrimary");
     // Title bar shares the transport bar's charcoal (backgroundSecondary) so all
     // docked-panel chrome reads as one consistent surface.
-    auto titleBarColor = theme.getColor("backgroundSecondary");
+    auto titleBarColor = theme.getColor("backgroundPrimary"); // the panel surface: the header is part of it, separated by the border line
     auto borderColor = theme.getColor("border");
 
     // Flat: no panel drop shadow — border + surface separation carry the frame.
@@ -235,7 +236,13 @@ void WindowPanel::onRender(AestraUI::NUIRenderer& renderer) {
         drawKeyTick();
         if (m_closeButton && m_closeButton->isVisible()) {
             const auto cb = m_closeButton->getBounds();
-            renderer.strokeRect(cb, 1.0f, borderColor);
+            // Four whole-pixel lines, so every corner is closed: the renderer's 1 px strokeRect left one corner of this outline
+            // open at a fractional position (a broken stub on the piano roll's close button, owner 21 Nov).
+            const float ox = std::round(cb.x), oy = std::round(cb.y), ow = std::round(cb.width), oh = std::round(cb.height);
+            renderer.fillRect({ox, oy, ow, 1.0f}, borderColor);
+            renderer.fillRect({ox, oy + oh - 1.0f, ow, 1.0f}, borderColor);
+            renderer.fillRect({ox, oy + 1.0f, 1.0f, oh - 2.0f}, borderColor);
+            renderer.fillRect({ox + ow - 1.0f, oy + 1.0f, 1.0f, oh - 2.0f}, borderColor);
             if (m_closeIcon) {
                 const float iconSize = 12.0f;
                 m_closeIcon->setBounds({cb.x + (cb.width - iconSize) * 0.5f, cb.y + (cb.height - iconSize) * 0.5f,
@@ -248,8 +255,8 @@ void WindowPanel::onRender(AestraUI::NUIRenderer& renderer) {
 
     // Draw content background
     if (!m_minimized) {
-        renderer.fillRoundedRect(bounds, windowRadius, bodyColor);
-        renderer.strokeRoundedRect(bounds, windowRadius, 1.0f, borderColor);
+        renderer.fillRect(bounds, bodyColor);
+        renderer.strokeRect(bounds, 1.0f, borderColor);
         renderer.fillRect(titleBarRect, titleBarColor);
         
         // Separator for title bar
@@ -261,8 +268,8 @@ void WindowPanel::onRender(AestraUI::NUIRenderer& renderer) {
         );
     } else {
         // Minimized: titlebar only
-        renderer.fillRoundedRect(titleBarRect, windowRadius, titleBarColor);
-        renderer.strokeRoundedRect(titleBarRect, windowRadius, 1.0f, borderColor);
+        renderer.fillRect(titleBarRect, titleBarColor);
+        renderer.strokeRect(titleBarRect, 1.0f, borderColor);
     }
     
     // Draw title text

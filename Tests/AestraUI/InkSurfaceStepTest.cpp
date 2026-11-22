@@ -60,11 +60,12 @@ int main() {
         const bool dark = kit.mode != 1;
         if (key.rfind("ink-", 0) != 0 || kit.mode == 2) continue; // Ink dark and light; high contrast keeps its own, smaller steps
         const std::string at = key + ": ";
-        check(ratio(t.backgroundSecondary, t.backgroundPrimary) >= (key == "ink-dark" ? 1.065f : kCardStep), at + "the card rises from the bed by the design step");
+        check(ratio(t.backgroundSecondary, t.backgroundPrimary) >= (key == "ink-dark" ? 1.06f : kCardStep), at + "the card rises from the bed by the design step");
         check(luma(t.backgroundSecondary) > luma(t.backgroundPrimary), at + "the card is lighter than the bed");
-        if (key == "ink-dark") { // owner pick S (21 Nov): a slate charcoal ladder; the panel is the old "bed", the outer bed is darker
-            check(ratio(t.backgroundPrimary, t.timelineBed) >= 1.15f, at + "the panel body is one step above the outer bed");
-            check(ratio(t.backgroundSecondary, t.backgroundPrimary) >= 1.065f && ratio(t.backgroundSecondary, t.backgroundPrimary) <= 1.08f, at + "card over panel is 1.07:1");
+        if (key == "ink-dark") { // Platinum (owner lock, 21 Nov): the panel and the outer bed are the one #181a1c surface, the card a quiet step
+            check(t.backgroundPrimary.r == t.timelineBed.r && t.backgroundPrimary.g == t.timelineBed.g && t.backgroundPrimary.b == t.timelineBed.b, at + "the panel body is the outer bed (#181a1c)");
+            check(ratio(t.backgroundSecondary, t.backgroundPrimary) >= 1.06f && ratio(t.backgroundSecondary, t.backgroundPrimary) <= 1.08f, at + "card over panel is 1.06:1");
+            check(ratio(t.surfaceTertiary, t.backgroundPrimary) >= 1.2f, at + "a control reads against the panel");
         }
         for (const NUIColor* control : {&t.surfaceTertiary, &t.surfaceRaised}) {
             if (dark) { // on dark the control greys climb past the card; on light they step down from the bed instead
@@ -93,7 +94,11 @@ int main() {
         {"AestraUI/Widgets/RumblePluginEditor.cpp", "b.height - headerHeight()}, token(\"backgroundPrimary\"));", "backgroundPrimary", "Rumble editor body"},
         {"Source/Components/TrackManagerUIRender.cpp", "themeManager.getColor(\"backgroundPrimary\"));\n    renderer.drawLine({rulerBounds.x, rulerBounds.bottom()}, {gridStartX", "backgroundPrimary", "timeline ruler corner"},
         {"Source/Components/TrackManagerUIToolbar.cpp", "renderer.fillRect(row, theme.getColor(\"backgroundPrimary\"));", "backgroundPrimary", "timeline toolbar strip"},
-        {"Source/Panels/WindowPanel.cpp", "auto titleBarColor = theme.getColor(\"backgroundSecondary\");", "backgroundSecondary", "panel title strip (opaque)"},
+        {"Source/Panels/WindowPanel.cpp", "auto titleBarColor = theme.getColor(\"backgroundPrimary\");", "backgroundPrimary", "panel title bar (the panel surface, separated by the border line)"},
+        {"Source/Components/TimelineMinimapBar.cpp", "colors_.glassFill = theme.getColor(\"backgroundPrimary\");", "backgroundPrimary", "minimap fill"},
+        {"Source/Components/TimelineMinimapBar.cpp", "colors_.glassBorder = theme.getColor(\"backgroundSecondary\");", "backgroundSecondary", "minimap border"},
+        {"Source/Components/AudioVisualizer.cpp", "renderer.fillRoundedRect(bounds, 4.0f, backgroundColor_);", "backgroundColor_ (the theme's panel colour)", "meter / scope / waveform fill"},
+        {"Source/Components/AudioVisualizer.cpp", "renderer.fillRoundedRect(meter, 4.0f, backgroundColor_);", "backgroundColor_ (the theme's panel colour)", "VU meter fill"},
         {"AestraUI/Widgets/PianoRollToolbar.cpp", "toolbarBg = themeManager.getColor(\"backgroundSecondary\");", "backgroundSecondary", "piano roll toolbar strip"},
         {"AestraUI/Base/NUICustomTitleBar.cpp", "const NUIColor bgColor = themeManager.getColor(\"timelineBed\");", "timelineBed", "title bar (the outer bed)"},
         {"Source/Panels/TransportBar.cpp", "renderer.fillRect(bounds, theme.getColor(\"timelineBed\"));", "timelineBed", "transport strip (the outer bed)"},
@@ -105,6 +110,20 @@ int main() {
         check(!text.empty(), std::string(s.file) + ": readable");
         check(text.find(s.anchor) != std::string::npos,
               std::string(s.what) + ": " + s.file + " no longer paints it with " + s.token);
+    }
+
+    // Things that must be gone: a gradient to another colour under the meter, scope and waveform (it made a strip of another
+    // colour on the transport bar), and rounded corners on the panel frame (a 2 px curve clipped by the window left a broken stub).
+    const struct { const char* file; const char* gone; const char* what; } absent[] = {
+        {"Source/Components/AudioVisualizer.cpp", "gradientColor", "the meter, scope and waveform fill is flat, with no gradient to another colour"},
+        {"Source/Components/AudioVisualizer.cpp", "NUIColor::lerp(topBg", "the VU and scope backgrounds are not lerped"},
+        {"Source/Panels/WindowPanel.cpp", "fillRoundedRect(bounds", "the panel body is a square rectangle"},
+        {"Source/Panels/WindowPanel.cpp", "strokeRoundedRect(bounds", "the panel border is a square rectangle, so its lines are whole"},
+        {"Source/Panels/WindowPanel.cpp", "windowRadius", "the panel frame has no corner radius"},
+    };
+    for (const auto& a : absent) {
+        const std::string text = slurp(root + "/" + a.file);
+        check(!text.empty() && text.find(a.gone) == std::string::npos, std::string(a.what) + " (" + a.file + ")");
     }
 
     std::cout << g_checks << " checks, " << g_failures << " failure(s)\n";

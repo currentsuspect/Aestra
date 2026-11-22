@@ -29,6 +29,26 @@ inline void drawLine(NUIRenderer& renderer, float x, float top, float bottom, co
     renderer.fillRect(NUIRect(lineLeft(x), std::round(top), kLineWidth, std::round(bottom) - std::round(top)), color);
 }
 
+/** @brief The head's bounding box for a playhead at @p x whose point touches @p tipY (same rounding as drawHead). */
+inline NUIRect headRect(float x, float tipY, float scale = 1.0f) {
+    const float cx = lineLeft(x) + kLineWidth * 0.5f;
+    const float halfW = std::round(kHeadWidth * scale) * 0.5f;
+    const float pointH = std::round(kHeadPointHeight * scale);
+    const float barH = std::round(kHeadBarHeight * scale);
+    const float tip = std::round(tipY);
+    return NUIRect(cx - halfW, tip - pointH - barH, halfW * 2.0f, barH + pointH);
+}
+
+/**
+ * @brief The clip to draw the head under, for a ruler of @p bounds: the ruler widened sideways by the head's half width, so a
+ * playhead at the ruler's left or right edge (beat 1, the end of the pattern) is a whole marker, not half of one. A ruler that
+ * clips to its own bounds cut the head at x = bounds.x: the folded-in marker the owner saw at beat 1 (21 Nov 2026).
+ */
+inline NUIRect headClip(const NUIRect& bounds, float scale = 1.0f) {
+    const float half = std::ceil(std::round(kHeadWidth * scale) * 0.5f) + 1.0f;
+    return NUIRect(bounds.x - half, bounds.y, bounds.width + half * 2.0f, bounds.height);
+}
+
 /**
  * @brief The filled head, its point touching @p tipY (the grid's top edge):
  * a kHeadWidth x kHeadBarHeight bar, then a triangle narrowing to the line.

@@ -3933,6 +3933,19 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(HoverFillShapeTest PROPERTIES LABELS "ui;layout;geometry;regression;contract:application")
 endif()
 
+# The playhead head is a whole marker at the ruler's edges (PlayheadMarker.h headRect / headClip, headless).
+if(AESTRA_ENABLE_UI)
+    add_executable(PlayheadHeadClipTest AestraUI/PlayheadHeadClipTest.cpp)
+    target_include_directories(PlayheadHeadClipTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Graphics
+        ${CMAKE_SOURCE_DIR}/AestraUI
+    )
+    add_test(NAME PlayheadHeadClipTest COMMAND PlayheadHeadClipTest)
+    set_tests_properties(PlayheadHeadClipTest PROPERTIES LABELS "ui;layout;geometry;regression;contract:application")
+endif()
+
 # Selection tokens guard: the accent / selection colours come from the theme's named tokens. Fails on a primary tinted
 # with an alpha, a lerp toward it, a violet literal, or a local given an alpha after being assigned from the accent.
 if(AESTRA_ENABLE_UI)
@@ -5052,6 +5065,7 @@ if(AESTRA_ENABLE_UI)
         TransportPillGeometryTest
         HoverShapeGuardTest
         HoverFillShapeTest
+        PlayheadHeadClipTest
     )
     foreach(_t IN LISTS AESTRA_REQUIRED_UI_TESTS)
         if(NOT TARGET ${_t})
