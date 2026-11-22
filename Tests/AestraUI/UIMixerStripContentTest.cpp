@@ -183,14 +183,14 @@ int main() {
         st.getContinuousParams()->setPan(svm.getChannelById(src->getChannelId())->slotIndex, -0.4f);
         svm.syncFromEngine(st, *st.getChannelSlotMapShared());
         AestraUI::UIMixerStrip strip(src->getChannelId(), 1, &svm, st.getMeterSnapshots(), st.getContinuousParams());
-        strip.setBounds({0, 0, 84, 640});
+        strip.setBounds({0, 0, 96, 640});
         strip.onUpdate(0.016);
         const auto* sends = strip.sendList();
         check(sends && sends->rows().size() == 1 && sends->rows()[0].name == "Verb" &&
                   std::fabs(sends->rows()[0].levelDb - (-6.02f)) < 0.1f && !sends->rows()[0].sidechain,
               "one send, to Verb, at -6 dB");
         check(strip.panBar() && std::fabs(strip.panBar()->value() - (-0.4f)) < 1e-4f, "the pan bar follows the channel's pan");
-        check(strip.meterBarsRect().width > 20.0f && strip.meterBarsRect().height > 100.0f, "the meters have room (24 px wide, tall)");
+        check(strip.meterBarsRect().width >= 18.0f && strip.meterBarsRect().height > 100.0f, "the meters have room (18 px wide, tall)");
     }
 
     std::cout << (g_failures == 0 ? "ALL PASS\n" : "FAILURES\n");

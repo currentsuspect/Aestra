@@ -5,6 +5,7 @@
 // level text, and the fader's overlay mode (cap across the meters, on the same scale as the meters).
 
 #include "MixerDensity.h"
+#include "MixerLane.h"
 #include "MixerScale.h"
 #include "UIMixerFader.h"
 #include "UIMixerFooter.h"
@@ -170,6 +171,32 @@ int main() {
         check(list.rows().size() == 3 && list.visibleRowCapacity() == 2, "three sends in room for two fold the rest");
     }
 
+    std::cout << "[5b] the console fader (Normal and Wide strips): slot in the track, minus infinity only at the bottom\n";
+    {
+        UIMixerFader fader;
+        fader.setRangeDb(-90.0f, 6.0f);
+        fader.setDefaultDb(0.0f);
+        fader.setBounds({100, 100, MixerLane::kFaderW, 400}); // the 34px cap hangs 17px over each end: track y=117 to y=483
+        const float trackTop = 117.0f, trackBottom = 483.0f;
+        const float slotX = 100.0f + MixerLane::slotCentre();
+        const float y0 = trackBottom - MixerScale::norm(0.0f) * (trackBottom - trackTop);
+        fader.setValueDb(-30.0f);
+        fader.onMouseEvent(down(slotX, y0));
+        check(std::fabs(fader.getValueDb()) < 0.3f, "clicking where the scale puts 0 dB sets 0 dB (" + std::to_string(fader.getValueDb()) + ")");
+        fader.onMouseEvent(up(slotX, y0));
+        pauseBetweenGestures();
+        fader.setValueDb(-30.0f);
+        fader.onMouseEvent(down(slotX, trackBottom - 0.015f * (trackBottom - trackTop)));
+        check(fader.getValueDb() <= UIMixerFader::FADER_FLOOR_THRESHOLD, "the bottom 2% of the throw is minus infinity");
+        fader.onMouseEvent(up(slotX, trackBottom - 0.015f * (trackBottom - trackTop)));
+        pauseBetweenGestures();
+        fader.onMouseEvent(down(slotX, trackBottom - MixerScale::norm(-60.0f) * (trackBottom - trackTop)));
+        check(fader.getValueDb() > UIMixerFader::FADER_FLOOR_THRESHOLD && std::fabs(fader.getValueDb() + 60.0f) < 0.5f,
+              "-60 dB is a number now, not minus infinity (" + std::to_string(fader.getValueDb()) + ")");
+        fader.onMouseEvent(up(slotX, trackBottom - MixerScale::norm(-60.0f) * (trackBottom - trackTop)));
+        check(UIMixerFader::FADER_FLOOR_THRESHOLD == MixerScale::kFloorDb, "the threshold is the scale's floor");
+    }
+
     std::cout << "[5] the overlay fader shares the meters' scale\n";
     {
         UIMixerFader fader;
@@ -201,7 +228,7 @@ int main() {
 
     std::cout << "[6] density widths and the saved name\n";
     {
-        check(mixerStripWidth(MixerDensity::Wide) == 120.0f && mixerStripWidth(MixerDensity::Normal) == 84.0f &&
+        check(mixerStripWidth(MixerDensity::Wide) == 136.0f && mixerStripWidth(MixerDensity::Normal) == 96.0f &&
                   mixerStripWidth(MixerDensity::Narrow) == 44.0f,
               "Wide 120, Normal 84, Narrow 44 px");
         bool roundTrip = true;

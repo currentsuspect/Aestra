@@ -260,6 +260,14 @@ target_include_directories(SlotGrooveTest PRIVATE
 add_test(NAME SlotGrooveTest COMMAND SlotGrooveTest)
 set_tests_properties(SlotGrooveTest PROPERTIES LABELS "unit;mixer;fader;contract:core")
 
+# Mixer rework slice 3: the strip lane's geometry and the dished cap's gradient. Pure headers.
+add_executable(MixerLaneCapTest AestraUI/MixerLaneCapTest.cpp)
+target_include_directories(MixerLaneCapTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME MixerLaneCapTest COMMAND MixerLaneCapTest)
+set_tests_properties(MixerLaneCapTest PROPERTIES LABELS "unit;mixer;fader;contract:core")
+
 # Arsenal unit naming: pure header, no libraries. A new unit takes the lowest free number for its kind.
 add_executable(ArsenalUnitNamingTest Integration/ArsenalUnitNamingTest.cpp)
 target_include_directories(ArsenalUnitNamingTest PRIVATE

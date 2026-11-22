@@ -1,5 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerStrip.h"
+#include "CapLook.h"
+#include "MixerLane.h"
 #include "../Graphics/NUIDepth.h"
 
 #include "NUIThemeSystem.h"
@@ -33,9 +35,8 @@ namespace {
     constexpr float GAP = 8.0f;
     constexpr float SIDE_INSET = 4.0f;
     constexpr float SECTION_GAP = 8.0f;
-    constexpr float METER_W = 24.0f;     // two 11 px bars and the gap between them
-    constexpr float FADER_COL_W = 20.0f; // the handle column beside the meters: the channel cap is 20 wide
-    constexpr float MASTER_METER_W = 36.0f;
+    constexpr float NARROW_METER_W = 18.0f; // Narrow strips: the meter pair with the compact overlay fader beside it
+    constexpr float NARROW_FADER_COL_W = 16.0f;
     // Technical master readouts (held peak dBFS, integrated LUFS, gain) are a
     // permanent fixture under the master's meter/fader columns — the master
     // strip has no footer, so this is the strip's live level dashboard.
@@ -49,6 +50,8 @@ namespace {
     constexpr float MASTER_ROW_H = 15.0f;
     // Integrated, short-term, true peak, correlation (with its bar), gain: one line each.
     constexpr float MASTER_READOUT_H = MASTER_ROW_H * 6.0f + 8.0f;
+
+    constexpr float MASTER_LR_LABEL_H = 11.0f; // the master meter's L / R labels (UIMixerMeter LR_LABEL_HEIGHT)
 
     constexpr float SELECT_TOP_H = 3.0f;
     constexpr float kStripRadius = 7.0f; // Design Spec, Mixer: strips are 6 to 8px round
@@ -252,9 +255,9 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
     m_fader = std::make_shared<UIMixerFader>();
     m_fader->setRangeDb(-90.0f, 6.0f);
     m_fader->setDefaultDb(0.0f);
-    // The master strip is wide enough to label its unity mark; channel strips draw the cap across the meters.
+    // The master keeps its gain readout above the travel; every fader prints its own scale (MixerLane.h). Only a
+    // Narrow strip (setDensity) swaps to the compact overlay fader.
     m_fader->setShowScaleLabels(m_channelId == 0);
-    if (m_channelId != 0) m_fader->setOverlay(true, METER_W + 2.0f);
     m_fader->onValueChanged = [this](float db) {
         if (!m_viewModel || !m_continuousParams) return;
         auto* channel = m_viewModel->getChannelById(m_channelId);
@@ -350,12 +353,7 @@ void UIMixerStrip::setDensity(MixerDensity density)
     if (m_outputChip && !master) m_outputChip->setCompact(narrow);
     if (m_footer && !master) m_footer->setCompact(narrow);
     if (m_header && !master) m_header->setCompact(narrow);
-    if (m_fader && !master) {
-        constexpr float kBar = 11.0f;
-        const float meterW = narrow ? 18.0f : 24.0f;
-        (void)kBar;
-        m_fader->setOverlay(true, meterW + 2.0f);
-    }
+    if (m_fader && !master) m_fader->setOverlay(narrow, NARROW_METER_W + 2.0f);
     layoutChildren();
     invalidateStaticCache();
     repaint();
@@ -433,22 +431,21 @@ void UIMixerStrip::layoutChildren()
         y += BUTTONS_H + 6.0f;
     }
 
-    // The master reserves a labelled Peak/LUFS/Gain block at the foot of the
-    // strip; its footer is hidden, so that space is otherwise unused.
-    const float meterW = isMaster ? MASTER_METER_W : METER_W;
-
     // Meter + fader fill the strip between the channel controls and the footer.
     const float meterY = y;
     const float meterH = std::max(16.0f, (footerY - GAP - readoutH) - y);
+    const float capHalf = CapLook::kH * 0.5f;
 
     if (isMaster) {
-        const float meterX = contentX + 2.0f;
-        if (m_meter) m_meter->setBounds(meterX, meterY, meterW, meterH);
-        if (m_fader) {
-            const float faderX = meterX + meterW + GAP;
-            const float faderW = std::max(16.0f, (contentX + contentW) - faderX);
-            m_fader->setBounds(faderX, meterY, faderW, meterH);
-        }
+        // The lane (MixerLane.h): printed scale and fader on the left, the meter pair on the right. The master's
+        // gain readout sits above the fader's travel, so the lane starts lower; its meter bars start where the
+        // fader's travel does and stop where it stops, above the L / R labels.
+        const float gx = MixerLane::groupX(contentX, contentW);
+        const float barsTop = m_meter ? m_meter->barsTopOffset() : 0.0f;
+        const float drop = capHalf + UIMixerFader::kReadoutBand - barsTop;
+        if (m_meter) m_meter->setBounds(MixerLane::meterX(gx), meterY + drop, MixerLane::kMeterW,
+                                        std::max(16.0f, meterH - drop - capHalf + MASTER_LR_LABEL_H));
+        if (m_fader) m_fader->setBounds(MixerLane::faderX(gx), meterY, MixerLane::kFaderW, meterH);
         // Readouts sit under the column they describe: observed signal (Peak, LUFS)
         // under the meter, user-controlled gain under the fader.
         const float readoutY = footerY - MASTER_READOUT_H;
@@ -457,19 +454,28 @@ void UIMixerStrip::layoutChildren()
         return;
     }
 
-    // Channel strips: the meters sit centred with the fader's handle column on their right edge, and the cap
-    // line drawn by the fader runs back across both bars.
-    const float chMeterW = narrow ? 18.0f : meterW;
-    const float chFaderCol = narrow ? 16.0f : FADER_COL_W;
-    const float groupW = chMeterW + 2.0f + chFaderCol;
+    if (!narrow) {
+        // Channel strips, Normal and Wide: the lane. The fader's travel starts where the meter bars do and its
+        // cap hangs half its height over each end.
+        const float gx = MixerLane::groupX(contentX, contentW);
+        const float barsTop = m_meter ? m_meter->barsTopOffset() : 0.0f;
+        if (m_meter) m_meter->setBounds(MixerLane::meterX(gx), meterY, MixerLane::kMeterW, meterH);
+        if (m_fader) m_fader->setBounds(MixerLane::faderX(gx), meterY + barsTop - capHalf, MixerLane::kFaderW,
+                                        meterH - barsTop + capHalf * 2.0f);
+        m_masterMeterReadoutRect = NUIRect{};
+        m_masterGainReadoutRect = NUIRect{};
+        return;
+    }
+
+    // Narrow: the meters sit centred with the compact fader's handle column on their right edge, and the cap
+    // line drawn by the fader runs back across both bars. (No room for the lane; a Trial rules what Narrow becomes.)
+    const float groupW = NARROW_METER_W + 2.0f + NARROW_FADER_COL_W;
     const float meterX = std::floor(contentX + (contentW - groupW) * 0.5f);
-    if (m_meter) m_meter->setBounds(meterX, meterY, chMeterW, meterH);
+    if (m_meter) m_meter->setBounds(meterX, meterY, NARROW_METER_W, meterH);
     if (m_fader) {
-        // The meter reserves its readout and clip lamp at the top; the fader's track starts where the bars do and
-        // its pad (half the cap) hangs over both ends.
         const float barsTop = m_meter ? m_meter->barsTopOffset() : 0.0f;
         const float handleHalf = UIMixerFader::overlayHandleHeight() * 0.5f;
-        m_fader->setBounds(meterX + chMeterW + 1.0f, meterY + barsTop - handleHalf, chFaderCol,
+        m_fader->setBounds(meterX + NARROW_METER_W + 1.0f, meterY + barsTop - handleHalf, NARROW_FADER_COL_W,
                            meterH - barsTop + handleHalf * 2.0f);
     }
     m_masterMeterReadoutRect = NUIRect{};
