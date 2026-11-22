@@ -60,7 +60,8 @@ inline Row row(const NUIThemeProperties& t, const RowState& s, const NUIColor& i
     } else if (s.selected) {
         r.fill = t.primary;
         r.edge = t.primary;
-        r.name = r.kind = r.kindGuess = r.grip = r.dot = t.textOnPrimary;
+        r.name = r.kind = r.kindGuess = r.grip = t.textOnPrimary;
+        r.dot = s.enabled ? t.textOnPrimary : t.textOnPrimary.withAlpha(0.45f); // a disabled unit still reads off on the lit card
         r.keyFill = t.backgroundPrimary; // an off key is a dark chip on the lit card
         r.stripRing = t.textOnPrimary;
         r.stripRingWidth = 2.0f;

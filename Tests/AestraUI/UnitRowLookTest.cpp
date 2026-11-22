@@ -63,6 +63,8 @@ int main() {
                 expectRatio(r.grip, r.fill, kPart, at + "grip");
                 expectRatio(r.dot, r.fill, kPart, at + "name dot");
                 expectRatio(r.stripRing, r.fill, kPart, at + "strip ring");
+                const Look::Row off = Look::row(t, {st.s.selected, st.s.hovered, false, false}, identity);
+                check(off.dot.a < r.dot.a, at + "a disabled unit's dot is dimmer than an enabled one on the lit card");
                 check(r.stripRingWidth >= 2.0f, at + "the strip gets a 2px ring");
                 expectRatio(r.keyFill, r.fill, kPart, at + "an off M/S key on the lit card");
                 expectRatio(r.fill, rest.fill, kPart, at + "selected row stands off an unselected one");

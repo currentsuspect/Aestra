@@ -36,7 +36,7 @@ static constexpr uint32_t TRACK_PALETTE[] = {
 static constexpr int PALETTE_SIZE = 10;
 /// The colours a new unit, track or channel can get, and the picker offers: PALETTE indices in the order they rotate.
 static constexpr int ASSIGNABLE_COUNT = 8;
-static constexpr int ASSIGNABLE_ORDER[ASSIGNABLE_COUNT] = {0, 8, 3, 4, 5, 6, 2, 9};
+inline constexpr int ASSIGNABLE_ORDER[ASSIGNABLE_COUNT] = {0, 8, 3, 4, 5, 6, 2, 9};
 
 static constexpr const char* PALETTE_NAMES[] = {
     "Teal",
