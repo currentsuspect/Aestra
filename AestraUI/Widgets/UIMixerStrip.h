@@ -58,6 +58,8 @@ public:
     const UIParamBar* panBar() const { return m_panBar.get(); }
     /// The meters' own bars (below the clip lamp): the height the shared dB scale is drawn against.
     NUIRect meterBarsRect() const;
+    /// Height of the solid top tint: from the strip's top to the top of the meter well, where the lane starts.
+    float tintHeight() const;
 
     // Platform bridge propagation for cursor warp
     void setPlatformBridge(NUIPlatformBridge* bridge);

@@ -489,7 +489,7 @@ void UIMixerStrip::renderWash(NUIRenderer& renderer, const NUIRect& bounds)
     const NUIColor tc = m_channelId == 0 ? theme.getColor("textSecondary")
                         : m_trackColorIndex >= 0 ? trackColorFromIndex(m_trackColorIndex) : theme.getColor("accentPrimary");
     const float alpha = StripWash::kAlpha;
-    const float top = StripWash::topHeight(bounds.height);
+    const float top = tintHeight();
     const int cornerRows = std::min(static_cast<int>(kStripRadius), static_cast<int>(top));
     for (int row = 0; row < cornerRows; ++row) {
         const float inset = StripWash::cornerInset(row, kStripRadius);
@@ -955,6 +955,14 @@ NUIRect UIMixerStrip::meterBarsRect() const
     const auto b = m_meter->getBounds();
     const float top = m_meter->barsTopOffset();
     return NUIRect{b.x, b.y + top, b.width, std::max(0.0f, b.height - top)};
+}
+
+float UIMixerStrip::tintHeight() const
+{
+    const auto b = getBounds();
+    const auto well = meterBarsRect();
+    if (well.isEmpty()) return 0.0f;
+    return StripWash::tintHeight(well.y - b.y, b.height);
 }
 
 NUIRect UIMixerStrip::getFXSummaryBounds() const
