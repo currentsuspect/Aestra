@@ -92,6 +92,8 @@ public:
     void* getNativeHandle() const;
     /// A plugin's editor window, made by the helper as a child of ours: place, show or hide it (window pixels).
     bool placeChildWindow(std::uintptr_t child, int x, int y, int width, int height, bool visible);
+    /// Arrow pointer on a plugin's window and all windows below it (the native pointer is hidden over Aestra's own).
+    bool applyArrowCursorToSubtree(std::uintptr_t child);
     bool getChildWindowSize(std::uintptr_t child, int& width, int& height) const;
     void* getNativeDeviceContext() const;
     void* getNativeGLContext() const;

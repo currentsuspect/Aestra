@@ -244,6 +244,15 @@ public:
         (void)child; (void)x; (void)y; (void)width; (void)height; (void)visible;
         return false;
     }
+    /**
+     * @brief Give a child window and every window below it the arrow pointer (Aestra hides the native one and draws
+     * its own, which a plugin's window covers). Call it again once the plugin has made its inner windows.
+     * @return false when the platform cannot or the child is gone.
+     */
+    virtual bool applyArrowCursorToSubtree(std::uintptr_t child) {
+        (void)child;
+        return false;
+    }
     /** @brief The child's current size in pixels: the plugin may resize its own window. */
     virtual bool getChildWindowSize(std::uintptr_t child, int& width, int& height) const {
         (void)child; (void)width; (void)height;

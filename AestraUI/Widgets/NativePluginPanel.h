@@ -67,6 +67,8 @@ private:
     bool m_placedVisible = false;
     bool m_everPlaced = false;
 
+    int m_cursorPasses = 0;     ///< arrow-cursor passes done: 0 none, 1 at placement, 2 at ~0.5 s, 3 at ~2 s
+    double m_sinceOpen = 0.0;
     double m_sizePoll = 0.0;
     bool m_resizing = false;
     NUIPoint m_resizeStart;

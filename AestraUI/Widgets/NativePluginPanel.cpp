@@ -109,11 +109,26 @@ void NativePluginPanel::place(bool force) {
     m_placed = view;
     m_placedVisible = visible;
     m_everPlaced = true;
+    // First placement: the arrow on the container (and whatever inner windows exist yet). onUpdate repeats it twice
+    // more, once the plugin has made the rest; not continuously, so a plugin's own hover cursors stay.
+    if (!m_cursorPasses) {
+        m_bridge->applyArrowCursorToSubtree(m_child);
+        m_cursorPasses = 1;
+    }
 }
 
 void NativePluginPanel::onUpdate(double deltaTime) {
     AestraPanelWindow::onUpdate(deltaTime);
     place(false);
+
+    // The plugin makes its inner windows after the editor opens; give them the arrow at ~0.5 s and ~2 s.
+    if (m_cursorPasses > 0 && m_cursorPasses < 3 && m_bridge && m_child) {
+        m_sinceOpen += deltaTime;
+        if (m_sinceOpen >= (m_cursorPasses == 1 ? 0.5 : 2.0)) {
+            m_bridge->applyArrowCursorToSubtree(m_child);
+            ++m_cursorPasses;
+        }
+    }
 
     // The plugin can change its own size (a zoom menu, a page with more controls). Ask the window system now and then
     // and follow, unless the user is dragging the grip, whose size wins.

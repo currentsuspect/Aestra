@@ -3,6 +3,7 @@
 #include <SDL2/SDL_syswm.h>
 #include <algorithm>
 #include <iostream>
+#include <vector>
 #if defined(SDL_VIDEO_DRIVER_X11)
 #include <X11/Xlib.h>
 #include <X11/cursorfont.h>
@@ -488,19 +489,50 @@ bool PlatformWindowLinux::placeChildWindow(std::uintptr_t child, int x, int y, i
         XUnmapWindow(display, id);
         return true;
     }
-    // Aestra hides the native pointer on its own window (it draws one); a child window inherits that blank cursor,
-    // and its own drawing covers Aestra's, so over a plugin the pointer vanished. Give the child a real arrow once;
-    // a plugin that sets its own cursor later simply replaces it.
-    if (m_childCursorSet.insert(child).second) {
-        const ::Cursor arrow = XCreateFontCursor(display, XC_left_ptr);
-        XDefineCursor(display, id, arrow);
-        XFreeCursor(display, arrow);
-    }
     XMoveResizeWindow(display, id, x, y, static_cast<unsigned>(std::max(1, width)), static_cast<unsigned>(std::max(1, height)));
     XMapRaised(display, id);
     return true;
 #else
     (void)child; (void)x; (void)y; (void)width; (void)height; (void)visible;
+    return false;
+#endif
+}
+
+bool PlatformWindowLinux::applyArrowCursorToSubtree(std::uintptr_t child) {
+#if defined(SDL_VIDEO_DRIVER_X11)
+    Display* display = nullptr;
+    ::Window parent = 0;
+    if (!child || !getX11WindowInfo(m_window, display, parent))
+        return false;
+    // Aestra hides the native pointer on its own window (it draws one); a child inherits that blank cursor, and its
+    // own drawing covers Aestra's, so over a plugin the pointer vanished. The plugin makes inner windows of its own
+    // (JUCE, for one) under the helper's container, and XWayland takes the cursor from the window under the pointer,
+    // so every window in the subtree gets the arrow. A plugin that sets its own cursor later simply replaces it.
+    // Windows can vanish under us (helper closing); the guard keeps BadWindow from reaching Xlib's exiting handler.
+    XErrorGuard guard(display);
+    const ::Cursor arrow = XCreateFontCursor(display, XC_left_ptr);
+    std::vector<::Window> pending{static_cast<::Window>(child)};
+    bool any = false;
+    while (!pending.empty()) {
+        const ::Window w = pending.back();
+        pending.pop_back();
+        ::Window root = 0, par = 0;
+        ::Window* kids = nullptr;
+        unsigned count = 0;
+        if (!XQueryTree(display, w, &root, &par, &kids, &count))
+            continue; // gone
+        XDefineCursor(display, w, arrow);
+        any = true;
+        for (unsigned i = 0; i < count; ++i)
+            pending.push_back(kids[i]);
+        if (kids)
+            XFree(kids);
+    }
+    XFreeCursor(display, arrow);
+    XFlush(display);
+    return any;
+#else
+    (void)child;
     return false;
 #endif
 }

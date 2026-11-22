@@ -54,6 +54,7 @@ public:
     // Native handles
     void* getNativeHandle() const override;
     bool placeChildWindow(std::uintptr_t child, int x, int y, int width, int height, bool visible) override;
+    bool applyArrowCursorToSubtree(std::uintptr_t child) override;
     bool getChildWindowSize(std::uintptr_t child, int& width, int& height) const override;
     void* getNativeDisplayHandle() const override;
 
@@ -117,7 +118,6 @@ private:
     bool m_maximized = false;
 
     void rememberRestoreBoundsIfNormal();
-    std::set<std::uintptr_t> m_childCursorSet; ///< embedded plugin windows already given a visible pointer
     bool m_isWindowVisible = true;
     bool m_isWindowMapped = true;
     float m_dpiScale = 1.0f;
