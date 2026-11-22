@@ -219,10 +219,9 @@ void TrackManagerUI::onRender(AestraUI::NUIRenderer& renderer) {
 
             AestraUI::NUIRect clippedRect(clipX, clipY, clipR - clipX, clipB - clipY);
 
-            // Match the Piano Roll's quiet purple rubber-band treatment.
-            const AestraUI::NUIColor accent = themeManager.getColor("accentPrimary");
-            renderer.fillRoundedRect(clippedRect, 2.0f, accent.withAlpha(0.15f));
-            renderer.strokeRoundedRect(clippedRect, 2.0f, 1.0f, accent.withAlpha(0.55f));
+            // A rubber band is drawn over the clips it selects, so it is an outline only: a fill over them would be a
+            // wash. The clips that fall inside light up as selected instead.
+            renderer.strokeRoundedRect(clippedRect, 2.0f, 1.0f, themeManager.getColor("selectionEdge"));
         }
     }
 
@@ -252,7 +251,7 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
     if (m_playlistVisible) {
         // Background for control area (always visible)
         AestraUI::NUIRect controlBg(bounds.x, bounds.y, controlAreaWidth, bounds.height);
-        renderer.fillRect(controlBg, themeManager.getColor("recessedPanel"));
+        renderer.fillRect(controlBg, themeManager.getColor("backgroundPrimary")); // the track list is the bed; each header is a card on it
 
         // Background for grid area (match track background; zebra grid provides contrast)
         float scrollbarWidth = kTimelineScrollbarWidth;
@@ -342,7 +341,7 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
         // expanded lanes read as one block under their track. Translucent, so
         // the shared grid plane shows through.
         if (track->isNestedLane()) {
-            renderer.fillRect(trackBounds, themeManager.getColor("accentSecondary").withAlpha(0.244f)); // gamma-space (F3), was 0.05
+            renderer.fillRect(trackBounds, themeManager.getColor("selectionTint"));
         }
 
         track->renderStatic(renderer);
@@ -459,18 +458,17 @@ void TrackManagerUI::renderTrackManagerDynamic(AestraUI::NUIRenderer& renderer) 
 
             if (selectionWidth > 0.0f) {
                 AestraUI::NUIRect selectionRect(visibleStartX, trackAreaTop, selectionWidth, trackAreaHeight);
-                auto accentColor = themeManager.getColor("accentPrimary");
-                renderer.fillRect(selectionRect, accentColor.withAlpha(0.10f));
+                // The span is marked by its two edges over the lanes: a fill here would be drawn over the clips. The
+                // opaque fill lives in the ruler, where nothing but the ruler is under it.
+                const auto accentColor = themeManager.getColor("selectionEdge");
 
                 if (selStartX >= gridStartX && selStartX <= gridEndX) {
                     renderer.drawLine(AestraUI::NUIPoint(selStartX, trackAreaTop),
-                                      AestraUI::NUIPoint(selStartX, trackAreaTop + trackAreaHeight), 1.0f,
-                                      accentColor.withAlpha(0.30f));
+                                      AestraUI::NUIPoint(selStartX, trackAreaTop + trackAreaHeight), 1.0f, accentColor);
                 }
                 if (selEndX >= gridStartX && selEndX <= gridEndX) {
                     renderer.drawLine(AestraUI::NUIPoint(selEndX, trackAreaTop),
-                                      AestraUI::NUIPoint(selEndX, trackAreaTop + trackAreaHeight), 1.0f,
-                                      accentColor.withAlpha(0.30f));
+                                      AestraUI::NUIPoint(selEndX, trackAreaTop + trackAreaHeight), 1.0f, accentColor);
                 }
             }
         }
@@ -873,7 +871,6 @@ void TrackManagerUI::onResize(int width, int height) {
 void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& rulerBounds) {
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     auto borderColor = themeManager.getColor("borderSubtle");
-    auto accentColor = themeManager.getColor("accentPrimary");
 
     auto textCol = themeManager.getColor("textSecondary").withAlpha(0.68f);
     auto majorTickCol = themeManager.getColor("gridMajor");
@@ -902,12 +899,39 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
     // grid area gets no shell of its own — the numbers are labels attached to
     // the grid. Only the left corner cell (the toolbar dock) gets material.
     renderer.fillRect(AestraUI::NUIRect(rulerBounds.x, rulerBounds.y, gridStartX - rulerBounds.x, rulerBounds.height),
-                      themeManager.getColor("recessedPanel"));
+                      themeManager.getColor("backgroundPrimary"));
     renderer.drawLine({rulerBounds.x, rulerBounds.bottom()}, {gridStartX, rulerBounds.bottom()}, 1.0f,
                       borderColor.withAlpha(0.24f));
 
     // === SET CLIP RECT for timeline grid area (prevents text/ticks bleeding outside) ===
     renderer.setClipRect(gridRulerRect);
+
+    // === RULER SELECTION HIGHLIGHT ===
+    // Draw selection highlight if active (either dragging or confirmed)
+    if (m_isDraggingRulerSelection || m_hasRulerSelection) {
+        double selStartBeat = std::min(m_rulerSelectionStartBeat, m_rulerSelectionEndBeat);
+        double selEndBeat = std::max(m_rulerSelectionStartBeat, m_rulerSelectionEndBeat);
+
+        // Convert beats to pixel positions
+        float selStartX = gridStartX + static_cast<float>(selStartBeat * m_pixelsPerBeat) - m_timelineScrollOffset;
+        float selEndX = gridStartX + static_cast<float>(selEndBeat * m_pixelsPerBeat) - m_timelineScrollOffset;
+
+        // Selection rendering - clip rect handles edge clipping
+        float selectionWidth = selEndX - selStartX;
+        if (selectionWidth > 0.0f) {
+            AestraUI::NUIRect selectionRect(selStartX, rulerBounds.y, selectionWidth, rulerBounds.height);
+
+            // An opaque fill, drawn before the ticks and numbers so they sit on top of it (a wash over them would
+            // thin them out), with a solid edge on each side.
+            renderer.fillRect(selectionRect, themeManager.getColor("selectionFill"));
+            const auto selEdge = themeManager.getColor("selectionEdge");
+            renderer.drawLine(AestraUI::NUIPoint(selStartX, rulerBounds.y),
+                              AestraUI::NUIPoint(selStartX, rulerBounds.bottom()), 1.0f, selEdge);
+            renderer.drawLine(AestraUI::NUIPoint(selEndX, rulerBounds.y),
+                              AestraUI::NUIPoint(selEndX, rulerBounds.bottom()), 1.0f, selEdge);
+        }
+    }
+
 
     // Grid spacing - DYNAMIC based on zoom level
     int beatsPerBar = m_beatsPerBar;
@@ -991,38 +1015,12 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
         }
     }
 
-    // === RULER SELECTION HIGHLIGHT ===
-    // Draw selection highlight if active (either dragging or confirmed)
-    if (m_isDraggingRulerSelection || m_hasRulerSelection) {
-        double selStartBeat = std::min(m_rulerSelectionStartBeat, m_rulerSelectionEndBeat);
-        double selEndBeat = std::max(m_rulerSelectionStartBeat, m_rulerSelectionEndBeat);
-
-        // Convert beats to pixel positions
-        float selStartX = gridStartX + static_cast<float>(selStartBeat * m_pixelsPerBeat) - m_timelineScrollOffset;
-        float selEndX = gridStartX + static_cast<float>(selEndBeat * m_pixelsPerBeat) - m_timelineScrollOffset;
-
-        // Selection rendering - clip rect handles edge clipping
-        float selectionWidth = selEndX - selStartX;
-        if (selectionWidth > 0.0f) {
-            AestraUI::NUIRect selectionRect(selStartX, rulerBounds.y, selectionWidth, rulerBounds.height);
-
-            // Fill with semi-transparent accent color
-            renderer.fillRect(selectionRect, accentColor.withAlpha(0.25f));
-
-            // Draw subtle borders at selection edges
-            renderer.drawLine(AestraUI::NUIPoint(selStartX, rulerBounds.y),
-                              AestraUI::NUIPoint(selStartX, rulerBounds.bottom()), 1.0f, accentColor.withAlpha(0.6f));
-            renderer.drawLine(AestraUI::NUIPoint(selEndX, rulerBounds.y),
-                              AestraUI::NUIPoint(selEndX, rulerBounds.bottom()), 1.0f, accentColor.withAlpha(0.6f));
-        }
-    }
-
     // === CLEAR CLIP RECT before drawing control area ===
     renderer.clearClipRect();
 
     // 2. Draw SOLID background for CONTROL AREA (left side - DRAWN LAST to fully cover any bleed)
     //    Use backgroundPrimary to match minimap's left section exactly
-    auto controlBg = themeManager.getColor("backgroundSecondary");
+    auto controlBg = themeManager.getColor("backgroundPrimary");
     AestraUI::NUIRect controlRect(rulerBounds.x, rulerBounds.y, controlAreaWidth + kTimelineGridInsetX, rulerBounds.height);
     renderer.fillRect(controlRect, controlBg);
     renderer.drawLine(AestraUI::NUIPoint(controlRect.x, controlRect.bottom() - 1.0f),
@@ -1068,14 +1066,10 @@ void TrackManagerUI::renderLoopMarkers(AestraUI::NUIRenderer& renderer, const Ae
         return;
 
     // Color based on enabled state and hover
-    auto accentColor = themeManager.getColor("accentPrimary");
-    AestraUI::NUIColor markerColor;
-
-    if (m_loopEnabled) {
-        markerColor = accentColor.withAlpha(0.8f); // Bright when active
-    } else {
-        markerColor = accentColor.withAlpha(0.3f); // Dimmed when inactive
-    }
+    const auto accentColor = themeManager.getColor("hoverSelected");
+    // Opaque in both states: active is the selection edge, inactive the quieter guide shade.
+    const AestraUI::NUIColor markerColor =
+        themeManager.getColor(m_loopEnabled ? "selectionEdge" : "controlGuide");
 
     // A thin ruler-locked range band is visually distinct from the neutral
     // minimap viewport and from canvas selection.
@@ -1083,9 +1077,8 @@ void TrackManagerUI::renderLoopMarkers(AestraUI::NUIRenderer& renderer, const Ae
     const float visibleEndX = std::min(gridEndX, loopEndX);
     const float bandY = rulerBounds.bottom() - 4.0f;
     renderer.fillRect({visibleStartX, bandY, std::max(0.0f, visibleEndX - visibleStartX), 3.0f},
-                      accentColor.withAlpha(0.16f));
-    renderer.drawLine({visibleStartX, bandY}, {visibleEndX, bandY}, 1.0f,
-                      accentColor.withAlpha(0.58f));
+                      themeManager.getColor("selectionTint"));
+    renderer.drawLine({visibleStartX, bandY}, {visibleEndX, bandY}, 1.0f, markerColor);
 
     const float handleWidth = 4.0f;
     const float handleHeight = 9.0f;
@@ -1165,21 +1158,21 @@ void TrackManagerUI::renderPlayhead(AestraUI::NUIRenderer& renderer) {
     const float cueX =
         gridStartX + static_cast<float>((cueBeats * m_pixelsPerBeat) - static_cast<double>(m_timelineScrollOffset));
     if (std::abs(cueX - playheadX) >= 1.0f && cueX >= gridStartX && cueX <= playheadEndX) {
-        const AestraUI::NUIColor cueColor = themeManager.getColor("accentPrimary");
+        const AestraUI::NUIColor cueColor = themeManager.getColor("controlGuide");
         constexpr float CUE_DASH_LENGTH = 4.0f;
         constexpr float CUE_DASH_GAP = 4.0f;
         for (float y = playheadStartY; y < playheadEndY; y += CUE_DASH_LENGTH + CUE_DASH_GAP) {
             renderer.drawLine(AestraUI::NUIPoint(cueX, y), AestraUI::NUIPoint(cueX, std::min(y + CUE_DASH_LENGTH, playheadEndY)),
-                              1.0f, cueColor.withAlpha(0.38f));
+                              1.0f, cueColor);
         }
         constexpr float CUE_MARKER_HALF_WIDTH = 4.0f;
         constexpr float CUE_MARKER_HEIGHT = 5.0f;
         const AestraUI::NUIPoint cueTip(cueX, playheadStartY);
         const AestraUI::NUIPoint cueLeft(cueX - CUE_MARKER_HALF_WIDTH, playheadStartY - CUE_MARKER_HEIGHT);
         const AestraUI::NUIPoint cueRight(cueX + CUE_MARKER_HALF_WIDTH, playheadStartY - CUE_MARKER_HEIGHT);
-        renderer.drawLine(cueLeft, cueRight, 1.0f, cueColor.withAlpha(0.5f));
-        renderer.drawLine(cueLeft, cueTip, 1.0f, cueColor.withAlpha(0.5f));
-        renderer.drawLine(cueRight, cueTip, 1.0f, cueColor.withAlpha(0.5f));
+        renderer.drawLine(cueLeft, cueRight, 1.0f, cueColor);
+        renderer.drawLine(cueLeft, cueTip, 1.0f, cueColor);
+        renderer.drawLine(cueRight, cueTip, 1.0f, cueColor);
     }
 
     // PRECISE CULLING: Draw if the playhead CENTER is within bounds
@@ -1190,7 +1183,7 @@ void TrackManagerUI::renderPlayhead(AestraUI::NUIRenderer& renderer) {
     // Allow triangle to extend outside as long as center line is visible
     if (playheadX >= gridStartX && playheadX <= playheadEndX) {
         // Flat and filled: a 1 px textPrimary line and a filled head (PlayheadMarker.h, Design Spec Clip).
-        const AestraUI::NUIColor playheadColor = themeManager.getColor("textPrimary");
+        const AestraUI::NUIColor playheadColor = themeManager.getColor("playhead");
         AestraUI::Playhead::drawLine(renderer, playheadX, playheadStartY, playheadEndY, playheadColor);
         AestraUI::Playhead::drawHead(renderer, playheadX, playheadStartY, playheadColor);
     }

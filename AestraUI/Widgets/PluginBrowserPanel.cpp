@@ -44,8 +44,9 @@ namespace Colors {
     static const NUIColor typeMidi      = NUIColor(0.957f, 0.447f, 0.714f, 1.0f);  // #f472b6
 
     // Format badge colors
-    static const NUIColor badgeVst3Bg   = NUIColor(0.655f, 0.545f, 0.980f, 0.20f);
-    static const NUIColor badgeVst3Text = NUIColor(0.655f, 0.545f, 0.980f, 1.0f);
+    // VST3 is the one format badge in the accent: read from the theme each time (a static would keep the first theme).
+    NUIColor badgeVst3Bg() { return NUIThemeManager::getInstance().getColor("selectionTint"); }
+    NUIColor badgeVst3Text() { return NUIThemeManager::getInstance().getColor("accentText"); }
     static const NUIColor badgeClapBg   = NUIColor(0.204f, 0.835f, 0.600f, 0.20f);
     static const NUIColor badgeClapText = NUIColor(0.204f, 0.835f, 0.600f, 1.0f);
 
@@ -57,8 +58,8 @@ namespace Colors {
     NUIColor pillInactiveText() { return NUIThemeManager::getInstance().getColor("textSecondary"); }
 
     // Favorite star
-    NUIColor starActive() { return NUIThemeManager::getInstance().getColor("accentPrimary"); }
-    NUIColor starGhost() { return NUIThemeManager::getInstance().getColor("accentPrimary").withAlpha(0.35f); }
+    NUIColor starActive() { return NUIThemeManager::getInstance().getColor("accentText"); }
+    NUIColor starGhost() { return NUIThemeManager::getInstance().getColor("controlGuide"); }
 }
 
 namespace {
@@ -143,15 +144,15 @@ void PluginBrowserPanel::renderHeaderBar(NUIRenderer& renderer) {
     NUIRect scanBtn = getScanButtonRect();
     const float scanRadius = 2.0f;
     if (m_scanning) {
-        renderer.fillRoundedRect(scanBtn, scanRadius, Colors::accentPrimary().withAlpha(0.10f));
+        renderer.fillRoundedRect(scanBtn, scanRadius, NUIThemeManager::getInstance().getColor("selectionTint"));
         auto dots = renderer.measureText("\xe2\x80\xa6", 11.0f); // ellipsis glyph
         renderer.drawText("\xe2\x80\xa6", {scanBtn.x + (scanBtn.width - dots.width) * 0.5f, scanBtn.y + 3.0f}, 11.0f,
-                          Colors::accentPrimary().withAlpha(0.75f));
+                          NUIThemeManager::getInstance().getColor("accentText"));
     } else {
-        renderer.fillRoundedRect(scanBtn, scanRadius, Colors::accentPrimary().withAlpha(0.16f));
+        renderer.fillRoundedRect(scanBtn, scanRadius, NUIThemeManager::getInstance().getColor("selectionFill"));
         auto label = renderer.measureText("Scan", 10.0f);
         renderer.drawText("Scan", {scanBtn.x + (scanBtn.width - label.width) * 0.5f, scanBtn.y + 4.5f}, 10.0f,
-                          Colors::accentPrimary());
+                          NUIThemeManager::getInstance().getColor("accentText"));
     }
 }
 
@@ -303,8 +304,8 @@ void PluginBrowserPanel::renderPluginRow(NUIRenderer& renderer,
     const bool external = (plugin.formatStr != "Int" && !plugin.formatStr.empty());
     if (external) {
         std::string badgeLabel = "VST3";
-        NUIColor badgeBg = Colors::badgeVst3Bg;
-        NUIColor badgeText = Colors::badgeVst3Text;
+        NUIColor badgeBg = Colors::badgeVst3Bg();
+        NUIColor badgeText = Colors::badgeVst3Text();
         if (plugin.formatStr.find("CLAP") != std::string::npos) {
             badgeLabel = "CLAP";
             badgeBg = Colors::badgeClapBg;

@@ -196,7 +196,7 @@ TransportBar::TransportBar()
     m_musicalTypingLabel = std::make_shared<AestraUI::NUILabel>("KEYS C3");
     m_musicalTypingLabel->setFontSize(11.0f);
     m_musicalTypingLabel->setAlignment(AestraUI::NUILabel::Alignment::Center);
-    m_musicalTypingLabel->setTextColor(AestraUI::NUIThemeManager::getInstance().getColor("accentPrimary"));
+    m_musicalTypingLabel->setTextColor(AestraUI::NUIThemeManager::getInstance().getColor("accentText"));
     m_musicalTypingLabel->setBackgroundVisible(true);
     m_musicalTypingLabel->setBackgroundColor(
         AestraUI::NUIThemeManager::getInstance().getColor("surfaceTertiary").withAlpha(0.72f));
@@ -404,8 +404,8 @@ void TransportBar::createButtons() {
         btn->setSize(TRANSPORT_BUTTON_W, TRANSPORT_BUTTON_H);
         
         btn->setBackgroundColor(AestraUI::NUIColor::transparent());
-        btn->setHoverColor(theme.getColor("primary").withAlpha(0.06f));
-        btn->setPressedColor(theme.getColor("primary").withAlpha(0.12f));
+        btn->setHoverColor(theme.getColor("selectionTint"));
+        btn->setPressedColor(theme.getColor("selectionFill"));
         btn->setBorderEnabled(false);
         btn->setCornerRadius(6.0f);
         btn->setGlowEnabled(false);
@@ -712,7 +712,7 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
     // hover. Engaging one pushes it into the surface: play while playing, record while armed, a key held down, an
     // open panel, a lit record aid. Nothing pops out and nothing carries an outline. The record glyph is red in
     // every state, so record never reads as play.
-    const AestraUI::NUIColor accentInk = theme.getColor("secondary");
+    const AestraUI::NUIColor accentInk = theme.getColor("accentText");
     const auto keyFace = [&](const AestraUI::NUIRect& rect, float radius, bool engaged, bool hovered, bool deep) {
         if (engaged) {
             AestraUI::Depth::bed(renderer, rect, radius, deep ? AestraUI::Depth::Cut::Deep : AestraUI::Depth::Cut::Shallow);
@@ -953,12 +953,12 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
         renderer.drawText(name, {nameRect.x + 4.0f, renderer.calculateTextY(nameRect, KEY_VALUE_SIZE)}, KEY_VALUE_SIZE, ink);
         if (!moved.empty())
             renderer.drawText(moved, {nameRect.x + 4.0f + nameW + 6.0f, renderer.calculateTextY(nameRect, KEY_VALUE_SIZE)},
-                              KEY_VALUE_SIZE, theme.getColor("secondary"));
+                              KEY_VALUE_SIZE, theme.getColor("accentText"));
         // The typing keyboard's root (right-click this module to change it): C3, or Off.
         const AestraUI::NUIRect typing = abs(m_keyTypingRect);
         const std::string root = m_keysEnabled ? "C" + std::to_string(m_keysOctave) : "Off";
         renderer.drawText(root, {typing.x + 8.0f, renderer.calculateTextY(typing, KEY_VALUE_SIZE)}, KEY_VALUE_SIZE,
-                          m_keysEnabled ? theme.getColor("secondary") : theme.getColor("textMuted"));
+                          m_keysEnabled ? theme.getColor("accentText") : theme.getColor("textMuted"));
         const AestraUI::NUIColor stepInk = theme.getColor("textSecondary");
         const std::pair<AestraUI::NUIRect, const char*> steps[] = {{m_keyMinusRect, "-"}, {m_keyPlusRect, "+"}};
         for (const auto& [rect, glyph] : steps) {

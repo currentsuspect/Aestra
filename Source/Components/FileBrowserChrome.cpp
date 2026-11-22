@@ -72,17 +72,10 @@ void FileBrowser::renderKindTabs(NUIRenderer& renderer, const BrowserLayout& lay
     const NUIRect& first = layout.kinds[0];
     const NUIRect& last = layout.kinds[2];
     const NUIRect well(first.x - 2.0f, first.y - 2.0f, last.right() - first.x + 4.0f, first.height + 4.0f);
-    renderer.fillRoundedRect(well, 4.0f, theme.getColor("backgroundPrimary").darkened(0.35f));
-    renderer.strokeRoundedRect(well, 4.0f, 1.0f, theme.getColor("border").withAlpha(0.55f));
-
-    static const char* kNames[3] = {"Sounds", "Patterns", "Plugins"};
+    static const std::vector<std::string> kNames = {"Sounds", "Patterns", "Plugins"};
     const int active = kindOf(activeNavAction_);
     for (int i = 0; i < 3; ++i) {
         const NUIRect& tab = layout.kinds[static_cast<size_t>(i)];
-        const bool on = i == active;
-        if (on) renderer.fillRoundedRect(tab, 3.0f, theme.getColor("accentPrimary").withAlpha(0.24f));
-        renderer.drawTextCentered(kNames[i], tab, props.fontSizeS,
-                                  on ? theme.getColor("textPrimary") : theme.getColor("textSecondary").withAlpha(0.80f));
         ChromeHit hit;
         hit.bounds = tab;
         hit.kind = i;
@@ -138,12 +131,12 @@ void FileBrowser::renderLocationRow(NUIRenderer& renderer, const BrowserLayout& 
     const std::string chipText = ellipsizeEnd(renderer, place, font, maxChip - 30.0f);
     const float chipW = renderer.measureText(chipText, font).width + 30.0f;
     const NUIRect chip(area.x, area.y, chipW, kChipH);
-    if (placesOpen_) renderer.fillRoundedRect(chip, 3.0f, theme.getColor("accentPrimary").withAlpha(0.20f));
+    if (placesOpen_) renderer.fillRoundedRect(chip, 3.0f, theme.getColor("selectionFill"));
     renderer.strokeRoundedRect(chip, 3.0f, 1.0f, theme.getColor("border").withAlpha(0.75f));
     const bool favourite = !placePath.empty() &&
                            std::find(favoritesPaths_.begin(), favoritesPaths_.end(), placePath) != favoritesPaths_.end();
     renderer.fillCircle({chip.x + 9.0f, chip.y + chip.height * 0.5f}, 3.0f,
-                        favourite ? theme.getColor("warning") : theme.getColor("accentPrimary"));
+                        favourite ? theme.getColor("warning") : theme.getColor("accentText"));
     renderer.drawText(chipText, {chip.x + 17.0f, std::round(renderer.calculateTextY(chip, font))}, font, text);
     drawDownChevron(renderer, chip.right() - 8.0f, chip.y + chip.height * 0.5f, muted);
     {
@@ -249,7 +242,7 @@ void FileBrowser::renderListHeader(NUIRenderer& renderer, const BrowserLayout& l
     auto& themeManager = NUIThemeManager::getInstance();
     const NUIColor border = themeManager.getColor("border").withAlpha(0.38f);
     const NUIColor muted = themeManager.getColor("textSecondary");
-    const NUIColor accent = themeManager.getColor("accentPrimary");
+    const NUIColor accent = themeManager.getColor("accentText");
     const auto& themeProps = themeManager.getCurrentTheme();
 
     // Opaque: the rows are drawn first and scroll under this band.
@@ -280,7 +273,7 @@ void FileBrowser::renderListHeader(NUIRenderer& renderer, const BrowserLayout& l
                       1.0f, border);
 
     const bool filterActive = isFilterActive();
-    const NUIColor controlColor = filterActive ? accent.withAlpha(0.94f) : muted.withAlpha(0.62f);
+    const NUIColor controlColor = filterActive ? accent : muted.withAlpha(0.62f);
     const float filterCx = layout.filterButton.x + layout.filterButton.width * 0.5f;
     const float filterCy = layout.filterButton.y + layout.filterButton.height * 0.5f;
     renderer.drawLine({filterCx - 5.0f, filterCy - 4.0f}, {filterCx + 5.0f, filterCy - 4.0f}, 1.2f, controlColor);

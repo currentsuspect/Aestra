@@ -54,8 +54,8 @@ inline Row row(const NUIThemeProperties& t, const RowState& s, const NUIColor& i
     r.keyFill = t.surfaceTertiary;
     r.keyLabel = t.textSecondary;
     if (s.dropTarget) {
-        r.fill = NUIColor::lerp(t.backgroundSecondary, t.primary, 0.18f);
-        r.edge = t.primary;
+        r.fill = t.selectionTint;
+        r.edge = t.selectionEdge;
         r.edgeWidth = 2.0f;
     } else if (s.selected) {
         r.fill = t.primary;
@@ -98,7 +98,14 @@ inline Pads pads(const NUIThemeProperties& t) {
         stroke = c;
         if (detail::ratio(c, t.surfaceTertiary) >= 3.0f && detail::ratio(c, t.surfaceRaised) >= 3.0f) break;
     }
-    return {t.surfaceTertiary, t.surfaceRaised, t.textPrimary, stroke, t.primary};
+    // The fill under the playhead must read 2.5:1 on both rest pads. A deep-violet primary (Ink, option C) is 2.4:1 on
+    // the control grey, so it falls back to the text colour rather than the floor being lowered.
+    NUIColor fill = t.primary;
+    for (const NUIColor& c : {t.primary, t.textPrimary}) {
+        fill = c;
+        if (detail::ratio(c, t.surfaceTertiary) >= 2.5f && detail::ratio(c, t.surfaceRaised) >= 2.5f) break;
+    }
+    return {t.surfaceTertiary, t.surfaceRaised, t.textPrimary, stroke, fill};
 }
 
 /// The part of an active pad above its velocity bar: opaque, so it never depends on what is behind the pad.

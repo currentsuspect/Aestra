@@ -66,11 +66,11 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     navHits_.clear();
     if (!placesOpen_ || layout.navPane.isEmpty()) return;
 
-    const NUIColor paneBg = themeManager.getColor("surfaceRaised");
+    const NUIColor paneBg = themeManager.getColor("backgroundSecondary"); // a card over the browser, not a grey slab
     const NUIColor sectionColor = themeManager.getColor("textSecondary").withAlpha(0.58f);  // Stronger section headers
     const NUIColor rowText = themeManager.getColor("textPrimary").withAlpha(0.78f);
     const NUIColor muted = themeManager.getColor("textSecondary").withAlpha(0.48f);
-    const NUIColor selectedBg = themeManager.getColor("accentPrimary").withAlpha(0.16f);
+    const NUIColor selectedBg = themeManager.getColor("selectionFill");
     const NUIColor divider = themeManager.getColor("divider");
     const bool compact = false;
 
@@ -83,7 +83,7 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     // One shared, compact navigation row. The browser no longer spends a full
     // second row on item counts and duplicate structural rules.
     const NUIRect& navHeader = layout.navHeader;
-    renderer.fillRect(navHeader, themeManager.getColor("backgroundSecondary").darkened(0.03f));
+    renderer.fillRect(navHeader, themeManager.getColor("backgroundSecondary")); // the card itself, not a darker shade
     renderer.drawLine({navHeader.x, navHeader.bottom()}, {navHeader.right(), navHeader.bottom()},
                       1.0f, themeManager.getColor("border").withAlpha(0.42f));
 

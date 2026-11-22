@@ -182,13 +182,13 @@ void AuditionHub::openReferenceMenu(const NUIPoint& at) {
 void AuditionHub::renderItemPage(NUIRenderer& r, const AuditionHubLayout::Frame& f) {
     auto& theme = NUIThemeManager::getInstance();
     const NUIColor text = theme.getColor("textPrimary"), muted = theme.getColor("textSecondary"), rule = theme.getColor("borderSubtle");
-    const NUIColor violet = theme.getColor("accentPrimary").lightened(0.25f);
+    const NUIColor violet = theme.getColor("accentText"); // violet used as text
     const bool withRail = m_result != nullptr;
     const auto p = AuditionHubLayout::itemFrame(f.content, withRail);
     r.setClipRect(f.content);
 
     // The hero: cover, what this is, its name, and the two things you do from here.
-    r.fillRect(p.hero, NUIColor::fromHex(0xff1d1536));
+    r.fillRect(p.hero, theme.getColor("selectionTint"));
     const bool ref = m_item.kind == AuditionLibrary::Item::Kind::Reference;
     drawCover(r, p.cover, m_item.seed);
     const float tx = p.cover.right() + 32.0f;
@@ -338,7 +338,7 @@ void AuditionHub::renderItemPage(NUIRenderer& r, const AuditionHubLayout::Frame&
             if (!row.note.empty() && p.table.right() - r.measureText(row.note, 10.0f).width <
                                          col2 + r.measureText(row.b.empty() ? row.a : row.b, 12.5f).width + 12.0f)
                 narrow = true;
-        r.drawText(mixHead, {col1, p.table.y + 24.0f}, 10.0f, violet.withAlpha(0.85f));
+        r.drawText(mixHead, {col1, p.table.y + 24.0f}, 10.0f, violet);
         if (m_result && !stacked) r.drawText("Ref", {col2, p.table.y + 24.0f}, 10.0f, kRef.withAlpha(0.85f));
         float y = p.table.y + 46.0f;
         for (const auto& row : rows) {

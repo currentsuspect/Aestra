@@ -1,6 +1,8 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIRenderCache.h"
 #include "NUIRendererGL.h"
+#include "RenderCacheTheme.h"
+#include "../../Core/NUIThemeSystem.h"
 #include <iostream>
 #include <cmath>
 
@@ -69,6 +71,10 @@ namespace AestraUI {
         if (it != m_caches.end()) {
             it->second->lastUsedFrame = m_currentFrame;
 
+            // Every cache is made of theme colours: one built under an earlier theme is redrawn.
+            invalidateIfThemeChanged(it->second->valid, it->second->themeGeneration,
+                                     NUIThemeManager::getInstance().themeGeneration());
+
             if (it->second->size.width != size.width || it->second->size.height != size.height) {
                 destroyFramebuffer(it->second.get());
                 createFramebuffer(it->second.get(), size);
@@ -88,6 +94,7 @@ namespace AestraUI {
 
         auto cache = std::make_unique<CachedRenderData>();
         cache->lastUsedFrame = m_currentFrame;
+        cache->themeGeneration = NUIThemeManager::getInstance().themeGeneration();
         createFramebuffer(cache.get(), size);
 
         CachedRenderData* ptr = cache.get();

@@ -57,7 +57,8 @@ void UIMixerInsertList::onRender(NUIRenderer& renderer) {
                     std::max(1.0f, std::floor(b.height) - 1.0f)};
     const NUIColor textPrimary = theme.getColor("textPrimary");
     const NUIColor textSecondary = theme.getColor("textSecondary");
-    const NUIColor accent = theme.getColor("accentPrimary");
+    const NUIColor accent = theme.getColor("selected");
+    const NUIColor accentText = theme.getColor("accentText");
 
     // Design Spec, Empty state: an empty slot is a quiet row with quiet hover, not a well and not a dashed box.
     if (m_rows.empty()) {
@@ -82,7 +83,7 @@ void UIMixerInsertList::onRender(NUIRenderer& renderer) {
         const float alpha = row.bypassed ? 0.38f : 1.0f;
         // A dot per insert: lit when it is processing, hollow-dim when bypassed.
         const NUIRect dot{r.x + 6.0f, y + (kRowH - 5.0f) * 0.5f, 5.0f, 5.0f};
-        renderer.fillRoundedRect(dot, 2.5f, row.bypassed ? textSecondary.withAlpha(0.35f) : accent.withAlpha(0.9f));
+        renderer.fillRoundedRect(dot, 2.5f, row.bypassed ? textSecondary.withAlpha(0.35f) : accent);
 
         const float textX = dot.right() + 5.0f;
         float rightInset = 5.0f;
@@ -108,7 +109,7 @@ void UIMixerInsertList::onRender(NUIRenderer& renderer) {
         }
         if (!status.empty()) {
             renderer.drawText(status, {r.right() - rightInset + 4.0f, y + (kRowH - 8.5f) * 0.5f - 1.0f}, 8.5f,
-                              accent.withAlpha(0.92f));
+                              accentText);
         }
         y += kRowH;
     }

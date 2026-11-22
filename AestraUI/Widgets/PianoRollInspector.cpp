@@ -168,8 +168,9 @@ void PianoRollInspector::onRender(NUIRenderer& renderer) {
     const auto secondary = theme.getColor("textSecondary");
     const auto muted = theme.getColor("textMuted");
     const auto bed = theme.getColor("backgroundPrimary");
+    const auto card = theme.getColor("backgroundSecondary"); // the wells below are cards on the bed, not cuts in a grey slab
     const auto raised = theme.getColor("surfaceRaised");
-    renderer.fillRect(b, theme.getColor("backgroundSecondary"));
+    renderer.fillRect(b, bed);
     renderer.drawLine(NUIPoint(b.x + 0.5f, b.y), NUIPoint(b.x + 0.5f, b.bottom()), 1.0f, theme.getColor("border"));
 
     auto layer = layer_.lock();
@@ -196,7 +197,7 @@ void PianoRollInspector::onRender(NUIRenderer& renderer) {
         renderer.drawText(label, NUIPoint(bar.x, ly), 12.0f, secondary);
         const float vw = renderer.measureText(value, 12.0f).width;
         renderer.drawText(value, NUIPoint(bar.right() - vw, ly), 12.0f, any ? primary : muted);
-        renderer.fillRect(bar, bed);
+        renderer.fillRect(bar, card);
         if (!any) return;
         const NUIRect filled(bar.x, bar.y, bar.width * std::clamp(fill, 0.0f, 1.0f), bar.height);
         renderer.fillRect(filled, unit);
@@ -217,7 +218,7 @@ void PianoRollInspector::onRender(NUIRenderer& renderer) {
     for (int hits = 1; hits <= 4; ++hits) {
         const NUIRect r = ratchetButton(hits);
         const bool active = any && s.ratchet == hits;
-        renderer.fillRect(r, active ? raised : bed);
+        renderer.fillRect(r, active ? raised : card);
         const std::string label = "\xC3\x97" + std::to_string(hits);
         const float lw = renderer.measureText(label, 12.0f).width;
         renderer.drawText(label, NUIPoint(r.x + (r.width - lw) * 0.5f, renderer.calculateTextY(r, 12.0f)), 12.0f,
@@ -226,7 +227,7 @@ void PianoRollInspector::onRender(NUIRenderer& renderer) {
 
     // Muse, under the selection (board A + C): the next bar's ideas, the previewed one lit; what Muse listens to.
     {
-        const auto violet = NUIColor::fromHex(0xa78bfa);
+        const auto violet = theme.getColor("accentText");
         const float ruleY = ratchetButton(1).bottom() + 16.0f;
         renderer.drawLine(NUIPoint(x, ruleY), NUIPoint(b.right() - kPad, ruleY), 1.0f, theme.getColor("border"));
         const float titleY = ruleY + 12.0f;
@@ -244,8 +245,8 @@ void PianoRollInspector::onRender(NUIRenderer& renderer) {
             for (int i = 0; i < count; ++i) {
                 const NUIRect r = ideaButton(i);
                 const bool on = i == previewed_;
-                renderer.fillRect(r, on ? NUIColor::fromHex(0x1c1530) : bed);
-                renderer.strokeRect(r, 1.0f, on ? NUIColor::fromHex(0x7c3aed) : theme.getColor("border"));
+                renderer.fillRect(r, on ? theme.getColor("selectionTint") : card);
+                renderer.strokeRect(r, 1.0f, on ? theme.getColor("selectionEdge") : theme.getColor("border"));
                 std::string label = std::to_string(i + 1) + " \xC2\xB7 " + (*ideas_)[static_cast<size_t>(i)].label;
                 while (label.size() > 4 && renderer.measureText(label, 12.0f).width > r.width - 16.0f) label.pop_back();
                 renderer.drawText(label, NUIPoint(r.x + 8.0f, renderer.calculateTextY(r, 12.0f)), 12.0f, on ? primary : secondary);

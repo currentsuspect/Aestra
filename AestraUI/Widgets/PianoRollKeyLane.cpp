@@ -38,7 +38,8 @@ void PianoRollKeyLane::onRender(NUIRenderer& renderer) {
     const auto rootEdge = themeManager.getColor("warning");
     const bool keyed = scaleType_ != ScaleType::Chromatic;
     // Pressed (SPEC 3 §5.1): the key sinks a little and its tip glows toward the grid row it plays.
-    const auto accent = themeManager.getColor("accentPrimary");
+    const auto playFill = themeManager.getColor("selectionFill");
+    const auto pressEdge = themeManager.getColor("hoverSelected");
 
     int startPitch = 127 - static_cast<int>((scrollY_) / keyHeight_);
     int endPitch = 127 - static_cast<int>((scrollY_ + b.height) / keyHeight_);
@@ -69,9 +70,9 @@ void PianoRollKeyLane::onRender(NUIRenderer& renderer) {
         }
         if (!nameEveryNote_ && accidental && press <= 0.0f) // the accidental's lit top edge
             renderer.fillRect(NUIRect(keyRect.x + 1.0f, keyRect.y + 1.0f, keyRect.width - 3.0f, 1.0f), ink.withAlpha(0.10f));
-        if (const float play = playLevel_[p]; play > 0.0f) renderer.fillRect(keyRect, accent.withAlpha(0.34f * play));
+        if (const float play = playLevel_[p]; play > 0.0f) renderer.fillRect(keyRect, NUIColor::lerp(press > 0.0f ? NUIColor::lerp(rest, sunk, press) : rest, playFill, play));
         if (press > 0.0f)
-            renderer.fillRect(NUIRect(keyRect.right() - 2.0f, keyRect.y, 2.0f, keyRect.height), accent.lightened(0.25f).withAlpha(0.95f * press));
+            renderer.fillRect(NUIRect(keyRect.right() - 2.0f, keyRect.y, 2.0f, keyRect.height), pressEdge);
         if (!nameEveryNote_ && isRoot) renderer.fillRect(NUIRect(keyRect.right() - 3.0f, keyRect.y, 3.0f, keyRect.height), rootEdge);
         // The edge between keys: under every row in E; in D only where two naturals meet (E-F, B-C).
         if (nameEveryNote_ || (!accidental && p > 0 && !isBlackKey(p - 1)))

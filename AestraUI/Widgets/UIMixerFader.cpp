@@ -55,7 +55,7 @@ void UIMixerFader::cacheThemeColors()
     // made the fader read as a second level meter — the fader shows where the
     // control is set, the meter beside it shows what the signal is doing.
     m_railFill = theme.getColor("textPrimary").withAlpha(0.55f);
-    m_accent = theme.getColor("accentPrimary");
+    m_accent = theme.getColor("selectionEdge");
     m_handle = theme.getColor("backgroundSecondary"); // Handle Core
     m_handleHover = theme.getColor("textPrimary");    // Handle Active
     m_text = theme.getColor("textPrimary");
@@ -311,7 +311,7 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
         }
 
         renderer.fillRoundedRect({tipX, tipY, tipW, tipH}, 3.0f, m_tooltipBg);
-        renderer.strokeRoundedRect({tipX, tipY, tipW, tipH}, 3.0f, 1.0f, m_accent.withAlpha(0.5f));
+        renderer.strokeRoundedRect({tipX, tipY, tipW, tipH}, 3.0f, 1.0f, m_accent);
         renderer.drawTextCentered(m_cachedText, {tipX, tipY, tipW, tipH}, 10.5f, m_text);
     }
 }
@@ -339,7 +339,7 @@ void UIMixerFader::renderOverlay(NUIRenderer& renderer)
         const float tipH = 18.0f;
         const NUIRect tip{handle.x - tipW - 6.0f, y - tipH * 0.5f, tipW, tipH};
         renderer.fillRoundedRect(tip, 3.0f, m_tooltipBg);
-        renderer.strokeRoundedRect(tip, 3.0f, 1.0f, m_accent.withAlpha(0.5f));
+        renderer.strokeRoundedRect(tip, 3.0f, 1.0f, m_accent);
         renderer.drawTextCentered(m_cachedText, tip, 10.5f, m_text);
     }
 }
