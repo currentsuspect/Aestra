@@ -928,6 +928,14 @@ bool UIMixerPanel::onMouseEvent(const NUIMouseEvent& event)
         }
     }
 
+    // An open plugin finder floats over the channel strips: a wheel over it
+    // scrolls its list. Offer it the event first, or the horizontal channel
+    // scroll below swallows the wheel before the dropdown ever sees it.
+    if (event.wheelDelta != 0.0f && m_pluginDropdown && m_pluginDropdown->isOpen() &&
+        m_pluginDropdown->getBounds().contains(event.position)) {
+        return m_pluginDropdown->onMouseEvent(event);
+    }
+
     if (event.wheelDelta != 0.0f) {
         auto bounds = getBounds();
         // These three already matched getChannelViewportWidth()/

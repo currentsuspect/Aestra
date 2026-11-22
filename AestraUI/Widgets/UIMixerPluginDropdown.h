@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include "Helpers/DropdownScroll.h"
 #include "Helpers/MixerPluginListPolicy.h"
 #include "NUIComponent.h"
 #include "NUITextInput.h"
@@ -96,6 +97,7 @@ private:
     int m_hoveredRow{-1};     // -1 = none, 0+ = flat index across all visible rows
     int m_hoveredFooter{-1};  // -1 = none, 0 = browse link
     int m_selectedRow{-1};    // keyboard selection; highlighted like hover, loads on Enter
+    float m_scrollOffset{0.0f}; // px the list has slid up under its viewport (0 = top)
     std::vector<Category> m_categories;
     std::vector<Category> m_filtered;
 
@@ -122,11 +124,17 @@ private:
     // copying the catalog on the per-frame paths.
     const std::vector<Category>& displayCategories() const;
 
-    // Flat row access for hit testing / rendering
+    // Flat row access for hit testing / rendering. `y` is in list CONTENT space
+    // (0 = top of the first header); the viewport begins SEARCH_H below the box top.
     struct FlatRow { bool isCategory; int catIndex; int itemIndex; float y; float h; };
     std::vector<FlatRow> flatten(const std::vector<Category>& cats) const;
     int hitTestRow(const NUIPoint& p) const;
     bool hitTestFooter(const NUIPoint& p) const;
+
+    // Scrolling (pure math lives in Helpers/DropdownScroll.h).
+    float listViewportH() const;
+    float contentHeight(const std::vector<FlatRow>& rows) const;
+    void scrollRowIntoView(int flatIndex);
 
     // Scratch for displayCategories()' rare fallback path (const method).
     mutable std::vector<Category> m_displayFallback;
