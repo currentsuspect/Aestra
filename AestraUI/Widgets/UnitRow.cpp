@@ -354,8 +354,8 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
         if (m_mixerRouteColorIndex >= 0) dot = colorFromUnitValue(paletteIndexToARGB(m_mixerRouteColorIndex));
         std::string label = m_mixerRouteName;
         const float room = UnitRowLook::routeChipTextRoom(routeRect.width);
-        bool cut = false;
-        while (label.size() > 1 && renderer.measureText(label, 10.5f).width > room) { label.pop_back(); cut = true; }
+        const bool cut = renderer.measureText(label, 10.5f).width > room;
+        while (cut && label.size() > 1 && renderer.measureText(label + "\xE2\x80\xA6", 10.5f).width > room) label.pop_back(); // the ellipsis counts against the room
         if (cut) label += "\xE2\x80\xA6";
         const auto chip = UnitRowLook::routeChip(routeRect.x, routeRect.width, renderer.measureText(label, 10.5f).width); // dot, name and chevron as one centred group
         const float cy = routeRect.y + routeRect.height * 0.5f;

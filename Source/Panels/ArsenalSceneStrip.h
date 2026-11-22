@@ -289,7 +289,7 @@ public:
         const float fillW = full * std::clamp(m_swing, 0.0f, 1.0f);
         if (fillW > 0.0f) {
             const AestraUI::NUIRect fill(track.x + inset, track.y + inset, std::max(track.height - inset * 2.0f, fillW), track.height - inset * 2.0f);
-            renderer.setClipRect(AestraUI::intersectRects(track, {fill.x, fill.y, std::min(fill.width, full), fill.height}));
+            renderer.setClipRect(AestraUI::intersectRects(track, {fill.x, fill.y, std::min(fillW, full), fill.height}));
             renderer.fillRoundedRect(fill, fill.height * 0.5f, theme.getColor(m_hover.kind == Hit::Kind::Swing || m_swingDrag ? "hoverSelected" : "selected"));
             renderer.clearClipRect();
         } else if (m_hover.kind == Hit::Kind::Swing) {
