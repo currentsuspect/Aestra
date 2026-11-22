@@ -4963,6 +4963,8 @@ if(AESTRA_ENABLE_UI)
         UIScenarioTest
         TextCentringTest
         AdaptiveFPSIdleTest
+        UnitRowLookTest
+        TrackPaletteVioletTest
     )
     foreach(_t IN LISTS AESTRA_REQUIRED_UI_TESTS)
         if(NOT TARGET ${_t})
