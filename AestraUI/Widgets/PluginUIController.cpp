@@ -174,7 +174,7 @@ void PluginUIController::placeEditorComp(const std::shared_ptr<NUIComponent>& ed
         return;
     const auto layer = m_popupLayer->getBounds();
     const auto current = editorComp->getBounds();
-    const auto region = EditorPlacement::editorPlacementRegion(layer.y, layer.width, layer.height, m_editorContentTop);
+    const auto region = EditorPlacement::editorPlacementRegion(layer.y, layer.width, layer.height, editorContentTop());
     const Layout::NUIAnchoredRect preference{anchorX, anchorY, static_cast<double>(current.width),
                                              static_cast<double>(current.height)};
     const auto placement = Layout::resolveAnchoredPlacement(preference, Layout::NUIPlacementMode::Anchored, region,
@@ -197,7 +197,7 @@ void PluginUIController::gatherEditors() {
     if (!m_popupLayer)
         return;
     const auto layer = m_popupLayer->getBounds();
-    const auto region = EditorPlacement::editorPlacementRegion(layer.y, layer.width, layer.height, m_editorContentTop);
+    const auto region = EditorPlacement::editorPlacementRegion(layer.y, layer.width, layer.height, editorContentTop());
     for (const auto& editorComp : m_activeEditors) {
         const auto b = editorComp->getBounds();
         const Layout::NUIAnchoredRect prior{0.5, 0.5, static_cast<double>(b.width), static_cast<double>(b.height)};
@@ -760,7 +760,7 @@ void PluginUIController::openPluginEditor(
 
         const auto layerBounds = m_popupLayer->getBounds();
         const auto below = EditorPlacement::editorPlacementRegion(layerBounds.y, layerBounds.width, layerBounds.height,
-                                                                  m_editorContentTop);
+                                                                  editorContentTop());
         const Layout::NUILocalRect localRegion(below.x, below.y, below.width, below.height);
         const Layout::NUISizeLimits limits{0.0, 0.0};
         const auto popupGlobal = m_popupLayer->getBounds(); // window-absolute: the layer's origin
