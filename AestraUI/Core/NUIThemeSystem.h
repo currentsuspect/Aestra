@@ -84,21 +84,23 @@ struct NUIThemeProperties {
     NUIColor outline;
     NUIColor outlineVariant;
     
-    // Interactive States
+    // Generic interaction states: how any control reacts to the pointer and the keyboard.
     NUIColor hover;
     NUIColor pressed;
     NUIColor focused;
     NUIColor selected;
     NUIColor disabled;
     NUIColor focusRing;
+    NUIColor dragTarget;
 
-    // Domain states remain separate from generic interaction states so
-    // selection does not compete with transport and mixer status.
-    NUIColor armed;
+    // Domain and control states: what a track, channel or effect is doing. A separate group from the generic
+    // interaction states above, so selection never competes with transport and mixer status, and from the
+    // status colours (success/warning/error/info), which they merely default to when a theme does not state them.
+    NUIColor armed;                  // ready to record
+    NUIColor recording;              // capture is happening now (defaults to armed)
     NUIColor muted;
     NUIColor soloed;
     NUIColor bypassed;
-    NUIColor dragTarget;
     
     // Interactive Element Defaults
     NUIColor buttonBgDefault;        // #242428
@@ -478,6 +480,10 @@ public:
     static const std::vector<KitTheme>& kitThemes();
     /// The variant called @p key; Ember dark when there is none.
     static NUIThemeProperties createKitTheme(const std::string& key);
+    /// Builds a theme from raw kit tokens ({name, 0xRRGGBBAA}); createKitTheme runs on this same path. Tokens the
+    /// kit does not state keep their derived values.
+    static NUIThemeProperties createThemeFromKitTokens(int mode,
+                                                       const std::vector<std::pair<std::string, uint32_t>>& rgbaTokens);
     /// Fills the surface and depth tokens an older preset does not state, from its polarity.
     static void finishDerivedTokens(NUIThemeProperties& theme);
     /// Fills the selection family (selectedText ... playhead) from primary, selected, secondary and the surfaces.

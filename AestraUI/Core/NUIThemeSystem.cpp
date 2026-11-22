@@ -67,6 +67,7 @@ void applyJSONThemeOverrides(const NUITheme& source, NUIThemeProperties& target)
     color("disabled", target.disabled);
     color("focusRing", target.focusRing);
     color("armed", target.armed);
+    color("recording", target.recording);
     color("muted", target.muted);
     color("soloed", target.soloed);
     color("bypassed", target.bypassed);
@@ -157,6 +158,10 @@ void applyJSONThemeOverrides(const NUITheme& source, NUIThemeProperties& target)
     }
     if (hasColor("info") && !hasColor("soloed"))
         target.soloed = target.info;
+    // Recording follows whatever armed ended up as when the file moves armed (or error) without stating recording;
+    // otherwise the base theme's own recording stands.
+    if (!hasColor("recording") && (hasColor("armed") || hasColor("error")))
+        target.recording = target.armed;
 
     const auto dimension = [&](const char* name, float& value) {
         if (source.hasDimensionOverride(name))
@@ -460,16 +465,19 @@ NUIColor NUIThemeManager::getColor(const std::string& colorName) const {
     if (colorName == "list.hover") return theme.hover;
     if (colorName == "textSelect") return theme.textPrimary;
     
-    // Interactive States
+    // Generic interaction states
     if (colorName == "hover") return theme.hover;
     if (colorName == "pressed") return theme.pressed;
     if (colorName == "focused") return theme.focused;
     if (colorName == "focusRing") return theme.focusRing;
+    if (colorName == "dragTarget") return theme.dragTarget;
+
+    // Domain and control states
     if (colorName == "armed") return theme.armed;
+    if (colorName == "recording") return theme.recording;
     if (colorName == "muted") return theme.muted;
     if (colorName == "soloed") return theme.soloed;
     if (colorName == "bypassed") return theme.bypassed;
-    if (colorName == "dragTarget") return theme.dragTarget;
     
     // Dropdown theme tokens
     if (colorName == "dropdown.background") return theme.surfaceTertiary.withAlpha(0.97f);
@@ -976,6 +984,7 @@ static NUIThemeProperties legacyAestraDark() {
     theme.disabled = NUIColor(0.5f, 0.5f, 0.5f, 0.38f);
     theme.focusRing = theme.primary.withAlpha(0.86f);
     theme.armed = theme.error;
+    theme.recording = theme.armed;
     theme.muted = theme.warning;
     theme.soloed = theme.info;
     theme.bypassed = theme.textDisabled;
@@ -1075,6 +1084,7 @@ static NUIThemeProperties legacyAestraLight() {
     theme.disabled = NUIColor(0.6f, 0.6f, 0.6f, 0.38f);
     theme.focusRing = theme.primary.withAlpha(0.82f);
     theme.armed = theme.error;
+    theme.recording = theme.armed;
     theme.muted = theme.warning;
     theme.soloed = theme.info;
     theme.bypassed = theme.textDisabled;
@@ -1350,6 +1360,7 @@ void deriveFromKitTokens(NUIThemeProperties& t) {
     t.inputBgHover = t.backgroundPrimary;
     t.inputBorderFocus = t.focusRing;
     t.armed = t.error;
+    t.recording = t.armed;
     t.muted = t.warning;
     t.soloed = t.secondary;
     t.bypassed = t.textDisabled;
@@ -1377,11 +1388,20 @@ NUIThemeProperties NUIThemePresets::createKitTheme(const std::string& key) {
     const KitThemeRow& row = it != rows.end() ? *it : rows.front();
 
     // Type, spacing, radii, shadows and motion are shared; only colours differ between variants.
-    NUIThemeProperties theme = row.info.mode == 1 ? legacyAestraLight() : legacyAestraDark();
-    theme.mode = row.info.mode;
-    for (const auto& token : row.tokens) {
-        if (NUIColor* slot = kitTokenSlot(theme, token.name))
-            *slot = colorFromRgba(token.rgba);
+    std::vector<std::pair<std::string, uint32_t>> tokens;
+    tokens.reserve(row.tokens.size());
+    for (const auto& token : row.tokens)
+        tokens.emplace_back(token.name, token.rgba);
+    return createThemeFromKitTokens(row.info.mode, tokens);
+}
+
+NUIThemeProperties NUIThemePresets::createThemeFromKitTokens(
+    int mode, const std::vector<std::pair<std::string, uint32_t>>& rgbaTokens) {
+    NUIThemeProperties theme = mode == 1 ? legacyAestraLight() : legacyAestraDark();
+    theme.mode = mode;
+    for (const auto& token : rgbaTokens) {
+        if (NUIColor* slot = kitTokenSlot(theme, token.first))
+            *slot = colorFromRgba(token.second);
     }
     deriveFromKitTokens(theme);
     return theme;
