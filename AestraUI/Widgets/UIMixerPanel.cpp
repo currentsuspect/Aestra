@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerPanel.h"
 #include "InspectorHandle.h"
+#include "MixerMinimal.h"
 #include "../Graphics/NUIDepth.h"
 #include "UIMixerStrip.h"
 #include "MixerScale.h"
@@ -587,8 +588,10 @@ void UIMixerPanel::renderGroupBands(NUIRenderer& renderer)
         } else if (band.master) {
             color = theme.getColor("textSecondary");
         }
-        renderer.fillRoundedRect(band.rect, 3.0f, color.withAlpha(band.master ? 0.10f : 0.18f));
-        renderer.fillRect(NUIRect{band.rect.x, band.rect.y, band.rect.width, 2.0f}, color.withAlpha(band.master ? 0.45f : 0.9f));
+        // Neutral band; the bus's colour is only the thin line that names it.
+        renderer.fillRoundedRect(band.rect, 3.0f, theme.getColor("textSecondary").withAlpha(MixerMinimal::kBandFillAlpha));
+        renderer.fillRect(NUIRect{band.rect.x, band.rect.y, band.rect.width, 1.0f},
+                          color.withAlpha(band.master ? MixerMinimal::kBandMasterLineAlpha : MixerMinimal::kBandLineAlpha));
         renderer.drawText("\xE2\x86\x92 " + band.label, {band.rect.x + 6.0f, band.rect.y + 3.0f}, 10.0f,
                           theme.getColor("textPrimary").withAlpha(0.88f));
     }

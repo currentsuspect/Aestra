@@ -14,7 +14,7 @@ namespace StripWash {
  *        of the meter well / the +6 mark, so the whole lane stays the plain strip. The edge comes from the layout,
  *        never from a percentage. Buses and returns follow the same rule as channels. Pure functions.
  */
-inline constexpr float kAlpha = 0.18f;
+inline constexpr float kAlpha = 0.11f; // low and desaturated (MixerMinimal.h): colour names the track, it does not paint it
 inline constexpr float kLift = 4.0f; // the tint ends this far above the lane (owner, 22 Nov: "push the colour up by 4px")
 
 /// Height of the tinted top, in px (the lane top less kLift), of a strip @p heightPx tall whose lane starts @p laneTopPx below the strip's top.

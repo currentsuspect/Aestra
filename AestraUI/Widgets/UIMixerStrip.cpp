@@ -4,6 +4,7 @@
 #include "MixerLane.h"
 #include "CorrelationLeds.h"
 #include "StripWash.h"
+#include "MixerMinimal.h"
 #include "../Graphics/NUIDepth.h"
 
 #include "NUIThemeSystem.h"
@@ -488,17 +489,18 @@ void UIMixerStrip::renderWash(NUIRenderer& renderer, const NUIRect& bounds)
     auto& theme = NUIThemeManager::getInstance();
     const NUIColor tc = m_channelId == 0 ? theme.getColor("textSecondary")
                         : m_trackColorIndex >= 0 ? trackColorFromIndex(m_trackColorIndex) : theme.getColor("accentPrimary");
+    const NUIColor tint = MixerMinimal::desaturate(tc, MixerMinimal::kTintDesaturate);
     const float alpha = StripWash::kAlpha;
     const float top = tintHeight();
     const int cornerRows = std::min(static_cast<int>(kStripRadius), static_cast<int>(top));
     for (int row = 0; row < cornerRows; ++row) {
         const float inset = StripWash::cornerInset(row, kStripRadius);
         renderer.fillRect({bounds.x + inset, bounds.y + static_cast<float>(row), bounds.width - inset * 2.0f, 1.0f},
-                          tc.withAlpha(alpha));
+                          tint.withAlpha(alpha));
     }
     if (top > static_cast<float>(cornerRows))
         renderer.fillRect({bounds.x, bounds.y + static_cast<float>(cornerRows), bounds.width, top - static_cast<float>(cornerRows)},
-                          tc.withAlpha(alpha));
+                          tint.withAlpha(alpha));
 }
 
 void UIMixerStrip::renderMasterReadout(NUIRenderer& renderer,

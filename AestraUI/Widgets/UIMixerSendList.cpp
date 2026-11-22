@@ -73,7 +73,7 @@ void UIMixerSendList::onRender(NUIRenderer& renderer) {
             renderer.drawLine({b.x + 8.0f, cy + s}, {b.x + 8.0f - s, cy}, 1.4f, amber.withAlpha(alpha));
             renderer.drawLine({b.x + 8.0f - s, cy}, {b.x + 8.0f, cy - s}, 1.4f, amber.withAlpha(alpha));
         } else {
-            renderer.fillRect(NUIRect{b.x + 5.0f, cy - 3.0f, 6.0f, 6.0f}, row.color.withAlpha(alpha));
+            renderer.fillRect(NUIRect{b.x + 5.0f, cy - 3.0f, 6.0f, 6.0f}, muted.withAlpha(alpha)); // neutral: the target's name is beside it
         }
         const std::string level = row.sidechain ? std::string("SC") : formatLevel(row.levelDb);
         const float levelW = renderer.measureText(level, kFont).width;

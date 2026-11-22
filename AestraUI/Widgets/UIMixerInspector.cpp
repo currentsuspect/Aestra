@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerInspector.h"
+#include "MixerMinimal.h"
 #include "SlotText.h"
 #include "NUIWheel.h"
 #include "MixerScale.h"
@@ -608,7 +609,9 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         NUIColor plate = th.surfaceRaised;
         if (channel->trackColorIndex >= 0) {
             const uint32_t argb = paletteIndexToARGB(channel->trackColorIndex);
-            plate = NUIColor(((argb >> 16) & 0xFF) / 255.0f, ((argb >> 8) & 0xFF) / 255.0f, (argb & 0xFF) / 255.0f, 1.0f);
+            plate = MixerMinimal::desaturate(
+                NUIColor(((argb >> 16) & 0xFF) / 255.0f, ((argb >> 8) & 0xFF) / 255.0f, (argb & 0xFF) / 255.0f, 1.0f),
+                MixerMinimal::kTintDesaturate);
         }
         const NUIColor ink = channel->trackColorIndex >= 0 ? themeManager.getColor("textOnStatus") : m_text;
         std::string dest = "Output";
@@ -724,7 +727,7 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
                     const uint32_t argb = paletteIndexToARGB(target->trackColorIndex);
                     swatch = NUIColor(((argb >> 16) & 0xFF) / 255.0f, ((argb >> 8) & 0xFF) / 255.0f, (argb & 0xFF) / 255.0f, 1.0f);
                 }
-                renderer.fillRoundedRect(NUIRect{r.x + 8.0f, cy - 4.0f, 8.0f, 8.0f}, 4.0f, swatch.withAlpha(alpha));
+                renderer.fillRoundedRect(NUIRect{r.x + 8.0f, cy - 4.0f, 8.0f, 8.0f}, 4.0f, m_text.withAlpha(alpha)); // neutral: the name is beside it
             }
             renderer.drawText(fitText(renderer, send.targetName, 11.0f, 64.0f), {r.x + 22.0f, SlotText::slotTextY(renderer, r, 11.0f)}, 11.0f,
                               m_text.withAlpha(alpha));
