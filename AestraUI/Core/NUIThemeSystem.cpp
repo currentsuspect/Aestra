@@ -3,6 +3,7 @@
 #include "NUITheme.h"
 #include <algorithm>
 #include <cmath>
+#include <unordered_set>
 #include <vector>
 
 namespace AestraUI {
@@ -1290,6 +1291,12 @@ NUIColor* kitTokenSlot(NUIThemeProperties& t, const std::string& name) {
         {"pressed", &NUIThemeProperties::pressed},
         {"selected", &NUIThemeProperties::selected},
         {"focused", &NUIThemeProperties::focused},
+        {"info", &NUIThemeProperties::info},
+        {"armed", &NUIThemeProperties::armed},
+        {"recording", &NUIThemeProperties::recording},
+        {"muted", &NUIThemeProperties::muted},
+        {"soloed", &NUIThemeProperties::soloed},
+        {"bypassed", &NUIThemeProperties::bypassed},
         {"dragTarget", &NUIThemeProperties::dragTarget},
         {"gridMajor", &NUIThemeProperties::gridMajor},
         {"gridMinor", &NUIThemeProperties::gridMinor},
@@ -1320,8 +1327,10 @@ NUIColor* kitTokenSlot(NUIThemeProperties& t, const std::string& name) {
 }
 
 /// The legacy fields every widget still reads, restated from the kit's tokens so no part of the app keeps an
-/// older theme's colour after a theme change.
-void deriveFromKitTokens(NUIThemeProperties& t) {
+/// older theme's colour after a theme change. `explicitNames` are the tokens the kit stated itself: a stated
+/// info/armed/recording/muted/soloed/bypassed is kept, and only an unstated one takes the colour it aliases.
+void deriveFromKitTokens(NUIThemeProperties& t, const std::unordered_set<std::string>& explicitNames) {
+    const auto derive = [&](const char* name) { return explicitNames.count(name) == 0; };
     t.background = t.backgroundPrimary;
     t.surface = t.backgroundSecondary;
     t.surfaceVariant = t.surfaceTertiary;
@@ -1329,7 +1338,7 @@ void deriveFromKitTokens(NUIThemeProperties& t) {
     t.secondaryVariant = t.primary;
     t.accentPrimary = t.primary;
     t.accentSecondary = t.secondary;
-    t.info = t.secondary;
+    if (derive("info")) t.info = t.secondary;
     t.textLink = t.secondary;
     t.textCritical = t.error;
     t.textOnSecondary = t.textOnPrimary;
@@ -1359,11 +1368,11 @@ void deriveFromKitTokens(NUIThemeProperties& t) {
     t.inputBgDefault = t.backgroundPrimary; // Design Spec: a field is a well in the bed
     t.inputBgHover = t.backgroundPrimary;
     t.inputBorderFocus = t.focusRing;
-    t.armed = t.error;
-    t.recording = t.armed;
-    t.muted = t.warning;
-    t.soloed = t.secondary;
-    t.bypassed = t.textDisabled;
+    if (derive("armed")) t.armed = t.error;
+    if (derive("recording")) t.recording = t.armed;
+    if (derive("muted")) t.muted = t.warning;
+    if (derive("soloed")) t.soloed = t.secondary;
+    if (derive("bypassed")) t.bypassed = t.textDisabled;
     t.highlightGlow = t.primary.withAlpha(0.20f);
     t.meterActive = t.meterSafe;
     t.mixerMasterBorder = t.primary.withAlpha(0.34f);
@@ -1399,11 +1408,14 @@ NUIThemeProperties NUIThemePresets::createThemeFromKitTokens(
     int mode, const std::vector<std::pair<std::string, uint32_t>>& rgbaTokens) {
     NUIThemeProperties theme = mode == 1 ? legacyAestraLight() : legacyAestraDark();
     theme.mode = mode;
+    std::unordered_set<std::string> explicitNames;
     for (const auto& token : rgbaTokens) {
-        if (NUIColor* slot = kitTokenSlot(theme, token.first))
+        if (NUIColor* slot = kitTokenSlot(theme, token.first)) {
             *slot = colorFromRgba(token.second);
+            explicitNames.insert(token.first);
+        }
     }
-    deriveFromKitTokens(theme);
+    deriveFromKitTokens(theme, explicitNames);
     return theme;
 }
 
