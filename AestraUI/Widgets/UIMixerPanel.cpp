@@ -797,10 +797,18 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
         // A width-imposed collapse reads as unavailable rather than chosen: the
         // rail still accepts the click (it records intent) but must not look
         // like it will open the panel right now, or it feels broken.
-        const NUIColor railColor = m_inspectorToggleHovered
-            ? theme.getColor("accentPrimary").withAlpha(forced ? 0.18f : 0.34f)
-            : theme.getColor("surfaceTertiary").withAlpha(collapsed ? 0.72f : 0.34f);
-        renderer.fillRoundedRect(rail, 3.0f, railColor);
+        // Expanded, the handle is the chevron on a short pill centred on the rail, not a stripe the inspector's full
+        // height: hover is one quiet, flat, neutral step on that pill (no accent wash, no glow), so a pointer
+        // crossing the edge on its way elsewhere barely registers. Collapsed, the rail is all that is left of the
+        // inspector, so it stays a full-height strip, one step lighter on hover.
+        const NUIColor lit = (forced ? theme.getColor("hover") : theme.getColor("surfaceRaised")).withAlpha(forced ? 0.6f : 0.95f);
+        if (collapsed) {
+            renderer.fillRoundedRect(rail, 3.0f, m_inspectorToggleHovered ? lit : theme.getColor("surfaceTertiary").withAlpha(0.72f));
+        } else if (m_inspectorToggleHovered) {
+            constexpr float kHandleH = 56.0f;
+            const NUIRect pill{rail.x, rail.y + (rail.height - kHandleH) * 0.5f, rail.width, std::min(kHandleH, rail.height)};
+            renderer.fillRoundedRect(pill, 4.0f, lit);
+        }
 
         // Chevron points the way the panel will move.
         float glyphAlpha = m_inspectorToggleHovered ? 0.95f : 0.6f;

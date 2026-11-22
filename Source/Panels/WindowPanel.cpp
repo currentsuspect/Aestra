@@ -94,8 +94,9 @@ WindowPanel::WindowPanel(const std::string& title)
     m_maximizeButton->setStyle(AestraUI::NUIButton::Style::Text);
     m_maximizeButton->setText("");
     m_maximizeButton->setBackgroundColor(AestraUI::NUIColor::transparent());
-    m_maximizeButton->setHoverColor(theme.getColor("primary").withAlpha(0.20f));
-    m_maximizeButton->setPressedColor(theme.getColor("primary").withAlpha(0.14f));
+    // Quiet, flat and neutral (no accent wash): a pointer crossing the corner on its way to close barely registers.
+    m_maximizeButton->setHoverColor(theme.getColor("hover"));
+    m_maximizeButton->setPressedColor(theme.getColor("pressed"));
     m_maximizeButton->setTextColor(AestraUI::NUIColor::transparent());
     m_maximizeButton->setOnClick([this]() {
         onMaximizeClicked();
@@ -107,8 +108,9 @@ WindowPanel::WindowPanel(const std::string& title)
     m_minimizeButton->setStyle(AestraUI::NUIButton::Style::Text);
     m_minimizeButton->setText("");
     m_minimizeButton->setBackgroundColor(AestraUI::NUIColor::transparent());
-    m_minimizeButton->setHoverColor(theme.getColor("primary").withAlpha(0.20f));
-    m_minimizeButton->setPressedColor(theme.getColor("primary").withAlpha(0.14f));
+    // Quiet, flat and neutral (no accent wash): a pointer crossing the corner on its way to close barely registers.
+    m_minimizeButton->setHoverColor(theme.getColor("hover"));
+    m_minimizeButton->setPressedColor(theme.getColor("pressed"));
     m_minimizeButton->setTextColor(AestraUI::NUIColor::transparent());
     m_minimizeButton->setOnClick([this]() {
         onMinimizeClicked();
