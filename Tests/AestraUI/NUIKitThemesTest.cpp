@@ -344,6 +344,31 @@ void testJsonDomainStates() {
     manager.setActiveTheme("Aestra-dark");
 }
 
+// The kit's spacing scale (tokens.json, group "spacing") is pinned here; regenerate NUIKitMetrics.inc with
+// tools/theme/gen_kit_metrics.py when the kit changes it. The legacy names keep their values: no layout moves.
+void testKitSpacing() {
+    std::cout << "kit spacing scale\n";
+    auto& manager = NUIThemeManager::getInstance();
+    manager.setActiveTheme("ember-dark");
+    const std::pair<const char*, float> kit[] = {{"space-xxs", 2.0f}, {"space-xs", 4.0f}, {"space-s", 8.0f},
+                                                 {"space-m", 16.0f},  {"space-l", 24.0f}, {"space-xl", 32.0f},
+                                                 {"space-xxl", 48.0f}};
+    float previous = 0.0f;
+    for (const auto& [name, px] : kit) {
+        const float v = manager.getSpacing(name);
+        check(v == px, std::string(name) + " is " + std::to_string(static_cast<int>(px)) + "px");
+        check(v > previous, std::string(name) + " is larger than the step before");
+        previous = v;
+    }
+    check(manager.getSpacing("xxs") == 2.0f, "short name xxs reads the kit");
+    check(manager.getSpacing("xl") == 32.0f && manager.getSpacing("xxl") == 48.0f, "short names xl and xxl read the kit");
+    check(manager.getSpacing("xs") == 4.0f && manager.getSpacing("s") == 8.0f && manager.getSpacing("m") == 16.0f &&
+              manager.getSpacing("l") == 24.0f,
+          "legacy names xs, s, m, l are unchanged");
+    check(manager.getSpacing("no-such-step") == 16.0f, "an unknown name still falls back to m");
+    manager.setActiveTheme("Aestra-dark");
+}
+
 } // namespace
 
 int main() {
@@ -355,6 +380,7 @@ int main() {
     testDomainStatesSurvive();
     testDomainStatesFallBack();
     testJsonDomainStates();
+    testKitSpacing();
     std::cout << (gFailures == 0 ? "ALL PASS\n" : "FAILURES: " + std::to_string(gFailures) + "\n");
     return gFailures == 0 ? 0 : 1;
 }

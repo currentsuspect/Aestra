@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <string>
 #include <algorithm>
+#include <array>
 #include <memory>
 #include <cstdint>
 #include <functional>
@@ -13,6 +14,23 @@
 #include <vector>
 
 namespace AestraUI {
+
+/// The Aestra Kit's metrics, generated into NUIKitMetrics.inc by tools/theme/gen_kit_metrics.py.
+namespace NUIKitMetrics {
+enum SpacingStep { XXS, XS, S, M, L, XL, XXL, Count }; // order of the lines in NUIKitMetrics.inc
+inline constexpr float kSpacing[] = {
+#define AESTRA_KIT_SPACING(step, px) px,
+#include "NUIKitMetrics.inc"
+#undef AESTRA_KIT_SPACING
+};
+static_assert(sizeof(kSpacing) / sizeof(kSpacing[0]) == Count, "NUIKitMetrics.inc and SpacingStep disagree");
+inline std::array<float, Count> spacingScale() {
+    std::array<float, Count> out{};
+    for (int i = 0; i < Count; ++i)
+        out[i] = kSpacing[i];
+    return out;
+}
+} // namespace NUIKitMetrics
 
 // Theme variants
 enum class NUIThemeVariant {
@@ -184,12 +202,15 @@ struct NUIThemeProperties {
     int mode = 0;
     
     // Spacing
-    float spacingXS = 4.0f;
-    float spacingS = 8.0f;
-    float spacingM = 16.0f;
-    float spacingL = 24.0f;
-    float spacingXL = 32.0f;
-    float spacingXXL = 48.0f;
+    // The legacy names equal the kit's steps xs..xxl (checked when the kit scale arrived), so they read the kit.
+    float spacingXS = NUIKitMetrics::kSpacing[NUIKitMetrics::XS];
+    float spacingS = NUIKitMetrics::kSpacing[NUIKitMetrics::S];
+    float spacingM = NUIKitMetrics::kSpacing[NUIKitMetrics::M];
+    float spacingL = NUIKitMetrics::kSpacing[NUIKitMetrics::L];
+    float spacingXL = NUIKitMetrics::kSpacing[NUIKitMetrics::XL];
+    float spacingXXL = NUIKitMetrics::kSpacing[NUIKitMetrics::XXL];
+    // The Aestra Kit's scale, smallest first (space-xxs .. space-xxl). Not used by any layout yet.
+    std::array<float, NUIKitMetrics::Count> kitSpacing = NUIKitMetrics::spacingScale();
     
     // Border radius — "dense instrument" scale, recentered onto the 5-7px
     // mass the UI actually uses (see Aestra-Internals: aestra-docs/ui-type-space-grammar.md).

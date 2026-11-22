@@ -613,6 +613,14 @@ NUIColor NUIThemeManager::getColor(const std::string& colorName) const {
 float NUIThemeManager::getSpacing(const std::string& spacingName) const {
     const auto& theme = getCurrentTheme();
     
+    // The kit's own names, plus the short ones the legacy scale never had (xxs).
+    static const std::unordered_map<std::string, int> kitSteps = {
+        {"space-xxs", NUIKitMetrics::XXS}, {"space-xs", NUIKitMetrics::XS}, {"space-s", NUIKitMetrics::S},
+        {"space-m", NUIKitMetrics::M},     {"space-l", NUIKitMetrics::L},   {"space-xl", NUIKitMetrics::XL},
+        {"space-xxl", NUIKitMetrics::XXL}, {"xxs", NUIKitMetrics::XXS}};
+    if (const auto it = kitSteps.find(spacingName); it != kitSteps.end())
+        return theme.kitSpacing[static_cast<size_t>(it->second)];
+
     if (spacingName == "xs") return theme.spacingXS;
     if (spacingName == "s") return theme.spacingS;
     if (spacingName == "m") return theme.spacingM;
