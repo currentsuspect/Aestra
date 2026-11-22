@@ -9,6 +9,7 @@
 #include <string>
 
 #if defined(SDL_VIDEO_DRIVER_X11)
+#include "InputFocusPolicy.h"
 #include "XInputFocus.h"
 #endif
 
@@ -100,6 +101,34 @@ bool PlatformWindowLinux::pressUnderChild(int x, int y) const {
 #else
     (void)x; (void)y;
     return false;
+#endif
+}
+
+void PlatformWindowLinux::reclaimFocusForPress(int x, int y) {
+#if defined(SDL_VIDEO_DRIVER_X11)
+    Display* display = nullptr;
+    ::Window win = 0;
+    if (!x11Handles(m_window, display, win)) return;
+    const auto snap = XInputFocus::query(display, win);
+    const bool take = shouldReclaimInputFocus(XInputFocus::known(snap), XInputFocus::isAestra(snap), true,
+                                              XInputFocus::childUnder(display, win, x, y));
+    if (!take) return;
+    XInputFocus::reclaim(display, win);
+    if (InputTrace::enabled()) InputTrace::log("press on Aestra while focus was elsewhere: focus RECLAIMED | was " + XInputFocus::describe(snap));
+#else
+    (void)x; (void)y;
+#endif
+}
+
+void PlatformWindowLinux::reclaimInputFocus() {
+#if defined(SDL_VIDEO_DRIVER_X11)
+    Display* display = nullptr;
+    ::Window win = 0;
+    if (!x11Handles(m_window, display, win)) return;
+    const auto snap = XInputFocus::query(display, win);
+    if (!XInputFocus::known(snap) || XInputFocus::isAestra(snap)) return;
+    XInputFocus::reclaim(display, win);
+    if (InputTrace::enabled()) InputTrace::log("focus RECLAIMED by request (panel closed) | was " + XInputFocus::describe(snap));
 #endif
 }
 

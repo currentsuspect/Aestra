@@ -95,6 +95,7 @@ public:
     void setCloseCallback(std::function<void()> callback) override { m_closeCallback = callback; }
     void setFocusCallback(std::function<void(bool focused)> callback) override { m_focusCallback = callback; }
     void requestFocus() override;
+    void reclaimInputFocus() override;
     void setDPIChangeCallback(std::function<void(float dpiScale)> callback) override { m_dpiChangeCallback = callback; }
 
 private:
@@ -124,6 +125,7 @@ private:
     void traceInputEvent(const SDL_Event& e);
     void traceFocusOwnerChange();
     bool pressUnderChild(int x, int y) const;
+    void reclaimFocusForPress(int x, int y);
     unsigned long m_lastTracedFocusWindow = ~0ul;
     bool m_isWindowVisible = true;
     bool m_isWindowMapped = true;

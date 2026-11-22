@@ -52,6 +52,9 @@ NativePluginPanel::~NativePluginPanel() {
         m_bridge->placeChildWindow(m_child, 0, 0, 1, 1, false);
     if (auto instance = m_instance.lock())
         instance->closeEditor();
+    // The plugin's window may have held X input focus, and X hands it to nobody in particular when that window dies.
+    if (m_bridge && m_child)
+        m_bridge->reclaimInputFocus();
 }
 
 NUISize NativePluginPanel::panelSizeFor(int width, int height) const {

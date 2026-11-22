@@ -93,4 +93,11 @@ bool childUnder(Display* display, ::Window aestra, int x, int y) {
     return hit;
 }
 
+void reclaim(Display* display, ::Window aestra) {
+    if (!display || !aestra) return;
+    XErrorGuard guard(display); // BadMatch when the window is not viewable
+    XSetInputFocus(display, aestra, RevertToParent, CurrentTime);
+    XFlush(display);
+}
+
 } // namespace Aestra::XInputFocus

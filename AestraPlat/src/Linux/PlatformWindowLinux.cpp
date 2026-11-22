@@ -7,6 +7,7 @@
 #if defined(SDL_VIDEO_DRIVER_X11)
 #include <X11/Xlib.h>
 #include <X11/cursorfont.h>
+#include "InputFocusPolicy.h"
 #include "XErrorGuard.h"
 #include "XInputFocus.h"
 #endif
@@ -197,6 +198,10 @@ bool PlatformWindowLinux::pollEvents() {
 
         case SDL_MOUSEBUTTONDOWN:
         case SDL_MOUSEBUTTONUP:
+            // A plugin editor may hold X input focus; a left press on Aestra's own surface takes it back.
+            if (e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT &&
+                e.button.windowID == SDL_GetWindowID(m_window))
+                reclaimFocusForPress(e.button.x, e.button.y);
             if (m_mouseButtonCallback) {
                 MouseButton btn = MouseButton::Left;
                 if (e.button.button == SDL_BUTTON_RIGHT)

@@ -328,6 +328,8 @@ public:
     virtual void setFocusCallback(std::function<void(bool focused)> callback) = 0;
     /** @brief Request the window to be brought to front and gain focus. */
     virtual void requestFocus() = 0;
+    /** @brief Take keyboard focus back when an embedded child window (a plugin editor) holds it. Default: nothing. */
+    virtual void reclaimInputFocus() {}
     /** @brief Set the DPI-change callback. */
     virtual void setDPIChangeCallback(std::function<void(float dpiScale)> callback) = 0;
 };

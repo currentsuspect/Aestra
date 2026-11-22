@@ -626,6 +626,10 @@ bool NUIPlatformBridge::applyArrowCursorToSubtree(std::uintptr_t child) {
     return m_window && m_window->applyArrowCursorToSubtree(child);
 }
 
+void NUIPlatformBridge::reclaimInputFocus() {
+    if (m_window) m_window->reclaimInputFocus();
+}
+
 bool NUIPlatformBridge::placeChildWindow(std::uintptr_t child, int x, int y, int width, int height, bool visible) {
     return m_window && m_window->placeChildWindow(child, x, y, width, height, visible);
 }

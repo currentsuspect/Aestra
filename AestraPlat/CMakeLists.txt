@@ -51,6 +51,7 @@ elseif(UNIX AND NOT APPLE)
             src/Linux/PlatformWindowLinux.h
             src/Linux/XErrorGuard.h
             src/Linux/XInputFocus.h
+            src/Linux/InputFocusPolicy.h
         )
         list(APPEND AESTRA_PLAT_PRIVATE_DEFINITIONS AESTRA_HAS_SDL2)
     else()

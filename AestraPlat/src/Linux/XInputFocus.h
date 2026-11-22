@@ -26,4 +26,7 @@ inline bool isAestra(const Snapshot& s) { return s.relation == Relation::Aestra;
 /// A mapped child of Aestra's window that covers (x, y) in Aestra's coordinates.
 bool childUnder(Display* display, ::Window aestra, int x, int y);
 
+/// Gives Aestra's window X input focus. Does not raise it.
+void reclaim(Display* display, ::Window aestra);
+
 } // namespace Aestra::XInputFocus
