@@ -967,6 +967,17 @@ void AestraApp::buildMenuBar() {
         m_windowManager->showDropdownMenu(menu, 145.0f);
     });
 
+    // Collapsed (a narrow window): the one "Menu" button lists the same menus; choosing one opens it as it would from the full bar.
+    menuBar->setOnCollapsedClick([this, weak = std::weak_ptr<AestraUI::NUIMenuBar>(menuBar)]() {
+        auto bar = weak.lock();
+        if (!bar) return;
+        auto list = std::make_shared<AestraUI::NUIContextMenu>();
+        for (const auto& item : bar->items()) {
+            auto action = item.onClick;
+            list->addItem(item.label, [action]() { if (action) action(); });
+        }
+        m_windowManager->showDropdownMenu(list, 10.0f);
+    });
     menuBar->setBounds(AestraUI::NUIRect(10.0f, 4.0f, 230.0f, 24.0f));
     m_windowManager->setMenuBar(menuBar);
 

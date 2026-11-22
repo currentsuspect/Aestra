@@ -890,6 +890,15 @@ void AudioClipEditorPanel::togglePreview() {
     repaint();
 }
 
+void AudioClipEditorPanel::onThemeChanged(const AestraUI::NUIThemeProperties& themeProps) {
+    if (m_resetButton) {
+        m_resetButton->setHoverColor(NUIThemeManager::getInstance().getColor("error").withAlpha(0.14f));
+        m_resetButton->setPressedColor(NUIThemeManager::getInstance().getColor("error").withAlpha(0.14f));
+        m_resetButton->setTextColor(mutedTextColor());
+    }
+    WindowPanel::onThemeChanged(themeProps);
+}
+
 void AudioClipEditorPanel::onUpdate(double deltaTime) {
     WindowPanel::onUpdate(deltaTime);
     if (m_previewSecondsLeft > 0.0) {

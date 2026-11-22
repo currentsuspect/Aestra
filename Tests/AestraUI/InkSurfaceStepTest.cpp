@@ -126,6 +126,14 @@ int main() {
         check(!text.empty() && text.find(a.gone) == std::string::npos, std::string(a.what) + " (" + a.file + ")");
     }
 
+    {
+        // The frame is drawn after the title bar is filled (a stroke first, then a fill over it, left stubs at the top corners).
+        const std::string wp = slurp(root + "/Source/Panels/WindowPanel.cpp");
+        const size_t fillAt = wp.find("renderer.fillRect(titleBarRect, titleBarColor);"), frameAt = wp.find("Aestra::PanelFrame::draw(renderer, bounds, borderColor);");
+        check(fillAt != std::string::npos && frameAt != std::string::npos && frameAt > fillAt, "WindowPanel draws its frame after the title bar fill, so nothing covers it");
+        check(wp.find("strokeRect(bounds") == std::string::npos, "and not with a stroke that the title bar fill would cut");
+    }
+
     std::cout << g_checks << " checks, " << g_failures << " failure(s)\n";
     std::cout << (g_failures == 0 ? "ALL PASS\n" : "FAILURES\n");
     return g_failures == 0 ? 0 : 1;

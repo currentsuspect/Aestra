@@ -134,6 +134,52 @@ int main() {
         }
     }
 
+    std::cout << "[5c] narrow windows: no two header controls overlap and each keeps 24 px, from 600 to 1400 px wide\n";
+    {
+        namespace R = Aestra::ArsenalResponsive;
+        const auto overlap = [](const AestraUI::NUIRect& a, const AestraUI::NUIRect& b) {
+            return a.width > 0 && b.width > 0 && a.x < b.right() - 1e-3f && b.x < a.right() - 1e-3f && a.y < b.bottom() - 1e-3f && b.y < a.bottom() - 1e-3f;
+        };
+        int tiers[6] = {0, 0, 0, 0, 0, 0};
+        for (float window = 600.0f; window <= 1400.0f; window += 20.0f) {
+            const float panelW = window - 262.0f, headerW = panelW - 16.0f; // the browser column is 262 wide
+            const float stripW = R::sceneStripWidth(headerW, panelW);
+            const AestraUI::NUIRect rect(300.0f, 130.0f, stripW, 44.0f);
+            ArsenalSceneStrip s;
+            s.refresh(pm, b.value, rect);
+            const auto l = ArsenalSceneStrip::headerLayout(rect);
+            const auto add = s.addRect();
+            const std::string at = "window " + std::to_string(static_cast<int>(window)) + " (strip " + std::to_string(static_cast<int>(stripW)) + "): ";
+            const AestraUI::NUIRect parts[] = {add, l.label, l.track, l.divider, l.place};
+            bool clean = true;
+            for (size_t i = 0; i < 5; ++i)
+                for (size_t j = i + 1; j < 5; ++j) clean = clean && !overlap(parts[i], parts[j]);
+            check(clean, at + "the + chip, label, slider, divider and the button overlap nothing");
+            check(l.place.width >= R::kMinHit && l.place.height >= R::kMinHit, at + "the Place button keeps 24 px");
+            check(l.track.width == 0.0f || (l.track.width >= R::kMinHit && l.track.height >= R::kMinHit), at + "the slider, when shown, keeps 24 px");
+            check(add.width >= R::kMinHit && add.height >= R::kMinHit, at + "the + chip keeps 24 px");
+            check(add.right() + ArsenalSceneStrip::kGap <= (l.label.width > 0 ? l.label.x : l.track.width > 0 ? l.track.x : l.place.x) + 1e-3f ||
+                      stripW < R::kMinScenes + ArsenalSceneStrip::kAddW + 34.0f,
+                  at + "the + chip ends before the right end begins");
+            check(l.place.right() <= rect.right() + 1e-3f && l.place.x >= rect.x, at + "the right end stays inside the strip");
+            const auto fit = R::fitFor(panelW);
+            check(fit.fitHalf >= R::kMinHit && fit.width - fit.fitHalf >= R::kMinHit, at + "Fit and Scroll each keep 24 px");
+            const auto r = R::rightFor(stripW, ArsenalSceneStrip::kAddW + ArsenalSceneStrip::kGap);
+            ++tiers[(r.label ? 0 : r.divider ? 1 : r.swing ? (r.place == R::PlaceLabel::Full ? 2 : 3) : r.place == R::PlaceLabel::Short ? 4 : 5)];
+        }
+        check(tiers[0] > 0 && tiers[2] + tiers[3] + tiers[4] > 0, "the sweep passes through the full header and the collapsed tiers (Swing label first, then the divider, then the Place label)");
+        // The stepper pills fit the head at each density's floor (195 / 262 / 294), and the old minimum width overlapped the ruler.
+        for (const float head : {195.0f, 262.0f, 294.0f}) {
+            const auto st = R::steppersFor(head);
+            const float width = 10.0f + (R::kMinHit + st.gapInner + st.barsValueW + st.gapInner + R::kMinHit) + st.gapBetween +
+                                (R::kMinHit + st.gapInner + st.stepsValueW + st.gapInner + R::kMinHit);
+            check(width <= head - 10.0f + 1e-3f, "the bars and steps pills fit a " + std::to_string(static_cast<int>(head)) + " px head (" + std::to_string(width) + ")");
+        }
+        check(std::max(272.0f, 195.0f - 10.0f) > 195.0f, "(negative control) the old stepper card was at least 272 px wide, past a 195 px head: it overlapped the ruler");
+        const float oldRight = ArsenalSceneStrip::kRightW, narrowStrip = R::sceneStripWidth(398.0f - 16.0f, 398.0f);
+        check(narrowStrip - oldRight - ArsenalSceneStrip::kGap - ArsenalSceneStrip::kAddW < 0.0f, "(negative control) the old fixed 296 px right end left no room for the + chip in a 660 px window");
+    }
+
     std::cout << "[6] the place button asks the panel to place the pattern\n";
     {
         AestraUI::NUIMouseEvent e;

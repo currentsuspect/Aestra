@@ -113,8 +113,17 @@ int main() {
     // Part 3: no panel may copy theme colours into members without an onThemeChanged.
     const fs::path root_dir = AESTRA_SOURCE_DIR;
     const std::regex memberRead("^\\s+(m_\\w+|\\w+_)\\s*=\\s*[^=;]*(getColor|getCurrentTheme\\(\\)\\.)");
+    // Panels also push theme colours into the widgets they build (button.setHoverColor(theme.getColor(...))): the widget keeps them.
+    // A panel that does this needs an onThemeChanged to push them again (owner, 21 Nov 2026: every WindowPanel's header icons kept the old
+    // theme's near-black after a switch to Ink dark, because they were set once in the constructor).
+    const std::regex pushRead("\\bset\\w*Color\\s*\\([^;]*getColor\\(");
+    check(std::regex_search(std::string("m_closeButton->setHoverColor(theme.getColor(\"error\").withAlpha(0.24f));"), pushRead),
+          "(negative control) the old WindowPanel constructor line is caught by the push-style rule");
     const std::set<std::string> exempt = {
         "AestraUI/Widgets/UnitRow.cpp", // its m_look is recomputed from the theme on every render; nothing is kept across frames
+        "Source/Panels/ArsenalPanel.cpp", // its Add-a-sound button is rebuilt, with fresh colours, on every refresh
+        "Source/Panels/ArsenalSceneMenu.cpp", // the rename editor lives for one edit and is built from the current theme each time
+        "Source/Panels/SampleEditorPanel.cpp", // KNOWN GAP: buildUI sets ~26 widget colours once; a theme switch leaves them (tracked, not fixed here)
     };
     int scanned = 0;
     for (const char* top : {"AestraUI/Widgets", "AestraUI/Base", "Source/Components", "Source/Panels", "Source/Settings", "Source/ui", "Source/HUD"}) {
@@ -130,7 +139,7 @@ int main() {
             std::stringstream ss(body);
             bool reads = false;
             for (std::string line; std::getline(ss, line);) {
-                if (std::regex_search(line, memberRead)) { reads = true; break; }
+                if (std::regex_search(line, memberRead) || (rel.rfind("Source/Panels/", 0) == 0 && std::regex_search(line, pushRead))) { reads = true; break; }
             }
             if (!reads || exempt.count(rel)) continue;
             fs::path header = e.path();

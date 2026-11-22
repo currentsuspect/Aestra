@@ -4,6 +4,7 @@
 #include "NUIRenderer.h"
 #include "NUITypes.h"
 #include "NUIThemeSystem.h"
+#include <algorithm>
 #include <vector>
 #include <string>
 #include <functional>
@@ -32,6 +33,13 @@ public:
         setDirty(true);
     }
     
+    /// Narrow window: the bar shows one "Menu" button instead of its items, which would run into the view switcher. Its click goes to
+    /// the callback set with setOnCollapsedClick (the app lists the items in a dropdown). The title bar decides when to collapse.
+    void setCollapsed(bool collapsed) { if (collapsed_ != collapsed) { collapsed_ = collapsed; hoveredIndex_ = pressedIndex_ = -1; itemRects_.clear(); setDirty(true); } }
+    bool isCollapsed() const { return collapsed_; }
+    void setOnCollapsedClick(std::function<void()> callback) { onCollapsedClick_ = std::move(callback); }
+    const std::vector<MenuItem>& items() const { return items_; }
+
     void clear() {
         items_.clear();
         hoveredIndex_ = -1;
@@ -52,9 +60,11 @@ public:
 
         // Calculate and render each menu item
         itemRects_.clear();
-        for (size_t i = 0; i < items_.size(); ++i) {
+        const size_t shown = collapsed_ ? std::min<size_t>(1, items_.size()) : items_.size();
+        for (size_t i = 0; i < shown; ++i) {
             const auto& item = items_[i];
-            NUISize sz = renderer.measureText(item.label, fontSize);
+            const std::string label = collapsed_ ? std::string("Menu") : item.label;
+            NUISize sz = renderer.measureText(label, fontSize);
 
             NUIRect itemRect(x, bounds.y + 2.0f, sz.width + paddingX * 2, bounds.height - 4.0f);
             itemRects_.push_back(itemRect);
@@ -72,7 +82,7 @@ public:
                 renderer.strokeRoundedRect(itemRect, radius, props.layout.dividerWidth, colors.border);
             }
 
-            renderer.drawTextCentered(item.label, itemRect, fontSize, colors.text);
+            renderer.drawTextCentered(label, itemRect, fontSize, colors.text);
 
             x += itemRect.width + gap;
         }
@@ -138,7 +148,9 @@ public:
             const int armedIndex = pressedIndex_;
             pressedIndex_ = -1;
             setDirty(true);
-            if (armedIndex >= 0 && armedIndex == hoveredIndex_ &&
+            if (armedIndex >= 0 && armedIndex == hoveredIndex_ && collapsed_) {
+                if (onCollapsedClick_) onCollapsedClick_();
+            } else if (armedIndex >= 0 && armedIndex == hoveredIndex_ &&
                 armedIndex < static_cast<int>(items_.size()) && items_[armedIndex].onClick) {
                 items_[armedIndex].onClick();
             }
@@ -153,6 +165,8 @@ private:
     std::vector<NUIRect> itemRects_; // Computed during render
     int hoveredIndex_;
     int pressedIndex_;
+    bool collapsed_ = false;
+    std::function<void()> onCollapsedClick_;
 };
 
 } // namespace AestraUI

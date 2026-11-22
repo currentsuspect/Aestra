@@ -54,6 +54,22 @@ struct ArsenalKit {
         return out;
     }
 
+    /// Whether the kit offer ("Start with a kit") is still shown: only while no unit has a sample. @p clipPaths is each unit's loaded sample path
+    /// (empty when it has none). A sample that arrives by a drop, "Add to Arsenal" or a project load sets the same unit path, and undoing the load
+    /// clears it, so this one rule covers all four; the folded line then keeps "+ Add a sound" and "Browse a folder" only.
+    static bool offersKit(const std::vector<std::string>& clipPaths) {
+        return std::none_of(clipPaths.begin(), clipPaths.end(), [](const std::string& p) { return !p.empty(); });
+    }
+
+    /// offersKit over the rows' units (drop, Add to Arsenal and project load all set the unit's audioClipPath; undo clears it).
+    template <class UnitMgr, class Rows>
+    static bool offersKitFor(const UnitMgr& units, const Rows& rows) {
+        std::vector<std::string> paths;
+        for (const auto& row : rows)
+            if (const auto* u = row ? units.getUnit(row->getUnitId()) : nullptr) paths.push_back(u->audioClipPath);
+        return offersKit(paths);
+    }
+
 private:
     static std::string lower(std::string s) {
         for (auto& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
@@ -75,7 +91,9 @@ public:
     void place(bool shown, const AestraUI::NUIRect& slot) { m_mode = Mode::Full; m_shown = shown; m_slot = slot; }
     /// The folded line: @p slot is kFoldedReserve tall (an 8 px gap under the last row, then the line); @p visible is false
     /// while it is scrolled out of the list's viewport, so it neither draws nor takes clicks.
-    void placeFolded(bool visible, const AestraUI::NUIRect& slot) { m_mode = Mode::Folded; m_shown = visible; m_slot = slot; }
+    /// @p kitOffer false drops the "Start with a kit" words (a sample is loaded); the slot's height is unchanged, so no row moves.
+    void placeFolded(bool visible, const AestraUI::NUIRect& slot, bool kitOffer = true) { m_mode = Mode::Folded; m_shown = visible; m_slot = slot; m_kitOffer = kitOffer; }
+    bool kitOffered() const { return m_kitOffer; }
     bool shown() const { return m_shown; }
     bool folded() const { return m_mode == Mode::Folded; }
     /// Folded line: "+ Add a sound" sits at the left (the panel's own button is placed here), the kit offer at the right.
@@ -97,7 +115,7 @@ public:
             const auto b = browseRect();
             const AestraUI::NUIColor muted = theme.getColor("textMuted");
             renderer.drawTextCentered("Browse a folder", b, tp.fontSizeS, theme.getColor("textSecondary"));
-            renderer.drawTextCentered("Start with a kit", {b.x - 120.0f, b.y, 112.0f, b.height}, tp.fontSizeS, muted);
+            if (m_kitOffer) renderer.drawTextCentered("Start with a kit", {b.x - 120.0f, b.y, 112.0f, b.height}, tp.fontSizeS, muted);
             return;
         }
         if (m_slot.width < kW) return;
@@ -121,6 +139,7 @@ public:
 
 private:
     Mode m_mode{Mode::Full};
+    bool m_kitOffer{true};
     bool m_shown{false};
     AestraUI::NUIRect m_slot{};
 };

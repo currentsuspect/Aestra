@@ -108,6 +108,8 @@ public:
     // Component overrides
     void onRender(AestraUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
+    /// Re-reads the buttons' hover and pressed fills and the key label colour (set once when the buttons are built).
+    void onThemeChanged(const AestraUI::NUIThemeProperties& theme) override;
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
 
     /** Width at the bar's right edge occupied by overlay siblings (the

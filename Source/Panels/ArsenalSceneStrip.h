@@ -6,6 +6,7 @@
 #include "NUIThemeSystem.h"
 #include "NUIDoubleClick.h"
 #include "UnitRowLook.h"
+#include "ArsenalResponsive.h"
 #include "NUIDepth.h"
 
 #include <algorithm>
@@ -34,7 +35,9 @@ public:
     static constexpr float kAddW = 44.0f;
     static constexpr float kSwingW = 132.0f; ///< bounded 0–100% swing slider, one scene card wide
     static constexpr float kPlaceW = 156.0f; ///< the "Place in timeline" button at the right end
-    static constexpr float kRightW = kSwingW + kGap + kPlaceW;
+    static constexpr float kRightW = kSwingW + kGap + kPlaceW; ///< the right end at full width; it gives way as the strip narrows (ArsenalResponsive.h)
+    /// The right end's width for a strip this wide.
+    static float rightWidth(float stripWidth) { return ArsenalResponsive::rightFor(stripWidth, kAddW + kGap).width; }
     static constexpr size_t kThumbBars = 16;
 
     struct Scene {
@@ -154,7 +157,7 @@ public:
         }
         m_followActive = m_followActive || activeId != m_lastActive;
         m_lastActive = activeId;
-        m_placed = place(widths, active, rect.width - kRightW - kGap, m_offset, m_followActive, m_offset);
+        m_placed = place(widths, active, rect.width - rightWidth(rect.width) - kGap, m_offset, m_followActive, m_offset);
         const auto* ap = pm.getPattern(Audio::PatternID{activeId});
         m_swingMixed = false;
         m_swing = ap ? ap->swing : 0.0f;
@@ -178,7 +181,7 @@ public:
     const std::vector<Placed>& placed() const { return m_placed; }
     /// The "+" slot follows the last card (the mock), and stops at the swing zone when the cards run out of room.
     AestraUI::NUIRect addRect() const {
-        const float limit = m_rect.right() - kRightW - kGap - kAddW;
+        const float limit = m_rect.right() - rightWidth(m_rect.width) - kGap - kAddW;
         const float after = m_placed.empty() ? m_rect.x : m_rect.x + m_placed.back().x + m_placed.back().w + kGap;
         return {std::min(limit, after), m_rect.y, kAddW, m_rect.height};
     }
@@ -194,17 +197,29 @@ public:
     static constexpr float kLabelW = 40.0f;
     static constexpr float kLabelGap = 6.0f;
     static HeaderLayout headerLayout(const AestraUI::NUIRect& strip) {
+        const auto r = ArsenalResponsive::rightFor(strip.width, kAddW + kGap);
         const float y = strip.y + (strip.height - kControlH) * 0.5f;
         HeaderLayout l;
-        l.place = {strip.right() - kPlaceW, y, kPlaceW, kControlH};
-        l.divider = {l.place.x - kGap - 1.0f, y + 5.0f, 1.0f, kControlH - 10.0f};
-        const float groupRight = l.divider.x - kGap;
-        const float groupLeft = strip.right() - kRightW;
-        l.label = {groupLeft, y, kLabelW, kControlH};
-        l.track = {groupLeft + kLabelW + kLabelGap, y, groupRight - (groupLeft + kLabelW + kLabelGap), kControlH};
+        l.place = {strip.right() - r.placeWidth(), y, r.placeWidth(), kControlH};
+        float x = l.place.x;
+        if (r.swing) {
+            if (r.divider) {
+                l.divider = {x - kGap - 1.0f, y + 5.0f, 1.0f, kControlH - 10.0f};
+                x = l.divider.x - kGap;
+            } else {
+                x -= kGap;
+            }
+            l.track = {x - ArsenalResponsive::kTrackW, y, ArsenalResponsive::kTrackW, kControlH};
+            if (r.label) l.label = {l.track.x - kLabelGap - kLabelW, y, kLabelW, kControlH};
+        }
         return l;
     }
-    AestraUI::NUIRect swingRect() const { const auto l = headerLayout(m_rect); return {l.label.x, l.label.y, l.track.right() - l.label.x, kControlH}; }
+    AestraUI::NUIRect swingRect() const {
+        const auto l = headerLayout(m_rect);
+        if (l.track.width <= 0.0f) return {};
+        const float left = l.label.width > 0.0f ? l.label.x : l.track.x;
+        return {left, l.track.y, l.track.right() - left, kControlH};
+    }
     AestraUI::NUIRect swingTrackRect() const { return headerLayout(m_rect).track; }
     AestraUI::NUIRect placeRect() const { return headerLayout(m_rect).place; }
     float swing() const { return m_swing; }
@@ -280,7 +295,8 @@ public:
         const float font = tp.fontSizeXS + 1.0f;
         const auto lineTop = [&](const AestraUI::NUIRect& r) { return r.y + (r.height - renderer.getFontMetrics(font).lineHeight) * 0.5f; };
         // The label, level with the slider and the button.
-        renderer.drawText("Swing", {lay.label.x, lineTop(lay.label)}, font, theme.getColor("textSecondary"));
+        if (lay.label.width > 0.0f) renderer.drawText("Swing", {lay.label.x, lineTop(lay.label)}, font, theme.getColor("textSecondary"));
+        if (track.width > 0.0f) { // the slider is the first control to go when there is no room (ArsenalResponsive.h)
         // The slider: a card-coloured capsule (the panel body is the bed, so a sunk bed would vanish on it), its fill a thumb in the
         // selection colour, the value centred over both.
         renderer.fillRoundedRect(track, track.height * 0.5f, theme.getColor("backgroundSecondary"));
@@ -298,16 +314,19 @@ public:
         const bool onFill = fillW > track.width * 0.5f - inset;
         renderer.drawTextCentered(m_swingMixed ? "MIX" : (std::to_string(swingPercent(m_swing)) + "%"), track, font,
                                   theme.getColor(onFill ? "selectedText" : "textPrimary"));
-        renderer.fillRect(lay.divider, theme.getColor("borderSubtle"));
+        }
+        if (lay.divider.width > 0.0f) renderer.fillRect(lay.divider, theme.getColor("borderSubtle"));
         // The one primary button: the selection colour, one step lighter under the pointer.
         const auto& pl = lay.place;
         const bool placeHot = m_hover.kind == Hit::Kind::Place;
         renderer.fillRoundedRect(pl, pl.height * 0.5f, theme.getColor(placeHot ? "hoverSelected" : "selected"));
         const auto buttonText = theme.getColor("selectedText");
-        const float arrowW = 11.0f, arrowGap = 8.0f;
-        const float labelW = renderer.measureText("Place in timeline", font).width;
+        const auto mode = ArsenalResponsive::rightFor(m_rect.width, kAddW + kGap).place;
+        const char* word = mode == ArsenalResponsive::PlaceLabel::Full ? "Place in timeline" : mode == ArsenalResponsive::PlaceLabel::Short ? "Place" : "";
+        const float arrowW = 11.0f, arrowGap = *word ? 8.0f : 0.0f;
+        const float labelW = *word ? renderer.measureText(word, font).width : 0.0f;
         const float startX = pl.x + (pl.width - (labelW + arrowGap + arrowW)) * 0.5f, midY = pl.y + pl.height * 0.5f;
-        renderer.drawText("Place in timeline", {startX, lineTop(pl)}, font, buttonText);
+        if (*word) renderer.drawText(word, {startX, lineTop(pl)}, font, buttonText);
         // The board's trailing arrow: it sends the pattern on to the timeline.
         const float ax = startX + labelW + arrowGap;
         renderer.drawLine({ax, midY}, {ax + arrowW, midY}, 1.5f, buttonText);

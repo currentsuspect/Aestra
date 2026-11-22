@@ -36,6 +36,31 @@ int main() {
     check(capped.size() == ArsenalKit::kMaxUnits && capped.front().name == "s00", "a big folder is capped to the first " + std::to_string(ArsenalKit::kMaxUnits));
     check(ArsenalKit::plan({}).empty(), "nothing in, nothing out");
 
+    std::cout << "[1b] the kit offer goes once a sample is loaded\n";
+    {
+        check(ArsenalKit::offersKit({}), "an empty Arsenal offers a kit");
+        check(ArsenalKit::offersKit({"", ""}), "rows with no sample yet still offer one");
+        check(!ArsenalKit::offersKit({"/lib/kick.wav", ""}), "a sample loaded by a drop (the unit's path) hides the offer");
+        check(!ArsenalKit::offersKit({"", "/lib/snare.wav"}), "so does one added with Add to Arsenal, on any row");
+        check(!ArsenalKit::offersKit({"/proj/a.wav", "/proj/b.wav"}), "so does a project load (every unit comes back with its path)");
+        std::vector<std::string> paths = {"", ""};
+        paths[0] = "/lib/kick.wav";
+        const bool afterLoad = ArsenalKit::offersKit(paths);
+        paths[0].clear(); // undo of the load
+        check(!afterLoad && ArsenalKit::offersKit(paths), "undoing the load brings the offer back");
+        ArsenalKitCard card;
+        const AestraUI::NUIRect slot{0, 100, 600, ArsenalKitCard::kFoldedReserve};
+        card.placeFolded(true, slot, true);
+        const auto addA = card.addRect(), browseA = card.browseRect();
+        check(card.kitOffered(), "the folded line with the offer shows it");
+        card.placeFolded(true, slot, false);
+        check(!card.kitOffered() && card.addRect().x == addA.x && card.browseRect().x == browseA.x && card.addRect().height == addA.height,
+              "without it, '+ Add a sound' and 'Browse a folder' keep their places and heights");
+        check(ArsenalKitCard::kFoldedReserve == 40.0f && ArsenalKitCard::modeFor(1) == ArsenalKitCard::Mode::Folded,
+              "the reserved height is the same, so no row jumps when the offer goes");
+        check(ArsenalKitCard::modeFor(0) == ArsenalKitCard::Mode::Full, "the full empty-state card stays for an empty Arsenal");
+    }
+
     std::cout << "[2] reading a folder\n";
     const fs::path dir = fs::temp_directory_path() / "aestra_kit_test";
     fs::remove_all(dir);
