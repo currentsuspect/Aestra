@@ -39,6 +39,19 @@ int main() {
     using namespace AestraUI::Layout;
     using namespace AestraUI::EditorPlacement;
 
+    {
+        // The layer covers the window (y 0) and the app title bar owns the top 32 px: a 738 px panel opened
+        // centred in the whole layer lands at y 15 and its close button sits under the title bar.
+        const auto region = editorPlacementRegion(0.0f, 1366.0f, 768.0f, 32.0f);
+        expect(region.y == 32.0f && region.height == 736.0f, "the editor region starts below the app title bar");
+        const auto placed = resolveAnchoredPlacement(AestraUI::Layout::NUIAnchoredRect{0.5, 0.5, 866.0, 738.0},
+                                                     NUIPlacementMode::Anchored, region, NUISizeLimits{0.0, 0.0});
+        expect(placed.applicable && placed.resolved.y >= 32.0f, "an editor never opens over the title bar strip");
+        // A layer that itself starts below the strip is untouched; one starting above it is trimmed to it.
+        const auto low = editorPlacementRegion(40.0f, 800.0f, 600.0f, 32.0f);
+        expect(low.y == 0.0f && low.height == 600.0f, "a layer already below the strip is not trimmed");
+    }
+
     expect(editorSurfaceKey("3.1.com.Aestrastudios.eq") == "editor.3.1.com.Aestrastudios.eq",
            "surface key lives under the editor namespace");
 

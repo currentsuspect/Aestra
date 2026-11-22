@@ -2007,6 +2007,10 @@ void AestraContent::onResize(int width, int height) {
     const auto& layout = themeManager.getLayoutDimensions();
 
     AestraUI::NUIRect contentBounds = getBounds();
+    // Content starts below the app title bar; the overlay layer below spans the window, so plugin editors are told
+    // where the usable region begins (a header placed over the title bar never receives a press).
+    if (m_pluginController)
+        m_pluginController->setEditorContentTop(contentBounds.y);
 
     if (m_workspaceLayer)
         m_workspaceLayer->setBounds(contentBounds);

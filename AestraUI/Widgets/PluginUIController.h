@@ -88,6 +88,8 @@ public:
      * @param layer Popup-layer component that owns transient menus and editors.
      */
     void setPopupLayer(NUIComponent* layer);
+    /// Window y of the first row below the app's title bar; editors are never placed above it (see editorPlacementRegion).
+    void setEditorContentTop(float y) { m_editorContentTop = y; }
 
     /**
      * @brief Provide the current mixer plugin catalog for on-demand popups.
@@ -323,6 +325,7 @@ private:
     
     // UI components for popups
     NUIComponent* m_popupLayer = nullptr;
+    float m_editorContentTop = 0.0f;
     std::shared_ptr<UIMixerPluginDropdown> m_activeMenu;
     std::vector<std::shared_ptr<NUIComponent>> m_activeEditors;
 

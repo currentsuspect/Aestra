@@ -3,6 +3,7 @@
 
 #include "../Layout/NUIAnchoredPlacement.h"
 
+#include <algorithm>
 #include <cmath>
 #include <optional>
 #include <string>
@@ -55,6 +56,19 @@ inline Layout::NUIAnchoredRect editorOpenPreference(const std::optional<Layout::
         preference.anchorY = stored->anchorY;
     }
     return preference;
+}
+
+/**
+ * @brief The region an editor may be placed in, in the popup layer's local space.
+ *
+ * The layer covers the whole window, but the app's own title bar (and its window-drag band) owns the strip above
+ * @p contentTop: NUICustomWindow never forwards a press there to the content, so a panel placed over it has a
+ * header whose close button and drag cannot be clicked. The region starts below that strip.
+ */
+inline Layout::NUIWindowRect editorPlacementRegion(float layerY, float layerWidth, float layerHeight,
+                                                   float contentTop) {
+    const float top = std::clamp(contentTop - layerY, 0.0f, layerHeight);
+    return Layout::NUIWindowRect(0.0f, top, layerWidth, layerHeight - top);
 }
 
 } // namespace EditorPlacement
