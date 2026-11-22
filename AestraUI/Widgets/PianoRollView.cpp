@@ -916,20 +916,24 @@ void PianoRollView::syncMuseSurfaces() {
     }
 }
 
-// The previewed idea (board A + C): the bar washed violet, its notes dashed and filled faintly, and the pill that says
+// The previewed idea (board A + C): the bar framed in the selection edge, its notes dashed and filled faintly, and the pill that says
 // what it is and how to keep it. Drawn over the grid, never into the pattern.
 void PianoRollView::renderMusePreview(NUIRenderer& renderer) {
     if (m_previewIdea < 0 || m_previewIdea >= static_cast<int>(m_ideas.size()) || !m_grid) return;
     const auto& idea = m_ideas[static_cast<size_t>(m_previewIdea)];
     const NUIRect g = m_grid->getBounds();
     auto& theme = NUIThemeManager::getInstance();
-    const auto barFill = theme.getColor("selectionTint");
     const auto noteFill = theme.getColor("selectionFill");
     const auto line = theme.getColor("selectionEdge");
     renderer.setClipRect(g);
     const float bx = g.x + static_cast<float>(m_ideaBar * m_pixelsPerBeat) - m_scrollX;
     const float bw = static_cast<float>(m_beatsPerBar) * m_pixelsPerBeat;
-    renderer.fillRect(NUIRect(bx, g.y, bw, g.height), barFill);
+    // The bar is framed, not filled: this runs after the grid, and an opaque fill would hide the notes and lines under it.
+    const auto frame = theme.getColor("selectionEdge");
+    renderer.fillRect(NUIRect(bx, g.y, bw, 2.0f), frame);
+    renderer.fillRect(NUIRect(bx, g.bottom() - 2.0f, bw, 2.0f), frame);
+    renderer.fillRect(NUIRect(bx, g.y, 2.0f, g.height), frame);
+    renderer.fillRect(NUIRect(bx + bw - 2.0f, g.y, 2.0f, g.height), frame);
     const auto dashed = [&](const NUIRect& r) {
         for (float x = r.x; x < r.right(); x += 7.0f) {
             const float w = std::min(4.0f, r.right() - x);

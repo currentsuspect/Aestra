@@ -4880,6 +4880,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserChrome.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserLibrary.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserScan.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserTheme.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/BrowserLibrary.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/BrowserLibraryIndex.cpp
     )
