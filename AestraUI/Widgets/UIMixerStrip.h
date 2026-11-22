@@ -136,7 +136,6 @@ private:
     /// Master-only readouts, computed in layoutChildren. Split so each number
     /// sits under the column that owns it: observed signal vs applied gain.
     int m_trackColorIndex{-1};
-    bool m_busLike{false}; // a bus or return: the strip takes a flat tint instead of the Wash
     NUIRect m_masterMeterReadoutRect{};
     NUIRect m_masterGainReadoutRect{};
 
@@ -144,7 +143,7 @@ private:
     void layoutChildren();
     void invalidateStaticCache();
     void renderStaticLayer(NUIRenderer& renderer);
-    /// The Wash top: the track colour fading down the strip (StripWash.h).
+    /// The top tint: a flat solid tint of the track colour over the strip's top half (StripWash.h).
     void renderWash(NUIRenderer& renderer, const NUIRect& bounds);
     void renderMasterReadout(NUIRenderer& renderer, const Aestra::ChannelViewModel& channel);
 };

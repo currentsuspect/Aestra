@@ -482,32 +482,23 @@ void UIMixerStrip::layoutChildren()
 
 void UIMixerStrip::renderWash(NUIRenderer& renderer, const NUIRect& bounds)
 {
-    // The Wash top (StripWash.h): the track's colour (the master's textSecondary) starts strong behind the name and
-    // fades down the whole strip. Stop to stop is one vertical gradient; the first few rows are laid one by one so
-    // they follow the strip's rounded top corners.
+    // The top tint (StripWash.h): a flat solid tint of the track's colour (the master's textSecondary) over the top
+    // half of the strip, a hard edge, nothing below. Buses and returns the same. The first rows are laid one by
+    // one so they follow the strip's rounded top corners.
     auto& theme = NUIThemeManager::getInstance();
     const NUIColor tc = m_channelId == 0 ? theme.getColor("textSecondary")
                         : m_trackColorIndex >= 0 ? trackColorFromIndex(m_trackColorIndex) : theme.getColor("accentPrimary");
-    if (m_busLike) {
-        // Buses and returns: a flat solid tint of their colour, no fade (StripWash::kFlatAlpha).
-        renderer.fillRoundedRect(bounds, kStripRadius, tc.withAlpha(StripWash::kFlatAlpha));
-        return;
-    }
-    const float h = bounds.height;
-    const auto colourAt = [&](float y) { return tc.withAlpha(StripWash::alphaAt(y, h)); };
-    const int cornerRows = static_cast<int>(kStripRadius);
-    for (int row = 0; row < cornerRows && static_cast<float>(row) < h; ++row) {
+    const float alpha = StripWash::kAlpha;
+    const float top = StripWash::topHeight(bounds.height);
+    const int cornerRows = std::min(static_cast<int>(kStripRadius), static_cast<int>(top));
+    for (int row = 0; row < cornerRows; ++row) {
         const float inset = StripWash::cornerInset(row, kStripRadius);
         renderer.fillRect({bounds.x + inset, bounds.y + static_cast<float>(row), bounds.width - inset * 2.0f, 1.0f},
-                          colourAt(static_cast<float>(row) + 0.5f));
+                          tc.withAlpha(alpha));
     }
-    float y0 = static_cast<float>(cornerRows);
-    for (int i = 1; i < StripWash::kStopCount; ++i) {
-        const float y1 = StripWash::stopY(i, h);
-        if (y1 <= y0) continue;
-        renderer.fillRectGradient({bounds.x, bounds.y + y0, bounds.width, y1 - y0}, colourAt(y0), colourAt(y1), true);
-        y0 = y1;
-    }
+    if (top > static_cast<float>(cornerRows))
+        renderer.fillRect({bounds.x, bounds.y + static_cast<float>(cornerRows), bounds.width, top - static_cast<float>(cornerRows)},
+                          tc.withAlpha(alpha));
 }
 
 void UIMixerStrip::renderMasterReadout(NUIRenderer& renderer,
@@ -638,7 +629,6 @@ void UIMixerStrip::onUpdate(double deltaTime)
         const std::string tag = channel->id == 0 ? std::string()
             : channel->role == Aestra::ChannelViewModel::Role::Bus ? std::string("BUS")
             : channel->role == Aestra::ChannelViewModel::Role::Return ? std::string("RETURN") : std::string();
-        m_busLike = !tag.empty();
         if (m_cachedTag != tag) {
             m_cachedTag = tag;
             invalidateStaticCache();
