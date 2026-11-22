@@ -138,8 +138,10 @@ int main() {
         check(UIMixerFooter::formatDb(0.0f) == "0.0" && UIMixerFooter::formatDb(0.01f) == "0.0", "zero reads 0.0");
         check(UIMixerFooter::formatDb(-90.0f) == "\xE2\x88\x92\xE2\x88\x9E", "the floor reads minus infinity");
         UIMixerFooter footer;
-        footer.setBounds({0, 0, 76, 18});
+        footer.setBounds({0, 0, 88, 23});
         footer.setGainDb(-65.0f);
+        check(footer.gainText() == "\xE2\x88\x92" "65.0", "-65 dB is a number: minus infinity is only the scale's floor");
+        footer.setGainDb(-85.0f);
         check(footer.gainText() == "\xE2\x88\x92\xE2\x88\x9E", "a fader pulled to its floor reads minus infinity");
         footer.setPeakDb(-1.2f, false);
         check(!footer.clipped() && footer.peakText() == "\xE2\x88\x92" "1.2", "peak text");

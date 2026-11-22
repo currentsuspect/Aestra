@@ -2,6 +2,7 @@
 #include "UIMixerStrip.h"
 #include "CapLook.h"
 #include "MixerLane.h"
+#include "StripWash.h"
 #include "../Graphics/NUIDepth.h"
 
 #include "NUIThemeSystem.h"
@@ -24,13 +25,12 @@ namespace AestraUI {
 
 namespace {
     constexpr float HEADER_H = 30.0f;
-    constexpr float PAN_H = 8.0f;
-    constexpr float PAN_VALUE_H = 12.0f;
+    constexpr float PAN_H = 14.0f;       // the pan row (board p-mixer2): a 4px sunk track and a 10px thumb in 14px
     constexpr float MIN_METER_H = 120.0f;
-    constexpr float OUTPUT_CHIP_H = 17.0f;
+    constexpr float OUTPUT_CHIP_H = 14.0f; // "to Master": one line of 10px muted text
     constexpr int INSERT_ROWS = 3;
     constexpr float BUTTONS_H = 26.0f;
-    constexpr float FOOTER_H = 18.0f;
+    constexpr float FOOTER_H = 23.0f;    // the dB pill (board p-mixer2): 23 tall
     constexpr float PAD = 8.0f;
     constexpr float GAP = 8.0f;
     constexpr float SIDE_INSET = 4.0f;
@@ -54,7 +54,7 @@ namespace {
     constexpr float MASTER_LR_LABEL_H = 11.0f; // the master meter's L / R labels (UIMixerMeter LR_LABEL_HEIGHT)
 
     constexpr float SELECT_TOP_H = 3.0f;
-    constexpr float kStripRadius = 7.0f; // Design Spec, Mixer: strips are 6 to 8px round
+    constexpr float kStripRadius = 8.0f; // board p-mixer2: strips are 8px round
     constexpr float MIXER_MIN_CHANNEL_HEIGHT = 220.0f;
 
     // Resolve a palette index to a renderer colour (matches UIMixerHeader::colorFromARGB).
@@ -393,7 +393,7 @@ void UIMixerStrip::layoutChildren()
     const bool hasButtons = (m_buttons && m_buttons->isVisible());
     const bool hasPan = (m_panBar && m_panBar->isVisible());
     const float keysH = hasButtons ? BUTTONS_H + 6.0f : 0.0f;
-    const float panH = hasPan ? PAN_H + PAN_VALUE_H + 6.0f : 0.0f;
+    const float panH = hasPan ? PAN_H + 6.0f : 0.0f;
     const int wantedSends = (m_sendList && m_sendList->isVisible()) ? std::min(static_cast<int>(m_sendList->rows().size()), UIMixerSendList::kMaxRows) : 0;
     const bool hasInserts = (m_insertList && m_insertList->isVisible() && !narrow);
     const float masterGap = (isMaster && hasInserts) ? 10.0f : 0.0f;
@@ -420,11 +420,8 @@ void UIMixerStrip::layoutChildren()
         y += h > 0.0f ? h + 4.0f : 0.0f;
     }
     if (hasPan) {
-        m_panBar->setBounds(contentX + 4.0f, y, contentW - 8.0f, PAN_H);
-        m_panValueRect = NUIRect{contentX, y + PAN_H, contentW, PAN_VALUE_H};
-        y += PAN_H + PAN_VALUE_H + 6.0f;
-    } else {
-        m_panValueRect = NUIRect{};
+        m_panBar->setBounds(contentX + 2.0f, y, contentW - 4.0f, PAN_H);
+        y += PAN_H + 6.0f;
     }
     if (hasButtons) {
         m_buttons->setBounds(contentX, y, contentW, BUTTONS_H);
@@ -482,15 +479,29 @@ void UIMixerStrip::layoutChildren()
     m_masterGainReadoutRect = NUIRect{};
 }
 
-void UIMixerStrip::renderPanValue(NUIRenderer& renderer, const Aestra::ChannelViewModel& channel)
+void UIMixerStrip::renderWash(NUIRenderer& renderer, const NUIRect& bounds)
 {
-    if (m_panValueRect.isEmpty()) return;
-    // C, or the side and how far: L25, R10 (percent of full pan).
-    const int percent = static_cast<int>(std::lround(std::fabs(channel.pan) * 100.0f));
-    const std::string text = percent == 0 ? std::string("C")
-                                           : std::string(channel.pan < 0.0f ? "L" : "R") + std::to_string(percent);
-    renderer.drawTextCentered(text, m_panValueRect, 9.5f,
-                              NUIThemeManager::getInstance().getColor("textSecondary").withAlpha(0.85f));
+    // The Wash top (StripWash.h): the track's colour (the master's textSecondary) starts strong behind the name and
+    // fades down the whole strip. Stop to stop is one vertical gradient; the first few rows are laid one by one so
+    // they follow the strip's rounded top corners.
+    auto& theme = NUIThemeManager::getInstance();
+    const NUIColor tc = m_channelId == 0 ? theme.getColor("textSecondary")
+                        : m_trackColorIndex >= 0 ? trackColorFromIndex(m_trackColorIndex) : theme.getColor("accentPrimary");
+    const float h = bounds.height;
+    const auto colourAt = [&](float y) { return tc.withAlpha(StripWash::alphaAt(y, h)); };
+    const int cornerRows = static_cast<int>(kStripRadius);
+    for (int row = 0; row < cornerRows && static_cast<float>(row) < h; ++row) {
+        const float inset = StripWash::cornerInset(row, kStripRadius);
+        renderer.fillRect({bounds.x + inset, bounds.y + static_cast<float>(row), bounds.width - inset * 2.0f, 1.0f},
+                          colourAt(static_cast<float>(row) + 0.5f));
+    }
+    float y0 = static_cast<float>(cornerRows);
+    for (int i = 1; i < StripWash::kStopCount; ++i) {
+        const float y1 = StripWash::stopY(i, h);
+        if (y1 <= y0) continue;
+        renderer.fillRectGradient({bounds.x, bounds.y + y0, bounds.width, y1 - y0}, colourAt(y0), colourAt(y1), true);
+        y0 = y1;
+    }
 }
 
 void UIMixerStrip::renderMasterReadout(NUIRenderer& renderer,
@@ -632,6 +643,7 @@ void UIMixerStrip::onUpdate(double deltaTime)
         m_header->setRouteName(channel->id == 0 ? channel->routeName : tag);
         if (m_cachedTrackColorArgb != static_cast<uint32_t>(channel->trackColorIndex + 1)) {
             m_cachedTrackColorArgb = static_cast<uint32_t>(channel->trackColorIndex + 1);
+            m_trackColorIndex = channel->trackColorIndex;
             invalidateStaticCache();
 
             // The track colour is the channel's IDENTITY, so it is carried by the
@@ -779,6 +791,7 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
     // Design Spec, Mixer (locked): each strip is a flat panel resting on the mixer's sunk bed, set apart by the
     // gap and a soft shadow, not by lines. The master is the same panel, its place and its cap set it apart.
     Depth::restingPanel(renderer, bounds, kStripRadius, m_stripBg);
+    renderWash(renderer, bounds);
 
     if (selected) {
         // Selection = a slight tinted body + a strong top edge. No outline.
@@ -803,7 +816,6 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
         if (m_channelId == 0 && channel) {
             renderMasterReadout(renderer, *channel);
         } else if (channel) {
-            renderPanValue(renderer, *channel);
         }
         if (channel && channel->muted) {
             renderer.fillRoundedRect(getBounds(), kStripRadius, m_mutedOverlay);
@@ -841,7 +853,6 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
     if (m_channelId == 0 && channel) {
         renderMasterReadout(renderer, *channel);
     } else if (channel) {
-        renderPanValue(renderer, *channel);
     }
     if (m_channelId == 0 && m_viewModel && m_viewModel->isPreviewDuckingActive()) {
         auto& theme = NUIThemeManager::getInstance();

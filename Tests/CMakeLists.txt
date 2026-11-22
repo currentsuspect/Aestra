@@ -268,6 +268,14 @@ target_include_directories(MixerLaneCapTest PRIVATE
 add_test(NAME MixerLaneCapTest COMMAND MixerLaneCapTest)
 set_tests_properties(MixerLaneCapTest PROPERTIES LABELS "unit;mixer;fader;contract:core")
 
+# Mixer rework slice 4: the Wash top's opacity curve. Pure header.
+add_executable(StripWashTest AestraUI/StripWashTest.cpp)
+target_include_directories(StripWashTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME StripWashTest COMMAND StripWashTest)
+set_tests_properties(StripWashTest PROPERTIES LABELS "unit;mixer;strip;contract:core")
+
 # Arsenal unit naming: pure header, no libraries. A new unit takes the lowest free number for its kind.
 add_executable(ArsenalUnitNamingTest Integration/ArsenalUnitNamingTest.cpp)
 target_include_directories(ArsenalUnitNamingTest PRIVATE
