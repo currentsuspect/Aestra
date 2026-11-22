@@ -508,8 +508,8 @@ void FileBrowser::renderHoverOverlays(NUIRenderer& renderer) {
     }
 
     if (hoveredChromeHit_ >= 0 && hoveredChromeHit_ < static_cast<int>(chromeHits_.size())) {
-        const NUIRect& r = chromeHits_[static_cast<size_t>(hoveredChromeHit_)].bounds;
-        renderer.fillRoundedRect(r, 3.0f, NUIColor::white().withAlpha(0.06f));
+        const auto& hit = chromeHits_[static_cast<size_t>(hoveredChromeHit_)];
+        Depth::hoverFill(renderer, hit.shape.isEmpty() ? hit.bounds : hit.shape, hit.radius, NUIColor::white().withAlpha(0.06f));
     }
 
     const BrowserLayout layout = computeBrowserLayout();

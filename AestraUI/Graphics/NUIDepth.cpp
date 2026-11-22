@@ -161,6 +161,29 @@ void emptyWell(NUIRenderer& renderer, const NUIRect& area) {
         bed(renderer, well, Radius::medium, Cut::Shallow);
 }
 
+void hoverFill(NUIRenderer& renderer, const NUIRect& rect, float radius, const NUIColor& color) {
+    if (rect.width <= 0.0f || rect.height <= 0.0f) return;
+    const float r = std::clamp(radius, 0.0f, std::min(rect.width, rect.height) * 0.5f);
+    if (r <= 0.0f) renderer.fillRect(rect, color); // a sharp component: its own shape is a rectangle
+    else renderer.fillRoundedRect(rect, r, color);
+}
+
+void rowHoverFill(NUIRenderer& renderer, const NUIRect& row, const NUIRect& container, float containerRadius, const NUIColor& color) {
+    if (row.width <= 0.0f || row.height <= 0.0f) return;
+    const float r = std::clamp(containerRadius, 0.0f, std::min(row.width, row.height) * 0.5f);
+    const bool atTop = std::fabs(row.y - container.y) < 1.0f, atBottom = std::fabs(row.bottom() - container.bottom()) < 1.0f;
+    const bool full = std::fabs(row.x - container.x) < 1.0f && std::fabs(row.right() - container.right()) < 1.0f;
+    if (r <= 0.0f || !full || (!atTop && !atBottom)) {
+        renderer.fillRect(row, color);
+        return;
+    }
+    // A rounded rect with the container's radius, then a rectangle over the half that touches other rows, so only the corners
+    // at the container's edge are round.
+    renderer.fillRoundedRect(row, r, color);
+    if (atTop && !atBottom) renderer.fillRect({row.x, row.y + r, row.width, row.height - r}, color);
+    else if (atBottom && !atTop) renderer.fillRect({row.x, row.y, row.width, row.height - r}, color);
+}
+
 void restingPanel(NUIRenderer& renderer, const NUIRect& rect, float radius, const NUIColor& fill) {
     const auto& t = theme();
     renderer.drawShadow(rect, 0.0f, 2.0f, 4.0f, scaledAlpha(t.neuLo, 0.5f));

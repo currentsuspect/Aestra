@@ -3911,6 +3911,28 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(TransportPillGeometryTest PROPERTIES LABELS "ui;layout;geometry;regression;contract:application")
 endif()
 
+# Hover fills follow the shape of what is hovered: the guard reads the source for a fillRect on a hover/pressed state, and the
+# shape test rasterises Depth::hoverFill / rowHoverFill / segment thumbs at their corners.
+if(AESTRA_ENABLE_UI)
+    add_executable(HoverShapeGuardTest AestraUI/HoverShapeGuardTest.cpp)
+    target_compile_definitions(HoverShapeGuardTest PRIVATE AESTRA_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+    add_test(NAME HoverShapeGuardTest COMMAND HoverShapeGuardTest)
+    set_tests_properties(HoverShapeGuardTest PROPERTIES LABELS "ui;theme;guard;contract:application" TIMEOUT 120)
+
+    aestra_require_ui_targets(HoverFillShapeTest AestraUI_Core)
+    add_executable(HoverFillShapeTest AestraUI/HoverFillShapeTest.cpp)
+    target_link_libraries(HoverFillShapeTest PRIVATE AestraUI_Core)
+    target_include_directories(HoverFillShapeTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Graphics
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME HoverFillShapeTest COMMAND HoverFillShapeTest)
+    set_tests_properties(HoverFillShapeTest PROPERTIES LABELS "ui;layout;geometry;regression;contract:application")
+endif()
+
 # Selection tokens guard: the accent / selection colours come from the theme's named tokens. Fails on a primary tinted
 # with an alpha, a lerp toward it, a violet literal, or a local given an alpha after being assigned from the accent.
 if(AESTRA_ENABLE_UI)
@@ -5029,6 +5051,8 @@ if(AESTRA_ENABLE_UI)
         ThemeChangeCacheTest
         SelectionTokenGuardTest
         TransportPillGeometryTest
+        HoverShapeGuardTest
+        HoverFillShapeTest
     )
     foreach(_t IN LISTS AESTRA_REQUIRED_UI_TESTS)
         if(NOT TARGET ${_t})
