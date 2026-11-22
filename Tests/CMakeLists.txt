@@ -5565,6 +5565,13 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraPlat/LinuxVideoDriverTest.cpp")
     set_tests_properties(LinuxVideoDriverTest PROPERTIES LABELS "platform;regression;contract:application")
 endif()
 
+# When Aestra asks the window system to maximise (each request costs ~1 s on X11). Header-only pure decisions.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraPlat/WindowMaximizePolicyTest.cpp")
+    add_executable(WindowMaximizePolicyTest AestraPlat/WindowMaximizePolicyTest.cpp)
+    add_test(NAME WindowMaximizePolicyTest COMMAND WindowMaximizePolicyTest)
+    set_tests_properties(WindowMaximizePolicyTest PROPERTIES LABELS "platform;regression;contract:application")
+endif()
+
 # `EDITOR OPEN <titleHex> [parentXid]`: the optional transient-parent argument's parse and format. Header-only,
 # links nothing.
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/HelperEditorProtocolTest.cpp")

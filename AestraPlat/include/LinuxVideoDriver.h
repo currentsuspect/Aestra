@@ -30,14 +30,19 @@ struct VideoDriverChoice {
     std::string reason;                ///< one human sentence for the log
 };
 
+// A Wayland session (as opposed to a plain X11 one): XDG_SESSION_TYPE=wayland or a WAYLAND_DISPLAY.
+inline bool isWaylandSession(const LinuxSessionEnv& env) {
+    auto set = [](const std::optional<std::string>& v) { return v && !v->empty(); };
+    return (set(env.xdgSessionType) && *env.xdgSessionType == "wayland") || set(env.waylandDisplay);
+}
+
 inline VideoDriverChoice chooseLinuxVideoDriver(const LinuxSessionEnv& env) {
     auto set = [](const std::optional<std::string>& v) { return v && !v->empty(); };
     if (set(env.sdlVideoDriver))
         return {std::nullopt, "SDL_VIDEODRIVER=" + *env.sdlVideoDriver + " set by the user; leaving SDL alone"};
     if (set(env.aestraVideoDriver))
         return {*env.aestraVideoDriver, "AESTRA_VIDEO_DRIVER=" + *env.aestraVideoDriver + " override"};
-    const bool wayland = (set(env.xdgSessionType) && *env.xdgSessionType == "wayland") || set(env.waylandDisplay);
-    if (!wayland) return {std::nullopt, "not a Wayland session; SDL default"};
+    if (!isWaylandSession(env)) return {std::nullopt, "not a Wayland session; SDL default"};
     if (!set(env.display))
         return {std::nullopt, "Wayland session without DISPLAY (no XWayland); SDL default, plugin editors open as their own windows"};
     return {std::string("x11"), "Wayland session with XWayland on DISPLAY=" + *env.display +
