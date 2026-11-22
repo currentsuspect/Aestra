@@ -16,6 +16,8 @@
 #include "Linux/PlatformWindowLinux.h"
 
 #include <SDL2/SDL.h>
+#include "../include/LinuxVideoDriver.h"
+#include <cstdlib>
 #endif
 #elif AESTRA_PLATFORM_MACOS
 // macOS stub implementation - runtime parity pending
@@ -70,8 +72,36 @@ bool Platform::initialize() {
     AESTRA_LOG_INFO("Windows platform initialized");
 #elif AESTRA_PLATFORM_LINUX
 #ifdef AESTRA_HAS_SDL2
+    // Choose the video driver before SDL_Init: X11 (XWayland) on a Wayland session so plugin editors embed.
+    Aestra::LinuxVideo::LinuxSessionEnv sessionEnv;
+    auto readEnv = [](const char* name) -> std::optional<std::string> {
+        const char* v = std::getenv(name);
+        return v ? std::optional<std::string>(v) : std::nullopt;
+    };
+    sessionEnv.sdlVideoDriver = readEnv("SDL_VIDEODRIVER");
+    sessionEnv.aestraVideoDriver = readEnv("AESTRA_VIDEO_DRIVER");
+    sessionEnv.xdgSessionType = readEnv("XDG_SESSION_TYPE");
+    sessionEnv.waylandDisplay = readEnv("WAYLAND_DISPLAY");
+    sessionEnv.display = readEnv("DISPLAY");
+    const auto videoChoice = Aestra::LinuxVideo::chooseLinuxVideoDriver(sessionEnv);
+    if (videoChoice.driver) SDL_SetHint(SDL_HINT_VIDEODRIVER, videoChoice.driver->c_str());
+    AESTRA_LOG_INFO("Video driver: " + (videoChoice.driver ? *videoChoice.driver : std::string("SDL default")) + " (" +
+                    videoChoice.reason + ")");
+
     // Initialize SDL
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_AUDIO) != 0) {
+    bool sdlReady = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_AUDIO) == 0;
+    if (!sdlReady && videoChoice.driver && !sessionEnv.sdlVideoDriver) {
+        // A DISPLAY that does not answer (stale, or no XWayland) must not stop Aestra starting: fall back to SDL's pick.
+        AESTRA_LOG_WARNING(std::string("SDL_Init with video driver ") + *videoChoice.driver + " failed (" + SDL_GetError() +
+                        "); retrying with SDL's default");
+#if SDL_VERSION_ATLEAST(2, 26, 0)
+        SDL_ResetHint(SDL_HINT_VIDEODRIVER);
+#else
+        SDL_ClearHints(); // nothing else has set a hint this early in startup
+#endif
+        sdlReady = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_AUDIO) == 0;
+    }
+    if (!sdlReady) {
         AESTRA_LOG_ERROR(std::string("SDL_Init failed: ") + SDL_GetError());
         return false;
     }
