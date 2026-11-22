@@ -272,7 +272,7 @@ void SettingsDialog::onRender(AestraUI::NUIRenderer& renderer) {
                       {m_sidebarBounds.right() - 0.5f, m_sidebarBounds.bottom()}, 1.0f, border);
     for (const auto& item : m_sidebarItems) {
         if (item.active) {
-            renderer.fillRoundedRect(item.bounds, 4.0f, theme.getColor("primary").withAlpha(0.20f));
+            renderer.fillRoundedRect(item.bounds, 4.0f, theme.getColor("selectionFill"));
         } else if (item.hovered) {
             renderer.fillRoundedRect(item.bounds, 4.0f, theme.getColor("surfaceRaised"));
         }

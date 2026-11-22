@@ -124,11 +124,22 @@ void testInk() {
     check(same(dark.textPrimary, hex(0xf5f5f5)) && same(dark.textSecondary, hex(0xc7c7c7)) &&
               same(dark.textMuted, hex(0x9e9e9e)) && same(dark.textDisabled, hex(0x717171)),
           "Ink dark text greys");
-    check(same(dark.primary, hex(0x9f63fd)) && same(dark.primaryHover, hex(0xab7cff)) &&
-              same(dark.primaryPressed, hex(0x8e4fe8)) && same(dark.textOnPrimary, hex(0x070707)),
-          "Ink dark accent");
+    check(same(dark.primary, hex(0x764bdf)) && same(dark.primaryHover, hex(0x8a66ea)) &&
+              same(dark.primaryPressed, hex(0x6538c5)) && same(dark.textOnPrimary, hex(0xffffff)),
+          "Ink dark accent (option C: deep violet, white labels)");
+    check(contrast(dark.primaryHover, dark.primary) > 1.0f && contrast(dark.primaryPressed, dark.backgroundPrimary) > 1.0f &&
+              (dark.primaryHover.r + dark.primaryHover.g + dark.primaryHover.b) >
+                  (dark.primary.r + dark.primary.g + dark.primary.b) &&
+              (dark.primaryPressed.r + dark.primaryPressed.g + dark.primaryPressed.b) <
+                  (dark.primary.r + dark.primary.g + dark.primary.b),
+          "Ink dark hover is lighter and pressed is darker than the primary");
+    check(contrast(dark.primary, dark.backgroundPrimary) >= 3.0f && contrast(dark.primary, dark.backgroundSecondary) >= 3.0f,
+          "the selected fill is a 3:1 mark on the bed and on a card");
+    check(contrast(dark.accentText, dark.backgroundPrimary) >= 4.5f && contrast(dark.accentText, dark.backgroundSecondary) >= 4.5f,
+          "violet used as text (accentText) reads 4.5:1 on the bed and on a card");
+    check(same(dark.focusRing, dark.primary), "the focus ring follows the primary");
     check(same(dark.selected, dark.primary) && dark.selected.a == 1.0f,
-          "variant B: selected is the solid lit primary, no alpha");
+          "selected is the solid deep-violet primary, no alpha");
     check(same(dark.focusRing, dark.primary) && dark.focusRing.a == 1.0f, "the focus ring is opaque");
     check(contrast(dark.textOnPrimary, dark.selected) >= 4.5f, "textOnPrimary reads on the selected fill");
     check(same(dark.success, hex(0x3fc168)) && same(dark.warning, hex(0xfcab00)) && same(dark.error, hex(0xfd7468)) &&
@@ -137,7 +148,7 @@ void testInk() {
     check(std::fabs(dark.hover.a - 15.0f / 255.0f) < 1e-3f,
           "the hover overlay stays an alpha for now");
     check(same(light.backgroundPrimary, hex(0xede9e1)) && same(light.backgroundSecondary, hex(0xfffbf4)) &&
-              same(light.timelineBed, hex(0xf2f0eb)) && same(light.primary, hex(0x8f50ea)) &&
+              same(light.timelineBed, hex(0xf2f0eb)) && same(light.primary, hex(0x764bdf)) &&
               same(light.textOnPrimary, hex(0xffffff)),
           "Ink light is Paper's surfaces under Ink's accent");
     check(same(light.selected, light.primary) && contrast(light.textOnPrimary, light.selected) >= 4.5f,
@@ -145,6 +156,11 @@ void testInk() {
     check(contrast(light.borderStrong, light.backgroundSecondary) >= 3.0f &&
               contrast(light.borderStrong, light.backgroundPrimary) >= 3.0f,
           "Ink light strong border reads at 3:1");
+    check(light.primaryHover.r < light.primary.r && light.primaryPressed.r < light.primaryHover.r,
+          "Ink light hover and pressed step darker");
+    check(contrast(light.primary, light.backgroundPrimary) >= 3.0f && contrast(light.accentText, light.backgroundPrimary) >= 4.5f &&
+              contrast(light.accentText, light.backgroundSecondary) >= 4.5f,
+          "Ink light: the selection is a mark on the bed, violet text reads 4.5:1");
     check(hc.mode == 2 && same(hc.timelineBed, NUIColor::black()), "Ink high contrast is a high-contrast theme");
     check(same(hc.primary, NUIThemePresets::createKitTheme("ember-hc").primary), "Ink high contrast copies Ember's");
 
@@ -153,6 +169,30 @@ void testInk() {
     check(same(ember.primary, hex(0x8a3ff0)) && same(ember.backgroundPrimary, hex(0x0a0908)),
           "Ember dark is unchanged");
     check(ember.selected.a < 0.5f, "Ember dark keeps its alpha selection");
+}
+
+// The selection family: every theme states it, all opaque, and each pairing meets its floor.
+void testSelectionFamily() {
+    std::cout << "selection family\n";
+    for (const auto& k : NUIThemePresets::kitThemes()) {
+        const std::string key = k.key;
+        const auto t = NUIThemePresets::createKitTheme(key);
+        const bool solid = t.selected.a >= 0.9f;
+        check(t.selectionFill.a == 1.0f && t.selectionTint.a == 1.0f && t.selectionEdge.a == 1.0f && t.hoverSelected.a == 1.0f &&
+                  t.accentText.a == 1.0f && t.playhead.a == 1.0f && t.selectedText.a == 1.0f,
+              key + ": the selection family is opaque");
+        check(contrast(t.selectedText, solid ? t.selected : t.selectionFill) >= 4.5f,
+              key + ": selectedText reads on what it labels");
+        check(contrast(t.textPrimary, t.selectionFill) >= 4.5f, key + ": textPrimary reads on selectionFill");
+        check(contrast(t.accentText, t.backgroundPrimary) >= 4.5f && contrast(t.accentText, t.backgroundSecondary) >= 4.5f,
+              key + ": accentText reads on the bed and on a card");
+        check(contrast(t.textPrimary, t.selectionTint) >= 4.5f, key + ": textPrimary reads on selectionTint");
+        check(contrast(t.selectionEdge, t.selectionTint) >= 3.0f, key + ": selectionEdge is a mark on selectionTint");
+        check(contrast(t.selectionEdge, t.backgroundSecondary) >= 3.0f, key + ": selectionEdge is a mark on a card");
+        check(contrast(t.playhead, t.backgroundPrimary) >= 3.0f && contrast(t.playhead, t.surfaceTertiary) >= 3.0f &&
+                  contrast(t.playhead, t.surfaceRaised) >= 3.0f,
+              key + ": the playhead reads 3:1 on the bed, a control and a raised surface");
+    }
 }
 
 void testAliases() {
@@ -227,6 +267,7 @@ void testDepth() {
 int main() {
     testAllKitThemes();
     testInk();
+    testSelectionFamily();
     testAliases();
     testDepth();
     std::cout << (gFailures == 0 ? "ALL PASS\n" : "FAILURES: " + std::to_string(gFailures) + "\n");

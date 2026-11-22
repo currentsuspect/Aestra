@@ -26,6 +26,7 @@
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Helpers/MixerPluginListPolicy.h"
 #include "../AestraUI/Widgets/UIRoutingMap.h"
+#include "../AestraUI/Widgets/UnitRow.h" // AestraUI::PluginLoadResult, named by the load functions below
 #include "Events/Connection.h"
 #include "KeyboardNoteInput.h"
 #include "MusicalTypingController.h"

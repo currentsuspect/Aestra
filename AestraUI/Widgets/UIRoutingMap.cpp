@@ -89,7 +89,7 @@ void UIRoutingMap::cacheThemeColors() {
     m_text = tm.getColor("textPrimary");
     m_textSecondary = tm.getColor("textSecondary");
     m_textMuted = tm.getColor("textMuted");
-    m_accent = tm.getColor("accentPrimary");
+    m_accent = tm.getColor("selected");
     m_live = tm.getColor("accentCyan");
     m_sidechain = tm.getColor("warning");
     m_refuse = tm.getColor("error");

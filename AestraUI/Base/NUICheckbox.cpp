@@ -627,7 +627,7 @@ void NUICheckbox::drawEnhancedToggle(NUIRenderer& renderer, const NUIRect& bound
     const NUIRect track(bounds.x, std::round(bounds.y + (bounds.height - kToggleH) * 0.5f), kToggleW, kToggleH);
     const bool on = state_ == State::Checked;
     if (on) {
-        renderer.fillRoundedRect(track, kToggleH * 0.5f, isEnabled() ? theme.primary : theme.primary.withAlpha(0.42f));
+        renderer.fillRoundedRect(track, kToggleH * 0.5f, isEnabled() ? theme.primary : theme.selectionFill);
         renderer.drawInnerShadow(track, kToggleH * 0.5f, 1.0f, 1.5f, NUIColor::black().withAlpha(0.4f));
     } else {
         Depth::bed(renderer, track, kToggleH * 0.5f, Depth::Cut::Shallow);

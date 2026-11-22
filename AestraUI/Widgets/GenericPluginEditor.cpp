@@ -123,7 +123,7 @@ void GenericPluginEditor::drawParameter(NUIRenderer& renderer, const ParameterWi
         hovered || p.isDragging ? editorNeutral(0.181f, 0.92f)
                                 : editorNeutral(0.111f, 0.74f));
     renderer.strokeRoundedRect(rowRect, 9.0f, 1.0f,
-        hovered || p.isDragging ? theme.getColor("accentPrimary").withAlpha(0.30f)
+        hovered || p.isDragging ? theme.getColor("selectionEdge")
                                 : editorInk(0.05f));
 
     float labelY = offsetY + p.sliderBounds.y + (p.sliderBounds.height * 0.5f) - 5.0f; 
@@ -141,15 +141,8 @@ void GenericPluginEditor::drawParameter(NUIRenderer& renderer, const ParameterWi
     float fillWidth = track.width * p.normalizedValue;
     if (fillWidth > 0) {
         NUIRect fillRect(track.x, track.y, fillWidth, track.height);
-        NUIColor accent = theme.getColor("accentPrimary");
-        
-        if (hovered || p.isDragging) {
-             renderer.fillRoundedRect(fillRect, 3.0f, accent.withAlpha(0.95f));
-             renderer.fillRoundedRect({fillRect.x, fillRect.y - 1, fillRect.width, fillRect.height + 2}, 
-                                      4.0f, accent.withAlpha(0.22f));
-        } else {
-            renderer.fillRoundedRect(fillRect, 3.0f, accent.withAlpha(0.78f));
-        }
+        // Solid in both states; hover steps to the lighter selected shade instead of adding a glow wash.
+        renderer.fillRoundedRect(fillRect, 3.0f, theme.getColor(hovered || p.isDragging ? "hoverSelected" : "selected"));
     }
 
     float thumbSize = 12.0f;
@@ -160,7 +153,7 @@ void GenericPluginEditor::drawParameter(NUIRenderer& renderer, const ParameterWi
 
     if (hovered || p.isDragging) {
          renderer.fillRoundedRect(thumbRect, thumbSize * 0.5f, editorInk(1.0f));
-         renderer.strokeRoundedRect(thumbRect, thumbSize * 0.5f, 1.5f, theme.getColor("accentPrimary"));
+         renderer.strokeRoundedRect(thumbRect, thumbSize * 0.5f, 1.5f, theme.getColor("selectionEdge"));
     } else {
          float idleSize = 8.0f;
          float offset = (thumbSize - idleSize) * 0.5f;

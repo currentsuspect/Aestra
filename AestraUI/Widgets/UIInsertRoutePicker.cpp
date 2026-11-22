@@ -234,11 +234,12 @@ void UIMixerRoutePicker::onRender(NUIRenderer& renderer) {
     const auto triggerBackground = m_compactChipStyle
                                        ? theme.getColor("surfaceTertiary")
                                        : theme.getColor("surfaceRaised").withAlpha(0.94f);
-    const auto accent = m_compactChipStyle ? theme.getColor("accentPrimary") : theme.getColor("secondary");
+    const auto accentEdge = theme.getColor("selectionEdge");
+    const auto accentText = theme.getColor("accentText");
 
     // Sharp: a flat fill, no outline until it is open (then an accent edge says so).
     renderer.fillRect(m_triggerBounds, isHovered() ? triggerBackground.lightened(0.05f) : triggerBackground);
-    if (m_open) renderer.strokeRect(m_triggerBounds, 1.0f, accent.withAlpha(0.9f));
+    if (m_open) renderer.strokeRect(m_triggerBounds, 1.0f, accentEdge);
 
     const Route* selected = selectedRoute();
     const std::string number = selected ? routeNumberLabel(*selected) : "M";
@@ -264,8 +265,8 @@ void UIMixerRoutePicker::onRender(NUIRenderer& renderer) {
         renderer.drawLine({ax, cy + 2.0f}, {ax + 3.5f, cy - 1.5f}, 1.4f, textSecondary);
     } else {
         const NUIRect badge{m_triggerBounds.x + 7.0f, m_triggerBounds.y + 5.0f, 29.0f, m_triggerBounds.height - 10.0f};
-        renderer.fillRect(badge, accent.withAlpha(0.17f));
-        renderer.drawTextCentered(number, badge, 10.0f, accent.lightened(0.20f));
+        renderer.fillRect(badge, theme.getColor("selectionTint"));
+        renderer.drawTextCentered(number, badge, 10.0f, accentText);
         renderer.drawText(name, {m_triggerBounds.x + 44.0f, m_triggerBounds.y + 8.0f}, 12.0f, textPrimary);
         renderer.drawText("FIND", {m_triggerBounds.right() - 39.0f, m_triggerBounds.y + 9.0f}, 9.0f, textSecondary);
     }
@@ -294,19 +295,19 @@ void UIMixerRoutePicker::onRender(NUIRenderer& renderer) {
         const NUIRect rowBounds{listBounds.x, rowY, listBounds.width, kRowHeight};
         const bool isSelected = route.id == m_selectedRouteId;
         if (visibleRow == m_hoveredVisibleRow || isSelected)
-            renderer.fillRect(rowBounds, isSelected ? accent.withAlpha(0.13f) : rowHover);
+            renderer.fillRect(rowBounds, isSelected ? theme.getColor("selectionFill") : rowHover);
 
         const NUIRect numberBounds{rowBounds.x + 9.0f, rowBounds.y + 7.0f, 31.0f, rowBounds.height - 14.0f};
-        renderer.fillRect(numberBounds, accent.withAlpha(isSelected ? 0.24f : 0.10f));
+        renderer.fillRect(numberBounds, theme.getColor(isSelected ? "selected" : "selectionTint"));
         renderer.drawTextCentered(routeNumberLabel(route), numberBounds, 10.0f,
-                                  isSelected ? accent.lightened(0.22f) : textSecondary);
+                                  isSelected ? theme.getColor("selectedText") : textSecondary);
 
         if (route.colorArgb != 0) {
             renderer.fillRect({rowBounds.x + 49.0f, rowBounds.y + 14.0f, 8.0f, 8.0f}, colorFromArgb(route.colorArgb));
         }
         renderer.drawText(route.name, {rowBounds.x + 65.0f, rowBounds.y + 10.0f}, 12.0f, textPrimary);
         if (isSelected)
-            renderer.drawText("ROUTED", {rowBounds.right() - 53.0f, rowBounds.y + 11.0f}, 9.0f, accent);
+            renderer.drawText("ROUTED", {rowBounds.right() - 53.0f, rowBounds.y + 11.0f}, 9.0f, accentText);
     }
     renderer.clearClipRect();
 

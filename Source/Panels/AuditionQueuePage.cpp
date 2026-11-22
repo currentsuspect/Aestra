@@ -103,7 +103,7 @@ void AuditionQueuePage::onRender(NUIRenderer& r) {
         const auto& item = queue[i];
         const bool playing = current && current->id == item.id;
         const bool hot = static_cast<int>(i) == m_hover && !m_reordering;
-        if (playing) r.fillRect(row, theme.getColor("accentPrimary").withAlpha(0.12f));
+        if (playing) r.fillRect(row, theme.getColor("selectionTint"));
         else if (hot) r.fillRect(row, theme.getColor("surfaceTertiary"));
         r.fillRect({row.x + 32.0f, row.y + 10.0f, 32.0f, 32.0f}, NUIColor(0, 0, 0, 1));
         drawCover(r, {row.x + 32.0f, row.y + 10.0f, 32.0f, 32.0f}, AuditionLibrary::seedOf(titleOf(item)));
@@ -114,7 +114,7 @@ void AuditionQueuePage::onRender(NUIRenderer& r) {
                 r.fillRect({row.x + 42.0f + static_cast<float>(k) * 5.0f, row.y + 26.0f - h * 0.5f, 3.0f, h}, NUIColor::white());
             }
         }
-        r.drawText(fitText(r, titleOf(item), 13.0f, row.width - 80.0f - 120.0f), {row.x + 80.0f, row.y + 11.0f}, 13.0f, playing ? theme.getColor("accentPrimary").lightened(0.3f) : text);
+        r.drawText(fitText(r, titleOf(item), 13.0f, row.width - 80.0f - 120.0f), {row.x + 80.0f, row.y + 11.0f}, 13.0f, playing ? theme.getColor("accentText") : text);
         const std::string sub = item.isReference ? "Reference" : item.isFromTimeline ? "From the timeline" : (item.artist.empty() || item.artist == "Unknown Artist" ? "" : item.artist);
         r.drawText(fitText(r, sub, 11.0f, row.width - 80.0f - 120.0f), {row.x + 80.0f, row.y + 29.0f}, 11.0f, muted);
         const std::string dur = mmss(item.durationSeconds);
@@ -127,9 +127,9 @@ void AuditionQueuePage::onRender(NUIRenderer& r) {
         }
         r.fillRect({row.x + 32.0f, row.bottom() - 1.0f, row.width - 64.0f, 1.0f}, rule.withAlpha(0.6f));
     }
-    if (m_reordering && m_insert >= 0) r.fillRect({l.list.x + 32.0f, l.list.y + static_cast<float>(m_insert) * kRowH - m_scroll - 1.0f, l.list.width - 64.0f, 2.0f}, theme.getColor("accentPrimary"));
+    if (m_reordering && m_insert >= 0) r.fillRect({l.list.x + 32.0f, l.list.y + static_cast<float>(m_insert) * kRowH - m_scroll - 1.0f, l.list.width - 64.0f, 2.0f}, theme.getColor("selectionEdge"));
     r.clearClipRect();
-    if (m_dropHover && !queue.empty()) r.strokeRect({b.x + 8.0f, b.y + 8.0f, b.width - 16.0f, b.height - 16.0f}, 2.0f, theme.getColor("accentPrimary").withAlpha(0.7f));
+    if (m_dropHover && !queue.empty()) r.strokeRect({b.x + 8.0f, b.y + 8.0f, b.width - 16.0f, b.height - 16.0f}, 2.0f, theme.getColor("selectionEdge"));
     if (m_menu) m_menu->onRender(r);
 }
 

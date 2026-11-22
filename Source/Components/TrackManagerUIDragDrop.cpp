@@ -796,19 +796,19 @@ void TrackManagerUI::renderDropPreview(AestraUI::NUIRenderer& renderer) {
 
         const float clipRadius = 6.0f;
         const float labelBarHeight = 14.0f;
-        const auto clipColor = themeManager.getColor("accentPrimary");
-        const auto clipFill = clipColor.withAlpha(0.30f);
-        const auto clipBorder = clipColor.lightened(0.12f).withAlpha(0.70f);
+        // The clip about to land is opaque, as the real clip will be: the selection family, no alpha.
+        const auto clipFill = themeManager.getColor("selectionFill");
+        const auto clipBorder = themeManager.getColor("selectionEdge");
         renderer.fillRoundedRect(clipPreview, clipRadius, clipFill);
         renderer.strokeRoundedRect(clipPreview, clipRadius, 1.0f, clipBorder);
         renderer.fillRoundedRect(
             {clipPreview.x + 1.5f, clipPreview.y + 1.5f, 4.0f, std::max(0.0f, clipPreview.height - 3.0f)}, 2.0f,
-            clipColor.lightened(0.18f).withAlpha(0.95f));
+            themeManager.getColor("hoverSelected"));
 
         const float headerH = std::min(labelBarHeight, std::max(0.0f, clipPreview.height - 2.0f));
         const AestraUI::NUIRect headerRect(clipPreview.x + 1.0f, clipPreview.y + 1.0f,
                                            std::max(0.0f, clipPreview.width - 2.0f), headerH);
-        renderer.fillRoundedRect(headerRect, clipRadius - 1.5f, clipColor.withAlpha(0.50f));
+        renderer.fillRoundedRect(headerRect, clipRadius - 1.5f, themeManager.getColor("selected"));
 
         // Get drag data for display name
         auto& dragManager = AestraUI::NUIDragDropManager::getInstance();

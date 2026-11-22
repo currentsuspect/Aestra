@@ -33,7 +33,13 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
         const float x1 = bounds.x + static_cast<float>(loopZoneStart_ * pixelsPerBeat_) - scrollX_;
         const float x2 = bounds.x + static_cast<float>(loopZoneEnd_ * pixelsPerBeat_) - scrollX_;
         renderer.fillRect(NUIRect(x1, bounds.y, x2 - x1, bounds.height),
-                          theme.getColor("accentPrimary").withAlpha(0.07f));
+                          theme.getColor("selectionTint"));
+    }
+
+    // The hovered pitch row is an opaque tint under the grid lines, so the beat lines still run through it.
+    if (hoveredPitch_ >= 0 && hoveredPitch_ <= 127) {
+        const float hoverY = bounds.y + (127 - hoveredPitch_) * keyHeight_ - scrollY_;
+        renderer.fillRect(NUIRect(bounds.x, hoverY, bounds.width, keyHeight_), theme.getColor("selectionTint"));
     }
 
     const auto gridInk = theme.getCurrentTheme().textPrimary;
@@ -86,16 +92,14 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
     if (hoveredPitch_ >= 0 && hoveredPitch_ <= 127) {
         const float hoverY = bounds.y + (127 - hoveredPitch_) * keyHeight_ - scrollY_;
         const NUIRect hoverRow(bounds.x, hoverY, bounds.width, keyHeight_);
-        const auto hoverColor = theme.getColor("accentPrimary").withAlpha(0.075f);
-        renderer.fillRect(hoverRow, hoverColor);
         renderer.drawLine(NUIPoint(bounds.x, hoverRow.y),
                           NUIPoint(bounds.right(), hoverRow.y),
                           1.0f,
-                          theme.getColor("accentPrimary").withAlpha(0.28f));
+                          theme.getColor("selectionEdge"));
         renderer.drawLine(NUIPoint(bounds.x, hoverRow.bottom()),
                           NUIPoint(bounds.right(), hoverRow.bottom()),
                           1.0f,
-                          theme.getColor("accentPrimary").withAlpha(0.18f));
+                          theme.getColor("controlGuide"));
     }
 
     const float patternEndX =
@@ -104,7 +108,7 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
         renderer.drawLine(NUIPoint(patternEndX, bounds.y),
                           NUIPoint(patternEndX, bounds.bottom()),
                           1.0f,
-                          theme.getColor("accentPrimary").withAlpha(0.34f));
+                          theme.getColor("controlGuide"));
     }
 
     renderer.clearClipRect();

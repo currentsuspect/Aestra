@@ -214,7 +214,7 @@ private:
         AestraUI::NUIColor bgColor(0.02f, 0.02f, 0.05f, 0.94f);
         renderer.fillRoundedRect(getBounds(), 8.0f, bgColor);
         
-        AestraUI::NUIColor borderColor = theme.getColor("accentPrimary").withAlpha(0.6f);
+        AestraUI::NUIColor borderColor = theme.getColor("selectionEdge");
         renderer.strokeRoundedRect(getBounds(), 8.0f, 1.5f, borderColor);
     }
 
