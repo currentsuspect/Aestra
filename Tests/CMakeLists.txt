@@ -244,6 +244,22 @@ target_include_directories(MixerScaleRulesTest PRIVATE
 add_test(NAME MixerScaleRulesTest COMMAND MixerScaleRulesTest)
 set_tests_properties(MixerScaleRulesTest PROPERTIES LABELS "unit;mixer;scale;contract:core")
 
+# Mixer rework slice 2: the stepped LED meter's geometry (4px pitch, 18px well). Pure headers.
+add_executable(MeterLedsTest AestraUI/MeterLedsTest.cpp)
+target_include_directories(MeterLedsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME MeterLedsTest COMMAND MeterLedsTest)
+set_tests_properties(MeterLedsTest PROPERTIES LABELS "unit;mixer;meter;contract:core")
+
+# Mixer rework slice 2: the fader slot's groove (3px plain + 1px lighter bands). Pure header.
+add_executable(SlotGrooveTest AestraUI/SlotGrooveTest.cpp)
+target_include_directories(SlotGrooveTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME SlotGrooveTest COMMAND SlotGrooveTest)
+set_tests_properties(SlotGrooveTest PROPERTIES LABELS "unit;mixer;fader;contract:core")
+
 # Arsenal unit naming: pure header, no libraries. A new unit takes the lowest free number for its kind.
 add_executable(ArsenalUnitNamingTest Integration/ArsenalUnitNamingTest.cpp)
 target_include_directories(ArsenalUnitNamingTest PRIVATE

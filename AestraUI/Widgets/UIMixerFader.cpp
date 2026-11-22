@@ -2,6 +2,7 @@
 #include "UIMixerFader.h"
 #include "../Graphics/NUIDepth.h"
 #include "MixerScale.h"
+#include "SlotGroove.h"
 
 #include "NUIThemeSystem.h"
 #include "NUIRenderer.h"
@@ -29,7 +30,7 @@ namespace {
     constexpr float HANDLE_WIDTH = 28.0f;
     constexpr float kOverlayHandleW = 20.0f;
     constexpr float kOverlayHandleH = 26.0f;
-    constexpr float TRACK_WIDTH = 8.0f;     // the master's wider slot (Design Spec, Mixer)
+    constexpr float TRACK_WIDTH = SlotGroove::kSlotW; // one slot for master and channel (board p-mixer2, variant F)
     constexpr float TOP_PAD = 18.0f;    // room for fixed dB readout at top
     constexpr float BOTTOM_PAD = 6.0f;   // minimal padding below track
     constexpr float SNAP_DB = 0.5f;
@@ -37,6 +38,22 @@ namespace {
 
     // The console scale's marks (MixerScale). Unity (0 dB) is the only one that gets emphasis.
     constexpr const auto& SCALE_TICKS = MixerScale::kTicks;
+
+    // The slot of the locked fader: meterBackground in 3px plain / 1px lighter bands, an inset shadow over it.
+    // fillRect per line, no blur: the shadow is the renderer's SDF inner shadow, as Depth::bed uses.
+    void drawGrooveSlot(NUIRenderer& renderer, const NUIRect& slot)
+    {
+        const auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
+        const NUIColor base = theme.meterBackground;
+        const NUIColor line{SlotGroove::liftChannel(base.r), SlotGroove::liftChannel(base.g),
+                            SlotGroove::liftChannel(base.b), base.a};
+        renderer.fillRoundedRect(slot, SlotGroove::kSlotRadius, base);
+        const int lines = SlotGroove::lineCount(slot.height);
+        for (int i = 0; i < lines; ++i)
+            renderer.fillRect({slot.x, slot.y + SlotGroove::lineTop(i), slot.width, 1.0f}, line);
+        renderer.drawInnerShadow(slot, SlotGroove::kSlotRadius, SlotGroove::kShadowOffset, SlotGroove::kShadowBlur,
+                                 theme.neuLo);
+    }
 
 }
 
@@ -264,8 +281,7 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
     renderScale(renderer, trackX, trackWidth, trackTop, trackHeight, showScaleLabels);
 
     // 2. The slot, cut into the strip (Design Spec: a sunk bed).
-    Depth::bed(renderer, trackRect, 3.0f, NUIThemeManager::getInstance().getCurrentTheme().meterBackground,
-               Depth::Cut::Slot);
+    drawGrooveSlot(renderer, trackRect);
 
     // 3. Filled Portion — neutral. This is control state, not signal.
     const float filledH = normFromDb(m_valueDb) * trackHeight;
@@ -327,6 +343,14 @@ void UIMixerFader::renderOverlay(NUIRenderer& renderer)
     const float trackBottom = bounds.y + bounds.height - bottomPad();
     const float trackHeight = std::max(1.0f, trackBottom - trackTop);
     const float y = trackBottom - normFromDb(m_valueDb) * trackHeight;
+
+    // The slot the cap rides in, centred in the fader's column (the handle's own centre). The meters keep their own
+    // well beside it; the per-strip layout that gives the slot a column of its own is slice 3.
+    {
+        const NUIRect handleCol = handleRectAt(trackTop);
+        const float slotX = std::round(handleCol.x + (handleCol.width - SlotGroove::kSlotW) * 0.5f);
+        drawGrooveSlot(renderer, NUIRect{slotX, trackTop, SlotGroove::kSlotW, trackHeight});
+    }
 
     // The cap: one line across the meters, so gain reads against the level behind it.
     const bool active = isHovered() || m_dragging;
