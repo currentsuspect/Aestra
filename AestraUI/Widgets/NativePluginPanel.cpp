@@ -1,6 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NativePluginPanel.h"
 
+#include "../Base/NUIContextMenu.h"
 #include "../Core/NUIThemeSystem.h"
 #include "../Graphics/NUIRenderer.h"
 #include "../Platform/NUIPlatformBridge.h"
@@ -87,7 +88,12 @@ void NativePluginPanel::place(bool force) {
         return;
     // A child window always draws over the app. While the panel's own preset fold or menu is open it would cover
     // the fold, so the plugin steps aside until the fold closes.
-    const bool popoverOpen = titleAccessory() && titleAccessory()->wantsKeys();
+    // The header's "..." menu is an Aestra component in the same layer; the plugin's window would hide it too.
+    bool popoverOpen = titleAccessory() && titleAccessory()->wantsKeys();
+    if (!popoverOpen && getParent())
+        for (const auto& sibling : getParent()->getChildren())
+            if (auto* menu = dynamic_cast<NUIContextMenu*>(sibling.get()); menu && menu->isVisible())
+                popoverOpen = true;
     const bool visible = shownInTree() && !m_instance.expired() && !popoverOpen;
     const NUIRect view = viewRect();
     if (!force && m_everPlaced && visible == m_placedVisible && view.x == m_placed.x && view.y == m_placed.y &&
