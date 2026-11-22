@@ -66,8 +66,10 @@ void UIMixerInsertList::onRender(NUIRenderer& renderer) {
         if (m_hovered)
             renderer.fillRoundedRect(row, kRadius, theme.getColor("hover"));
         const char* invite = renderer.measureText("+ insert", kFont).width <= row.width - 10.0f ? "+ insert" : "+";
-        renderer.drawText(invite, {row.x + 5.0f, row.y + (row.height - kFont) * 0.5f - 1.0f}, kFont,
-                          m_hovered ? textPrimary : theme.getColor("textMuted"));
+        // Centred in its 20px row by the renderer's own metrics, on the baseline a filled chip's name uses.
+        const float w = renderer.measureText(invite, kFont).width;
+        renderer.drawText(invite, {std::round(row.x + (row.width - w) * 0.5f), std::round(renderer.calculateOpticalTextY(row, kFont))},
+                          kFont, m_hovered ? textPrimary : theme.getColor("textMuted"));
         return;
     }
 
@@ -101,14 +103,14 @@ void UIMixerInsertList::onRender(NUIRenderer& renderer) {
         }
         if (cut)
             name += "\xE2\x80\xA6";
-        const float textY = y + (kChipH - kFont) * 0.5f - 1.0f;
+        const float textY = std::round(renderer.calculateOpticalTextY(chip, kFont));
         renderer.drawText(name, {textX, textY}, kFont, textPrimary.withAlpha(alpha));
         if (row.bypassed) {
             const float w = std::min(avail, renderer.measureText(name, kFont).width);
             renderer.fillRect(NUIRect{textX, y + kChipH * 0.5f, w, 1.0f}, textSecondary.withAlpha(0.45f));
         }
         if (!status.empty()) {
-            renderer.drawText(status, {chip.right() - rightInset + 4.0f, y + (kChipH - 8.5f) * 0.5f - 1.0f}, 8.5f,
+            renderer.drawText(status, {chip.right() - rightInset + 4.0f, std::round(renderer.calculateOpticalTextY(chip, 8.5f))}, 8.5f,
                               accent.withAlpha(0.92f));
         }
         y += kRowH;
@@ -116,7 +118,8 @@ void UIMixerInsertList::onRender(NUIRenderer& renderer) {
     if (overflow) {
         const int hidden = static_cast<int>(m_rows.size()) - shown;
         renderer.drawText("+" + std::to_string(hidden) + " more",
-                          {r.x + 5.0f, y + (kChipH - kFont) * 0.5f - 1.0f}, kFont, theme.getColor("textMuted"));
+                          {r.x + 5.0f, std::round(renderer.calculateOpticalTextY(NUIRect{r.x, y, r.width, kChipH}, kFont))}, kFont,
+                          theme.getColor("textMuted"));
     }
 }
 
