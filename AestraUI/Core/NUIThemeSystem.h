@@ -452,7 +452,7 @@ public:
     /// One of the twelve Aestra Kit variants (FD-79): Ember, Obsidian Moss, Solace and Monolith, each dark, light
     /// and high contrast. Values come from NUIKitThemes.inc, generated from the kit.
     struct KitTheme {
-        const char* key;      ///< "ember-dark", "solace-hc", ...
+        const char* key;      ///< "ink-dark", "ember-dark", "solace-hc", ...
         const char* name;     ///< "Ember"
         const char* modeName; ///< "Dark", "Light", "High contrast"
         int mode;             ///< 0 dark, 1 light, 2 high contrast
@@ -512,6 +512,17 @@ inline NUIColor editorNeutral(const NUIColor& dark) {
     if (!editorLightUi()) return editorNeutral(luma, dark.a);
     const float g = std::min(0.905f + luma * 0.38f, 0.985f);
     return NUIColor(g, g, g, dark.a);
+}
+
+/** True when the active theme's `selected` is a solid fill (Ink: the lit primary) rather than a thin wash. */
+inline bool selectedIsSolid() {
+    return NUIThemeManager::getInstance().getCurrentTheme().selected.a >= 0.9f;
+}
+
+/** The label colour for text drawn on a `selected` fill: textOnPrimary when the selection is solid, else `normal`
+    (a wash leaves the surface dark enough for the ordinary text colour). Draw the fill first, then the label. */
+inline NUIColor labelOnSelected(const NUIColor& normal) {
+    return selectedIsSolid() ? NUIThemeManager::getInstance().getCurrentTheme().textOnPrimary : normal;
 }
 
 /** The active theme's text ink — replaces hardcoded white overlays/labels. */

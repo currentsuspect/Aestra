@@ -6,6 +6,7 @@
 #include "UnitManager.h"
 #include "PatternSource.h" // For PatternID (value type, can't forward-declare)
 #include "UnitNameLabel.h"
+#include "UnitRowLook.h"
 #include "NUIContextMenu.h"
 #include <functional>
 #include <memory>
@@ -302,6 +303,7 @@ private:
     bool m_isDragging = false;
     bool m_isSelected = false;
     bool m_isDropHighlighted = false;
+    UnitRowLook::Row m_look; ///< this frame's row colours (UnitRowLook.h), set at the top of drawContent
     NUIPoint m_dragStartPos;
 
     // Step gesture session. A vertical drag edits velocity; a horizontal drag

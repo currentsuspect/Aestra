@@ -60,7 +60,7 @@ void UnitNameLabel::onRender(NUIRenderer& renderer) {
     renderer.drawText(displayName,
                       NUIPoint(bounds.x + 10.0f, bounds.y + 3.0f),
                       13.0f,
-                      theme.getColor("textPrimary").withAlpha(0.92f));
+                      m_ink.set ? m_ink.name : theme.getColor("textPrimary"));
 
     if (m_compact) {
         // Compact representation: name only. The type line returns at Full
@@ -92,14 +92,14 @@ void UnitNameLabel::onRender(NUIRenderer& renderer) {
     renderer.drawText(typeLabel,
                       NUIPoint(bounds.x + 10.0f, bounds.y + 19.0f),
                       10.0f,
-                      theme.getColor("textSecondary").withAlpha(0.5f));
+                      m_ink.set ? m_ink.kind : theme.getColor("textSecondary"));
     if (m_role.known()) {
         // The role follows the type: "Sampler · Drums · Kick". Read from the name it is quiet; chosen by the user it
         // is a little brighter, so a guess and a decision never look the same.
         const float typeW = renderer.measureText(typeLabel + "  ", 10.0f).width;
         renderer.drawText("\xc2\xb7 " + Aestra::Audio::roleLabel(m_role),
                           NUIPoint(bounds.x + 10.0f + typeW, bounds.y + 19.0f), 10.0f,
-                          theme.getColor("textSecondary").withAlpha(m_role.source == Aestra::Audio::RoleSource::User ? 0.85f : 0.5f));
+                          m_role.source == Aestra::Audio::RoleSource::User ? (m_ink.set ? m_ink.kind : theme.getColor("textSecondary")) : (m_ink.set ? m_ink.kindGuess : theme.getColor("textMuted")));
     }
     renderer.clearClipRect();
 }

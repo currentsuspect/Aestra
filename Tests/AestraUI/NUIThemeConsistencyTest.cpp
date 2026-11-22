@@ -438,8 +438,9 @@ void testEditorNeutralsFollowTheme() {
     auto& manager = NUIThemeManager::getInstance();
 
     // Ember is a warm black, so an editor's tuned gray must come out warm
-    // (red >= green >= blue) at the same lightness, not as a cool gray.
-    manager.setActiveTheme("Aestra-dark");
+    // (red >= green >= blue) at the same lightness, not as a cool gray. (Ink, the default since 21 Nov 2026, is
+    // pure neutral: see the exact-greys check below.)
+    manager.setActiveTheme("ember-dark");
     const NUIColor warm = editorNeutral(0.045f, 0.9f);
     check(warm.r > warm.b, "a dark editor surface leans toward the theme's warmth");
     check(nearlyEqual((warm.r + warm.g + warm.b) / 3.0f, 0.045f, 0.002f), "tinting keeps the tuned lightness");
@@ -455,7 +456,15 @@ void testEditorNeutralsFollowTheme() {
     check(colorsEqual(editorNeutral(0.045f, 0.9f), NUIColor(0.045f, 0.045f, 0.045f, 0.9f)),
           "a neutral theme leaves editor grays untouched");
 
+    // Ink is pure neutral too, and it is what the old names resolve to.
     manager.setActiveTheme("Aestra-dark");
+    check(manager.getCurrentTheme().backgroundPrimary.r == manager.getCurrentTheme().backgroundPrimary.b,
+          "the default dark theme is a neutral grey ramp");
+    check(colorsEqual(editorNeutral(0.045f, 0.9f), NUIColor(0.045f, 0.045f, 0.045f, 0.9f)),
+          "Ink leaves editor grays exactly as tuned");
+    check(colorsEqual(manager.getColor("backgroundSecondary"), NUIColor::fromHex(0x1e1e1e)) &&
+              colorsEqual(manager.getColor("surfaceRaised"), NUIColor::fromHex(0x3e3e3e)),
+          "the default dark surfaces are Ink's exact greys");
 }
 
 void testControlKitTokens() {

@@ -3881,7 +3881,7 @@ void AestraContent::addDemoTracks() {
         if (auto* lane = playlist.getLane(laneId)) {
             // Cycle the shared track palette so the lane strip matches the
             // name ink and mixer tint derived from the same index.
-            lane->colorRGBA = AestraUI::TRACK_PALETTE[(i - 1) % AestraUI::PALETTE_SIZE];
+            lane->colorRGBA = AestraUI::TRACK_PALETTE[AestraUI::assignablePaletteIndex(i - 1)];
         }
     }
 

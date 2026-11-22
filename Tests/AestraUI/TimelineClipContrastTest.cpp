@@ -267,9 +267,9 @@ void testLaneIdentityRestraintIsNotAnIdentityFunction() {
 void testUnsetChannelColourResolvesLikeTheMixer() {
     check(AestraUI::resolveTrackColorIndex(3, 0, 0) == 3, "a saved index wins");
     check(AestraUI::resolveTrackColorIndex(-1, AestraUI::paletteIndexToARGB(5), 0) == 5, "else the entry nearest its colour");
-    check(AestraUI::resolveTrackColorIndex(-1, 0, 2) == 2, "else its position");
-    check(AestraUI::resolveTrackColorIndex(-1, 0, AestraUI::PALETTE_SIZE + 1) == 1, "position wraps the palette");
-    check(AestraUI::resolveTrackColorIndex(AestraUI::PALETTE_SIZE, 0, 4) == 4, "a stale out-of-range index is not used");
+    check(AestraUI::resolveTrackColorIndex(-1, 0, 2) == AestraUI::assignablePaletteIndex(2), "else its position in the assignable rotation");
+    check(AestraUI::resolveTrackColorIndex(-1, 0, AestraUI::PALETTE_SIZE + 1) == AestraUI::assignablePaletteIndex(AestraUI::PALETTE_SIZE + 1), "position wraps the rotation");
+    check(AestraUI::resolveTrackColorIndex(AestraUI::PALETTE_SIZE, 0, 4) == AestraUI::assignablePaletteIndex(4), "a stale out-of-range index is not used");
 }
 
 int main() {

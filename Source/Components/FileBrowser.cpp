@@ -2335,8 +2335,8 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         const bool primarySelected = i == selectedIndex_;
         const bool selected = primarySelected ||
                               std::find(selectedIndices_.begin(), selectedIndices_.end(), i) != selectedIndices_.end();
-        renderer.fillRect(itemRect, evenRow);
-        if (selected) renderer.fillRect(itemRect, primarySelected ? selectedRow : secondarySelectedRow);
+        renderer.fillRect(itemRect, evenRow); if (selected) renderer.fillRect(itemRect, primarySelected ? selectedRow : secondarySelectedRow);
+        const bool lit = primarySelected && selectedIsSolid(); const NUIColor onLit = themeProps.textOnPrimary; // solid selection: ink on the lit row; paler secondary rows keep light text
         // Hover wash is drawn by renderHoverOverlays() OUTSIDE the FBO cache —
         // hover must never invalidate the cache (rebuilding the whole list per
         // row crossing cost ~11 ms/frame of the mouse-active render budget).
@@ -2347,7 +2347,7 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
             // FD-47: the sound that is playing is tinted, with teal bars where the
             // play glyph would be — teal is what "live" means everywhere in Aestra.
             renderer.fillRect(itemRect, themeManager.getColor("accentPrimary").withAlpha(0.14f));
-            const NUIColor live = themeManager.getColor("accentCyan");
+            const NUIColor live = lit ? onLit : themeManager.getColor("accentCyan");
             const float bx = itemRect.x + 5.0f, cy = itemRect.y + itemRect.height * 0.5f;
             renderer.fillRect({bx, cy - 3.0f, 2.0f, 6.0f}, live);
             renderer.fillRect({bx + 3.0f, cy - 5.0f, 2.0f, 10.0f}, live);
@@ -2362,7 +2362,7 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
             const float cx = contentX + 5.0f;
             const float cy = itemRect.y + itemRect.height * 0.5f;
             const float s = 3.0f; // the spec's 10px disclosure chevron
-            const NUIColor chevronColor = themeProps.textMuted;
+            const NUIColor chevronColor = lit ? onLit : themeProps.textMuted;
             if (item->isExpanded) {
                 renderer.drawLine({cx - s, cy - s * 0.5f}, {cx, cy + s * 0.5f}, 1.3f, chevronColor);
                 renderer.drawLine({cx, cy + s * 0.5f}, {cx + s, cy - s * 0.5f}, 1.3f, chevronColor);
@@ -2384,7 +2384,7 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
             NUIRect iconRect(contentX, std::round(itemRect.y + (itemRect.height - ROW_ICON_SIZE) * 0.5f), ROW_ICON_SIZE,
                              ROW_ICON_SIZE);
             // renderAt: the shared per-file-type icon was re-tinted per row, invalidating it per frame.
-            icon->renderAt(renderer, iconRect, selected ? themeProps.textPrimary
+            icon->renderAt(renderer, iconRect, lit ? onLit : selected ? themeProps.textPrimary
                                                : (item->isDirectory && item->isExpanded ? themeProps.textSecondary : themeProps.textMuted));
         }
         contentX += 20.0f;
@@ -2408,7 +2408,7 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         if (!lengthText.empty()) {
             const float w = renderer.measureText(lengthText, factFont).width;
             renderer.drawText(lengthText, {itemRect.right() - 12.0f - w, std::round(renderer.calculateTextY(itemRect, factFont))},
-                              factFont, muted.withAlpha(0.75f));
+                              factFont, lit ? onLit : muted.withAlpha(0.75f));
         }
         if (!keyText.empty()) { // the key on a small chip
             const NUIRect chip{itemRect.right() - 12.0f - lengthColW - keyColW, itemRect.y + itemRect.height * 0.5f - 8.0f, keyColW - 2.0f, 16.0f};
@@ -2435,8 +2435,8 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         }
 
         const NUIColor itemTextColor = item->isPlaceholder
-                                           ? muted.withAlpha(0.60f)
-                                           : selected ? themeManager.getColor("textPrimary")
+                                           ? (lit ? onLit : muted.withAlpha(0.60f))
+                                           : lit ? onLit : selected ? themeManager.getColor("textPrimary")
                                                       : item->isDirectory ? folderText : text;
         renderer.drawText(displayName, {contentX, std::round(renderer.calculateTextY(itemRect, labelFont))},
                           labelFont, itemTextColor);
@@ -2454,7 +2454,7 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
                 if (!folder.empty() && room > 40.0f) {
                     const std::string hint = ellipsizeEnd(renderer, folder, hintFont, room);
                     renderer.drawText(hint, {afterNameX + 8.0f, std::round(renderer.calculateTextY(itemRect, hintFont))},
-                                      hintFont, muted.withAlpha(0.62f));
+                                      hintFont, lit ? onLit : muted.withAlpha(0.62f));
                     afterNameX += 8.0f + renderer.measureText(hint, hintFont).width;
                 }
             }

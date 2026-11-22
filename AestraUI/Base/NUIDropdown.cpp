@@ -559,7 +559,7 @@ void NUIDropdown::renderItem(NUIRenderer& renderer, int index, const NUIRect& bo
     else if (isHovered)
         renderer.fillRoundedRect(bounds, kRowRadius, hoverColor_.withAlpha(hoverColor_.a * rowMotion_.hover()));
 
-    NUIColor curText = item.enabled ? textColor_ : props.textDisabled;
+    NUIColor curText = item.enabled ? (isSelected ? labelOnSelected(textColor_) : textColor_) : props.textDisabled;
     float padding = props.spacingS;
     
     NUIRect textBounds = bounds;

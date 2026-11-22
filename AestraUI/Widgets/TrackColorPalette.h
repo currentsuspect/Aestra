@@ -10,22 +10,33 @@
 
 namespace AestraUI {
 
-// Ember palette (2026-09-29). Eight identity hues at one OKLCH lightness
-// (L 0.73), 45° apart where the wheel allows, each at the largest chroma
-// sRGB can hold. Designed for the clip contract below: every body is
-// scaled down to kClipBodyLuminanceCeiling, and hues chosen this way land
-// as distinct, saturated tones there instead of browns and olives.
+// Ember palette (2026-09-29), re-hued for Ink (21 Nov 2026). Identity hues at one OKLCH lightness (L 0.73), each at
+// the largest chroma (up to 0.18) sRGB can hold. Designed for the clip contract below: every body is scaled down to
+// kClipBodyLuminanceCeiling, and hues chosen this way land as distinct, saturated tones there instead of browns and
+// olives.
+//
+// Violet now means "selected" and "the playhead" (the Ink theme's primary, hue ~295 in OKLCH), so no unit, track or
+// route may be coloured from the violet family (hue 255-300). Purple (1) and Indigo (7) were that. A saved project
+// names its colours by INDEX (the mixer channel's trackColorIndex) and by ARGB, so those two entries stay decodable
+// as legacy slots and an old project loads exactly as it was; they are never offered or handed out again. Gold (8)
+// and Cyan (9) take their places in the eight assignable colours.
 static constexpr uint32_t TRACK_PALETTE[] = {
     0xFF06C49D, // 0 — Teal      oklch(0.73 0.18 172)
-    0xFFB88EFC, // 1 — Purple    oklch(0.73 0.18 300)
+    0xFFB88EFC, // 1 — Purple    LEGACY (hue 300): decodes saved projects, never assigned
     0xFFFB8304, // 2 — Amber     oklch(0.73 0.18  55)
     0xFFFF7A66, // 3 — Coral     oklch(0.73 0.18  30)
     0xFF10B6F3, // 4 — Sky Blue  oklch(0.73 0.18 232)
     0xFF86BC23, // 5 — Sage      oklch(0.73 0.18 128)
     0xFFFB70AD, // 6 — Pink      oklch(0.73 0.18 355)
-    0xFF8AA1FC, // 7 — Indigo    oklch(0.73 0.18 272)
+    0xFF8AA1FC, // 7 — Indigo    LEGACY (hue 272): decodes saved projects, never assigned
+    0xFFC9A300, // 8 — Gold      oklch(0.73 0.15  92)
+    0xFF00BECD, // 9 — Cyan      oklch(0.73 0.12 205)
 };
-static constexpr int PALETTE_SIZE = 8;
+/// Every entry a saved colour index may name (legacy slots included).
+static constexpr int PALETTE_SIZE = 10;
+/// The colours a new unit, track or channel can get, and the picker offers: PALETTE indices in the order they rotate.
+static constexpr int ASSIGNABLE_COUNT = 8;
+inline constexpr int ASSIGNABLE_ORDER[ASSIGNABLE_COUNT] = {0, 8, 3, 4, 5, 6, 2, 9};
 
 static constexpr const char* PALETTE_NAMES[] = {
     "Teal",
@@ -36,7 +47,12 @@ static constexpr const char* PALETTE_NAMES[] = {
     "Sage",
     "Pink",
     "Indigo",
+    "Gold",
+    "Cyan",
 };
+
+/// The palette index the n-th new unit, track or channel takes.
+inline int assignablePaletteIndex(size_t n) { return ASSIGNABLE_ORDER[n % ASSIGNABLE_COUNT]; }
 
 inline uint32_t paletteIndexToARGB(int index) {
     if (index < 0 || index >= PALETTE_SIZE) return 0xFF808080;
@@ -232,7 +248,7 @@ inline int nearestPaletteIndex(uint32_t argb) {
 inline int resolveTrackColorIndex(int savedIndex, uint32_t argb, size_t slot) {
     if (savedIndex >= 0 && savedIndex < PALETTE_SIZE) return savedIndex;
     const int nearest = nearestPaletteIndex(argb);
-    return nearest >= 0 ? nearest : static_cast<int>(slot % PALETTE_SIZE);
+    return nearest >= 0 ? nearest : assignablePaletteIndex(slot);
 }
 
 } // namespace AestraUI

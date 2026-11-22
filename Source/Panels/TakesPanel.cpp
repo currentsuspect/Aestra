@@ -711,12 +711,12 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
                 if (current) renderer.fillRoundedRect(row, 6.0f, theme.getColor("selected"));
                 else if (i == m_hoveredStep) renderer.fillRoundedRect(row, 6.0f, theme.getColor("hover"));
                 const bool undone = m_steps[static_cast<size_t>(i)].undone;
-                renderer.fillCircle({row.x + 12.0f, row.y + row.height * 0.5f}, 3.0f, current ? c : quiet);
+                renderer.fillCircle({row.x + 12.0f, row.y + row.height * 0.5f}, 3.0f, current ? labelOnSelected(c) : quiet);
                 renderer.drawText(m_steps[static_cast<size_t>(i)].label, {row.x + 24.0f, std::round(renderer.calculateTextY(row, 12.0f))}, 12.0f,
-                                  undone ? quiet : (current || i == m_hoveredStep ? text : muted));
+                                  undone ? quiet : (current ? labelOnSelected(text) : i == m_hoveredStep ? text : muted));
                 if (const std::string clock = VersionsTimeline::clockLabel(m_steps[static_cast<size_t>(i)].atMs); !clock.empty()) {
                     const float cw = renderer.measureText(clock, 10.0f).width;
-                    renderer.drawText(clock, {row.right() - 8.0f - cw, std::round(renderer.calculateTextY(row, 10.0f))}, 10.0f, quiet);
+                    renderer.drawText(clock, {row.right() - 8.0f - cw, std::round(renderer.calculateTextY(row, 10.0f))}, 10.0f, current ? labelOnSelected(quiet) : quiet);
                 }
             }
             if (m_steps.empty()) renderer.drawTextCentered("Nothing done in this version yet", layout.stepsList, 12.0f, quiet);
@@ -764,8 +764,9 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
             const NUIRect row{dx - 8.0f, layout.snapshotList.y + static_cast<float>(i) * SNAPSHOT_ROW_HEIGHT + 1.0f, dw + 16.0f, SNAPSHOT_ROW_HEIGHT - 2.0f};
             if (i == m_selectedSnapshot) renderer.fillRoundedRect(row, 6.0f, theme.getColor("selected"));
             else if (i == m_hoveredSnapshot) renderer.fillRoundedRect(row, 6.0f, theme.getColor("hover"));
-            renderer.fillCircle({dx + 4.0f, row.y + row.height * 0.5f}, 3.5f, theme.getColor("warning"));
-            renderer.drawText(m_snapshotRows[static_cast<size_t>(i)].label, {dx + 18.0f, std::round(renderer.calculateTextY(row, 11.0f))}, 11.0f, muted);
+            const bool chosen = i == m_selectedSnapshot;
+            renderer.fillCircle({dx + 4.0f, row.y + row.height * 0.5f}, 3.5f, chosen ? labelOnSelected(theme.getColor("warning")) : theme.getColor("warning"));
+            renderer.drawText(m_snapshotRows[static_cast<size_t>(i)].label, {dx + 18.0f, std::round(renderer.calculateTextY(row, 11.0f))}, 11.0f, chosen ? labelOnSelected(muted) : muted);
         }
     }
 
