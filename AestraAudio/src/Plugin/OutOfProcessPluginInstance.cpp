@@ -3,6 +3,7 @@
 #include "Plugin/OutOfProcessPluginInstance.h"
 
 #include "AestraLog.h"
+#include "HelperEditorProtocol.h"
 #include "SharedAudioBlock.h"
 
 #include <cstdio>
@@ -1179,10 +1180,20 @@ bool OutOfProcessPluginInstance::hasEditor() const {
 }
 
 bool OutOfProcessPluginInstance::openEditor(void* parentWindow) {
-    (void)parentWindow; // the helper makes the window; there is nothing of the app's to embed into
+    // The helper makes the window; there is nothing of the app's to embed into. On Linux a non-null parentWindow is
+    // the app's own X11 window id, which the helper uses as WM_TRANSIENT_FOR (HelperEditorProtocol.h). Elsewhere it
+    // is not an X11 id, so it is not sent.
+#if defined(_WIN32) || defined(__APPLE__)
+    (void)parentWindow;
+    const std::uintptr_t transientParent = 0;
+#else
+    const auto transientParent = reinterpret_cast<std::uintptr_t>(parentWindow);
+#endif
     if (!hasEditor()) return false;
     std::string response;
-    if (!sendCommand("EDITOR OPEN " + hexEncode(m_info.name), &response, std::chrono::seconds(15))) return false;
+    if (!sendCommand(AestraHelper::formatEditorOpenCommand(hexEncode(m_info.name), transientParent), &response,
+                     std::chrono::seconds(15)))
+        return false;
     int width = 0, height = 0;
     if (std::sscanf(response.c_str(), "OK EDITOR %d %d", &width, &height) != 2) return false;
     m_editorWidth.store(width, std::memory_order_relaxed);

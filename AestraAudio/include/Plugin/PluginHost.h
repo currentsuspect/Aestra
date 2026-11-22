@@ -323,7 +323,8 @@ public:
 
     /**
      * @brief Whether the plugin makes its own top-level window (the sandbox helper does), so the app must not make one
-     * to embed it in. When true, openEditor() ignores its argument: pass nullptr.
+     * to embed it in. When true, openEditor()'s argument is not a parent to embed in: pass nullptr, or on Linux the
+     * app's own X11 window id, which the sandbox helper makes the plugin's window transient for (kept above the app).
      */
     virtual bool ownsEditorWindow() const { return false; }
 

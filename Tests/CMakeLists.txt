@@ -5565,6 +5565,14 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraPlat/LinuxVideoDriverTest.cpp")
     set_tests_properties(LinuxVideoDriverTest PROPERTIES LABELS "platform;regression;contract:application")
 endif()
 
+# `EDITOR OPEN <titleHex> [parentXid]`: the optional transient-parent argument's parse and format. Header-only,
+# links nothing.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/HelperEditorProtocolTest.cpp")
+    add_executable(HelperEditorProtocolTest AestraAudio/HelperEditorProtocolTest.cpp)
+    add_test(NAME HelperEditorProtocolTest COMMAND HelperEditorProtocolTest)
+    set_tests_properties(HelperEditorProtocolTest PROPERTIES LABELS "audio;plugin;regression;contract:application")
+endif()
+
 # V8-C14 step 2 (FD-23): the store half of the resolution contract, driven through
 # UISurfaceGeometry — maximize restores the pre-maximize rect, dragging a maximized
 # surface restores it, absent entries resolve from defaults without writing.
