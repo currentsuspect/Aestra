@@ -5,6 +5,7 @@
 #include <iostream>
 #if defined(SDL_VIDEO_DRIVER_X11)
 #include <X11/Xlib.h>
+#include <X11/cursorfont.h>
 #endif
 
 namespace Aestra {
@@ -486,6 +487,14 @@ bool PlatformWindowLinux::placeChildWindow(std::uintptr_t child, int x, int y, i
     if (!visible) {
         XUnmapWindow(display, id);
         return true;
+    }
+    // Aestra hides the native pointer on its own window (it draws one); a child window inherits that blank cursor,
+    // and its own drawing covers Aestra's, so over a plugin the pointer vanished. Give the child a real arrow once;
+    // a plugin that sets its own cursor later simply replaces it.
+    if (m_childCursorSet.insert(child).second) {
+        const ::Cursor arrow = XCreateFontCursor(display, XC_left_ptr);
+        XDefineCursor(display, id, arrow);
+        XFreeCursor(display, arrow);
     }
     XMoveResizeWindow(display, id, x, y, static_cast<unsigned>(std::max(1, width)), static_cast<unsigned>(std::max(1, height)));
     XMapRaised(display, id);

@@ -1,4 +1,6 @@
 #pragma once
+#include <cstdint>
+#include <set>
 #include "../../include/AestraPlatform.h"
 
 #include <SDL2/SDL.h>
@@ -115,6 +117,7 @@ private:
     bool m_maximized = false;
 
     void rememberRestoreBoundsIfNormal();
+    std::set<std::uintptr_t> m_childCursorSet; ///< embedded plugin windows already given a visible pointer
     bool m_isWindowVisible = true;
     bool m_isWindowMapped = true;
     float m_dpiScale = 1.0f;
