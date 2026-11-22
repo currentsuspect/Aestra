@@ -5027,6 +5027,7 @@ if(AESTRA_ENABLE_UI)
         InkSurfaceStepTest
         ThemeChangeCacheTest
         SelectionTokenGuardTest
+        TransportPillGeometryTest
     )
     foreach(_t IN LISTS AESTRA_REQUIRED_UI_TESTS)
         if(NOT TARGET ${_t})
