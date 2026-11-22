@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerPanel.h"
+#include "InspectorHandle.h"
 #include "../Graphics/NUIDepth.h"
 #include "UIMixerStrip.h"
 #include "MixerScale.h"
@@ -593,14 +594,28 @@ void UIMixerPanel::renderGroupBands(NUIRenderer& renderer)
     }
 }
 
-NUIRect UIMixerPanel::getInspectorToggleRect() const
+NUIRect UIMixerPanel::getInspectorRailRect() const
 {
     const TrailingLayout trailing = trailingLayout();
 
-    // Collapsed: the whole thin rail is the target. Expanded: a grip strip down
-    // the inspector's leading edge.
+    // Collapsed: the thin strip that is left. Expanded: a 10px strip down the inspector's leading edge. Only the
+    // handle (InspectorHandle.h) on it is drawn and reacts; the rail is where the handle is centred.
     const float railW = isInspectorCollapsed() ? INSPECTOR_COLLAPSED_WIDTH : 10.0f;
     return NUIRect{trailing.inspectorRect.x, trailing.inspectorRect.y, railW, trailing.inspectorRect.height};
+}
+
+NUIRect UIMixerPanel::getInspectorTabRect() const
+{
+    const NUIRect rail = getInspectorRailRect();
+    const auto t = InspectorHandle::tab(rail.x, rail.y, rail.width, rail.height);
+    return NUIRect{t.x, t.y, t.w, t.h};
+}
+
+NUIRect UIMixerPanel::getInspectorToggleRect() const
+{
+    const NUIRect rail = getInspectorRailRect();
+    const auto h = InspectorHandle::hit(rail.x, rail.y, rail.width, rail.height);
+    return NUIRect{h.x, h.y, h.w, h.h};
 }
 
 void UIMixerPanel::updateInspectorWidthConstraint()
@@ -790,27 +805,19 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
     // inspector; expanded it is a slim grip on the panel's leading edge.
     {
         auto& theme = NUIThemeManager::getInstance();
-        const NUIRect rail = getInspectorToggleRect();
+        const NUIRect rail = getInspectorTabRect(); // the drawn handle; its hit area is this plus a little slop
         const bool collapsed = isInspectorCollapsed();
         const bool forced = isInspectorForcedCollapsed();
 
-        // A width-imposed collapse reads as unavailable rather than chosen: the
-        // rail still accepts the click (it records intent) but must not look
-        // like it will open the panel right now, or it feels broken.
-        // Expanded, the handle is the chevron on a short pill centred on the rail, not a stripe the inspector's full
-        // height: hover is one quiet, flat, neutral step on that pill (no accent wash, no glow), so a pointer
-        // crossing the edge on its way elsewhere barely registers. Collapsed, the rail is all that is left of the
-        // inspector, so it stays a full-height strip, one step lighter on hover.
+        // A width-imposed collapse reads as unavailable rather than chosen: the handle still accepts the click (it
+        // records intent) but must not look like it will open the panel right now, or it feels broken.
+        // Owner, 22 Nov: at rest only the chevron shows; near it a small round-cornered tab rises behind it, one
+        // flat quiet step (no accent wash, no glow, no lift). Nothing else along the edge reacts.
         const NUIColor lit = (forced ? theme.getColor("hover") : theme.getColor("surfaceRaised")).withAlpha(forced ? 0.6f : 0.95f);
-        if (collapsed) {
-            renderer.fillRoundedRect(rail, 3.0f, m_inspectorToggleHovered ? lit : theme.getColor("surfaceTertiary").withAlpha(0.72f));
-        } else if (m_inspectorToggleHovered) {
-            constexpr float kHandleH = 56.0f;
-            const NUIRect pill{rail.x, rail.y + (rail.height - kHandleH) * 0.5f, rail.width, std::min(kHandleH, rail.height)};
-            renderer.fillRoundedRect(pill, 4.0f, lit);
-        }
+        if (m_inspectorToggleHovered)
+            renderer.fillRoundedRect(rail, 4.0f, lit);
 
-        // Chevron points the way the panel will move.
+        // Chevron points the way the panel will move: a 1.5px stroke, 4 wide by 8 tall.
         float glyphAlpha = m_inspectorToggleHovered ? 0.95f : 0.6f;
         if (forced) {
             glyphAlpha *= 0.45f;
@@ -819,11 +826,8 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
         const float cx = rail.x + rail.width * 0.5f;
         const float cy = rail.y + rail.height * 0.5f;
         const float dir = collapsed ? -1.0f : 1.0f;
-        for (int i = 0; i < 5; ++i) {
-            const float dy = static_cast<float>(i) - 2.0f;
-            const float dx = dir * (2.0f - std::abs(dy));
-            renderer.fillRect(NUIRect{cx + dx - 0.5f, cy + dy * 2.0f, 1.5f, 2.0f}, glyph);
-        }
+        const NUIPoint pts[3] = {{cx - dir * 2.0f, cy - 4.0f}, {cx + dir * 2.0f, cy}, {cx - dir * 2.0f, cy + 4.0f}};
+        renderer.drawPolyline(pts, 3, 1.5f, glyph);
     }
 
     // Master strip renders on top / outside the clip.

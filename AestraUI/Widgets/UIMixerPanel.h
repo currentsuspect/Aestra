@@ -186,7 +186,9 @@ private:
     /// `recorder` is passed only by the layout pass (V8-X2b criterion 4); render and hit tests call it bare.
     TrailingLayout trailingLayout(Layout::NUILayoutRecorder* recorder = nullptr) const;
 
-    /// Rail/handle that collapses or restores the inspector.
+    /// The strip the collapse handle sits on, the handle's drawn tab, and what reacts to the pointer (tab + slop).
+    NUIRect getInspectorRailRect() const;
+    NUIRect getInspectorTabRect() const;
     NUIRect getInspectorToggleRect() const;
 
     bool channelLayoutMatchesViewModel() const;

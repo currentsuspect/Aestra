@@ -276,6 +276,14 @@ target_include_directories(StripWashTest PRIVATE
 add_test(NAME StripWashTest COMMAND StripWashTest)
 set_tests_properties(StripWashTest PROPERTIES LABELS "unit;mixer;strip;contract:core")
 
+# Mixer rework slice 7: the inspector collapse handle's tab and hit rect. Pure header.
+add_executable(InspectorHandleTest AestraUI/InspectorHandleTest.cpp)
+target_include_directories(InspectorHandleTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME InspectorHandleTest COMMAND InspectorHandleTest)
+set_tests_properties(InspectorHandleTest PROPERTIES LABELS "unit;mixer;inspector;contract:core")
+
 # Mixer rework slice 5: the correlation meter as dotted LEDs. Pure header.
 add_executable(CorrelationLedsTest AestraUI/CorrelationLedsTest.cpp)
 target_include_directories(CorrelationLedsTest PRIVATE
