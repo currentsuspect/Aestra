@@ -27,12 +27,12 @@ void applyJSONThemeOverrides(const NUITheme& source, NUIThemeProperties& target)
     color("surface", target.surface);
     color("surfaceVariant", target.surfaceVariant);
 
-    color("primary", target.primary);
     color("accent", target.primary);
-    color("primaryHover", target.primaryHover);
+    color("primary", target.primary);
     color("accentHover", target.primaryHover);
-    color("primaryPressed", target.primaryPressed);
+    color("primaryHover", target.primaryHover);
     color("accentPressed", target.primaryPressed);
+    color("primaryPressed", target.primaryPressed);
     color("secondary", target.secondary);
     color("accentCyan", target.accentCyan);
     color("accentMagenta", target.accentMagenta);
@@ -59,6 +59,10 @@ void applyJSONThemeOverrides(const NUITheme& source, NUIThemeProperties& target)
     color("borderStrong", target.borderStrong);
     color("borderActive", target.borderActive);
     color("divider", target.divider);
+    // Alias precedence (answering the owner's note here): where a file may name a property by two keys, the canonical key (the
+    // property's own name) always wins. Each alias is applied BEFORE its canonical key, so a file that supplies both gets the
+    // canonical one. It was inconsistent: backgroundPrimary/surfaceTertiary/selected/... did this, but accent, accentHover and
+    // accentPressed were applied after primary, primaryHover and primaryPressed, so the alias won. NUIThemeJSONTest pins it.
     color("selection", target.selected);
     color("selected", target.selected);
     color("hover", target.hover);
@@ -111,6 +115,14 @@ void applyJSONThemeOverrides(const NUITheme& source, NUIThemeProperties& target)
     color("gridMinor", target.gridMinor);
     color("mixerStripBg", target.mixerStripBg);
     color("mixerMasterBorder", target.mixerMasterBorder);
+    // The kit's surface tokens, so a preview can move a whole layer (theme_preview.sh --set timelineBed=#000000).
+    color("timelineBed", target.timelineBed);
+    color("editorCard", target.editorCard);
+    color("editorWell", target.editorWell);
+    color("editorControl", target.editorControl);
+    color("controlEdge", target.controlEdge);
+    color("controlSelected", target.controlSelected);
+    color("controlGuide", target.controlGuide);
 
     const auto hasColor = [&](const char* primaryName, const char* alias = nullptr) {
         return source.hasColorOverride(primaryName) || (alias && source.hasColorOverride(alias));

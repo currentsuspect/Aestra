@@ -3900,6 +3900,17 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(ThemeChangeCacheTest PROPERTIES LABELS "ui;theme;cache;regression;contract:application")
 endif()
 
+# Transport pills: one height, one inset, glyphs centred in their cells (TransportPillLook.h, headless).
+if(AESTRA_ENABLE_UI)
+    add_executable(TransportPillGeometryTest AestraUI/TransportPillGeometryTest.cpp)
+    target_include_directories(TransportPillGeometryTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+    )
+    add_test(NAME TransportPillGeometryTest COMMAND TransportPillGeometryTest)
+    set_tests_properties(TransportPillGeometryTest PROPERTIES LABELS "ui;layout;geometry;regression;contract:application")
+endif()
+
 # Selection tokens guard: the accent / selection colours come from the theme's named tokens. Fails on a primary tinted
 # with an alpha, a lerp toward it, a violet literal, or a local given an alpha after being assigned from the accent.
 if(AESTRA_ENABLE_UI)
@@ -4878,6 +4889,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowser.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserNavigation.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserChrome.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserTheme.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserLibrary.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserScan.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserTheme.cpp
@@ -5016,6 +5028,7 @@ if(AESTRA_ENABLE_UI)
         InkSurfaceStepTest
         ThemeChangeCacheTest
         SelectionTokenGuardTest
+        TransportPillGeometryTest
     )
     foreach(_t IN LISTS AESTRA_REQUIRED_UI_TESTS)
         if(NOT TARGET ${_t})

@@ -5,6 +5,7 @@
 // Everything here is drawn into the static cache; the hit rects it records are
 // read by handleChromeHits() and washed on hover by renderHoverOverlays().
 #include "FileBrowserInternal.h"
+#include "NUISegmentedControl.h"
 
 using namespace Aestra;
 
@@ -71,9 +72,12 @@ void FileBrowser::renderKindTabs(NUIRenderer& renderer, const BrowserLayout& lay
     const auto& props = theme.getCurrentTheme();
     const NUIRect& first = layout.kinds[0];
     const NUIRect& last = layout.kinds[2];
+    // The same switch as the title bar's Arsenal | Timeline | Audition: one shared look (NUISegmentedControl::paintPill),
+    // not a copy. The hover index comes from the pointer over the tab rects.
     const NUIRect well(first.x - 2.0f, first.y - 2.0f, last.right() - first.x + 4.0f, first.height + 4.0f);
     static const std::vector<std::string> kNames = {"Sounds", "Patterns", "Plugins"};
     const int active = kindOf(activeNavAction_);
+    NUISegmentedControl::paintPill(renderer, well, kNames, static_cast<float>(active), static_cast<size_t>(std::max(0, active)));
     for (int i = 0; i < 3; ++i) {
         const NUIRect& tab = layout.kinds[static_cast<size_t>(i)];
         ChromeHit hit;

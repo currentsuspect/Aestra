@@ -9,6 +9,8 @@
 #include "NUIThemeSystem.h"
 
 #include <algorithm>
+#include <cstdio>
+#include <fstream>
 #include <cmath>
 #include <iostream>
 #include <string>
@@ -86,7 +88,7 @@ void testAllKitThemes() {
         check(t.neuLo.a > 0.0f && t.neuHi.a > 0.0f, key + " has depth light and shade");
         check(t.glassEdge.a > 0.0f, key + " has a glass edge");
         if (k.mode != 1)
-            check(same(t.timelineBed, NUIColor::black()), key + " keeps the pure-black timeline bed");
+            check(same(t.timelineBed, key == "ink-dark" ? NUIColor::fromHex(0x050709) : NUIColor::black()), key + " keeps its outer bed (pure black, or Ink dark's slate near-black)");
         if (k.mode == 2)
             check(t.neuEdge.a > 0.0f, key + " keeps an inner edge on controls");
         else
@@ -108,19 +110,50 @@ void testInk() {
             check(std::string(k.name) == "Ink", std::string(k.key) + " is named simply Ink");
         }
     check(inkRows == 3, "Ink has dark, light and high contrast");
-    check(same(dark.timelineBed, hex(0x000000)) && same(dark.editorWell, hex(0x030303)) &&
-              same(dark.meterBackground, hex(0x030303)),
-          "Ink dark: bed, editor well and meter background are the near-blacks");
-    check(same(dark.backgroundPrimary, hex(0x0a0a0a)) && same(dark.backgroundSecondary, hex(0x1e1e1e)) &&
-              same(dark.surfaceTertiary, hex(0x303030)) && same(dark.surfaceRaised, hex(0x3e3e3e)),
-          "Ink dark surfaces are exact neutral greys");
-    check(same(dark.mixerStripBg, hex(0x1e1e1e)) && same(dark.editorCard, hex(0x1e1e1e)) &&
-              same(dark.editorControl, hex(0x141414)),
+    check(same(dark.timelineBed, hex(0x050709)) && same(dark.editorWell, hex(0x050709)) &&
+              same(dark.meterBackground, hex(0x050709)),
+          "Ink dark: the outer bed, editor well and meter background are the slate near-black (owner pick S)");
+    check(same(dark.backgroundPrimary, hex(0x151a1f)) && same(dark.backgroundSecondary, hex(0x1b2025)) &&
+              same(dark.surfaceTertiary, hex(0x272c32)) && same(dark.surfaceRaised, hex(0x32373d)),
+          "Ink dark surfaces are the slate charcoal ladder: panel, card, control, raised");
+    check(same(dark.mixerStripBg, hex(0x1b2025)) && same(dark.editorCard, hex(0x1b2025)) &&
+              same(dark.editorControl, hex(0x151a1f)),
           "Ink dark mixer strip, editor card and control");
-    check(same(dark.borderSubtle, hex(0x3e3e3e)) && same(dark.border, hex(0x525252)) &&
-              same(dark.borderStrong, hex(0x747474)) && same(dark.divider, hex(0x3e3e3e)) &&
-              same(dark.controlEdge, hex(0x747474)),
-          "Ink dark borders");
+    check(same(dark.borderSubtle, hex(0x32373d)) && same(dark.border, hex(0x4c535a)) &&
+              same(dark.borderStrong, hex(0x727a81)) && same(dark.controlEdge, hex(0x727a81)),
+          "Ink dark borders are tinted slate");
+    {
+        // The whole family is tinted: every surface, border, wash and shade has the same cool hue and a little chroma, so no
+        // neutral grey is left in it (the old #1e1e1e / #303030 read as dirty). A neutral grey fails the same check.
+        const auto tinted = [](const NUIColor& c) {
+            const float mx = std::max({c.r, c.g, c.b}), mn = std::min({c.r, c.g, c.b});
+            return (mx - mn) * 255.0f >= 3.0f && c.b >= c.r && c.b >= c.g - 1e-4f && c.b > c.r; // blue-leaning, not grey
+        };
+        const std::pair<const char*, NUIColor> family[] = {
+            {"timelineBed", dark.timelineBed}, {"backgroundPrimary", dark.backgroundPrimary}, {"backgroundSecondary", dark.backgroundSecondary},
+            {"surfaceTertiary", dark.surfaceTertiary}, {"surfaceRaised", dark.surfaceRaised}, {"editorCard", dark.editorCard},
+            {"editorWell", dark.editorWell}, {"editorControl", dark.editorControl}, {"meterBackground", dark.meterBackground},
+            {"mixerStripBg", dark.mixerStripBg}, {"border", dark.border}, {"borderSubtle", dark.borderSubtle},
+            {"borderStrong", dark.borderStrong}, {"divider", dark.divider}, {"controlEdge", dark.controlEdge},
+            {"hover", dark.hover}, {"pressed", dark.pressed}, {"gridMajor", dark.gridMajor}, {"gridMinor", dark.gridMinor},
+            {"overlay", dark.overlay}, {"shadow", dark.shadow}, {"neuHi", dark.neuHi}, {"neuLo", dark.neuLo},
+            {"glassHi", dark.glassHi}, {"glassShade", dark.glassShade}};
+        for (const auto& [name, col] : family) check(tinted(col), std::string("Ink dark ") + name + " is slate-tinted, not a neutral grey");
+        check(!tinted(NUIColor::fromHex(0x1e1e1e)) && !tinted(NUIColor::fromHex(0x303030)), "(negative control) the old neutral greys fail the check");
+        // The steps: outer < panel < card < control < raised, each at least 1.07, panel to card the compromise that keeps
+        // the selected violet 3:1 on a card; outer to panel and control steps are 1.15 or more.
+        check(contrast(dark.backgroundPrimary, dark.timelineBed) >= 1.15f, "outer to panel is at least 1.15:1");
+        check(contrast(dark.backgroundSecondary, dark.backgroundPrimary) >= 1.065f, "panel to card is 1.07:1 (the 3:1 selected-on-card compromise)");
+        check(contrast(dark.surfaceTertiary, dark.backgroundSecondary) >= 1.15f && contrast(dark.surfaceRaised, dark.surfaceTertiary) >= 1.15f,
+              "card to control and control to raised are at least 1.15:1");
+        check(contrast(dark.selected, dark.backgroundSecondary) >= 3.0f && contrast(dark.selected, dark.backgroundPrimary) >= 3.0f &&
+                  contrast(dark.selected, dark.timelineBed) >= 3.0f, "the selected violet is 3:1 on the card, the panel and the outer bed");
+        for (const NUIColor* s : {&dark.timelineBed, &dark.backgroundPrimary, &dark.backgroundSecondary, &dark.surfaceTertiary, &dark.surfaceRaised})
+            check(contrast(dark.textPrimary, *s) >= 4.5f && contrast(dark.textSecondary, *s) >= 4.5f, "primary and secondary text read on every level");
+        check(contrast(dark.textMuted, dark.timelineBed) >= 4.5f && contrast(dark.textMuted, dark.backgroundPrimary) >= 4.5f &&
+                  contrast(dark.textMuted, dark.backgroundSecondary) >= 4.5f, "muted text reads on the outer bed, the panel and the card");
+        check(contrast(dark.accentText, dark.timelineBed) >= 4.5f && contrast(dark.accentText, dark.backgroundSecondary) >= 4.5f, "accent text reads on the outer bed and the card");
+    }
     check(same(dark.textPrimary, hex(0xf5f5f5)) && same(dark.textSecondary, hex(0xc7c7c7)) &&
               same(dark.textMuted, hex(0x9e9e9e)) && same(dark.textDisabled, hex(0x717171)),
           "Ink dark text greys");
@@ -193,6 +226,32 @@ void testSelectionFamily() {
                   contrast(t.playhead, t.surfaceRaised) >= 3.0f,
               key + ": the playhead reads 3:1 on the bed, a control and a raised surface");
     }
+}
+
+// A key that is an alias of a property (accent for primary, selection for selected) loses to the property's own key when a
+// file supplies both (owner's note in applyJSONThemeOverrides, 21 Nov 2026). accent/accentHover/accentPressed used to win.
+void testCanonicalKeyBeatsAlias() {
+    std::cout << "canonical keys beat their aliases\n";
+    const std::string path = "theme_alias_test.json";
+    {
+        std::ofstream out(path);
+        out << R"({"colors": {
+            "accent": "#aa0000", "primary": "#00aa00", "accentHover": "#bb0000", "primaryHover": "#00bb00",
+            "accentPressed": "#cc0000", "primaryPressed": "#00cc00", "selection": "#dd0000", "selected": "#00dd00",
+            "recessedPanel": "#110000", "backgroundSecondary": "#001100"}})";
+    }
+    const auto hex = [](unsigned v) { return NUIColor::fromHex(v); };
+    auto& manager = NUIThemeManager::getInstance();
+    check(manager.loadThemeFromFile("alias-test", path, "ink-dark"), "the theme file loads over Ink dark");
+    manager.setActiveTheme("alias-test");
+    const auto& t = manager.getCurrentTheme();
+    check(same(t.primary, hex(0x00aa00)), "primary beats accent");
+    check(same(t.primaryHover, hex(0x00bb00)), "primaryHover beats accentHover");
+    check(same(t.primaryPressed, hex(0x00cc00)), "primaryPressed beats accentPressed");
+    check(same(t.selected, hex(0x00dd00)), "selected beats selection");
+    check(same(t.backgroundSecondary, hex(0x001100)), "backgroundSecondary beats recessedPanel");
+    manager.setActiveTheme("ink-dark");
+    std::remove(path.c_str());
 }
 
 void testAliases() {
@@ -268,6 +327,7 @@ int main() {
     testAllKitThemes();
     testInk();
     testSelectionFamily();
+    testCanonicalKeyBeatsAlias();
     testAliases();
     testDepth();
     std::cout << (gFailures == 0 ? "ALL PASS\n" : "FAILURES: " + std::to_string(gFailures) + "\n");
