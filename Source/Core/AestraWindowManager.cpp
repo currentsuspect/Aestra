@@ -1193,29 +1193,17 @@ void AestraWindowManager::applyWindowState(const WindowState& state) {
     // maximized had no restore geometry to un-maximize back to, and a window
     // restored as non-maximized could not escape the maximized state it was born
     // in (see startMaximized in initialize()).
-    // Each of these can block on the window manager (about a second per maximise on X11), so the cost of every
-    // step is logged next to the [Startup] timings.
-    using Clock = std::chrono::steady_clock;
-    auto since = [](Clock::time_point t) {
-        return std::to_string(std::chrono::duration<double, std::milli>(Clock::now() - t).count()) + " ms";
-    };
     if (state.width >= 640 && state.height >= 480) {
-        auto t = Clock::now();
         m_window->setSize(state.width, state.height);
-        Log::info("[Startup] applyWindowState setSize: " + since(t));
         if (state.x > -1000 && state.y > -1000) {
-            t = Clock::now();
             m_window->setPosition(state.x, state.y);
-            Log::info("[Startup] applyWindowState setPosition: " + since(t));
         }
     }
 
     if (state.maximized) {
         // A window born maximised (SDL_WINDOW_MAXIMIZED from initialize()) needs no second request.
         if (Aestra::WindowMaximize::shouldCallMaximize(state.maximized, m_window->isMaximized())) {
-            const auto t = Clock::now();
             m_window->maximize();
-            Log::info("[Startup] applyWindowState maximize: " + since(t));
         }
     } else {
         // Explicitly leave the maximized state. The window is created with

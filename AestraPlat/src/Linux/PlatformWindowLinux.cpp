@@ -4,7 +4,6 @@
 #include <algorithm>
 #include "../../include/LinuxVideoDriver.h"
 #include "../../include/WindowMaximizePolicy.h"
-#include <chrono>
 #include <cstdlib>
 #include <iostream>
 #include <vector>
@@ -35,6 +34,14 @@ bool getX11WindowInfo(SDL_Window* window, Display*& display, ::Window& x11Window
     return (display != nullptr && x11Window != 0);
 }
 
+// Whether the desktop session is Wayland, read from the environment (the decision itself is LinuxVideo::isWaylandSession).
+bool runningInWaylandSession() {
+    Aestra::LinuxVideo::LinuxSessionEnv env;
+    if (const char* sessionType = std::getenv("XDG_SESSION_TYPE")) env.xdgSessionType = sessionType;
+    if (const char* waylandDisplay = std::getenv("WAYLAND_DISPLAY")) env.waylandDisplay = waylandDisplay;
+    return Aestra::LinuxVideo::isWaylandSession(env);
+}
+
 } // namespace
 
 PlatformWindowLinux::PlatformWindowLinux() {
@@ -54,15 +61,10 @@ bool PlatformWindowLinux::create(const WindowDesc& desc) {
     // saved size and let the compositor place the window. m_maximized below still records the intent, so the state
     // persists as maximised and applyWindowState does not ask again.
     {
-        const char* sessionType = std::getenv("XDG_SESSION_TYPE");
-        const char* waylandDisplay = std::getenv("WAYLAND_DISPLAY");
-        Aestra::LinuxVideo::LinuxSessionEnv env;
-        if (sessionType) env.xdgSessionType = sessionType;
-        if (waylandDisplay) env.waylandDisplay = waylandDisplay;
         const char* driver = SDL_GetCurrentVideoDriver();
         const bool driverIsX11 = driver && std::string(driver) == "x11";
         if (Aestra::WindowMaximize::shouldRequestMaximizeAtCreate(desc.startMaximized, driverIsX11,
-                                                                  Aestra::LinuxVideo::isWaylandSession(env)))
+                                                                  runningInWaylandSession()))
             flags |= SDL_WINDOW_MAXIMIZED;
     }
     if (desc.startFullscreen)
@@ -83,12 +85,7 @@ bool PlatformWindowLinux::create(const WindowDesc& desc) {
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
 
-    const auto createStart = std::chrono::steady_clock::now();
     m_window = SDL_CreateWindow(desc.title.c_str(), x, y, desc.width, desc.height, flags);
-    std::cout << "[Startup] SDL_CreateWindow"
-              << (flags & SDL_WINDOW_MAXIMIZED ? " (maximized)" : "") << ": "
-              << std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - createStart).count()
-              << " ms" << std::endl;
 
     if (!m_window) {
         std::cerr << "SDL_CreateWindow Error: " << SDL_GetError() << std::endl;
