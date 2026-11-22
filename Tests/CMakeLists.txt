@@ -276,6 +276,14 @@ target_include_directories(StripWashTest PRIVATE
 add_test(NAME StripWashTest COMMAND StripWashTest)
 set_tests_properties(StripWashTest PROPERTIES LABELS "unit;mixer;strip;contract:core")
 
+# Mixer rework slice 5: the correlation meter as dotted LEDs. Pure header.
+add_executable(CorrelationLedsTest AestraUI/CorrelationLedsTest.cpp)
+target_include_directories(CorrelationLedsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME CorrelationLedsTest COMMAND CorrelationLedsTest)
+set_tests_properties(CorrelationLedsTest PROPERTIES LABELS "unit;mixer;meter;contract:core")
+
 # Arsenal unit naming: pure header, no libraries. A new unit takes the lowest free number for its kind.
 add_executable(ArsenalUnitNamingTest Integration/ArsenalUnitNamingTest.cpp)
 target_include_directories(ArsenalUnitNamingTest PRIVATE

@@ -2,6 +2,7 @@
 #include "UIMixerStrip.h"
 #include "CapLook.h"
 #include "MixerLane.h"
+#include "CorrelationLeds.h"
 #include "StripWash.h"
 #include "../Graphics/NUIDepth.h"
 
@@ -557,16 +558,12 @@ void UIMixerStrip::renderMasterReadout(NUIRenderer& renderer,
     std::snprintf(buf, sizeof(buf), "%+.2f", channel.correlation);
     line("CORRELATION", "CORR", buf, "", channel.correlation < 0.0f ? warnColor : valueColor);
     {
-        const NUIRect bar{card.x + 7.0f, card.y + 4.0f + static_cast<float>(row) * MASTER_ROW_H - 1.0f,
-                          card.width - 14.0f, 3.0f};
-        renderer.fillRoundedRect(bar, 1.5f, theme.getColor("border").withAlpha(0.35f));
-        const float mid = bar.x + bar.width * 0.5f;
-        const float pos = mid + std::clamp(channel.correlation, -1.0f, 1.0f) * bar.width * 0.5f;
-        renderer.fillRect(NUIRect{std::min(mid, pos), bar.y, std::max(1.5f, std::abs(pos - mid)), bar.height},
-                          (channel.correlation < 0.0f ? warnColor : theme.getColor("accentPrimary")).withAlpha(0.9f));
-        renderer.fillRect(NUIRect{mid - 0.5f, bar.y - 1.0f, 1.0f, bar.height + 2.0f}, labelColor.withAlpha(0.6f));
+        // The bar under the value, in the level meters' dotted LEDs (CorrelationLeds.h): its own row, centred.
+        const float rowTop = card.y + 4.0f + static_cast<float>(row) * MASTER_ROW_H;
+        const NUIRect well{card.x + 7.0f, std::round(rowTop + (MASTER_ROW_H - CorrelationLeds::kWellH) * 0.5f),
+                           card.width - 14.0f, CorrelationLeds::kWellH};
+        UIMixerMeter::renderCorrelation(renderer, well, channel.correlation);
     }
-
     // The fader's gain: the one user-controlled number, kept with the readings it governs.
     std::string gainText = kSilence;
     if (channel.faderGainDb > UIMixerFader::FADER_FLOOR_THRESHOLD) {

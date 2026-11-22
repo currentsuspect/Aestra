@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerMeter.h"
 #include "../Graphics/NUIDepth.h"
+#include "CorrelationLeds.h"
 #include "MeterLeds.h"
 #include "MeterZones.h"
 #include "MixerScale.h"
@@ -220,6 +221,35 @@ void UIMixerMeter::renderMeterBar(NUIRenderer& renderer, const NUIRect& bounds,
     }
 }
 
+void UIMixerMeter::renderCorrelation(NUIRenderer& renderer, const NUIRect& well, float correlation, bool dimmed)
+{
+    // The well is the level meters' (meterBackground, sunk); only the lit segments and the zero marker are drawn.
+    // Positive (in phase) is the meter green, a slight negative the warning colour, a deep negative the error colour:
+    // the same sign logic the continuous bar had.
+    auto& theme = NUIThemeManager::getInstance();
+    Depth::bed(renderer, well, CorrelationLeds::kWellRadius, theme.getColor("meterBackground"), Depth::Cut::Slot);
+    const float laneX = well.x + CorrelationLeds::kPad;
+    const float laneW = well.width - CorrelationLeds::kPad * 2.0f;
+    const float y = well.y + CorrelationLeds::kPad;
+    const int count = CorrelationLeds::segmentCount(laneW);
+    if (count < 1)
+        return;
+    const int centre = CorrelationLeds::centreIndex(count);
+    const auto segment = [&](int i) {
+        return NUIRect{laneX + CorrelationLeds::segmentX(i, count, laneW), y, CorrelationLeds::kSegW, CorrelationLeds::kSegH};
+    };
+    NUIColor marker = theme.getColor("textPrimary").withAlpha(0.55f);
+    renderer.fillRect(segment(centre), dimmed ? marker.withSaturation(0.0f) : marker);
+    NUIColor color = correlation < -0.25f ? theme.getColor("error")
+                     : correlation < 0.0f ? theme.getColor("warning")
+                                          : theme.getColor("meterSafe");
+    if (dimmed)
+        color = color.withSaturation(0.0f).withAlpha(0.6f);
+    const auto lit = CorrelationLeds::lit(correlation, count);
+    for (int i = lit.from; i <= lit.to; ++i)
+        renderer.fillRect(segment(i), color);
+}
+
 void UIMixerMeter::onRender(NUIRenderer& renderer)
 {
     auto bounds = getBounds();
@@ -293,43 +323,11 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
 
     // Draw Correlation Meter
     if (m_showCorrelation) {
-        NUIRect corrBounds = {
-            bounds.x,
-            bounds.y + bounds.height - CORR_HEIGHT,
-            bounds.width,
-            CORR_HEIGHT
-        };
-        
-        // Background (distinct from main meter)
-        // Use a visible gray track (0.25f)
-        renderer.fillRect(corrBounds, NUIThemeManager::getInstance().getColor("controlBackground"));
-        
-        // Center line (white/bright) - 2px width
-        float centerX = corrBounds.x + corrBounds.width * 0.5f;
-        renderer.fillRect({centerX - 1.0f, corrBounds.y, 2.0f, corrBounds.height}, m_colorPeakHold);
-        
-        // Bar
-        float val = m_correlation; // -1 to 1
-        float barW = (corrBounds.width * 0.5f) * std::abs(val);
-        float barX = (val >= 0.0f) ? centerX : (centerX - barW);
-        
-        NUIRect barRect = {
-            barX,
-            corrBounds.y + 1.0f,
-            barW,
-            CORR_HEIGHT - 2.0f
-        };
-        
-        // Correlation is also semantic status:
-        // positive/in-phase -> audio color, slight negative -> warning, deep negative -> error.
-        auto& theme = NUIThemeManager::getInstance();
-        const NUIColor phaseGood = theme.getColor("meterSafe");
-        const NUIColor phaseWarn = theme.getColor("warning");
-        const NUIColor phaseBad = theme.getColor("error");
-        NUIColor barColor = (val < -0.25f) ? phaseBad : (val < 0.0f ? phaseWarn : phaseGood);
-        if (m_dimmed) barColor = barColor.withSaturation(0.0f).withAlpha(0.6f);
-        
-        renderer.fillRect(barRect, barColor);
+        // Phase correlation in the same dotted LEDs and well as the level meters (CorrelationLeds.h), centred under them.
+        const NUIRect band{wellX, bounds.y + bounds.height - CORR_HEIGHT, wellW, CORR_HEIGHT};
+        renderCorrelation(renderer, NUIRect{band.x, band.y + (CORR_HEIGHT - CorrelationLeds::kWellH) * 0.5f, band.width,
+                                            CorrelationLeds::kWellH},
+                          m_correlation, m_dimmed);
     }
     
     // Draw Value Readout (Top) — track strips only.

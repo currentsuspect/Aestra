@@ -97,6 +97,10 @@ public:
 
     /// Where the bars start below the meter's top: the readout band (track strips) plus the clip lamp's band.
     /// The channel fader lines its track up with this, so level and gain read against each other.
+    /// The correlation meter as dotted LEDs (CorrelationLeds.h) in @p well: a sunk well, a zero marker, and the
+    /// segments between zero and @p correlation (-1..+1) lit. The master's readout card draws the same.
+    static void renderCorrelation(NUIRenderer& renderer, const NUIRect& well, float correlation, bool dimmed = false);
+
     float barsTopOffset() const { return (m_masterMode ? 0.0f : READOUT_BAND) + LAMP_BAND; }
 
     /// True when either channel has a latched clip.
