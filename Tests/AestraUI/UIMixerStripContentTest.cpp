@@ -193,7 +193,7 @@ int main() {
         check(strip.meterBarsRect().width >= 18.0f && strip.meterBarsRect().height > 100.0f, "the meters have room (18 px wide, tall)");
     }
 
-    std::cout << "[9] the top tint ends exactly where the lane starts, in every density, on channels, buses and the master\n";
+    std::cout << "[9] the top tint ends 4px above the lane's start (the meter well top), in every density, on channels, buses and the master\n";
     {
         auto strip = makeStrip(drums->getChannelId());
         for (const auto density : {AestraUI::MixerDensity::Wide, AestraUI::MixerDensity::Normal, AestraUI::MixerDensity::Narrow}) {
@@ -201,18 +201,18 @@ int main() {
                 strip->setBounds({0, 0, 96, h});
                 strip->setDensity(density);
                 const auto well = strip->meterBarsRect();
-                check(well.y > 40.0f && std::fabs(strip->tintHeight() - well.y) < 0.51f,
+                check(well.y > 40.0f && std::fabs(strip->tintHeight() - (well.y - 4.0f)) < 0.51f,
                       "density " + std::to_string(static_cast<int>(density)) + ", " + std::to_string(static_cast<int>(h)) +
-                          "px: tint " + std::to_string(strip->tintHeight()) + " = meter well top " + std::to_string(well.y));
+                          "px: tint " + std::to_string(strip->tintHeight()) + " = meter well top - 4 " + std::to_string(well.y));
             }
         }
         auto busStrip = makeStrip(bus->getChannelId());
         busStrip->setBounds({0, 0, 96, 452});
-        check(std::fabs(busStrip->tintHeight() - busStrip->meterBarsRect().y) < 0.51f, "a bus follows the same rule as a channel");
+        check(std::fabs(busStrip->tintHeight() - (busStrip->meterBarsRect().y - 4.0f)) < 0.51f, "a bus follows the same rule as a channel");
         auto master = makeStrip(0);
         master->setBounds({0, 0, 120, 600});
-        check(master->meterBarsRect().y > 40.0f && std::fabs(master->tintHeight() - master->meterBarsRect().y) < 0.51f,
-              "the master's tint ends at its meter well top too");
+        check(master->meterBarsRect().y > 40.0f && std::fabs(master->tintHeight() - (master->meterBarsRect().y - 4.0f)) < 0.51f,
+              "the master's tint ends 4px above its meter well top too");
     }
 
     std::cout << (g_failures == 0 ? "ALL PASS\n" : "FAILURES\n");

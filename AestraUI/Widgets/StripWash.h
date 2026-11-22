@@ -10,17 +10,18 @@ namespace StripWash {
 /**
  * @brief The strip's top tint (owner, 22 Nov: "solid, and only the top"; then "the tint ends at the meter's top"):
  *        a flat solid tint of the track colour (the master's textSecondary) over the strip's header zone (name,
- *        output, inserts, sends, pan, M/S/IN) and nothing below it. It ends exactly where the lane starts, the top
+ *        output, inserts, sends, pan, M/S/IN) and nothing below it. It ends 4px (kLift) above where the lane starts, the top
  *        of the meter well / the +6 mark, so the whole lane stays the plain strip. The edge comes from the layout,
  *        never from a percentage. Buses and returns follow the same rule as channels. Pure functions.
  */
 inline constexpr float kAlpha = 0.18f;
+inline constexpr float kLift = 4.0f; // the tint ends this far above the lane (owner, 22 Nov: "push the colour up by 4px")
 
-/// Height of the tinted top, in px, of a strip @p heightPx tall whose lane starts @p laneTopPx below the strip's top.
+/// Height of the tinted top, in px (the lane top less kLift), of a strip @p heightPx tall whose lane starts @p laneTopPx below the strip's top.
 inline float tintHeight(float laneTopPx, float heightPx) {
     if (!(heightPx > 0.0f) || !std::isfinite(laneTopPx))
         return 0.0f;
-    return std::min(heightPx, std::max(0.0f, std::round(laneTopPx)));
+    return std::min(heightPx, std::max(0.0f, std::round(laneTopPx) - kLift));
 }
 
 /// The tint's opacity @p y px down the strip: kAlpha down to the lane's top, nothing from it on.

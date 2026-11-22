@@ -22,23 +22,26 @@ bool near(float a, float b, float tol = 1e-5f) { return std::fabs(a - b) <= tol;
 } // namespace
 
 int main() {
-    std::cout << "[1] the tint ends exactly where the lane starts (from the layout, not a percentage)\n";
+    std::cout << "[1] the tint ends 4px above where the lane starts (from the layout, not a percentage)\n";
     {
         struct Row { const char* what; float laneTop, height, expect; };
         // lane top as laid out by the strip: Wide (taller header, more insert rows), Normal, Narrow (header only
         // name + keys), and a strip with extra sends pushing the lane lower.
         const Row rows[] = {
-            {"Normal 452px, lane at 232", 232.0f, 452.0f, 232.0f},
-            {"Normal, one send pushes the lane to 252", 252.0f, 452.0f, 252.0f},
-            {"Wide 560px, lane at 330", 330.0f, 560.0f, 330.0f},
-            {"Narrow 452px, lane at 118", 118.0f, 452.0f, 118.0f},
-            {"short 300px strip, lane at 190", 190.0f, 300.0f, 190.0f},
-            {"fractional lane top rounds to whole px", 231.6f, 452.0f, 232.0f},
+            {"Normal 452px, lane at 232", 232.0f, 452.0f, 228.0f},
+            {"Normal, one send pushes the lane to 252", 252.0f, 452.0f, 248.0f},
+            {"Wide 560px, lane at 330", 330.0f, 560.0f, 326.0f},
+            {"Narrow 452px, lane at 118", 118.0f, 452.0f, 114.0f},
+            {"short 300px strip, lane at 190", 190.0f, 300.0f, 186.0f},
+            {"fractional lane top rounds to whole px", 231.6f, 452.0f, 228.0f},
+            {"master 600px, lane at 345", 345.0f, 600.0f, 341.0f},
+            {"a lane within 4px of the top: no tint", 3.0f, 452.0f, 0.0f},
         };
         for (const auto& r : rows) {
-            check(StripWash::tintHeight(r.laneTop, r.height) == r.expect, std::string(r.what) + ": tint is exactly the lane top");
-            check(near(StripWash::alphaAt(r.expect - 1.0f, r.laneTop, r.height), StripWash::kAlpha), std::string(r.what) + ": tinted just above the lane");
-            check(StripWash::alphaAt(r.expect, r.laneTop, r.height) == 0.0f, std::string(r.what) + ": plain from the lane's top on");
+            check(StripWash::tintHeight(r.laneTop, r.height) == r.expect, std::string(r.what) + ": tint ends 4px above the lane top");
+            if (r.expect > 0.0f)
+                check(near(StripWash::alphaAt(r.expect - 1.0f, r.laneTop, r.height), StripWash::kAlpha), std::string(r.what) + ": tinted just above the edge");
+            check(StripWash::alphaAt(r.expect, r.laneTop, r.height) == 0.0f, std::string(r.what) + ": plain from the edge on");
             check(StripWash::alphaAt(r.height - 1.0f, r.laneTop, r.height) == 0.0f, std::string(r.what) + ": the whole lane is plain");
         }
         check(StripWash::tintHeight(232.0f, 452.0f) != 226.0f, "no longer the old 50% edge (226 of 452)");
