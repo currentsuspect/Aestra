@@ -136,6 +136,7 @@ private:
     /// Master-only readouts, computed in layoutChildren. Split so each number
     /// sits under the column that owns it: observed signal vs applied gain.
     int m_trackColorIndex{-1};
+    bool m_busLike{false}; // a bus or return: the strip takes a flat tint instead of the Wash
     NUIRect m_masterMeterReadoutRect{};
     NUIRect m_masterGainReadoutRect{};
 

@@ -58,6 +58,11 @@ int main() {
     check(StripWash::cornerInset(8, 8.0f) == 0.0f && StripWash::cornerInset(20, 8.0f) == 0.0f, "rows past the radius are full width");
     check(StripWash::cornerInset(0, 8.0f) >= StripWash::cornerInset(3, 8.0f), "insets shrink downward");
 
+    std::cout << "[5] bus and return strips: one flat tint, no fade\n";
+    check(StripWash::kFlatAlpha < StripWash::kStopAlpha[0] && StripWash::kFlatAlpha > StripWash::kStopAlpha[1],
+          "the flat tint sits between the Wash's first two stops");
+    check(StripWash::kFlatAlpha > 0.0f && StripWash::kFlatAlpha < 0.5f, "a tint, not a fill");
+
     std::cout << (g_failures == 0 ? "ALL PASS\n" : "FAILURES\n");
     return g_failures == 0 ? 0 : 1;
 }

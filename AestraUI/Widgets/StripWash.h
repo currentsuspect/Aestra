@@ -15,6 +15,11 @@ namespace StripWash {
 inline constexpr int kStopCount = 5;
 inline constexpr float kStopAlpha[kStopCount] = {0.26f, 0.13f, 0.07f, 0.03f, 0.0f};
 
+/// Bus and return strips are one flat, solid tint of their colour instead of the fade (owner, 22 Nov): the same
+/// family the Wash starts from, held down the whole body. Between the Wash's first and second stops, so it reads as
+/// a body colour and not a header.
+inline constexpr float kFlatAlpha = 0.18f;
+
 /// Where stop @p i sits, in px from the strip's top: 0, 60, 170, 300, then the strip's foot. On a strip shorter than
 /// 300px the later stops are pulled in (never past the foot), so the wash still ends at nothing.
 inline float stopY(int i, float heightPx) {

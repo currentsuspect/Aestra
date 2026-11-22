@@ -488,6 +488,11 @@ void UIMixerStrip::renderWash(NUIRenderer& renderer, const NUIRect& bounds)
     auto& theme = NUIThemeManager::getInstance();
     const NUIColor tc = m_channelId == 0 ? theme.getColor("textSecondary")
                         : m_trackColorIndex >= 0 ? trackColorFromIndex(m_trackColorIndex) : theme.getColor("accentPrimary");
+    if (m_busLike) {
+        // Buses and returns: a flat solid tint of their colour, no fade (StripWash::kFlatAlpha).
+        renderer.fillRoundedRect(bounds, kStripRadius, tc.withAlpha(StripWash::kFlatAlpha));
+        return;
+    }
     const float h = bounds.height;
     const auto colourAt = [&](float y) { return tc.withAlpha(StripWash::alphaAt(y, h)); };
     const int cornerRows = static_cast<int>(kStripRadius);
@@ -633,6 +638,7 @@ void UIMixerStrip::onUpdate(double deltaTime)
         const std::string tag = channel->id == 0 ? std::string()
             : channel->role == Aestra::ChannelViewModel::Role::Bus ? std::string("BUS")
             : channel->role == Aestra::ChannelViewModel::Role::Return ? std::string("RETURN") : std::string();
+        m_busLike = !tag.empty();
         if (m_cachedTag != tag) {
             m_cachedTag = tag;
             invalidateStaticCache();
