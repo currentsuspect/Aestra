@@ -118,6 +118,13 @@ private:
     bool m_maximized = false;
 
     void rememberRestoreBoundsIfNormal();
+
+    // X input focus: diagnosis lines (AESTRA_INPUT_TRACE) and taking it back from an embedded plugin editor.
+    std::string describeInputFocus() const;
+    void traceInputEvent(const SDL_Event& e);
+    void traceFocusOwnerChange();
+    bool pressUnderChild(int x, int y) const;
+    unsigned long m_lastTracedFocusWindow = ~0ul;
     bool m_isWindowVisible = true;
     bool m_isWindowMapped = true;
     float m_dpiScale = 1.0f;

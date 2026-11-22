@@ -5,6 +5,9 @@
 #include "NUIComponent.h"
 #include "NUIRenderer.h"
 #include "../../AestraCore/include/AestraLog.h"
+#include "../../AestraPlat/include/AestraInputTrace.h"
+#include "../Widgets/AestraPanelWindow.h"
+#include <typeinfo>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -211,10 +214,18 @@ void NUIPlatformBridge::setupEventBridges() {
                 mods.capsLock = mods.capsLock || m_capsLockLatched;
                 event.modifiers = convertModifiers(mods);
             }
+            bool consumed = false;
             if (m_cursorService.isCaptured() && m_cursorCaptureOwner) {
-                NUIComponent::dispatchMouseEvent(m_cursorCaptureOwner, event);
+                consumed = NUIComponent::dispatchMouseEvent(m_cursorCaptureOwner, event);
             } else {
-                NUIComponent::dispatchMouseEvent(m_rootComponent, event);
+                consumed = NUIComponent::dispatchMouseEvent(m_rootComponent, event);
+            }
+            if (pressed && button == Aestra::MouseButton::Left && Aestra::InputTrace::enabled() && Aestra::InputTrace::allow("ui-press", 20)) {
+                const auto* panel = AestraPanelWindow::panelContaining(event.position);
+                const auto* owner = NUIComponent::heldPressOwner();
+                Aestra::InputTrace::log("left press reached UI root at (" + std::to_string(x) + "," + std::to_string(y) +
+                                ") insidePanel=" + (panel ? "YES" : "no") + " consumed=" + (consumed ? "yes" : "no") +
+                                " heldBy=" + (owner ? typeid(*owner).name() : "none"));
             }
         }
     });

@@ -7,7 +7,10 @@
 #if defined(SDL_VIDEO_DRIVER_X11)
 #include <X11/Xlib.h>
 #include <X11/cursorfont.h>
+#include "XErrorGuard.h"
+#include "XInputFocus.h"
 #endif
+#include "AestraInputTrace.h"
 
 namespace Aestra {
 
@@ -27,27 +30,6 @@ bool getX11WindowInfo(SDL_Window* window, Display*& display, ::Window& x11Window
     return (display != nullptr && x11Window != 0);
 }
 
-#if defined(SDL_VIDEO_DRIVER_X11)
-// A child window the plugin helper has already destroyed raises BadWindow, and Xlib's default handler exits the app
-// with unsaved work in it. Requests go out on the app's own connection and errors come back asynchronously, so the
-// handler stays installed until XSync has delivered them.
-class XErrorGuard {
-public:
-    explicit XErrorGuard(Display* display) : m_display(display) { m_previous = XSetErrorHandler(&swallow); }
-    ~XErrorGuard() {
-        XSync(m_display, False);
-        XSetErrorHandler(m_previous);
-    }
-    XErrorGuard(const XErrorGuard&) = delete;
-    XErrorGuard& operator=(const XErrorGuard&) = delete;
-
-private:
-    static int swallow(Display*, XErrorEvent*) { return 0; }
-
-    Display* m_display = nullptr;
-    int (*m_previous)(Display*, XErrorEvent*) = nullptr;
-};
-#endif
 } // namespace
 
 PlatformWindowLinux::PlatformWindowLinux() {
@@ -129,7 +111,9 @@ void PlatformWindowLinux::destroy() {
 
 bool PlatformWindowLinux::pollEvents() {
     SDL_Event e;
+    traceFocusOwnerChange();
     while (SDL_PollEvent(&e)) {
+        traceInputEvent(e);
         switch (e.type) {
         case SDL_QUIT:
             if (m_closeCallback) {

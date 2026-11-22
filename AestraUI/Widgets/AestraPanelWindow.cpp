@@ -4,18 +4,36 @@
 #include "NUIThemeSystem.h"
 #include "NUIRenderer.h"
 #include "PluginEditorKit.h"
+#include "../../AestraPlat/include/AestraInputTrace.h"
 #include <algorithm>
 #include <cmath>
+#include <vector>
 
 namespace AestraUI {
 
+namespace {
+std::vector<const AestraPanelWindow*>& livePanels() {
+    static std::vector<const AestraPanelWindow*> panels;
+    return panels;
+}
+} // namespace
+
+const AestraPanelWindow* AestraPanelWindow::panelContaining(const NUIPoint& p) {
+    for (const auto* panel : livePanels())
+        if (panel->isVisible() && panel->getBounds().contains(p)) return panel;
+    return nullptr;
+}
+
 AestraPanelWindow::AestraPanelWindow()
 {
+    livePanels().push_back(this);
     cacheThemeColors();
 }
 
 AestraPanelWindow::~AestraPanelWindow()
 {
+    auto& panels = livePanels();
+    panels.erase(std::remove(panels.begin(), panels.end(), this), panels.end());
     // Torn down mid-drag: cancel the capture so the bridge never routes to a
     // dangling owner and the cursor is never stranded hidden.
     if (m_platformBridge && m_platformBridge->isCursorCaptureOwner(this)) {
@@ -292,6 +310,10 @@ bool AestraPanelWindow::onMouseEvent(const NUIMouseEvent& event)
     // Close on outside click
     if (m_closeOnOutsideClick && event.pressed && event.button == NUIMouseButton::Left
         && !b.contains(event.position) && !m_isDraggingWindow) {
+        if (Aestra::InputTrace::enabled())
+            Aestra::InputTrace::log("panel auto-close fired by press at (" + std::to_string(event.position.x) + "," +
+                            std::to_string(event.position.y) + ") outside panel bounds (" + std::to_string(b.x) + "," +
+                            std::to_string(b.y) + " " + std::to_string(b.width) + "x" + std::to_string(b.height) + ")");
         if (m_onClose) m_onClose();
         return false;
     }
