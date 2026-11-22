@@ -1,5 +1,6 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerFooter.h"
+#include "SlotText.h"
 #include "../Graphics/NUIDepth.h"
 #include "UIMixerFader.h"
 
@@ -65,7 +66,6 @@ void UIMixerFooter::onRender(NUIRenderer& renderer) {
     const auto b = getBounds();
     if (b.isEmpty())
         return;
-    const float ty = b.y + (b.height - kFont) * 0.5f - 1.0f;
     // Design Spec, Mixer (board p-mixer2): the gain sits in one sunk pill at the strip's foot, at least 58 wide and
     // 23 tall, 11px / 500, tabular. A Narrow strip keeps its small pill.
     if (m_compact) {
@@ -75,15 +75,18 @@ void UIMixerFooter::onRender(NUIRenderer& renderer) {
     }
     const NUIRect gainPill{b.x, b.y + (b.height - kPillH) * 0.5f, std::min(b.width, std::max(kPillMinW, renderer.measureText(m_gainText, kFont).width + 16.0f)), kPillH};
     Depth::bed(renderer, gainPill, gainPill.height * 0.5f, Depth::Cut::Shallow);
-    renderer.drawTextCentered(m_gainText, gainPill, kFont, m_text);
+    const float pillTextY = SlotText::slotTextY(renderer, gainPill, kFont);
+    renderer.drawText(m_gainText, {std::round(gainPill.x + (gainPill.width - renderer.measureText(m_gainText, kFont).width) * 0.5f), pillTextY},
+                      kFont, m_text);
 
     const float peakW = renderer.measureText(m_peakText, kFont).width;
     if (m_clipped) {
         const NUIRect block{b.right() - peakW - 8.0f, b.y + 2.0f, peakW + 6.0f, b.height - 4.0f};
         renderer.fillRoundedRect(block, 2.0f, m_clip);
-        renderer.drawText(m_peakText, {block.x + 3.0f, ty}, kFont, m_clipInk);
+        renderer.drawText(m_peakText, {block.x + 3.0f, SlotText::slotTextY(renderer, block, kFont)}, kFont, m_clipInk);
     } else {
-        renderer.drawText(m_peakText, {b.right() - peakW - 2.0f, ty}, kFont, m_textSecondary.withAlpha(0.85f));
+        renderer.drawText(m_peakText, {b.right() - peakW - 2.0f, SlotText::slotTextY(renderer, b, kFont)}, kFont,
+                          m_textSecondary.withAlpha(0.85f));
     }
 }
 

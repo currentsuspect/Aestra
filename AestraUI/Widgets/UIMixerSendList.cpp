@@ -1,5 +1,6 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerSendList.h"
+#include "SlotText.h"
 
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
@@ -86,14 +87,15 @@ void UIMixerSendList::onRender(NUIRenderer& renderer) {
         }
         if (cut)
             name += "\xE2\x80\xA6";
-        const float ty = y + (kRowH - kFont) * 0.5f - 1.0f;
+        const float ty = SlotText::slotTextY(renderer, NUIRect{b.x, y, b.width, kRowH}, kFont); // centred on the row, like the swatch
         renderer.drawText(name, {textX, ty}, kFont, text.withAlpha(0.85f * alpha));
         renderer.drawText(level, {b.right() - 6.0f - levelW, ty}, kFont, muted.withAlpha(0.85f * alpha));
         y += kRowH;
     }
     if (overflow) {
         renderer.drawText("+" + std::to_string(static_cast<int>(m_rows.size()) - shown) + " more",
-                          {b.x + 16.0f, y + (kRowH - kFont) * 0.5f - 1.0f}, kFont, muted.withAlpha(0.7f));
+                          {b.x + 16.0f, SlotText::slotTextY(renderer, NUIRect{b.x, y, b.width, kRowH}, kFont)}, kFont,
+                          muted.withAlpha(0.7f));
     }
 }
 

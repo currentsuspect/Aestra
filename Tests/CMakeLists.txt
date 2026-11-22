@@ -284,6 +284,14 @@ target_include_directories(CorrelationLedsTest PRIVATE
 add_test(NAME CorrelationLedsTest COMMAND CorrelationLedsTest)
 set_tests_properties(CorrelationLedsTest PROPERTIES LABELS "unit;mixer;meter;contract:core")
 
+# Mixer rework slice 6: where a label sits in its slot. Pure header.
+add_executable(SlotTextTest AestraUI/SlotTextTest.cpp)
+target_include_directories(SlotTextTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME SlotTextTest COMMAND SlotTextTest)
+set_tests_properties(SlotTextTest PROPERTIES LABELS "unit;mixer;text;contract:core")
+
 # Arsenal unit naming: pure header, no libraries. A new unit takes the lowest free number for its kind.
 add_executable(ArsenalUnitNamingTest Integration/ArsenalUnitNamingTest.cpp)
 target_include_directories(ArsenalUnitNamingTest PRIVATE
