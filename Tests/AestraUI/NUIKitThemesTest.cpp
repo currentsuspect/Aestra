@@ -12,8 +12,11 @@
 #include <cstdio>
 #include <fstream>
 #include <cmath>
+#include <cstdio>
+#include <fstream>
 #include <iostream>
 #include <string>
+#include <utility>
 #include <vector>
 
 using namespace AestraUI;
@@ -321,6 +324,110 @@ void testDepth() {
     manager.setActiveTheme("Aestra-dark");
 }
 
+using Tokens = std::vector<std::pair<std::string, uint32_t>>;
+
+NUIColor rgba(uint32_t v) {
+    return NUIColor(((v >> 24) & 0xffu) / 255.0f, ((v >> 16) & 0xffu) / 255.0f, ((v >> 8) & 0xffu) / 255.0f,
+                    (v & 0xffu) / 255.0f);
+}
+
+// Status colours, domain states and generic interaction states are three groups: a kit that states a domain state
+// keeps it, and only a kit that leaves one out gets the status colour it historically aliased.
+void testDomainStatesSurvive() {
+    std::cout << "kit states its own domain tokens\n";
+    const Tokens base = {{"warning", 0xe0a010ffu}, {"error", 0xd02030ffu}, {"secondary", 0x2090d0ffu},
+                         {"textDisabled", 0x707070ffu}};
+    Tokens stated = base;
+    stated.insert(stated.end(), {{"muted", 0x111111ffu}, {"soloed", 0x222222ffu}, {"armed", 0x333333ffu},
+                                 {"bypassed", 0x444444ffu}, {"info", 0x555555ffu}, {"recording", 0x666666ffu}});
+    const auto t = NUIThemePresets::createThemeFromKitTokens(0, stated);
+    check(same(t.muted, rgba(0x111111ffu)) && !same(t.muted, t.warning), "explicit muted survives and is not warning");
+    check(same(t.soloed, rgba(0x222222ffu)) && !same(t.soloed, t.secondary), "explicit soloed survives");
+    check(same(t.armed, rgba(0x333333ffu)) && !same(t.armed, t.error), "explicit armed survives and is not error");
+    check(same(t.bypassed, rgba(0x444444ffu)) && !same(t.bypassed, t.textDisabled), "explicit bypassed survives");
+    check(same(t.info, rgba(0x555555ffu)) && !same(t.info, t.secondary), "explicit info survives");
+    check(same(t.recording, rgba(0x666666ffu)) && !same(t.recording, t.armed), "explicit recording differs from armed");
+
+    Tokens armedOnly = base;
+    armedOnly.push_back({"armed", 0x333333ffu});
+    const auto a = NUIThemePresets::createThemeFromKitTokens(0, armedOnly);
+    check(same(a.recording, a.armed) && same(a.armed, rgba(0x333333ffu)), "recording follows a stated armed");
+
+    auto& manager = NUIThemeManager::getInstance();
+    manager.setCustomTheme("domain-test", t);
+    manager.setActiveTheme("domain-test");
+    check(same(manager.getColor("recording"), rgba(0x666666ffu)), "getColor reads recording");
+    check(same(manager.getColor("muted"), rgba(0x111111ffu)), "getColor reads the stated muted");
+    manager.setActiveTheme("Aestra-dark");
+}
+
+void testDomainStatesFallBack() {
+    std::cout << "kit without domain tokens aliases the status colours\n";
+    const Tokens tokens = {{"warning", 0xe0a010ffu}, {"error", 0xd02030ffu}, {"secondary", 0x2090d0ffu},
+                           {"textDisabled", 0x707070ffu}};
+    for (int mode : {0, 1, 2}) {
+        const auto t = NUIThemePresets::createThemeFromKitTokens(mode, tokens);
+        const std::string m = " (mode " + std::to_string(mode) + ")";
+        check(same(t.muted, t.warning), "muted is warning" + m);
+        check(same(t.armed, t.error), "armed is error" + m);
+        check(same(t.soloed, t.secondary), "soloed is secondary" + m);
+        check(same(t.info, t.secondary), "info is secondary" + m);
+        check(same(t.bypassed, t.textDisabled), "bypassed is textDisabled" + m);
+        check(same(t.recording, t.armed), "recording is armed" + m);
+    }
+}
+
+void testJsonDomainStates() {
+    std::cout << "JSON themes keep the legacy fallbacks\n";
+    const char* path = "theme_domain_states_test.json";
+    auto& manager = NUIThemeManager::getInstance();
+    const auto load = [&](const std::string& body, const std::string& name) {
+        std::ofstream(path, std::ios::binary | std::ios::trunc) << body;
+        const bool ok = manager.loadThemeFromFile(name, path, "ember-dark");
+        std::remove(path);
+        return ok;
+    };
+    check(load(R"({"colors": {"warning": "#e0a010", "error": "#d02030", "muted": "#111111"}})", "json-explicit"),
+          "theme with an explicit muted loads");
+    manager.setActiveTheme("json-explicit");
+    check(same(manager.getColor("muted"), rgba(0x111111ffu)), "explicit muted beats the warning fallback");
+    check(same(manager.getColor("armed"), manager.getColor("error")), "absent armed falls back to error");
+    check(same(manager.getColor("recording"), manager.getColor("armed")), "absent recording follows armed");
+    check(load(R"({"colors": {"warning": "#e0a010"}})", "json-fallback"), "theme without muted loads");
+    manager.setActiveTheme("json-fallback");
+    check(same(manager.getColor("muted"), manager.getColor("warning")), "absent muted falls back to warning");
+    check(load(R"({"colors": {"error": "#d02030", "recording": "#777777"}})", "json-recording"), "recording theme loads");
+    manager.setActiveTheme("json-recording");
+    check(same(manager.getColor("recording"), rgba(0x777777ffu)) && !same(manager.getColor("recording"), manager.getColor("armed")),
+          "explicit recording beats the armed fallback");
+    manager.setActiveTheme("Aestra-dark");
+}
+
+// The kit's spacing scale (tokens.json, group "spacing") is pinned here; regenerate NUIKitMetrics.inc with
+// tools/theme/gen_kit_metrics.py when the kit changes it. The legacy names keep their values: no layout moves.
+void testKitSpacing() {
+    std::cout << "kit spacing scale\n";
+    auto& manager = NUIThemeManager::getInstance();
+    manager.setActiveTheme("ember-dark");
+    const std::pair<const char*, float> kit[] = {{"space-xxs", 2.0f}, {"space-xs", 4.0f}, {"space-s", 8.0f},
+                                                 {"space-m", 16.0f},  {"space-l", 24.0f}, {"space-xl", 32.0f},
+                                                 {"space-xxl", 48.0f}};
+    float previous = 0.0f;
+    for (const auto& [name, px] : kit) {
+        const float v = manager.getSpacing(name);
+        check(v == px, std::string(name) + " is " + std::to_string(static_cast<int>(px)) + "px");
+        check(v > previous, std::string(name) + " is larger than the step before");
+        previous = v;
+    }
+    check(manager.getSpacing("xxs") == 2.0f, "short name xxs reads the kit");
+    check(manager.getSpacing("xl") == 32.0f && manager.getSpacing("xxl") == 48.0f, "short names xl and xxl read the kit");
+    check(manager.getSpacing("xs") == 4.0f && manager.getSpacing("s") == 8.0f && manager.getSpacing("m") == 16.0f &&
+              manager.getSpacing("l") == 24.0f,
+          "legacy names xs, s, m, l are unchanged");
+    check(manager.getSpacing("no-such-step") == 16.0f, "an unknown name still falls back to m");
+    manager.setActiveTheme("Aestra-dark");
+}
+
 } // namespace
 
 int main() {
@@ -330,6 +437,10 @@ int main() {
     testCanonicalKeyBeatsAlias();
     testAliases();
     testDepth();
+    testDomainStatesSurvive();
+    testDomainStatesFallBack();
+    testJsonDomainStates();
+    testKitSpacing();
     std::cout << (gFailures == 0 ? "ALL PASS\n" : "FAILURES: " + std::to_string(gFailures) + "\n");
     return gFailures == 0 ? 0 : 1;
 }

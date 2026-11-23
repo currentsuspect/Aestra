@@ -279,7 +279,7 @@ void TransportBar::createIcons() {
     )";
     m_recordIcon = std::make_shared<AestraUI::NUIIcon>(recordSvg);
     m_recordIcon->setIconSize(AestraUI::NUIIconSize::Medium);
-    m_recordIcon->setColorFromTheme("error");  // #ff4d4d - Clear red for recording
+    m_recordIcon->setColorFromTheme("recording");  // capture colour; the glyph is repainted each frame
 
     // Mixer icon (Stylized Sliders)
     const char* mixerSvg = R"(
@@ -696,7 +696,7 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
     const AestraUI::NUIColor raised = theme.getColor("surfaceRaised");
     const AestraUI::NUIColor ink = theme.getColor("textPrimary");
     const AestraUI::NUIColor inkQuiet = theme.getColor("textSecondary");
-    const AestraUI::NUIColor recordRed = theme.getColor("error");
+    const AestraUI::NUIColor recordRed = theme.getColor("recording");
     const AestraUI::NUIColor lampOn = theme.getColor("warning");
     const AestraUI::NUIColor lampOff = theme.getColor("textDisabled");
 
