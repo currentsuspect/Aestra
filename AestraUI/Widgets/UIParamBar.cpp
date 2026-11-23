@@ -72,8 +72,9 @@ void UIParamBar::onRender(NUIRenderer& renderer) {
 
     NUIRect bar = barRect();
     if (m_look == Look::Bar) {
-        // Thin bar centred in the bounds: 6 px, with the marker and centre tick taller than it.
-        bar = NUIRect{b.x, b.y + b.height * 0.5f - 3.0f, b.width, 6.0f};
+        // The pan row (board p-mixer2): a 4px sunk track centred in the row, the primary travel 2px thick from the
+        // centre, and a 10px round thumb. (drawn below)
+        bar = NUIRect{b.x + 5.0f, b.y + b.height * 0.5f - 2.0f, std::max(1.0f, b.width - 10.0f), 4.0f};
     } else {
         if (!m_label.empty())
             renderer.drawText(m_label, {b.x, b.y + (b.height - kFont) * 0.5f - 1.0f}, kFont, muted.withAlpha(0.9f));
@@ -86,9 +87,21 @@ void UIParamBar::onRender(NUIRenderer& renderer) {
     // carries the fader cap on its side; the compact bar under a strip keeps a 2 px marker, where a cap would crowd it.
     const float t = std::clamp((m_value - m_min) / (m_max - m_min), 0.0f, 1.0f);
     if (m_look == Look::Bar) {
-        Depth::sliderSlot(renderer, bar, t, m_bipolar ? 0.5f : 0.0f);
+        const auto& th = theme.getCurrentTheme();
+        renderer.fillRoundedRect(bar, 2.0f, th.meterBackground);
+        renderer.drawInnerShadow(bar, 2.0f, 1.0f, 2.0f, th.neuLo);
+        const float origin = m_bipolar ? 0.5f : 0.0f;
         const float x = bar.x + t * bar.width;
-        renderer.fillRect(NUIRect{std::clamp(x - 1.0f, bar.x, bar.right() - 2.0f), bar.y - 2.0f, 2.0f, bar.height + 4.0f}, fill);
+        const float x0 = std::min(x, bar.x + origin * bar.width);
+        const float x1 = std::max(x, bar.x + origin * bar.width);
+        if (x1 - x0 >= 1.0f)
+            renderer.fillRect({x0, bar.y + 1.0f, x1 - x0, 2.0f}, th.primary);
+        // The thumb: a 10px disc of surfaceRaised, lit on top and shaded underneath, with a short shadow below.
+        const NUIRect thumb{x - 5.0f, b.y + b.height * 0.5f - 5.0f, 10.0f, 10.0f};
+        renderer.drawShadow(thumb, 0.0f, 2.0f, 3.0f, th.neuLo);
+        renderer.fillRoundedRectVertical(thumb, 5.0f, NUIColor::lerp(th.surfaceRaised, NUIColor::white(), 0.16f),
+                                         NUIColor::lerp(th.surfaceRaised, NUIColor::black(), 0.22f));
+        (void)fill;
     } else {
         const NUIRect slot{bar.x + 11.0f, bar.y, std::max(1.0f, bar.width - 22.0f), bar.height};
         Depth::sliderSlot(renderer, slot, t, m_bipolar ? 0.5f : 0.0f);

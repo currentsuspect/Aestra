@@ -1,6 +1,6 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerInsertList.h"
-#include "../Graphics/NUIDepth.h"
+#include "SlotText.h"
 
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
@@ -11,8 +11,9 @@
 namespace AestraUI {
 
 namespace {
-constexpr float kFont = 9.5f;
+constexpr float kFont = 10.0f;
 constexpr float kRadius = 5.0f;
+constexpr float kDotSize = 6.0f;
 } // namespace
 
 float UIMixerInsertList::heightForRows(int rowCount) {
@@ -60,18 +61,19 @@ void UIMixerInsertList::onRender(NUIRenderer& renderer) {
     const NUIColor accent = theme.getColor("selected");
     const NUIColor accentText = theme.getColor("accentText");
 
-    // Design Spec, Empty state: an empty slot is a quiet row with quiet hover, not a well and not a dashed box.
+    // Design Spec, Mixer (board p-mixer2, locked): an insert is a flat 20px chip, surfaceTertiary, radius 5, with a 6px
+    // primary dot and the name in 10px. An empty chain is one quiet "+ insert" row in textMuted, no fill.
     if (m_rows.empty()) {
+        const NUIRect row{r.x, r.y, r.width, kChipH};
         if (m_hovered)
-            renderer.fillRoundedRect(r, kRadius, theme.getColor("hover"));
-        const char* invite = renderer.measureText("+ Add an effect", kFont).width <= r.width - 6.0f ? "+ Add an effect" : "+";
-        renderer.drawTextCentered(invite, r, kFont, m_hovered ? textPrimary : theme.getColor("textMuted"));
+            renderer.fillRoundedRect(row, kRadius, theme.getColor("hover"));
+        const char* invite = renderer.measureText("+ insert", kFont).width <= row.width - 10.0f ? "+ insert" : "+";
+        // Centred in its 20px row by the renderer's own metrics, on the baseline a filled chip's name uses.
+        const float w = renderer.measureText(invite, kFont).width;
+        renderer.drawText(invite, {std::round(row.x + (row.width - w) * 0.5f), SlotText::slotTextY(renderer, row, kFont)},
+                          kFont, m_hovered ? textPrimary : theme.getColor("textMuted"));
         return;
     }
-    // Design Spec, Mixer: filled insert slots are cut into the strip, a shallow well, never an outlined box.
-    Depth::bed(renderer, r, kRadius, Depth::Cut::Shallow);
-    if (m_hovered)
-        renderer.fillRoundedRect(r, kRadius, theme.getColor("hover"));
 
     const int capacity = visibleRowCapacity();
     const bool overflow = static_cast<int>(m_rows.size()) > capacity;
@@ -81,18 +83,20 @@ void UIMixerInsertList::onRender(NUIRenderer& renderer) {
     for (int i = 0; i < shown; ++i) {
         const Row& row = m_rows[static_cast<size_t>(i)];
         const float alpha = row.bypassed ? 0.38f : 1.0f;
-        // A dot per insert: lit when it is processing, hollow-dim when bypassed.
-        const NUIRect dot{r.x + 6.0f, y + (kRowH - 5.0f) * 0.5f, 5.0f, 5.0f};
-        renderer.fillRoundedRect(dot, 2.5f, row.bypassed ? textSecondary.withAlpha(0.35f) : accent);
+        const NUIRect chip{r.x, y, r.width, kChipH};
+        renderer.fillRoundedRect(chip, kRadius, theme.getColor(m_hovered ? "surfaceRaised" : "surfaceTertiary"));
+        // A dot per insert: lit when it is processing, dim when bypassed.
+        const NUIRect dot{chip.x + 5.0f, chip.y + (kChipH - kDotSize) * 0.5f, kDotSize, kDotSize};
+        renderer.fillRoundedRect(dot, kDotSize * 0.5f, row.bypassed ? textSecondary.withAlpha(0.35f) : accent);
 
-        const float textX = dot.right() + 5.0f;
+        const float textX = dot.right() + 4.0f;
         float rightInset = 5.0f;
         std::string status;
         if (i == 0 && !m_status.empty()) {
             status = m_status;
             rightInset += renderer.measureText(status, 8.5f).width + 4.0f;
         }
-        const float avail = std::max(1.0f, r.right() - textX - rightInset);
+        const float avail = std::max(1.0f, chip.right() - textX - rightInset);
         std::string name = row.name;
         bool cut = false;
         while (name.size() > 1 && renderer.measureText(name, kFont).width > avail) {
@@ -101,14 +105,14 @@ void UIMixerInsertList::onRender(NUIRenderer& renderer) {
         }
         if (cut)
             name += "\xE2\x80\xA6";
-        const float textY = y + (kRowH - kFont) * 0.5f - 1.0f;
-        renderer.drawText(name, {textX, textY}, kFont, textPrimary.withAlpha(0.92f * alpha));
+        const float textY = SlotText::slotTextY(renderer, chip, kFont);
+        renderer.drawText(name, {textX, textY}, kFont, textPrimary.withAlpha(alpha));
         if (row.bypassed) {
             const float w = std::min(avail, renderer.measureText(name, kFont).width);
-            renderer.fillRect(NUIRect{textX, y + kRowH * 0.5f, w, 1.0f}, textSecondary.withAlpha(0.45f));
+            renderer.fillRect(NUIRect{textX, y + kChipH * 0.5f, w, 1.0f}, textSecondary.withAlpha(0.45f));
         }
         if (!status.empty()) {
-            renderer.drawText(status, {r.right() - rightInset + 4.0f, y + (kRowH - 8.5f) * 0.5f - 1.0f}, 8.5f,
+            renderer.drawText(status, {chip.right() - rightInset + 4.0f, SlotText::slotTextY(renderer, chip, 8.5f)}, 8.5f,
                               accentText);
         }
         y += kRowH;
@@ -116,7 +120,8 @@ void UIMixerInsertList::onRender(NUIRenderer& renderer) {
     if (overflow) {
         const int hidden = static_cast<int>(m_rows.size()) - shown;
         renderer.drawText("+" + std::to_string(hidden) + " more",
-                          {r.x + 6.0f, y + (kRowH - kFont) * 0.5f - 1.0f}, kFont, textSecondary.withAlpha(0.7f));
+                          {r.x + 5.0f, SlotText::slotTextY(renderer, NUIRect{r.x, y, r.width, kChipH}, kFont)}, kFont,
+                          theme.getColor("textMuted"));
     }
 }
 

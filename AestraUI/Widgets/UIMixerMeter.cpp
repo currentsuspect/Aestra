@@ -1,6 +1,8 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerMeter.h"
 #include "../Graphics/NUIDepth.h"
+#include "CorrelationLeds.h"
+#include "MeterLeds.h"
 #include "MeterZones.h"
 #include "MixerScale.h"
 
@@ -174,79 +176,33 @@ NUIColor UIMixerMeter::getColorForLevel(float db) const
 void UIMixerMeter::renderMeterBar(NUIRenderer& renderer, const NUIRect& bounds,
                                    float peakDb, float rmsDb, float peakOverlayDb, float peakHoldDb, bool clip)
 {
-    // Resting rail. A bare dark fill was indistinguishable from the strip
-    // background, so a silent channel gave no clue where level would appear.
-    // The groove plus its top edge say "meter lives here" before any signal.
-    // Design Spec, Mixer: the meter is a slot cut into the strip, not an outlined box.
-    Depth::bed(renderer, bounds, 1.5f, m_colorBackground, Depth::Cut::Slot);
-
+    // Stepped LEDs (Design Spec, Mixer, board p-mixer2 locked): 3px lit, 1px of well between, stacked up from the
+    // lane's bottom; an unlit LED is not drawn, the well shows. The well itself is drawn once for both columns
+    // (onRender). The lane is exactly the fader's travel, so level reads against gain.
     const NUIColor& yellow = m_dimmed ? m_colorYellowDim : m_colorYellow;
     const NUIColor& red = m_dimmed ? m_colorRedDim : m_colorRed;
-    const NUIColor& peakOverlay = m_dimmed ? m_colorPeakOverlayDim : m_colorPeakOverlay;
-
-    // The bar uses its whole slot; the clip lamp sits above both bars (onRender).
-    float meterAreaHeight = bounds.height;
-    NUIRect meterArea = bounds;
+    const NUIColor green = m_dimmed ? m_colorGreenDim : m_colorGreen;
     (void)clip;
+    (void)peakOverlayDb; // Unused in this mode (bars are already showing fast peak)
 
-    // RMS Bar (Thick, Solid, Main Body)
-    // User: "RMS thick bar"
-    float normalizedRms = dbToNormalized(rmsDb);
-    float rmsFillHeight = normalizedRms * meterAreaHeight;
+    const NUIRect meterArea = bounds;
+    const int count = MeterLeds::ledCount(meterArea.height);
+    const int rmsLit = MeterLeds::litCount(dbToNormalized(rmsDb), count);
+    const int peakLit = MeterLeds::litCount(dbToNormalized(peakDb), count);
 
-    if (rmsFillHeight > 1.0f) {
-        float rmsFillTopY = meterArea.y + meterArea.height - rmsFillHeight;
-        NUIRect rmsFillRect = {
-            meterArea.x,
-            rmsFillTopY,
-            meterArea.width,
-            rmsFillHeight
-        };
-
-        // Standard Gradient Colors for RMS
-        NUIColor bottomColor = m_colorGreen;
-        NUIColor topColor = m_colorGreen;
-
-        switch (MeterZones::meterZone(normalizedRms)) { // zone by height fraction (MeterZones.h)
-        case MeterZones::Zone::Red: topColor = m_colorRed; break;
-        case MeterZones::Zone::Amber: topColor = m_colorYellow; break;
-        case MeterZones::Zone::Green: topColor = m_colorGreen.lightened(0.2f); break;
+    for (int i = 0; i < std::max(rmsLit, peakLit); ++i) {
+        const NUIColor* c = &green;
+        switch (MeterZones::meterZone(MeterLeds::ledFraction(i, count))) { // zone by height fraction (MeterZones.h)
+        case MeterZones::Zone::Red: c = &red; break;
+        case MeterZones::Zone::Amber: c = &yellow; break;
+        case MeterZones::Zone::Green: break;
         }
-
-        if (m_dimmed) {
-            bottomColor = bottomColor.withSaturation(0.0f).withAlpha(0.5f);
-            topColor = topColor.withSaturation(0.0f).withAlpha(0.5f);
-        }
-
-        renderer.fillRectGradient(rmsFillRect, topColor, bottomColor, true);
-    }
-
-    // Peak Bar (Full Width, Transparent/Ghost Overlay)
-    // User: "peak the transparent bar"
-    // Renders ON TOP of RMS but transparent so you see the "headroom" between RMS and Peak.
-    float normalizedPeak = dbToNormalized(peakDb);
-    float peakFillHeight = normalizedPeak * meterAreaHeight;
-    
-    // Only render the part of the peak that EXTENDS above RMS to avoid double-blending color
-    // or render fully transparent if that's the desired look.
-    // Ableton approach: Peak is a lighter box surrounding RMS or extending above it.
-    
-    if (peakFillHeight > rmsFillHeight) {
-        float peakTopY = meterArea.y + meterArea.height - peakFillHeight;
-        float peakHeight = peakFillHeight - rmsFillHeight; 
-        
-        // Draw the "excess" peak range as a transparent ghost
-        NUIRect peakRect = {
-            meterArea.x,
-            peakTopY,
-            meterArea.width,
-            peakHeight
-        };
-        
-        NUIColor peakColor = getColorForLevel(peakDb).withAlpha(0.35f); // 35% opacity
-        if (m_dimmed) peakColor = peakColor.withSaturation(0.0f);
-        
-        renderer.fillRect(peakRect, peakColor);
+        // The RMS body is solid; the peak's excess above it stays the 35% ghost the continuous bar had.
+        NUIColor color = i < rmsLit ? *c : c->withAlpha(0.35f);
+        if (m_dimmed) color = color.withSaturation(0.0f).withAlpha(i < rmsLit ? 0.5f : 0.35f);
+        renderer.fillRect(NUIRect{meterArea.x, meterArea.y + MeterLeds::ledTop(i, meterArea.height), meterArea.width,
+                                  MeterLeds::kLedH},
+                          color);
     }
 
     // Peak Hold indicator (white line that sticks)
@@ -263,8 +219,35 @@ void UIMixerMeter::renderMeterBar(NUIRenderer& renderer, const NUIRect& bounds,
             : m_colorPeakHold.withAlpha(0.85f);
         renderer.fillRect(NUIRect{meterArea.x, peakY, meterArea.width, PEAK_HOLD_HEIGHT}, holdColor);
     }
+}
 
-    (void)peakOverlayDb; // Unused in this mode (bars are already showing fast peak)
+void UIMixerMeter::renderCorrelation(NUIRenderer& renderer, const NUIRect& well, float correlation, bool dimmed)
+{
+    // The well is the level meters' (meterBackground, sunk); only the lit segments and the zero marker are drawn.
+    // Positive (in phase) is the meter green, a slight negative the warning colour, a deep negative the error colour:
+    // the same sign logic the continuous bar had.
+    auto& theme = NUIThemeManager::getInstance();
+    Depth::bed(renderer, well, CorrelationLeds::kWellRadius, theme.getColor("meterBackground"), Depth::Cut::Slot);
+    const float laneX = well.x + CorrelationLeds::kPad;
+    const float laneW = well.width - CorrelationLeds::kPad * 2.0f;
+    const float y = well.y + CorrelationLeds::kPad;
+    const int count = CorrelationLeds::segmentCount(laneW);
+    if (count < 1)
+        return;
+    const int centre = CorrelationLeds::centreIndex(count);
+    const auto segment = [&](int i) {
+        return NUIRect{laneX + CorrelationLeds::segmentX(i, count, laneW), y, CorrelationLeds::kSegW, CorrelationLeds::kSegH};
+    };
+    NUIColor marker = theme.getColor("textPrimary").withAlpha(0.55f);
+    renderer.fillRect(segment(centre), dimmed ? marker.withSaturation(0.0f) : marker);
+    NUIColor color = correlation < -0.25f ? theme.getColor("error")
+                     : correlation < 0.0f ? theme.getColor("warning")
+                                          : theme.getColor("meterSafe");
+    if (dimmed)
+        color = color.withSaturation(0.0f).withAlpha(0.6f);
+    const auto lit = CorrelationLeds::lit(correlation, count);
+    for (int i = lit.from; i <= lit.to; ++i)
+        renderer.fillRect(segment(i), color);
 }
 
 void UIMixerMeter::onRender(NUIRenderer& renderer)
@@ -292,16 +275,29 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
     const float topReserve = barsTopOffset() - LAMP_BAND;
     const float bottomReserve = m_masterMode ? LR_LABEL_HEIGHT : 0.0f;
 
-    // Left Meter
+    // The LED pair (MeterLeds.h): two 6px columns, gap 2, in an 18px well padded 2. The strip still reserves the
+    // old 24px column (slice 3 re-lays it), so the well is centred in whatever width it is given.
+    const float wellW = std::min(bounds.width, MeterLeds::kWellW);
+    const float colW = (wellW - MeterLeds::kPad * 2.0f - MeterLeds::kColumnGap) * 0.5f;
+    const float wellX = std::round(bounds.x + (bounds.width - wellW) * 0.5f);
+
     NUIRect leftBounds = bounds;
+    leftBounds.x = wellX + MeterLeds::kPad;
     leftBounds.y += topReserve + LAMP_BAND;
     leftBounds.height = std::max(1.0f, meterHeight - topReserve - LAMP_BAND - bottomReserve);
-    leftBounds.width = (bounds.width - METER_GAP) * 0.5f;
-    renderMeterBar(renderer, leftBounds, m_peakL, m_rmsL, m_peakOverlayL, m_peakHoldL, m_clipL);
-
-    // Right Meter
+    leftBounds.width = colW;
     NUIRect rightBounds = leftBounds;
-    rightBounds.x += leftBounds.width + METER_GAP;
+    rightBounds.x += colW + MeterLeds::kColumnGap;
+
+    // The well pads the lane by 2px at the top and (track strips) the bottom, so the lane keeps the fader's travel.
+    // The master's L / R labels sit right under the lane, so its well stops at the lane.
+    {
+        const float padBottom = m_masterMode ? 0.0f : MeterLeds::kPad;
+        const NUIRect well{wellX, leftBounds.y - MeterLeds::kPad, wellW,
+                           leftBounds.height + MeterLeds::kPad + padBottom};
+        Depth::bed(renderer, well, MeterLeds::kWellRadius, m_colorBackground, Depth::Cut::Slot);
+    }
+    renderMeterBar(renderer, leftBounds, m_peakL, m_rmsL, m_peakOverlayL, m_peakHoldL, m_clipL);
     renderMeterBar(renderer, rightBounds, m_peakR, m_rmsR, m_peakOverlayR, m_peakHoldR, m_clipR);
 
     // Design Spec, Mixer (locked): the clip lamp, an 8px sunk dot above the meters. Any sample at or over 0 dBFS
@@ -327,43 +323,11 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
 
     // Draw Correlation Meter
     if (m_showCorrelation) {
-        NUIRect corrBounds = {
-            bounds.x,
-            bounds.y + bounds.height - CORR_HEIGHT,
-            bounds.width,
-            CORR_HEIGHT
-        };
-        
-        // Background (distinct from main meter)
-        // Use a visible gray track (0.25f)
-        renderer.fillRect(corrBounds, NUIThemeManager::getInstance().getColor("controlBackground"));
-        
-        // Center line (white/bright) - 2px width
-        float centerX = corrBounds.x + corrBounds.width * 0.5f;
-        renderer.fillRect({centerX - 1.0f, corrBounds.y, 2.0f, corrBounds.height}, m_colorPeakHold);
-        
-        // Bar
-        float val = m_correlation; // -1 to 1
-        float barW = (corrBounds.width * 0.5f) * std::abs(val);
-        float barX = (val >= 0.0f) ? centerX : (centerX - barW);
-        
-        NUIRect barRect = {
-            barX,
-            corrBounds.y + 1.0f,
-            barW,
-            CORR_HEIGHT - 2.0f
-        };
-        
-        // Correlation is also semantic status:
-        // positive/in-phase -> audio color, slight negative -> warning, deep negative -> error.
-        auto& theme = NUIThemeManager::getInstance();
-        const NUIColor phaseGood = theme.getColor("meterSafe");
-        const NUIColor phaseWarn = theme.getColor("warning");
-        const NUIColor phaseBad = theme.getColor("error");
-        NUIColor barColor = (val < -0.25f) ? phaseBad : (val < 0.0f ? phaseWarn : phaseGood);
-        if (m_dimmed) barColor = barColor.withSaturation(0.0f).withAlpha(0.6f);
-        
-        renderer.fillRect(barRect, barColor);
+        // Phase correlation in the same dotted LEDs and well as the level meters (CorrelationLeds.h), centred under them.
+        const NUIRect band{wellX, bounds.y + bounds.height - CORR_HEIGHT, wellW, CORR_HEIGHT};
+        renderCorrelation(renderer, NUIRect{band.x, band.y + (CORR_HEIGHT - CorrelationLeds::kWellH) * 0.5f, band.width,
+                                            CorrelationLeds::kWellH},
+                          m_correlation, m_dimmed);
     }
     
     // Draw Value Readout (Top) — track strips only.

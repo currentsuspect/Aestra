@@ -1,5 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerInspector.h"
+#include "MixerMinimal.h"
+#include "SlotText.h"
 #include "NUIWheel.h"
 #include "MixerScale.h"
 #include "UIMixerSendList.h"
@@ -607,7 +609,9 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         NUIColor plate = th.surfaceRaised;
         if (channel->trackColorIndex >= 0) {
             const uint32_t argb = paletteIndexToARGB(channel->trackColorIndex);
-            plate = NUIColor(((argb >> 16) & 0xFF) / 255.0f, ((argb >> 8) & 0xFF) / 255.0f, (argb & 0xFF) / 255.0f, 1.0f);
+            plate = MixerMinimal::desaturate(
+                NUIColor(((argb >> 16) & 0xFF) / 255.0f, ((argb >> 8) & 0xFF) / 255.0f, (argb & 0xFF) / 255.0f, 1.0f),
+                MixerMinimal::kTintDesaturate);
         }
         const NUIColor ink = channel->trackColorIndex >= 0 ? themeManager.getColor("textOnStatus") : m_text;
         std::string dest = "Output";
@@ -723,16 +727,18 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
                     const uint32_t argb = paletteIndexToARGB(target->trackColorIndex);
                     swatch = NUIColor(((argb >> 16) & 0xFF) / 255.0f, ((argb >> 8) & 0xFF) / 255.0f, (argb & 0xFF) / 255.0f, 1.0f);
                 }
-                renderer.fillRoundedRect(NUIRect{r.x + 8.0f, cy - 4.0f, 8.0f, 8.0f}, 4.0f, swatch.withAlpha(alpha));
+                renderer.fillRoundedRect(NUIRect{r.x + 8.0f, cy - 4.0f, 8.0f, 8.0f}, 4.0f, m_text.withAlpha(alpha)); // neutral: the name is beside it
             }
-            renderer.drawText(fitText(renderer, send.targetName, 11.0f, 64.0f), {r.x + 22.0f, cy - 6.5f}, 11.0f, m_text.withAlpha(alpha));
+            renderer.drawText(fitText(renderer, send.targetName, 11.0f, 64.0f), {r.x + 22.0f, SlotText::slotTextY(renderer, r, 11.0f)}, 11.0f,
+                              m_text.withAlpha(alpha));
             const std::string tag = send.sidechainOnly ? "SC" : (send.postFader ? "Post" : "Pre");
             const float tagW = renderer.measureText(tag, 9.0f).width;
             const float db = send.gain > 1e-6f ? 20.0f * std::log10(send.gain) : -90.0f;
             const std::string dbText = send.sidechainOnly ? std::string() : UIMixerSendList::formatLevel(db);
             const float dbW = renderer.measureText(dbText, 10.0f).width;
-            renderer.drawText(tag, {r.right() - 8.0f - tagW, cy - 5.0f}, 9.0f, muted.withAlpha(alpha));
-            if (!dbText.empty()) renderer.drawText(dbText, {r.right() - 8.0f - tagW - 6.0f - dbW, cy - 5.5f}, 10.0f, m_textSecondary.withAlpha(alpha));
+            renderer.drawText(tag, {r.right() - 8.0f - tagW, SlotText::slotTextY(renderer, r, 9.0f)}, 9.0f, muted.withAlpha(alpha));
+            if (!dbText.empty()) renderer.drawText(dbText, {r.right() - 8.0f - tagW - 6.0f - dbW, SlotText::slotTextY(renderer, r, 10.0f)}, 10.0f,
+                                                 m_textSecondary.withAlpha(alpha));
             const float barL = r.x + 22.0f + 66.0f;
             const float barR = r.right() - 8.0f - tagW - 6.0f - dbW - 8.0f;
             if (barR - barL > 10.0f) {

@@ -13,9 +13,10 @@
 namespace AestraUI {
 
 namespace {
-    constexpr float BTN_W = 24.0f;
+    constexpr float BTN_W = 22.0f;      // M and S (board p-mixer2); IN is 30 wide
+    constexpr float BTN_IN_W = 30.0f;
     constexpr float BTN_H = 20.0f;
-    constexpr float BTN_GAP = 5.0f;
+    constexpr float BTN_GAP = 3.0f;
     constexpr float BTN_RADIUS = 3.0f;  // keys, matching the track-header M / S / R
 
     // Mute / solo / input-monitor render as lettered keys, the same language
@@ -48,14 +49,19 @@ void UIMixerButtonRow::layoutButtons()
 {
     const auto b = getBounds();
     // The keys shrink to fit a narrow strip rather than spilling over its edges.
-    const float btnW = std::min(BTN_W, std::floor((b.width - BTN_GAP * (m_count - 1)) / static_cast<float>(m_count)));
-    const float totalW = btnW * m_count + BTN_GAP * (m_count - 1);
-    const float startX = std::round(b.x + (b.width - totalW) * 0.5f);
+    // M and S are 22 wide, IN 30, gap 3; when the row is too narrow every key scales down together.
+    float widths[kButtonCount] = {BTN_W, BTN_W, BTN_IN_W};
+    float natural = BTN_GAP * (m_count - 1);
+    for (int i = 0; i < m_count; ++i) natural += widths[i];
+    const float scale = natural > b.width && natural > 0.0f ? std::max(0.0f, (b.width - BTN_GAP * (m_count - 1)) / (natural - BTN_GAP * (m_count - 1))) : 1.0f;
+    float totalW = BTN_GAP * (m_count - 1);
+    for (int i = 0; i < m_count; ++i) { widths[i] = std::floor(widths[i] * scale); totalW += widths[i]; }
+    float x = std::round(b.x + (b.width - totalW) * 0.5f);
     const float y = std::round(b.y + (b.height - BTN_H) * 0.5f);
 
     for (int i = 0; i < kButtonCount; ++i) {
-        const float x = startX + i * (btnW + BTN_GAP);
-        m_buttonBounds[i] = i < m_count ? NUIRect{x, y, btnW, BTN_H} : NUIRect{};
+        m_buttonBounds[i] = i < m_count ? NUIRect{x, y, widths[i], BTN_H} : NUIRect{};
+        if (i < m_count) x += widths[i] + BTN_GAP;
     }
 }
 

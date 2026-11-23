@@ -1,5 +1,6 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIDepth.h"
+#include "../Widgets/CapLook.h"
 
 #include "../Core/NUIThemeSystem.h"
 #include "NUIRenderer.h"
@@ -139,6 +140,32 @@ void faderCap(NUIRenderer& renderer, const NUIRect& cap, bool master, bool held)
     }
     const float lineH = master ? 3.0f : 2.0f;
     renderer.fillRect({cap.x + 2.0f, cy - lineH * 0.5f, cap.width - 4.0f, lineH}, master ? th.primary : th.textPrimary);
+}
+
+void consoleCap(NUIRenderer& renderer, const NUIRect& cap, bool master, bool held) {
+    const auto& th = theme();
+    // Shadow cast down into the slot: 0 7 10 -3 neuLo and 0 1 2 neuLo (the spread of -3 pulls the first in).
+    const float lift = held ? 1.4f : 1.0f;
+    const NUIRect spread{cap.x + 3.0f, cap.y + 3.0f, std::max(0.0f, cap.width - 6.0f), std::max(0.0f, cap.height - 6.0f)};
+    renderer.drawShadow(spread, 0.0f, 7.0f * lift, 10.0f, th.neuLo);
+    renderer.drawShadow(cap, 0.0f, 1.0f, 2.0f, th.neuLo);
+
+    // The dished face: a 5-stop gradient the renderer's two-stop fill cannot give, so it is laid down a row at a time
+    // (CapLook.h), pulled in at the corners to keep the radius.
+    const CapLook::Rgb base{th.surfaceRaised.r, th.surfaceRaised.g, th.surfaceRaised.b};
+    const int rows = static_cast<int>(std::round(cap.height));
+    for (int row = 0; row < rows; ++row) {
+        const CapLook::Rgb c = CapLook::faceColour(base, (static_cast<float>(row) + 0.5f) / static_cast<float>(rows));
+        const float inset = CapLook::cornerInset(row, static_cast<float>(rows), CapLook::kRadius);
+        renderer.fillRect({cap.x + inset, cap.y + static_cast<float>(row), cap.width - inset * 2.0f, 1.0f},
+                          NUIColor(c.r, c.g, c.b, 1.0f));
+    }
+    // Inset top highlight (0 1 0 white 22%) and the index line across the middle.
+    renderer.fillRect({cap.x + CapLook::kRadius, cap.y, cap.width - CapLook::kRadius * 2.0f, 1.0f},
+                      NUIColor::white().withAlpha(0.22f));
+    const float cy = std::round(cap.y + cap.height * 0.5f);
+    renderer.fillRect({cap.x, cy - CapLook::kIndexH * 0.5f, cap.width, CapLook::kIndexH},
+                      master ? th.primary : th.textPrimary);
 }
 
 void knobCap(NUIRenderer& renderer, const NUIPoint& centre, float radius, float angle, bool held, bool enabled) {

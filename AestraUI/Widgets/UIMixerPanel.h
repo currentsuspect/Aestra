@@ -186,7 +186,9 @@ private:
     /// `recorder` is passed only by the layout pass (V8-X2b criterion 4); render and hit tests call it bare.
     TrailingLayout trailingLayout(Layout::NUILayoutRecorder* recorder = nullptr) const;
 
-    /// Rail/handle that collapses or restores the inspector.
+    /// The strip the collapse handle sits on, the handle's drawn tab, and what reacts to the pointer (tab + slop).
+    NUIRect getInspectorRailRect() const;
+    NUIRect getInspectorTabRect() const;
     NUIRect getInspectorToggleRect() const;
 
     bool channelLayoutMatchesViewModel() const;
@@ -243,7 +245,6 @@ private:
     /// Extra width the gaps between groups add to the strip row.
     float groupGapsWidth() const;
     void renderGroupBands(NUIRenderer& renderer);
-    void renderDbScale(NUIRenderer& renderer);
 
     /// Master strip (pinned on the right)
     std::shared_ptr<UIMixerStrip> m_masterStrip;
@@ -271,7 +272,6 @@ private:
     static constexpr float STRIP_SPACING = 6.0f;
     static constexpr float GROUP_HEADER_H = 18.0f;
     static constexpr float GROUP_GAP = 10.0f;
-    static constexpr float SCALE_W = 26.0f; // the shared dB scale at the far left
     static constexpr float HEADER_HEIGHT = 28.0f;
     static constexpr float PADDING = 8.0f;
     static constexpr float MASTER_STRIP_WIDTH = 146.0f;

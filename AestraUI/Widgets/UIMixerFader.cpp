@@ -1,7 +1,10 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerFader.h"
 #include "../Graphics/NUIDepth.h"
+#include "CapLook.h"
+#include "MixerLane.h"
 #include "MixerScale.h"
+#include "SlotGroove.h"
 
 #include "NUIThemeSystem.h"
 #include "NUIRenderer.h"
@@ -22,21 +25,34 @@
 namespace AestraUI {
 
 namespace {
-    constexpr float TRACK_RADIUS = 4.0f;
-    constexpr float HANDLE_RADIUS = 4.0f;
-    // Design Spec, Mixer (locked): two caps. The master's is wider and heavier (28 by 30), a channel's is slim (20 by 26).
-    constexpr float HANDLE_HEIGHT = 30.0f;
-    constexpr float HANDLE_WIDTH = 28.0f;
+    // Design Spec, Mixer (locked, board p-mixer2): one 24 by 34 dished cap for channel and master. The compact
+    // overlay look (Narrow strips, which have no room for the lane) keeps the old 20 by 26 cap until a Trial says otherwise.
+    constexpr float kCapH = CapLook::kH;
     constexpr float kOverlayHandleW = 20.0f;
     constexpr float kOverlayHandleH = 26.0f;
-    constexpr float TRACK_WIDTH = 8.0f;     // the master's wider slot (Design Spec, Mixer)
-    constexpr float TOP_PAD = 18.0f;    // room for fixed dB readout at top
-    constexpr float BOTTOM_PAD = 6.0f;   // minimal padding below track
+    constexpr float TRACK_WIDTH = SlotGroove::kSlotW; // one slot for master and channel (board p-mixer2, variant F)
+    constexpr float TOP_PAD = UIMixerFader::kReadoutBand; // room for the master's dB readout at the top
     constexpr float SNAP_DB = 0.5f;
     constexpr float DRAG_SLOP = 1.5f;
 
     // The console scale's marks (MixerScale). Unity (0 dB) is the only one that gets emphasis.
     constexpr const auto& SCALE_TICKS = MixerScale::kTicks;
+
+    // The slot of the locked fader: meterBackground in 3px plain / 1px lighter bands, an inset shadow over it.
+    // fillRect per line, no blur: the shadow is the renderer's SDF inner shadow, as Depth::bed uses.
+    void drawGrooveSlot(NUIRenderer& renderer, const NUIRect& slot)
+    {
+        const auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
+        const NUIColor base = theme.meterBackground;
+        const NUIColor line{SlotGroove::liftChannel(base.r), SlotGroove::liftChannel(base.g),
+                            SlotGroove::liftChannel(base.b), base.a};
+        renderer.fillRoundedRect(slot, SlotGroove::kSlotRadius, base);
+        const int lines = SlotGroove::lineCount(slot.height);
+        for (int i = 0; i < lines; ++i)
+            renderer.fillRect({slot.x, slot.y + SlotGroove::lineTop(i), slot.width, 1.0f}, line);
+        renderer.drawInnerShadow(slot, SlotGroove::kSlotRadius, SlotGroove::kShadowOffset, SlotGroove::kShadowBlur,
+                                 theme.neuLo);
+    }
 
 }
 
@@ -120,7 +136,7 @@ float UIMixerFader::handleWidth() const
 {
     // The drawn handle and the drag hit-box must be the same rectangle; keeping
     // one formula is what guarantees that.
-    return std::min(HANDLE_WIDTH, getBounds().width - 4.0f);
+    return std::min(CapLook::kW, getBounds().width);
 }
 
 NUIRect UIMixerFader::readoutRect() const
@@ -147,8 +163,10 @@ float UIMixerFader::dbFromNorm(float norm) const
 
 float UIMixerFader::overlayHandleHeight() { return kOverlayHandleH; }
 
-float UIMixerFader::topPad() const { return m_overlay ? kOverlayHandleH * 0.5f : TOP_PAD; }
-float UIMixerFader::bottomPad() const { return m_overlay ? kOverlayHandleH * 0.5f : BOTTOM_PAD; }
+float UIMixerFader::capHeight() const { return m_overlay ? kOverlayHandleH : kCapH; }
+// The cap hangs half its height over each end of the track. The master also keeps its gain readout above the travel.
+float UIMixerFader::topPad() const { return capHeight() * 0.5f + (!m_overlay && m_showScaleLabels ? TOP_PAD : 0.0f); }
+float UIMixerFader::bottomPad() const { return capHeight() * 0.5f; }
 
 NUIRect UIMixerFader::handleRectAt(float handleY) const
 {
@@ -157,8 +175,9 @@ NUIRect UIMixerFader::handleRectAt(float handleY) const
         const float w = std::min(kOverlayHandleW, bounds.width);
         return NUIRect{bounds.x + (bounds.width - w) * 0.5f, handleY, w, kOverlayHandleH};
     }
+    // The cap rides the slot, which sits at the lane's track centre, not the widget's.
     const float handleW = handleWidth();
-    return NUIRect{bounds.x + (bounds.width - handleW) * 0.5f, handleY, handleW, HANDLE_HEIGHT};
+    return NUIRect{bounds.x + MixerLane::slotCentre() - handleW * 0.5f, handleY, handleW, kCapH};
 }
 
 float UIMixerFader::dbToY(float db, float trackTop, float trackHeight) const
@@ -169,72 +188,32 @@ float UIMixerFader::dbToY(float db, float trackTop, float trackHeight) const
 void UIMixerFader::renderScale(NUIRenderer& renderer, float trackX, float trackWidth,
                                float trackTop, float trackHeight, bool showLabels)
 {
-    // Ticks flank the rail on both sides so the cap never hides the scale.
-    constexpr float TICK_LEN = 4.0f;
-    constexpr float TICK_GAP = 3.0f;
-    const float leftEnd = trackX - TICK_GAP;
-    const float rightStart = trackX + trackWidth + TICK_GAP;
-
-    // The scale is structural, not a second readout: major marks are always
-    // labelled, the complete dB ladder is revealed for the master strip or
-    // while the musician is directly manipulating this fader.
-    // Ticks first, all of them; labels second, with collision avoidance. On a
-    // short fader (a floating mixer, a small window) neighbouring labels land
-    // on top of each other and "+6" and "0" merge into one smudge. Unity is
-    // placed first and always wins; any other label that would sit within
-    // kMinLabelGap of an already placed one is skipped.
-    constexpr float kMinLabelGap = 10.0f;
+    // The printed console scale (Design Spec, Mixer, board p-mixer2): numbers in the 16px column on the left, a 1px
+    // gridMajor tick 8px long on each side of the slot, 1px in from the track's edge. 0 dB is textSecondary and bold
+    // (the renderer has no bold weight: it is drawn twice, half a pixel apart). Both sides print, so the cap never
+    // hides the scale.
+    (void)trackWidth;
+    (void)showLabels;
+    auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
+    const float faderLeft = getBounds().x;
+    constexpr float kLabelSize = 9.0f;
     for (float db : SCALE_TICKS) {
         if (db > m_maxDb || db < m_minDb) continue;
         const bool unity = (std::abs(db) < 0.01f);
-        const float y = dbToY(db, trackTop, trackHeight);
-        const float len = unity ? TICK_LEN + 2.0f : TICK_LEN;
-        const float thickness = unity ? 2.0f : 1.0f;
-        const NUIColor color =
-            unity ? m_tickUnity : (showLabels ? m_tick : m_tick.withAlpha(m_tick.a * 0.58f));
-        renderer.fillRect(NUIRect{leftEnd - len, y - thickness * 0.5f, len, thickness}, color);
-        renderer.fillRect(NUIRect{rightStart, y - thickness * 0.5f, len, thickness}, color);
-    }
+        const float y = std::round(dbToY(db, trackTop, trackHeight));
+        const NUIColor tick = unity ? theme.textSecondary : theme.gridMajor;
+        renderer.fillRect(NUIRect{faderLeft + MixerLane::leftTickX(), y, MixerLane::kTickLen, 1.0f}, tick);
+        renderer.fillRect(NUIRect{faderLeft + MixerLane::rightTickX(), y, MixerLane::kTickLen, 1.0f}, tick);
 
-    float placed[16];
-    static_assert(std::size(SCALE_TICKS) <= std::size(placed), "every scale label needs a slot");
-    int placedCount = 0;
-    const auto fits = [&](float y) {
-        for (int i = 0; i < placedCount; ++i) {
-            if (std::abs(placed[i] - y) < kMinLabelGap) return false;
-        }
-        return true;
-    };
-    const auto drawLabel = [&](float db) {
-        const bool unity = (std::abs(db) < 0.01f);
-        const float y = dbToY(db, trackTop, trackHeight);
-        if (!fits(y) || placedCount >= 16) return;
-        placed[placedCount++] = y;
-        char labelBuf[8];
-        const char* label = "0";
-        if (!unity) {
-            std::snprintf(labelBuf, sizeof(labelBuf), "%+d", static_cast<int>(db));
-            label = labelBuf;
-        }
-        const float size = unity ? 8.0f : 7.5f;
-        const float labelW = renderer.measureText(label, size).width;
-        // Right-align labels against the tick so they remain a measurement aid
-        // instead of forming a permanent text column.
-        renderer.drawText(label, {leftEnd - TICK_LEN - 5.0f - labelW, y - 3.5f}, size,
-                          unity ? m_tickUnity : m_textMuted.withAlpha(showLabels ? 1.0f : 0.72f));
-    };
-
-    if (0.0f <= m_maxDb && 0.0f >= m_minDb) drawLabel(0.0f);
-    for (float db : SCALE_TICKS) {
-        if (db > m_maxDb || db < m_minDb || std::abs(db) < 0.01f) continue;
-        // At rest the major marks stay labelled, so the scale reads as a scale;
-        // a lone "0" read as a stray glyph. The full ladder appears on the
-        // master, on hover and while dragging.
-        const auto near = [db](float mark) { return std::abs(db - mark) < 0.01f; };
-        const bool major = near(6.0f) || near(-12.0f) || near(-24.0f) || near(-48.0f);
-        if (!showLabels && !major) continue;
-        drawLabel(db);
+        char buf[8];
+        if (unity) std::snprintf(buf, sizeof(buf), "0");
+        else std::snprintf(buf, sizeof(buf), "%s%d", db > 0.0f ? "+" : "-", static_cast<int>(std::fabs(db)));
+        const NUIColor ink = unity ? theme.textSecondary : theme.textMuted;
+        const NUIPoint at{faderLeft, y - kLabelSize * 0.5f - 1.0f};
+        renderer.drawText(buf, at, kLabelSize, ink);
+        if (unity) renderer.drawText(buf, {at.x + 0.5f, at.y}, kLabelSize, ink);
     }
+    (void)trackX;
 }
 
 void UIMixerFader::onRender(NUIRenderer& renderer)
@@ -256,7 +235,7 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
     const float trackHeight = std::max(1.0f, trackBottom - trackTop);
 
     const float trackWidth = TRACK_WIDTH;
-    const float trackX = bounds.x + (bounds.width - trackWidth) * 0.5f;
+    const float trackX = bounds.x + MixerLane::slotCentre() - trackWidth * 0.5f;
     NUIRect trackRect{trackX, trackTop, trackWidth, trackHeight};
 
     // 1. Scale first, so the rail and cap sit on top of it.
@@ -264,30 +243,30 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
     renderScale(renderer, trackX, trackWidth, trackTop, trackHeight, showScaleLabels);
 
     // 2. The slot, cut into the strip (Design Spec: a sunk bed).
-    Depth::bed(renderer, trackRect, 3.0f, NUIThemeManager::getInstance().getCurrentTheme().meterBackground,
-               Depth::Cut::Slot);
+    drawGrooveSlot(renderer, trackRect);
 
     // 3. Filled Portion — neutral. This is control state, not signal.
     const float filledH = normFromDb(m_valueDb) * trackHeight;
 
     // 4. Fader Handle (distinct grab block)
-    const float handleY = std::clamp(trackBottom - filledH - HANDLE_HEIGHT * 0.5f,
-                                     trackTop - HANDLE_HEIGHT * 0.5f,
-                                     trackBottom - HANDLE_HEIGHT * 0.5f);
+    const float handleY = std::clamp(trackBottom - filledH - kCapH * 0.5f,
+                                     trackTop - kCapH * 0.5f,
+                                     trackBottom - kCapH * 0.5f);
 
     const float handleW = handleWidth();
     const float handleX = bounds.x + (bounds.width - handleW) * 0.5f;
-    const float handleH = HANDLE_HEIGHT;
+    const float handleH = kCapH;
 
     NUIRect handleRect{handleX, handleY, handleW, handleH};
-    // The cap is an object (Design Spec, Mixer). Only the master strip draws its fader standalone (channel faders
-    // ride their meters as an overlay), so this one takes the master cap.
-    Depth::faderCap(renderer, handleRect, true, m_dragging);
+    // The cap is an object (Design Spec, Mixer): one dished 24 by 34 cap, the master's index line in primary.
+    Depth::consoleCap(renderer, handleRect, m_showScaleLabels, m_dragging);
 
     // 5. dB readout at top. It remains available for exact entry, but recedes
     //    on ordinary channel strips so the control shape and the adjacent meter
     //    retain visual priority. The master strip keeps a stronger readout.
-    if (m_editing && m_textInput) {
+    if (!m_showScaleLabels) {
+        // A channel's gain reads in its footer; only the master keeps the readout above the travel.
+    } else if (m_editing && m_textInput) {
         renderChildren(renderer);
     } else {
         const bool valueActive = isHovered() || m_dragging || m_showScaleLabels;
@@ -327,6 +306,14 @@ void UIMixerFader::renderOverlay(NUIRenderer& renderer)
     const float trackBottom = bounds.y + bounds.height - bottomPad();
     const float trackHeight = std::max(1.0f, trackBottom - trackTop);
     const float y = trackBottom - normFromDb(m_valueDb) * trackHeight;
+
+    // The slot the cap rides in, centred in the fader's column (the handle's own centre). Narrow strips only: the
+    // other densities draw the full lane in onRender.
+    {
+        const NUIRect handleCol = handleRectAt(trackTop);
+        const float slotX = std::round(handleCol.x + (handleCol.width - SlotGroove::kSlotW) * 0.5f);
+        drawGrooveSlot(renderer, NUIRect{slotX, trackTop, SlotGroove::kSlotW, trackHeight});
+    }
 
     // The cap: one line across the meters, so gain reads against the level behind it.
     const bool active = isHovered() || m_dragging;
@@ -528,7 +515,7 @@ bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
 
         // The readout is an entry field, not part of the track: clicking it used
         // to slam the fader to whatever value that Y mapped to.
-        if (readoutRect().contains(event.position)) {
+        if (m_showScaleLabels && readoutRect().contains(event.position)) {
             beginEdit();
             return true;
         }
@@ -547,9 +534,9 @@ bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
         const float trackBottom = bounds.y + bounds.height - bottomPad();
         const float trackHeight = std::max(1.0f, trackBottom - trackTop);
         const float filledH = normFromDb(m_valueDb) * trackHeight;
-        const float handleY = std::clamp(trackBottom - filledH - (m_overlay ? kOverlayHandleH : HANDLE_HEIGHT) * 0.5f,
-                                         trackTop - (m_overlay ? kOverlayHandleH : HANDLE_HEIGHT) * 0.5f,
-                                         trackBottom - (m_overlay ? kOverlayHandleH : HANDLE_HEIGHT) * 0.5f);
+        const float handleY = std::clamp(trackBottom - filledH - capHeight() * 0.5f,
+                                         trackTop - capHeight() * 0.5f,
+                                         trackBottom - capHeight() * 0.5f);
         const NUIRect handleRect = handleRectAt(handleY);
 
         if (!handleRect.contains(event.position)) {
@@ -583,7 +570,7 @@ bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
             const float trackBottom = bounds.y + bounds.height - bottomPad();
             const float trackHeight = std::max(1.0f, trackBottom - trackTop);
             const float filledH = normFromDb(m_valueDb) * trackHeight;
-            const float hh = m_overlay ? kOverlayHandleH : HANDLE_HEIGHT;
+            const float hh = capHeight();
             const float handleY = std::clamp(trackBottom - filledH - hh * 0.5f, trackTop - hh * 0.5f, trackBottom - hh * 0.5f);
             const NUIRect handleR = handleRectAt(handleY);
             const float handleW = handleR.width;

@@ -244,6 +244,62 @@ target_include_directories(MixerScaleRulesTest PRIVATE
 add_test(NAME MixerScaleRulesTest COMMAND MixerScaleRulesTest)
 set_tests_properties(MixerScaleRulesTest PROPERTIES LABELS "unit;mixer;scale;contract:core")
 
+# Mixer rework slice 2: the stepped LED meter's geometry (4px pitch, 18px well). Pure headers.
+add_executable(MeterLedsTest AestraUI/MeterLedsTest.cpp)
+target_include_directories(MeterLedsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME MeterLedsTest COMMAND MeterLedsTest)
+set_tests_properties(MeterLedsTest PROPERTIES LABELS "unit;mixer;meter;contract:core")
+
+# Mixer rework slice 2: the fader slot's groove (3px plain + 1px lighter bands). Pure header.
+add_executable(SlotGrooveTest AestraUI/SlotGrooveTest.cpp)
+target_include_directories(SlotGrooveTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME SlotGrooveTest COMMAND SlotGrooveTest)
+set_tests_properties(SlotGrooveTest PROPERTIES LABELS "unit;mixer;fader;contract:core")
+
+# Mixer rework slice 3: the strip lane's geometry and the dished cap's gradient. Pure headers.
+add_executable(MixerLaneCapTest AestraUI/MixerLaneCapTest.cpp)
+target_include_directories(MixerLaneCapTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME MixerLaneCapTest COMMAND MixerLaneCapTest)
+set_tests_properties(MixerLaneCapTest PROPERTIES LABELS "unit;mixer;fader;contract:core")
+
+# Mixer rework slice 4: the Wash top's opacity curve. Pure header.
+add_executable(StripWashTest AestraUI/StripWashTest.cpp)
+target_include_directories(StripWashTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME StripWashTest COMMAND StripWashTest)
+set_tests_properties(StripWashTest PROPERTIES LABELS "unit;mixer;strip;contract:core")
+
+# Mixer rework slice 7: the inspector collapse handle's tab and hit rect. Pure header.
+add_executable(InspectorHandleTest AestraUI/InspectorHandleTest.cpp)
+target_include_directories(InspectorHandleTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME InspectorHandleTest COMMAND InspectorHandleTest)
+set_tests_properties(InspectorHandleTest PROPERTIES LABELS "unit;mixer;inspector;contract:core")
+
+# Mixer rework slice 5: the correlation meter as dotted LEDs. Pure header.
+add_executable(CorrelationLedsTest AestraUI/CorrelationLedsTest.cpp)
+target_include_directories(CorrelationLedsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME CorrelationLedsTest COMMAND CorrelationLedsTest)
+set_tests_properties(CorrelationLedsTest PROPERTIES LABELS "unit;mixer;meter;contract:core")
+
+# Mixer rework slice 6: where a label sits in its slot. Pure header.
+add_executable(SlotTextTest AestraUI/SlotTextTest.cpp)
+target_include_directories(SlotTextTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME SlotTextTest COMMAND SlotTextTest)
+set_tests_properties(SlotTextTest PROPERTIES LABELS "unit;mixer;text;contract:core")
+
 # Arsenal unit naming: pure header, no libraries. A new unit takes the lowest free number for its kind.
 add_executable(ArsenalUnitNamingTest Integration/ArsenalUnitNamingTest.cpp)
 target_include_directories(ArsenalUnitNamingTest PRIVATE
