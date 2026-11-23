@@ -31,6 +31,12 @@ public:
     // @p part names one part of the thing (each kind numbers its own parts); kWhole for all of it.
     void add(Touch kind, AestraUUID id, uint32_t part = kWhole) { m_touched.push_back({kind, id, part}); }
 
+    // Everything @p other touched as well (a step made of several steps touches all of theirs).
+    void merge(const Footprint& other) {
+        m_everything = m_everything || other.m_everything;
+        m_touched.insert(m_touched.end(), other.m_touched.begin(), other.m_touched.end());
+    }
+
     bool isEverything() const { return m_everything; }
     bool empty() const { return !m_everything && m_touched.empty(); }
 

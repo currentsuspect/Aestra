@@ -25,8 +25,8 @@ void UIMixerHeader::cacheThemeColors()
     m_text = theme.getColor("textPrimary");
     m_textSecondary = theme.getColor("textSecondary");
     m_selectedText = theme.getColor("textPrimary");
-    m_selectedBg = theme.getColor("primary").withAlpha(0.06f);
-    m_selectedBorder = theme.getColor("primary").withAlpha(0.16f);
+    m_selectedBg = theme.getColor("selectionTint");
+    m_selectedBorder = theme.getColor("selectionEdge");
 }
 
 NUIColor UIMixerHeader::colorFromARGB(uint32_t argb)

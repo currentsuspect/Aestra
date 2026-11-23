@@ -126,6 +126,12 @@ public:
     // Component interface
     void onRender(NUIRenderer& renderer) override;
     void onUpdate(double deltaTime) override;
+    void onThemeChanged(const NUIThemeProperties& theme) override; ///< FileBrowserTheme.cpp
+    /// The colours the browser keeps from the theme, and whether its rendered list is queued for a redraw (read by
+    /// FileBrowserLibraryTest to prove a theme change reaches them).
+    struct ThemeColors { NUIColor background, text, selected, hover; };
+    ThemeColors themeColors() const { return {backgroundColor_, textColor_, selectedColor_, hoverColor_}; }
+    bool listRedrawQueued() const { return m_cacheInvalidated; }
     void onResize(int width, int height) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
     bool onKeyEvent(const NUIKeyEvent& event) override;
@@ -506,6 +512,7 @@ public:
         std::string createUntitledCollection();
         void finishCollectionRename(bool accept);
         NUIColor collectionColor(const std::string& name) const;
+        void applyThemeColors(); ///< reads every cached colour from the active theme (FileBrowserTheme.cpp)
         std::vector<std::string> collections_{"Purple", "Drums", "Instruments", "Vocals"};
         std::function<std::vector<std::string>()> projectFilesProvider_;
         // Inline collection-name editor. A finished editor is parked in

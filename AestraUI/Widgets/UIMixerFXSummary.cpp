@@ -31,7 +31,7 @@ void UIMixerFXSummary::cacheThemeColors()
     m_borderHover = theme.getColor("border").withAlpha(0.38f);
     m_textPrimary = theme.getColor("textPrimary");
     m_textSecondary = theme.getColor("textSecondary").withAlpha(0.86f);
-    m_accent = theme.getColor("accentPrimary");
+    m_accent = theme.getColor("selected");
 }
 
 void UIMixerFXSummary::requestInvalidate()
@@ -80,15 +80,15 @@ void UIMixerFXSummary::onRender(NUIRenderer& renderer)
     // Repeated empty insert controls must stay quiet. Purple is reserved for
     // the directly hovered/pressed action, not six persistent invitations.
     if (!hasFx && (m_hovered || m_pressed)) {
-        bg = m_accent.withAlpha(m_pressed ? 0.14f : 0.08f);
+        bg = NUIThemeManager::getInstance().getColor(m_pressed ? "selectionFill" : "selectionTint");
     } else if (m_pressed) {
-        bg = NUIThemeManager::getInstance().getColor("buttonBgActive").withAlpha(0.99f);
+        bg = NUIThemeManager::getInstance().getColor("selectionFill");
     }
     renderer.fillRoundedRect(visualRect, RADIUS, bg);
     if (m_hovered || m_pressed || hasFx) {
         const NUIColor border = hasFx
             ? m_border.withAlpha(m_hovered ? 0.48f : 0.28f)
-            : m_accent.withAlpha(0.50f);
+            : NUIThemeManager::getInstance().getColor("selectionEdge");
         renderer.strokeRoundedRect(visualRect, RADIUS, 1.0f, border);
     }
 
@@ -100,7 +100,7 @@ void UIMixerFXSummary::onRender(NUIRenderer& renderer)
     const NUIRect chipRect{visualRect.x + 8.0f, visualRect.y + (visualRect.height - 10.0f) * 0.5f, 18.0f, 10.0f};
     renderer.fillRoundedRect(chipRect,
                              CHIP_RADIUS,
-                             hasFx ? m_accent.withAlpha(0.88f) : m_accent.withAlpha(0.95f));
+                             m_accent);
 
     float rightInset = 10.0f;
     if (!m_statusText.empty()) {
@@ -110,7 +110,7 @@ void UIMixerFXSummary::onRender(NUIRenderer& renderer)
                                  statusW,
                                  16.0f};
         renderer.fillRoundedRect(statusRect, 8.0f, m_bg.withAlpha(0.85f));
-        renderer.drawTextCentered(m_statusText, statusRect, 8.5f, m_accent.withAlpha(0.92f));
+        renderer.drawTextCentered(m_statusText, statusRect, 8.5f, NUIThemeManager::getInstance().getColor("accentText"));
         rightInset = (visualRect.right() - statusRect.x) + 6.0f;
     }
 

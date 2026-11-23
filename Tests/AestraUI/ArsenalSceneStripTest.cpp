@@ -95,13 +95,14 @@ int main() {
         const auto sw = strip.swingRect();
         check(sw.right() < strip.placeRect().x && strip.placeRect().right() == rect.right() && strip.addRect().right() < sw.x, "the swing zone sits right of the + chip, and the place button ends the strip");
         AestraUI::NUIMouseEvent e;
-        e.position = {sw.x + sw.width * 0.5f, sw.y + 4};
+        const auto tr = strip.swingTrackRect(); // the slider; the "Swing" label beside it is not a control
+        e.position = {tr.x + tr.width * 0.5f, tr.y + 4};
         e.pressed = true;
         e.button = AestraUI::NUIMouseButton::Left;
         ArsenalSceneStrip::Action act;
         check(strip.onMouse(e, pm, b.value, act) && act.kind == ArsenalSceneStrip::Action::Kind::SwingEdited, "pressing the zone edits swing");
         check(std::abs(pm.getPattern(b)->swing - 0.5f) < 0.02f, "halfway across is about half swing");
-        e.position.x = sw.right() + 400;
+        e.position.x = tr.right() + 400;
         e.pressed = true;
         strip.onMouse(e, pm, b.value, act);
         check(pm.getPattern(b)->swing == 1.0f, "dragging past the end holds full swing");
@@ -110,6 +111,27 @@ int main() {
         e.position = {0, 0};
         check(!strip.onMouse(e, pm, b.value, act), "after release the strip leaves pointer events outside it alone");
         check(pm.getPattern(a)->swing == 0.0f, "other patterns keep their own swing");
+    }
+
+    std::cout << "[5b] the header: label, slider, divider and the one button are level, one height, evenly spaced\n";
+    {
+        for (const float w : {640.0f, 760.0f, 1000.0f, 1100.0f, 1500.0f}) {
+            for (const float h : {44.0f, 52.0f}) {
+                const AestraUI::NUIRect r(300.0f, 130.0f, w, h);
+                const auto l = ArsenalSceneStrip::headerLayout(r);
+                const std::string at = "strip " + std::to_string(static_cast<int>(w)) + "x" + std::to_string(static_cast<int>(h)) + ": ";
+                check(l.track.height == l.place.height && l.label.height == l.place.height, at + "slider, label and button are one height");
+                check(std::abs(l.track.y - l.place.y) < 1e-3f && std::abs(l.label.y - l.place.y) < 1e-3f, at + "they share a top edge, so a baseline");
+                const float centre = r.y + r.height * 0.5f;
+                check(std::abs((l.place.y + l.place.height * 0.5f) - centre) < 0.5f, at + "and are centred on the strip's centre line");
+                check(std::abs(l.place.right() - r.right()) < 1e-3f, at + "the button ends the strip");
+                check(std::abs((l.place.x - l.divider.right()) - ArsenalSceneStrip::kGap) < 1e-3f, at + "divider to button is the standard gap");
+                check(std::abs((l.divider.x - l.track.right()) - ArsenalSceneStrip::kGap) < 1e-3f, at + "slider to divider is the same gap");
+                check(std::abs((l.track.x - l.label.right()) - ArsenalSceneStrip::kLabelGap) < 1e-3f, at + "label to slider is the label gap");
+                check(l.track.width >= 60.0f, at + "the slider keeps room for '100%'");
+                check(l.label.x >= r.right() - ArsenalSceneStrip::kRightW - 1e-3f, at + "the group stays inside the reserved right end");
+            }
+        }
     }
 
     std::cout << "[6] the place button asks the panel to place the pattern\n";

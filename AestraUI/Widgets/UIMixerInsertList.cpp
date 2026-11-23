@@ -58,7 +58,8 @@ void UIMixerInsertList::onRender(NUIRenderer& renderer) {
                     std::max(1.0f, std::floor(b.height) - 1.0f)};
     const NUIColor textPrimary = theme.getColor("textPrimary");
     const NUIColor textSecondary = theme.getColor("textSecondary");
-    const NUIColor accent = theme.getColor("accentPrimary");
+    const NUIColor accent = theme.getColor("selected");
+    const NUIColor accentText = theme.getColor("accentText");
 
     // Design Spec, Mixer (board p-mixer2, locked): an insert is a flat 20px chip, surfaceTertiary, radius 5, with a 6px
     // primary dot and the name in 10px. An empty chain is one quiet "+ insert" row in textMuted, no fill.
@@ -86,7 +87,7 @@ void UIMixerInsertList::onRender(NUIRenderer& renderer) {
         renderer.fillRoundedRect(chip, kRadius, theme.getColor(m_hovered ? "surfaceRaised" : "surfaceTertiary"));
         // A dot per insert: lit when it is processing, dim when bypassed.
         const NUIRect dot{chip.x + 5.0f, chip.y + (kChipH - kDotSize) * 0.5f, kDotSize, kDotSize};
-        renderer.fillRoundedRect(dot, kDotSize * 0.5f, row.bypassed ? textSecondary.withAlpha(0.35f) : theme.getColor("primary"));
+        renderer.fillRoundedRect(dot, kDotSize * 0.5f, row.bypassed ? textSecondary.withAlpha(0.35f) : accent);
 
         const float textX = dot.right() + 4.0f;
         float rightInset = 5.0f;
@@ -112,7 +113,7 @@ void UIMixerInsertList::onRender(NUIRenderer& renderer) {
         }
         if (!status.empty()) {
             renderer.drawText(status, {chip.right() - rightInset + 4.0f, SlotText::slotTextY(renderer, chip, 8.5f)}, 8.5f,
-                              accent.withAlpha(0.92f));
+                              accentText);
         }
         y += kRowH;
     }

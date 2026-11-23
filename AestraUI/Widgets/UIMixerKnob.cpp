@@ -35,7 +35,7 @@ void UIMixerKnob::cacheThemeColors()
     m_bgHover = theme.getColor("controlHover");
     m_ring = theme.getColor("borderSubtle").withAlpha(0.65f);
     m_ringHover = theme.getColor("border").withAlpha(0.85f);
-    m_indicator = theme.getColor("accentPrimary");
+    m_indicator = theme.getColor("selectionEdge");
     // Resting arcs are neutral. When every knob carried a saturated accent the
     // whole strip read as "everything is active"; colour now marks engagement.
     m_arcResting = theme.getColor("textPrimary").withAlpha(0.42f);

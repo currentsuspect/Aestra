@@ -199,14 +199,7 @@ FileBrowser::FileBrowser()
     navHistory_.push_back(currentPath_);
     navHistoryIndex_ = 0;
 
-    // Load Theme Colors (Consistent with AestraTheme)
-    backgroundColor_ = themeManager.getColor("backgroundPrimary"); // Deep Void from theme
-    textColor_ = themeManager.getColor("textPrimary");
-
-    // Use theme accent for selection (consistent with the rest of the app)
-    selectedColor_ = themeManager.getColor("accentPrimary");
-
-    hoverColor_ = themeManager.getColor("buttonBgHover").withAlpha(0.72f);
+    applyThemeColors(); // FileBrowserTheme.cpp: also what a theme change runs
     // Perform initial layout now that all members (icons, search input) are initialized
     // This initializes scrollbarTrackHeight_ and other layout vars needed by updateScrollbarVisibility
     onResize(static_cast<int>(getWidth()), static_cast<int>(getHeight()));
@@ -443,11 +436,11 @@ void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& boun
 
     NUIRect fileBrowserBounds(bounds.x, bounds.y, bounds.width, bounds.height);
 
-    renderer.fillRect(fileBrowserBounds, themeManager.getColor("backgroundPrimary"));
+    renderer.fillRect(fileBrowserBounds, themeManager.getColor("timelineBed"));
     // Search row sits ON the surface (DESIGN.md rule 4: no recessed dark
     // well); the single quiet divider below it explains the boundary.
     renderer.fillRect(NUIRect(bounds.x, bounds.y, bounds.width, browserLayout.searchBar.bottom() - bounds.y),
-                      themeManager.getColor("backgroundSecondary"));
+                      themeManager.getColor("timelineBed"));
     renderer.drawLine({browserLayout.searchBar.x, browserLayout.searchBar.bottom() - 1.0f},
                       {browserLayout.searchBar.right(), browserLayout.searchBar.bottom() - 1.0f},
                       1.0f, themeManager.getColor("border").withAlpha(0.30f));
@@ -476,7 +469,7 @@ void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& boun
     renderNavigationPane(renderer, browserLayout);
     if (isFocused() && (!searchInput_ || !searchInput_->isFocused())) {
         renderer.strokeRoundedRect(browserLayout.list, 2.0f, 1.0f,
-                                   themeManager.getColor("accentPrimary").withAlpha(0.28f));
+                                   themeManager.getColor("focusRing"));
     }
 }
 
@@ -1798,15 +1791,6 @@ void FileBrowser::openFolder(const std::string& path) {
 // -----------------------------------------------------------------------------
 
 
-NUIColor FileBrowser::collectionColor(const std::string& name) const {
-    static constexpr uint32_t kPalette[] = {0x7c3aed, 0xf97316, 0x22c55e, 0x3b82f6,
-                                            0xec4899, 0x14b8a6, 0xeab308, 0xef4444};
-    const auto it = std::find(collections_.begin(), collections_.end(), name);
-    if (it == collections_.end()) return NUIColor(0.42f, 0.42f, 0.42f, 1.0f); // a plain tag
-    const size_t index = static_cast<size_t>(it - collections_.begin());
-    return NUIColor::fromHex(kPalette[index % (sizeof(kPalette) / sizeof(kPalette[0]))]);
-}
-
 void FileBrowser::addTaggingSubmenus(const std::string& path) {
     auto collectionsMenu = std::make_shared<NUIContextMenu>();
     for (const auto& name : collections_) {
@@ -2318,7 +2302,7 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
 
     const NUIColor evenRow = themeManager.getColor("backgroundPrimary"); // flat rows: no zebra
     const NUIColor selectedRow = themeManager.getColor("selected"); // selection is the wash, never an edge
-    const NUIColor secondarySelectedRow = selectedRow.withAlpha(selectedRow.a * 0.6f);
+    const NUIColor secondarySelectedRow = themeManager.getColor("selectionFill"); // opaque: the other selected rows
     const NUIColor text = themeManager.getColor("textSecondary"); // files secondary, folders primary
     const NUIColor folderText = themeManager.getColor("textPrimary");
     const NUIColor muted = themeManager.getColor("textSecondary").withAlpha(0.56f);
@@ -2346,7 +2330,7 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         if (playbackActive) {
             // FD-47: the sound that is playing is tinted, with teal bars where the
             // play glyph would be — teal is what "live" means everywhere in Aestra.
-            renderer.fillRect(itemRect, themeManager.getColor("accentPrimary").withAlpha(0.14f));
+            if (!selected) renderer.fillRect(itemRect, themeManager.getColor("selectionTint")); // opaque, under the row text
             const NUIColor live = lit ? onLit : themeManager.getColor("accentCyan");
             const float bx = itemRect.x + 5.0f, cy = itemRect.y + itemRect.height * 0.5f;
             renderer.fillRect({bx, cy - 3.0f, 2.0f, 6.0f}, live);
@@ -3438,8 +3422,8 @@ void FileBrowser::renderInteractiveBreadcrumbs(NUIRenderer& renderer) {
              renderer.fillRoundedRect(partRect, chipRadius, hoverColor_);
              renderer.strokeRoundedRect(partRect, chipRadius, 1, hoverColor_.lightened(0.2f));
         } else if (isLast) {
-             renderer.fillRoundedRect(partRect, chipRadius, selectedColor_.withAlpha(0.15f));
-             renderer.strokeRoundedRect(partRect, chipRadius, 1, selectedColor_.withAlpha(0.3f));
+             renderer.fillRoundedRect(partRect, chipRadius, NUIThemeManager::getInstance().getColor("selectionTint"));
+             renderer.strokeRoundedRect(partRect, chipRadius, 1, NUIThemeManager::getInstance().getColor("controlGuide"));
          } else {
              renderer.fillRoundedRect(partRect, chipRadius, NUIThemeManager::getInstance().getColor("hover").withAlpha(0.44f));
         }
@@ -3529,8 +3513,8 @@ void FileBrowser::renderInteractiveBreadcrumbs(NUIRenderer& renderer) {
             renderer.fillRoundedRect(partRect, chipRadius, hoverColor_);
             renderer.strokeRoundedRect(partRect, chipRadius, 1, hoverColor_.lightened(0.2f));
         } else if (isLast) {
-            renderer.fillRoundedRect(partRect, chipRadius, selectedColor_.withAlpha(0.15f));
-            renderer.strokeRoundedRect(partRect, chipRadius, 1, selectedColor_.withAlpha(0.3f));
+            renderer.fillRoundedRect(partRect, chipRadius, NUIThemeManager::getInstance().getColor("selectionTint"));
+            renderer.strokeRoundedRect(partRect, chipRadius, 1, NUIThemeManager::getInstance().getColor("controlGuide"));
         } else {
             renderer.fillRoundedRect(partRect, chipRadius, NUIThemeManager::getInstance().getColor("hover").withAlpha(0.44f));
         }

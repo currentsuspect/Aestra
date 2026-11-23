@@ -83,10 +83,13 @@ void UIMixerNavigator::onRender(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
     const NUIColor text = theme.getColor("textPrimary");
     const NUIColor muted = theme.getColor("textSecondary");
-    const NUIColor accent = theme.getColor("accentPrimary");
     const NUIColor safe = theme.getColor("meterSafe");
     const NUIColor crit = theme.getColor("meterCrit");
     const NUIColor solo = theme.getColor("soloed");
+
+    // The viewport bracket is an opaque tint drawn first, so the ticks and labels sit on it rather than under a wash.
+    const auto br = bracketRect();
+    renderer.fillRoundedRect(br, 3.0f, theme.getColor("selectionTint"));
 
     for (size_t i = 0; i < m_groups.size(); ++i) {
         const auto r = groupLabelRect(i);
@@ -111,9 +114,7 @@ void UIMixerNavigator::onRender(NUIRenderer& renderer) {
         else if (t.soloed) renderer.fillRect(NUIRect{r.x, r.bottom() - 3.0f, r.width, 3.0f}, solo);
     }
 
-    const auto br = bracketRect();
-    renderer.fillRoundedRect(br, 3.0f, accent.withAlpha(0.10f));
-    renderer.strokeRoundedRect(br, 3.0f, 1.25f, accent.withAlpha(m_draggingBracket ? 0.95f : 0.65f));
+    renderer.strokeRoundedRect(br, 3.0f, 1.25f, theme.getColor(m_draggingBracket ? "hoverSelected" : "selectionEdge"));
 }
 
 bool UIMixerNavigator::onMouseEvent(const NUIMouseEvent& event) {

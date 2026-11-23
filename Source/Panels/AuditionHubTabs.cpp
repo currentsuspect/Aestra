@@ -44,7 +44,7 @@ struct Ink {
 Ink ink() {
     auto& theme = NUIThemeManager::getInstance();
     return {theme.getColor("textPrimary"), theme.getColor("textSecondary"), theme.getColor("borderSubtle"),
-            theme.getColor("accentPrimary").lightened(0.25f), theme.getColor("accentPrimary"),
+            theme.getColor("accentText"), theme.getColor("selected"),
             theme.getColor("backgroundSecondary"), theme.getColor("accentCyan")};
 }
 

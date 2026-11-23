@@ -24,6 +24,14 @@ DEPTH = {
 }
 
 
+# Ink dark is a cool-slate family: its depth and glass tokens use the same slate light and slate black as its washes, so no
+# neutral grey is left in it (owner pick S, 21 Nov 2026).
+DEPTH_BY_KEY = {
+    "ink-dark": {"neuHi": "#c8d8e80e", "neuLo": "#02040ad9", "neuEdge": "#00000000",
+                 "glassHi": "#c8d8e81a", "glassEdge": "#c8d8e826", "glassShade": "#02040ab3"},
+}
+
+
 def rgba(hex_value: str) -> str:
     h = hex_value.lstrip("#")
     if len(h) == 6:
@@ -46,7 +54,7 @@ def main() -> int:
     for key in data["order"]:
         family, mode = key.rsplit("-", 1)
         values = dict(data["values"][key])
-        for name, value in DEPTH[mode].items():
+        for name, value in DEPTH_BY_KEY.get(key, DEPTH[mode]).items():
             values[name] = value if value is not None else values["borderSubtle"]
         pairs = ", ".join(f'{{"{n}", {rgba(v)}}}' for n, v in values.items())
         mode_index = {"dark": 0, "light": 1, "hc": 2}[mode]

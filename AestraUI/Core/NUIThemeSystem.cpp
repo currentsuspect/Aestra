@@ -27,12 +27,12 @@ void applyJSONThemeOverrides(const NUITheme& source, NUIThemeProperties& target)
     color("surface", target.surface);
     color("surfaceVariant", target.surfaceVariant);
 
-    color("primary", target.primary);
     color("accent", target.primary);
-    color("primaryHover", target.primaryHover);
+    color("primary", target.primary);
     color("accentHover", target.primaryHover);
-    color("primaryPressed", target.primaryPressed);
+    color("primaryHover", target.primaryHover);
     color("accentPressed", target.primaryPressed);
+    color("primaryPressed", target.primaryPressed);
     color("secondary", target.secondary);
     color("accentCyan", target.accentCyan);
     color("accentMagenta", target.accentMagenta);
@@ -59,6 +59,10 @@ void applyJSONThemeOverrides(const NUITheme& source, NUIThemeProperties& target)
     color("borderStrong", target.borderStrong);
     color("borderActive", target.borderActive);
     color("divider", target.divider);
+    // Alias precedence (answering the owner's note here): where a file may name a property by two keys, the canonical key (the
+    // property's own name) always wins. Each alias is applied BEFORE its canonical key, so a file that supplies both gets the
+    // canonical one. It was inconsistent: backgroundPrimary/surfaceTertiary/selected/... did this, but accent, accentHover and
+    // accentPressed were applied after primary, primaryHover and primaryPressed, so the alias won. NUIThemeJSONTest pins it.
     color("selection", target.selected);
     color("selected", target.selected);
     color("hover", target.hover);
@@ -71,6 +75,13 @@ void applyJSONThemeOverrides(const NUITheme& source, NUIThemeProperties& target)
     color("soloed", target.soloed);
     color("bypassed", target.bypassed);
     color("dragTarget", target.dragTarget);
+    color("selectedText", target.selectedText);
+    color("selectionFill", target.selectionFill);
+    color("selectionTint", target.selectionTint);
+    color("selectionEdge", target.selectionEdge);
+    color("hoverSelected", target.hoverSelected);
+    color("accentText", target.accentText);
+    color("playhead", target.playhead);
 
     color("controlBackground", target.buttonBgDefault);
     color("buttonBgDefault", target.buttonBgDefault);
@@ -104,6 +115,14 @@ void applyJSONThemeOverrides(const NUITheme& source, NUIThemeProperties& target)
     color("gridMinor", target.gridMinor);
     color("mixerStripBg", target.mixerStripBg);
     color("mixerMasterBorder", target.mixerMasterBorder);
+    // The kit's surface tokens, so a preview can move a whole layer (theme_preview.sh --set timelineBed=#000000).
+    color("timelineBed", target.timelineBed);
+    color("editorCard", target.editorCard);
+    color("editorWell", target.editorWell);
+    color("editorControl", target.editorControl);
+    color("controlEdge", target.controlEdge);
+    color("controlSelected", target.controlSelected);
+    color("controlGuide", target.controlGuide);
 
     const auto hasColor = [&](const char* primaryName, const char* alias = nullptr) {
         return source.hasColorOverride(primaryName) || (alias && source.hasColorOverride(alias));
@@ -124,6 +143,20 @@ void applyJSONThemeOverrides(const NUITheme& source, NUIThemeProperties& target)
         if (!hasColor("sliderHandle")) target.sliderHandle = target.primary;
         if (!hasColor("sliderHandleHover")) target.sliderHandleHover = target.primaryHover;
         if (!hasColor("sliderHandlePressed")) target.sliderHandlePressed = target.primaryPressed;
+    }
+    // The selection family follows whatever the file changed in the colours it is derived from, unless it names the
+    // token itself.
+    if (hasColor("primary", "accent") || hasColor("selected", "selection") || hasColor("textOnPrimary") ||
+        hasColor("secondary") || hasColor("backgroundSecondary") || hasColor("primaryHover", "accentHover")) {
+        NUIThemeProperties derived = target;
+        NUIThemePresets::deriveSelectionFamily(derived);
+        if (!hasColor("selectedText")) target.selectedText = derived.selectedText;
+        if (!hasColor("selectionFill")) target.selectionFill = derived.selectionFill;
+        if (!hasColor("selectionTint")) target.selectionTint = derived.selectionTint;
+        if (!hasColor("selectionEdge")) target.selectionEdge = derived.selectionEdge;
+        if (!hasColor("hoverSelected")) target.hoverSelected = derived.hoverSelected;
+        if (!hasColor("accentText")) target.accentText = derived.accentText;
+        if (!hasColor("playhead")) target.playhead = derived.playhead;
     }
     if (hasColor("warning")) {
         if (!hasColor("muted")) target.muted = target.warning;
@@ -358,6 +391,7 @@ void NUIThemeManager::unsubscribeFromThemeChanges(ThemeSubscriptionId subscripti
 }
 
 void NUIThemeManager::notifyThemeChanged() {
+    ++themeGeneration_; // before any subscriber runs, so they see the new generation
     const auto& theme = getCurrentTheme();
     if (onThemeChanged_)
         onThemeChanged_(theme);
@@ -530,6 +564,14 @@ NUIColor NUIThemeManager::getColor(const std::string& colorName) const {
     if (colorName == "controlEdge") return theme.controlEdge;
     if (colorName == "controlSelected") return theme.controlSelected;
     if (colorName == "controlGuide") return theme.controlGuide;
+    // Selection family: opaque, semantic. See NUIThemeProperties.
+    if (colorName == "selectedText") return theme.selectedText;
+    if (colorName == "selectionFill") return theme.selectionFill;
+    if (colorName == "selectionTint") return theme.selectionTint;
+    if (colorName == "selectionEdge") return theme.selectionEdge;
+    if (colorName == "hoverSelected") return theme.hoverSelected;
+    if (colorName == "accentText") return theme.accentText;
+    if (colorName == "playhead") return theme.playhead;
     if (colorName == "textOnStatus") return theme.textOnStatus;
     // Depth and glass (Design Spec rules 1 and 6).
     if (colorName == "neuHi") return theme.neuHi;
@@ -1261,6 +1303,13 @@ NUIColor* kitTokenSlot(NUIThemeProperties& t, const std::string& name) {
         {"controlEdge", &NUIThemeProperties::controlEdge},
         {"controlSelected", &NUIThemeProperties::controlSelected},
         {"controlGuide", &NUIThemeProperties::controlGuide},
+        {"selectedText", &NUIThemeProperties::selectedText},
+        {"selectionFill", &NUIThemeProperties::selectionFill},
+        {"selectionTint", &NUIThemeProperties::selectionTint},
+        {"selectionEdge", &NUIThemeProperties::selectionEdge},
+        {"hoverSelected", &NUIThemeProperties::hoverSelected},
+        {"accentText", &NUIThemeProperties::accentText},
+        {"playhead", &NUIThemeProperties::playhead},
         {"neuHi", &NUIThemeProperties::neuHi},
         {"neuLo", &NUIThemeProperties::neuLo},
         {"neuEdge", &NUIThemeProperties::neuEdge},
@@ -1350,6 +1399,40 @@ NUIThemeProperties NUIThemePresets::createKitTheme(const std::string& key) {
     return theme;
 }
 
+namespace {
+float relLuminance(const NUIColor& c) {
+    const auto lin = [](float v) { return v <= 0.04045f ? v / 12.92f : std::pow((v + 0.055f) / 1.055f, 2.4f); };
+    return 0.2126f * lin(c.r) + 0.7152f * lin(c.g) + 0.0722f * lin(c.b);
+}
+float contrastOf(const NUIColor& a, const NUIColor& b) {
+    const float x = relLuminance(a), y = relLuminance(b);
+    return (std::max(x, y) + 0.05f) / (std::min(x, y) + 0.05f);
+}
+} // namespace
+
+void NUIThemePresets::deriveSelectionFamily(NUIThemeProperties& t) {
+    const bool solid = t.selected.a >= 0.9f;
+    t.selectedText = solid ? t.textOnPrimary : t.textPrimary;
+    // A wash selection keeps the colour it produced over a card, as an opaque fill; a solid one gets a half-strength
+    // primary so the label stays textPrimary.
+    t.selectionFill = solid ? NUIColor::lerp(t.backgroundSecondary, t.primary, 0.5f)
+                            : NUIColor::lerp(t.backgroundSecondary, t.selected.withAlpha(1.0f), t.selected.a);
+    t.selectionFill.a = 1.0f;
+    t.selectionTint = solid ? NUIColor::lerp(t.backgroundSecondary, t.primary, 0.22f)
+                            : NUIColor::lerp(t.backgroundSecondary, t.selected.withAlpha(1.0f), t.selected.a * 0.5f);
+    t.selectionTint.a = 1.0f;
+    t.selectionEdge = t.mode == 1 ? t.primary : t.primaryHover;
+    t.hoverSelected = t.primaryHover;
+    t.accentText = t.secondary;
+    t.playhead = t.textPrimary;
+    for (const NUIColor& c : {t.primaryHover, t.primary, t.textPrimary}) {
+        t.playhead = c;
+        if (contrastOf(c, t.backgroundPrimary) >= 3.0f && contrastOf(c, t.backgroundSecondary) >= 3.0f &&
+            contrastOf(c, t.surfaceTertiary) >= 3.0f && contrastOf(c, t.surfaceRaised) >= 3.0f)
+            break;
+    }
+}
+
 void NUIThemePresets::finishDerivedTokens(NUIThemeProperties& theme) {
     const bool dark = theme.mode != 1;
     theme.timelineBed = dark ? NUIColor::black() : NUIColor(0.936f, 0.938f, 0.942f, 1.0f);
@@ -1361,6 +1444,7 @@ void NUIThemePresets::finishDerivedTokens(NUIThemeProperties& theme) {
     theme.controlEdge = dark ? NUIColor::fromHex(0x6b645c) : theme.textMuted;
     theme.controlSelected = NUIColor::lerp(theme.backgroundSecondary, theme.primary, 0.23f);
     theme.controlGuide = NUIColor::lerp(theme.backgroundSecondary, theme.primary, 0.45f);
+    deriveSelectionFamily(theme);
     theme.textOnStatus = NUIColor::fromHex(0x12100e);
     const bool light = theme.mode == 1;
     theme.neuHi = light ? NUIColor::white().withAlpha(0.90f) : NUIColor::white().withAlpha(0.055f);

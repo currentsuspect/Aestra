@@ -208,7 +208,7 @@ void WindowPanel::onRender(AestraUI::NUIRenderer& renderer) {
     const auto drawKeyTick = [&]() {
         if (!ownsKeys) return;
         const float x = bounds.x + 5.0f, y = bounds.y + (m_titleBarHeight - 10.0f) * 0.5f;
-        renderer.fillRoundedRect({x, y, 3.0f, 10.0f}, 1.5f, theme.getColor("accentPrimary"));
+        renderer.fillRoundedRect({x, y, 3.0f, 10.0f}, 1.5f, theme.getColor("selected"));
     };
     
     // Draw title bar
@@ -217,7 +217,9 @@ void WindowPanel::onRender(AestraUI::NUIRenderer& renderer) {
     
     // Unified panel shell + flat titlebar treatment
     const float windowRadius = std::min(theme.getRadius("m"), 2.0f); // 2 px, as the clips, pads and mixer strips
-    auto bodyColor = theme.getColor("surfaceTertiary");
+    // The body is the bed (backgroundPrimary, the page's #0a0a0a in Ink): rows, cards and keys rise from it as lighter
+    // surfaces instead of sitting inside a flat mid-grey slab. The border keeps the frame.
+    auto bodyColor = theme.getColor("backgroundPrimary");
     // Title bar shares the transport bar's charcoal (backgroundSecondary) so all
     // docked-panel chrome reads as one consistent surface.
     auto titleBarColor = theme.getColor("backgroundSecondary");
@@ -250,7 +252,7 @@ void WindowPanel::onRender(AestraUI::NUIRenderer& renderer) {
     if (!m_minimized) {
         renderer.fillRoundedRect(bounds, windowRadius, bodyColor);
         renderer.strokeRoundedRect(bounds, windowRadius, 1.0f, borderColor);
-        renderer.fillRect(titleBarRect, titleBarColor.withAlpha(0.98f));
+        renderer.fillRect(titleBarRect, titleBarColor);
         
         // Separator for title bar
         renderer.drawLine(
@@ -261,7 +263,7 @@ void WindowPanel::onRender(AestraUI::NUIRenderer& renderer) {
         );
     } else {
         // Minimized: titlebar only
-        renderer.fillRoundedRect(titleBarRect, windowRadius, titleBarColor.withAlpha(0.98f));
+        renderer.fillRoundedRect(titleBarRect, windowRadius, titleBarColor);
         renderer.strokeRoundedRect(titleBarRect, windowRadius, 1.0f, borderColor);
     }
     

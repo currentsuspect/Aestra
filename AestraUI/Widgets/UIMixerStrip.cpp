@@ -327,9 +327,9 @@ void UIMixerStrip::cacheThemeColors()
     auto& theme = NUIThemeManager::getInstance();
     // Selection is a navigation state, not a second channel colour. The
     // inspector and a thin top marker carry it; the strip surface stays calm.
-    m_selectedTint = theme.getColor("primary").withAlpha(0.008f);
-    m_selectedOutline = theme.getColor("primary").withAlpha(0.18f);
-    m_selectedTopHighlight = theme.getColor("primary").withAlpha(0.72f);
+    m_selectedTint = theme.getColor("selectionTint");
+    m_selectedOutline = theme.getColor("selectionEdge");
+    m_selectedTopHighlight = theme.getColor("selected");
     
     // Master: Distinct Dark Glass
     m_mutedOverlay = NUIColor(0.0f, 0.0f, 0.0f, 0.4f);
@@ -785,7 +785,8 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
 
     // Design Spec, Mixer (locked): each strip is a flat panel resting on the mixer's sunk bed, set apart by the
     // gap and a soft shadow, not by lines. The master is the same panel, its place and its cap set it apart.
-    Depth::restingPanel(renderer, bounds, kStripRadius, m_stripBg);
+    // A selected strip's body is the opaque selection tint, drawn as the panel itself (not as a wash over it).
+    Depth::restingPanel(renderer, bounds, kStripRadius, selected ? m_selectedTint : m_stripBg);
     renderWash(renderer, bounds);
 
     if (selected) {
@@ -796,7 +797,6 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
         // tinted body and a bright edge the strip is already unmistakable, and
         // the border was what made a selected strip read as a different kind of
         // component rather than the same strip, selected.
-        renderer.fillRoundedRect(bounds, kStripRadius, m_selectedTint);
         renderer.fillRoundedRect(NUIRect{bounds.x + kStripRadius, bounds.y, bounds.width - kStripRadius * 2.0f, SELECT_TOP_H},
                                  SELECT_TOP_H * 0.5f, m_selectedTopHighlight);
     }

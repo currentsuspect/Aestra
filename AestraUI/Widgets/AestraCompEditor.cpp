@@ -236,7 +236,7 @@ void AestraCompEditor::drawTransferCurve(NUIRenderer& renderer) {
     }
     if (kneeDb > 0.0f) {
         const float x0 = clampX(px(thrDb - kneeDb * 0.5f)), x1 = clampX(px(thrDb + kneeDb * 0.5f));
-        renderer.fillRect(NUIRect(x0, w.y + 1.0f, x1 - x0, w.height - 2.0f), c.primary.withAlpha(0.12f));
+        renderer.fillRect(NUIRect(x0, w.y + 1.0f, x1 - x0, w.height - 2.0f), c.selected);
     }
     renderer.fillRect(NUIRect(std::round(clampX(px(thrDb))), w.y + 1.0f, 1.0f, w.height - 2.0f), c.guide);
     renderer.drawLine({w.x + 1.0f, w.bottom() - 1.0f}, {w.right() - 1.0f, w.y + 1.0f}, 1.0f, c.inkOff);
