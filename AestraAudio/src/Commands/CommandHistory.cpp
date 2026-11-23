@@ -1,6 +1,9 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "Commands/CommandHistory.h"
 
+#include <algorithm>
+#include <cstddef>
+
 #include <iostream>
 
 namespace Aestra {
@@ -176,6 +179,97 @@ void CommandHistory::rollbackTransaction() {
 bool CommandHistory::isTransactionActive() const {
     std::lock_guard<std::mutex> lock(m_mutex);
     return m_transactionNestingLevel > 0;
+}
+
+PickedUndo CommandHistory::undoJust(size_t index, bool withDependants) {
+    PickedUndo out;
+    std::lock_guard<std::mutex> opLock(m_operationMutex);
+
+    // Phase 1: decide, and take the steps out of the stack, under lock.
+    std::vector<size_t> picked;                    // stack indices, oldest first
+    std::vector<std::shared_ptr<ICommand>> steps;  // the same steps
+    std::shared_ptr<ICommand> predecessor;         // what sat just before them, to put them back by
+    std::shared_ptr<ICommand> successor;           // and just after
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (m_activeTransaction && m_transactionNestingLevel > 0) {
+            out.result = PickResult::Busy;
+            return out;
+        }
+        if (index >= m_undoStack.size()) return out; // NothingThere
+        out.dependants = dependantsOf(m_undoStack, index);
+        if (!out.dependants.empty() && !withDependants) {
+            out.result = PickResult::HasDependants;
+            return out;
+        }
+        picked.push_back(index);
+        picked.insert(picked.end(), out.dependants.begin(), out.dependants.end());
+        predecessor = picked.front() > 0 ? m_undoStack[picked.front() - 1] : nullptr;
+        successor = picked.back() + 1 < m_undoStack.size() ? m_undoStack[picked.back() + 1] : nullptr;
+        for (size_t i : picked) steps.push_back(m_undoStack[i]);
+        for (auto it = picked.rbegin(); it != picked.rend(); ++it) {
+            m_undoStack.erase(m_undoStack.begin() + static_cast<std::ptrdiff_t>(*it));
+        }
+    }
+
+    // Phase 2: undo them newest first, outside the lock (an undo may re-enter this class). If one fails, redo
+    // the ones already undone and put the stack back exactly as it was.
+    size_t undone = 0;
+    bool failed = false;
+    try {
+        for (auto it = steps.rbegin(); it != steps.rend(); ++it, ++undone) (*it)->undo();
+    } catch (const std::exception& e) {
+        std::cerr << "Pickable undo failed: " << e.what() << std::endl;
+        failed = true;
+    } catch (...) {
+        std::cerr << "Pickable undo failed with unknown exception" << std::endl;
+        failed = true;
+    }
+    if (failed) {
+        for (size_t k = steps.size() - undone; k < steps.size(); ++k) {
+            try {
+                steps[k]->redo(); // one that cannot come back must not stop the others coming back
+            } catch (...) {
+                std::cerr << "Pickable undo: could not restore a step after a failed undo" << std::endl;
+            }
+        }
+        // Put the picked steps back where they were. Only they were ever taken out, so a step another thread recorded
+        // while this undo ran is kept rather than dropped with the repair. The place is found by the steps around them
+        // and not by index: a step recorded during the repair runs trimHistory(), which drops from the front and moves
+        // every index down — and puts the history over its limit when it was full.
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            const auto where = [this](const std::shared_ptr<ICommand>& step) {
+                return step ? std::find(m_undoStack.begin(), m_undoStack.end(), step) : m_undoStack.end();
+            };
+            auto at = where(successor);
+            if (at == m_undoStack.end()) {
+                const auto before = where(predecessor);
+                if (before != m_undoStack.end())
+                    at = before + 1;
+                else if (picked.front() == 0)
+                    at = m_undoStack.begin(); // they were the oldest, so they go back in front of what came since
+                else
+                    at = m_undoStack.end();
+            }
+            m_undoStack.insert(at, steps.begin(), steps.end());
+            trimHistory();
+        }
+        notifyStateChanged();
+        out.result = PickResult::Failed;
+        return out;
+    }
+
+    // Phase 3: one new step records what was undone; nothing is erased.
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_undoStack.push_back(std::make_shared<PickedSteps>(std::move(steps)));
+        m_redoStack.clear();
+        trimHistory();
+    }
+    notifyStateChanged();
+    out.result = PickResult::Done;
+    return out;
 }
 
 bool CommandHistory::undo() {
