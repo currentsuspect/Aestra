@@ -97,7 +97,7 @@ int main() {
         {"AestraUI/Widgets/PianoRollToolbar.cpp", "toolbarBg = themeManager.getColor(\"backgroundSecondary\");", "backgroundSecondary", "piano roll toolbar strip"},
         {"AestraUI/Base/NUICustomTitleBar.cpp", "const NUIColor bgColor = themeManager.getColor(\"timelineBed\");", "timelineBed", "title bar (the outer bed)"},
         {"Source/Panels/TransportBar.cpp", "renderer.fillRect(bounds, theme.getColor(\"timelineBed\"));", "timelineBed", "transport strip (the outer bed)"},
-        {"Source/Components/FileBrowser.cpp", "renderer.fillRect(fileBrowserBounds, themeManager.getColor(\"timelineBed\"));", "timelineBed", "file browser sidebar (the outer bed)"},
+        {"Source/Components/FileBrowser.cpp", "renderer.fillRect(fileBrowserBounds, themeManager.getColor(\"backgroundPrimary\"));", "backgroundPrimary", "file browser sidebar (one panel, header and list)"},
         {"Source/Settings/MissingAssetsDialog.cpp", "theme.radiusL, theme.backgroundSecondary)", "backgroundSecondary", "Missing assets dialog card"},
     };
     for (const auto& s : sites) {
