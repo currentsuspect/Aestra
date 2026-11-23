@@ -309,6 +309,17 @@ target_include_directories(SlotTextTest PRIVATE
 add_test(NAME SlotTextTest COMMAND SlotTextTest)
 set_tests_properties(SlotTextTest PROPERTIES LABELS "unit;mixer;text;contract:core")
 
+# Selection System Spec 2.3: selecting repaints what changed and nothing else. Header-only; NUITypes.h for the rect.
+add_executable(SelectionSurfaceTest Integration/SelectionSurfaceTest.cpp)
+target_include_directories(SelectionSurfaceTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Core
+    ${CMAKE_SOURCE_DIR}/AestraUI/Core
+    ${CMAKE_SOURCE_DIR}/AestraUI/Base
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME SelectionSurfaceTest COMMAND SelectionSurfaceTest)
+set_tests_properties(SelectionSurfaceTest PROPERTIES LABELS "unit;selection;contract:core")
+
 # Arsenal unit naming: pure header, no libraries. A new unit takes the lowest free number for its kind.
 add_executable(ArsenalUnitNamingTest Integration/ArsenalUnitNamingTest.cpp)
 target_include_directories(ArsenalUnitNamingTest PRIVATE
@@ -3978,6 +3989,23 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(UnitRowLookTest PROPERTIES LABELS "ui;theme;contrast;arsenal;contract:application")
 endif()
 
+# Selection System Spec 2.2: SelectionLook.h in every kit theme and every state.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(SelectionLookTest AestraUI_Core)
+    add_executable(SelectionLookTest AestraUI/SelectionLookTest.cpp)
+    target_link_libraries(SelectionLookTest PRIVATE AestraUI_Core)
+    target_include_directories(SelectionLookTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Graphics
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME SelectionLookTest COMMAND SelectionLookTest)
+    set_tests_properties(SelectionLookTest PROPERTIES LABELS "ui;theme;contrast;selection;contract:application")
+endif()
+
 # Ink theme: the bed, card and control greys keep their order, and the big areas the 21 Nov sweep corrected stay on the bed or card.
 if(AESTRA_ENABLE_UI)
     aestra_require_ui_targets(InkSurfaceStepTest AestraUI_Core)
@@ -5141,6 +5169,7 @@ if(AESTRA_ENABLE_UI)
         TextCentringTest
         AdaptiveFPSIdleTest
         UnitRowLookTest
+        SelectionLookTest
         TrackPaletteVioletTest
         InkSurfaceStepTest
         ThemeChangeCacheTest
