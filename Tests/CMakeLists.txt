@@ -5677,6 +5677,15 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/EditorSurfacePlacementTest.cpp")
     set_tests_properties(EditorSurfacePlacementTest PROPERTIES LABELS "ui;layout;regression;contract:application")
 endif()
 
+# Mixer plugin finder scroll math: clamp, wheel convention, ensure-visible for
+# keyboard selection, hit-testing that honours the offset. Links nothing:
+# DropdownScroll.h is header-only, so this builds in every configuration.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/DropdownScrollTest.cpp")
+    add_executable(DropdownScrollTest AestraUI/DropdownScrollTest.cpp)
+    add_test(NAME DropdownScrollTest COMMAND DropdownScrollTest)
+    set_tests_properties(DropdownScrollTest PROPERTIES LABELS "ui;input;regression;contract:application")
+endif()
+
 # V8-C14 step 2 (FD-23): the store half of the resolution contract, driven through
 # UISurfaceGeometry — maximize restores the pre-maximize rect, dragging a maximized
 # surface restores it, absent entries resolve from defaults without writing.
