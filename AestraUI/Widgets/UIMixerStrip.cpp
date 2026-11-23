@@ -1,5 +1,10 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerStrip.h"
+#include "CapLook.h"
+#include "MixerLane.h"
+#include "CorrelationLeds.h"
+#include "StripWash.h"
+#include "MixerMinimal.h"
 #include "../Graphics/NUIDepth.h"
 
 #include "NUIThemeSystem.h"
@@ -22,20 +27,18 @@ namespace AestraUI {
 
 namespace {
     constexpr float HEADER_H = 30.0f;
-    constexpr float PAN_H = 8.0f;
-    constexpr float PAN_VALUE_H = 12.0f;
+    constexpr float PAN_H = 14.0f;       // the pan row (board p-mixer2): a 4px sunk track and a 10px thumb in 14px
     constexpr float MIN_METER_H = 120.0f;
-    constexpr float OUTPUT_CHIP_H = 17.0f;
+    constexpr float OUTPUT_CHIP_H = 14.0f; // "to Master": one line of 10px muted text
     constexpr int INSERT_ROWS = 3;
     constexpr float BUTTONS_H = 26.0f;
-    constexpr float FOOTER_H = 18.0f;
+    constexpr float FOOTER_H = 23.0f;    // the dB pill (board p-mixer2): 23 tall
     constexpr float PAD = 8.0f;
     constexpr float GAP = 8.0f;
     constexpr float SIDE_INSET = 4.0f;
     constexpr float SECTION_GAP = 8.0f;
-    constexpr float METER_W = 24.0f;     // two 11 px bars and the gap between them
-    constexpr float FADER_COL_W = 20.0f; // the handle column beside the meters: the channel cap is 20 wide
-    constexpr float MASTER_METER_W = 36.0f;
+    constexpr float NARROW_METER_W = 18.0f; // Narrow strips: the meter pair with the compact overlay fader beside it
+    constexpr float NARROW_FADER_COL_W = 16.0f;
     // Technical master readouts (held peak dBFS, integrated LUFS, gain) are a
     // permanent fixture under the master's meter/fader columns — the master
     // strip has no footer, so this is the strip's live level dashboard.
@@ -50,8 +53,10 @@ namespace {
     // Integrated, short-term, true peak, correlation (with its bar), gain: one line each.
     constexpr float MASTER_READOUT_H = MASTER_ROW_H * 6.0f + 8.0f;
 
+    constexpr float MASTER_LR_LABEL_H = 11.0f; // the master meter's L / R labels (UIMixerMeter LR_LABEL_HEIGHT)
+
     constexpr float SELECT_TOP_H = 3.0f;
-    constexpr float kStripRadius = 7.0f; // Design Spec, Mixer: strips are 6 to 8px round
+    constexpr float kStripRadius = 8.0f; // board p-mixer2: strips are 8px round
     constexpr float MIXER_MIN_CHANNEL_HEIGHT = 220.0f;
 
     // Resolve a palette index to a renderer colour (matches UIMixerHeader::colorFromARGB).
@@ -252,9 +257,9 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
     m_fader = std::make_shared<UIMixerFader>();
     m_fader->setRangeDb(-90.0f, 6.0f);
     m_fader->setDefaultDb(0.0f);
-    // The master strip is wide enough to label its unity mark; channel strips draw the cap across the meters.
+    // The master keeps its gain readout above the travel; every fader prints its own scale (MixerLane.h). Only a
+    // Narrow strip (setDensity) swaps to the compact overlay fader.
     m_fader->setShowScaleLabels(m_channelId == 0);
-    if (m_channelId != 0) m_fader->setOverlay(true, METER_W + 2.0f);
     m_fader->onValueChanged = [this](float db) {
         if (!m_viewModel || !m_continuousParams) return;
         auto* channel = m_viewModel->getChannelById(m_channelId);
@@ -350,12 +355,7 @@ void UIMixerStrip::setDensity(MixerDensity density)
     if (m_outputChip && !master) m_outputChip->setCompact(narrow);
     if (m_footer && !master) m_footer->setCompact(narrow);
     if (m_header && !master) m_header->setCompact(narrow);
-    if (m_fader && !master) {
-        constexpr float kBar = 11.0f;
-        const float meterW = narrow ? 18.0f : 24.0f;
-        (void)kBar;
-        m_fader->setOverlay(true, meterW + 2.0f);
-    }
+    if (m_fader && !master) m_fader->setOverlay(narrow, NARROW_METER_W + 2.0f);
     layoutChildren();
     invalidateStaticCache();
     repaint();
@@ -395,7 +395,7 @@ void UIMixerStrip::layoutChildren()
     const bool hasButtons = (m_buttons && m_buttons->isVisible());
     const bool hasPan = (m_panBar && m_panBar->isVisible());
     const float keysH = hasButtons ? BUTTONS_H + 6.0f : 0.0f;
-    const float panH = hasPan ? PAN_H + PAN_VALUE_H + 6.0f : 0.0f;
+    const float panH = hasPan ? PAN_H + 6.0f : 0.0f;
     const int wantedSends = (m_sendList && m_sendList->isVisible()) ? std::min(static_cast<int>(m_sendList->rows().size()), UIMixerSendList::kMaxRows) : 0;
     const bool hasInserts = (m_insertList && m_insertList->isVisible() && !narrow);
     const float masterGap = (isMaster && hasInserts) ? 10.0f : 0.0f;
@@ -422,33 +422,29 @@ void UIMixerStrip::layoutChildren()
         y += h > 0.0f ? h + 4.0f : 0.0f;
     }
     if (hasPan) {
-        m_panBar->setBounds(contentX + 4.0f, y, contentW - 8.0f, PAN_H);
-        m_panValueRect = NUIRect{contentX, y + PAN_H, contentW, PAN_VALUE_H};
-        y += PAN_H + PAN_VALUE_H + 6.0f;
-    } else {
-        m_panValueRect = NUIRect{};
+        m_panBar->setBounds(contentX + 2.0f, y, contentW - 4.0f, PAN_H);
+        y += PAN_H + 6.0f;
     }
     if (hasButtons) {
         m_buttons->setBounds(contentX, y, contentW, BUTTONS_H);
         y += BUTTONS_H + 6.0f;
     }
 
-    // The master reserves a labelled Peak/LUFS/Gain block at the foot of the
-    // strip; its footer is hidden, so that space is otherwise unused.
-    const float meterW = isMaster ? MASTER_METER_W : METER_W;
-
     // Meter + fader fill the strip between the channel controls and the footer.
     const float meterY = y;
     const float meterH = std::max(16.0f, (footerY - GAP - readoutH) - y);
+    const float capHalf = CapLook::kH * 0.5f;
 
     if (isMaster) {
-        const float meterX = contentX + 2.0f;
-        if (m_meter) m_meter->setBounds(meterX, meterY, meterW, meterH);
-        if (m_fader) {
-            const float faderX = meterX + meterW + GAP;
-            const float faderW = std::max(16.0f, (contentX + contentW) - faderX);
-            m_fader->setBounds(faderX, meterY, faderW, meterH);
-        }
+        // The lane (MixerLane.h): printed scale and fader on the left, the meter pair on the right. The master's
+        // gain readout sits above the fader's travel, so the lane starts lower; its meter bars start where the
+        // fader's travel does and stop where it stops, above the L / R labels.
+        const float gx = MixerLane::groupX(contentX, contentW);
+        const float barsTop = m_meter ? m_meter->barsTopOffset() : 0.0f;
+        const float drop = capHalf + UIMixerFader::kReadoutBand - barsTop;
+        if (m_meter) m_meter->setBounds(MixerLane::meterX(gx), meterY + drop, MixerLane::kMeterW,
+                                        std::max(16.0f, meterH - drop - capHalf + MASTER_LR_LABEL_H));
+        if (m_fader) m_fader->setBounds(MixerLane::faderX(gx), meterY, MixerLane::kFaderW, meterH);
         // Readouts sit under the column they describe: observed signal (Peak, LUFS)
         // under the meter, user-controlled gain under the fader.
         const float readoutY = footerY - MASTER_READOUT_H;
@@ -457,34 +453,54 @@ void UIMixerStrip::layoutChildren()
         return;
     }
 
-    // Channel strips: the meters sit centred with the fader's handle column on their right edge, and the cap
-    // line drawn by the fader runs back across both bars.
-    const float chMeterW = narrow ? 18.0f : meterW;
-    const float chFaderCol = narrow ? 16.0f : FADER_COL_W;
-    const float groupW = chMeterW + 2.0f + chFaderCol;
+    if (!narrow) {
+        // Channel strips, Normal and Wide: the lane. The fader's travel starts where the meter bars do and its
+        // cap hangs half its height over each end.
+        const float gx = MixerLane::groupX(contentX, contentW);
+        const float barsTop = m_meter ? m_meter->barsTopOffset() : 0.0f;
+        if (m_meter) m_meter->setBounds(MixerLane::meterX(gx), meterY, MixerLane::kMeterW, meterH);
+        if (m_fader) m_fader->setBounds(MixerLane::faderX(gx), meterY + barsTop - capHalf, MixerLane::kFaderW,
+                                        meterH - barsTop + capHalf * 2.0f);
+        m_masterMeterReadoutRect = NUIRect{};
+        m_masterGainReadoutRect = NUIRect{};
+        return;
+    }
+
+    // Narrow: the meters sit centred with the compact fader's handle column on their right edge, and the cap
+    // line drawn by the fader runs back across both bars. (No room for the lane; a Trial rules what Narrow becomes.)
+    const float groupW = NARROW_METER_W + 2.0f + NARROW_FADER_COL_W;
     const float meterX = std::floor(contentX + (contentW - groupW) * 0.5f);
-    if (m_meter) m_meter->setBounds(meterX, meterY, chMeterW, meterH);
+    if (m_meter) m_meter->setBounds(meterX, meterY, NARROW_METER_W, meterH);
     if (m_fader) {
-        // The meter reserves its readout and clip lamp at the top; the fader's track starts where the bars do and
-        // its pad (half the cap) hangs over both ends.
         const float barsTop = m_meter ? m_meter->barsTopOffset() : 0.0f;
         const float handleHalf = UIMixerFader::overlayHandleHeight() * 0.5f;
-        m_fader->setBounds(meterX + chMeterW + 1.0f, meterY + barsTop - handleHalf, chFaderCol,
+        m_fader->setBounds(meterX + NARROW_METER_W + 1.0f, meterY + barsTop - handleHalf, NARROW_FADER_COL_W,
                            meterH - barsTop + handleHalf * 2.0f);
     }
     m_masterMeterReadoutRect = NUIRect{};
     m_masterGainReadoutRect = NUIRect{};
 }
 
-void UIMixerStrip::renderPanValue(NUIRenderer& renderer, const Aestra::ChannelViewModel& channel)
+void UIMixerStrip::renderWash(NUIRenderer& renderer, const NUIRect& bounds)
 {
-    if (m_panValueRect.isEmpty()) return;
-    // C, or the side and how far: L25, R10 (percent of full pan).
-    const int percent = static_cast<int>(std::lround(std::fabs(channel.pan) * 100.0f));
-    const std::string text = percent == 0 ? std::string("C")
-                                           : std::string(channel.pan < 0.0f ? "L" : "R") + std::to_string(percent);
-    renderer.drawTextCentered(text, m_panValueRect, 9.5f,
-                              NUIThemeManager::getInstance().getColor("textSecondary").withAlpha(0.85f));
+    // The top tint (StripWash.h): a flat solid tint of the track's colour (the master's textSecondary) over the top
+    // half of the strip, a hard edge, nothing below. Buses and returns the same. The first rows are laid one by
+    // one so they follow the strip's rounded top corners.
+    auto& theme = NUIThemeManager::getInstance();
+    const NUIColor tc = m_channelId == 0 ? theme.getColor("textSecondary")
+                        : m_trackColorIndex >= 0 ? trackColorFromIndex(m_trackColorIndex) : theme.getColor("accentPrimary");
+    const NUIColor tint = MixerMinimal::desaturate(tc, MixerMinimal::kTintDesaturate);
+    const float alpha = StripWash::kAlpha;
+    const float top = tintHeight();
+    const int cornerRows = std::min(static_cast<int>(kStripRadius), static_cast<int>(top));
+    for (int row = 0; row < cornerRows; ++row) {
+        const float inset = StripWash::cornerInset(row, kStripRadius);
+        renderer.fillRect({bounds.x + inset, bounds.y + static_cast<float>(row), bounds.width - inset * 2.0f, 1.0f},
+                          tint.withAlpha(alpha));
+    }
+    if (top > static_cast<float>(cornerRows))
+        renderer.fillRect({bounds.x, bounds.y + static_cast<float>(cornerRows), bounds.width, top - static_cast<float>(cornerRows)},
+                          tint.withAlpha(alpha));
 }
 
 void UIMixerStrip::renderMasterReadout(NUIRenderer& renderer,
@@ -540,16 +556,12 @@ void UIMixerStrip::renderMasterReadout(NUIRenderer& renderer,
     std::snprintf(buf, sizeof(buf), "%+.2f", channel.correlation);
     line("CORRELATION", "CORR", buf, "", channel.correlation < 0.0f ? warnColor : valueColor);
     {
-        const NUIRect bar{card.x + 7.0f, card.y + 4.0f + static_cast<float>(row) * MASTER_ROW_H - 1.0f,
-                          card.width - 14.0f, 3.0f};
-        renderer.fillRoundedRect(bar, 1.5f, theme.getColor("border").withAlpha(0.35f));
-        const float mid = bar.x + bar.width * 0.5f;
-        const float pos = mid + std::clamp(channel.correlation, -1.0f, 1.0f) * bar.width * 0.5f;
-        renderer.fillRect(NUIRect{std::min(mid, pos), bar.y, std::max(1.5f, std::abs(pos - mid)), bar.height},
-                          channel.correlation < 0.0f ? warnColor : theme.getColor("selected"));
-        renderer.fillRect(NUIRect{mid - 0.5f, bar.y - 1.0f, 1.0f, bar.height + 2.0f}, labelColor.withAlpha(0.6f));
+        // The bar under the value, in the level meters' dotted LEDs (CorrelationLeds.h): its own row, centred.
+        const float rowTop = card.y + 4.0f + static_cast<float>(row) * MASTER_ROW_H;
+        const NUIRect well{card.x + 7.0f, std::round(rowTop + (MASTER_ROW_H - CorrelationLeds::kWellH) * 0.5f),
+                           card.width - 14.0f, CorrelationLeds::kWellH};
+        UIMixerMeter::renderCorrelation(renderer, well, channel.correlation);
     }
-
     // The fader's gain: the one user-controlled number, kept with the readings it governs.
     std::string gainText = kSilence;
     if (channel.faderGainDb > UIMixerFader::FADER_FLOOR_THRESHOLD) {
@@ -626,6 +638,7 @@ void UIMixerStrip::onUpdate(double deltaTime)
         m_header->setRouteName(channel->id == 0 ? channel->routeName : tag);
         if (m_cachedTrackColorArgb != static_cast<uint32_t>(channel->trackColorIndex + 1)) {
             m_cachedTrackColorArgb = static_cast<uint32_t>(channel->trackColorIndex + 1);
+            m_trackColorIndex = channel->trackColorIndex;
             invalidateStaticCache();
 
             // The track colour is the channel's IDENTITY, so it is carried by the
@@ -774,6 +787,7 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
     // gap and a soft shadow, not by lines. The master is the same panel, its place and its cap set it apart.
     // A selected strip's body is the opaque selection tint, drawn as the panel itself (not as a wash over it).
     Depth::restingPanel(renderer, bounds, kStripRadius, selected ? m_selectedTint : m_stripBg);
+    renderWash(renderer, bounds);
 
     if (selected) {
         // Selection = a slight tinted body + a strong top edge. No outline.
@@ -797,7 +811,6 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
         if (m_channelId == 0 && channel) {
             renderMasterReadout(renderer, *channel);
         } else if (channel) {
-            renderPanValue(renderer, *channel);
         }
         if (channel && channel->muted) {
             renderer.fillRoundedRect(getBounds(), kStripRadius, m_mutedOverlay);
@@ -835,7 +848,6 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
     if (m_channelId == 0 && channel) {
         renderMasterReadout(renderer, *channel);
     } else if (channel) {
-        renderPanValue(renderer, *channel);
     }
     if (m_channelId == 0 && m_viewModel && m_viewModel->isPreviewDuckingActive()) {
         auto& theme = NUIThemeManager::getInstance();
@@ -945,6 +957,14 @@ NUIRect UIMixerStrip::meterBarsRect() const
     const auto b = m_meter->getBounds();
     const float top = m_meter->barsTopOffset();
     return NUIRect{b.x, b.y + top, b.width, std::max(0.0f, b.height - top)};
+}
+
+float UIMixerStrip::tintHeight() const
+{
+    const auto b = getBounds();
+    const auto well = meterBarsRect();
+    if (well.isEmpty()) return 0.0f;
+    return StripWash::tintHeight(well.y - b.y, b.height);
 }
 
 NUIRect UIMixerStrip::getFXSummaryBounds() const

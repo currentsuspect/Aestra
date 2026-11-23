@@ -3068,7 +3068,7 @@ void TrackUIComponent::drawLiveWaveform(AestraUI::NUIRenderer& renderer, const A
     if (endX < gridStartX || startX > bounds.right()) return;
 
     // Drawing Loop — one filled envelope per decimated bucket (#846/#849).
-    const AestraUI::NUIColor waveColor = AestraUI::NUIThemeManager::getInstance().getColor("error"); // Red for recording
+    const AestraUI::NUIColor waveColor = AestraUI::NUIThemeManager::getInstance().getColor("recording"); // capture in progress
 
     const size_t bucketCount = peaks.size() / 2;
     // Same stride as getRecordingDataPeaks (ceiling), so spans line up with

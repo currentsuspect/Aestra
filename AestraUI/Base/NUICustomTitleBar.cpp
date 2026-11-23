@@ -154,7 +154,8 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
     const auto& props = themeManager.getCurrentTheme();
 
     // Draw title bar background - flat and minimal, slightly raised over canvas.
-    const NUIColor bgColor = themeManager.getColor("backgroundSecondary");
+    // The title bar is the outer bed (darkest), not a card: the panels sit on it (owner pick S, 21 Nov).
+    const NUIColor bgColor = themeManager.getColor("timelineBed");
     renderer.fillRect(bounds, bgColor);
     renderer.drawLine({bounds.x, bounds.bottom() - 1.0f},
                       {bounds.right(), bounds.bottom() - 1.0f},

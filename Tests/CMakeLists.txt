@@ -245,6 +245,70 @@ target_include_directories(SelectionModelTest PRIVATE
 add_test(NAME SelectionModelTest COMMAND SelectionModelTest)
 set_tests_properties(SelectionModelTest PROPERTIES LABELS "unit;selection;contract:core")
 
+# Mixer rework slice 1: the board's dB scale knots and the meter's height-fraction colour zones. Pure headers.
+add_executable(MixerScaleRulesTest AestraUI/MixerScaleRulesTest.cpp)
+target_include_directories(MixerScaleRulesTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME MixerScaleRulesTest COMMAND MixerScaleRulesTest)
+set_tests_properties(MixerScaleRulesTest PROPERTIES LABELS "unit;mixer;scale;contract:core")
+
+# Mixer rework slice 2: the stepped LED meter's geometry (4px pitch, 18px well). Pure headers.
+add_executable(MeterLedsTest AestraUI/MeterLedsTest.cpp)
+target_include_directories(MeterLedsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME MeterLedsTest COMMAND MeterLedsTest)
+set_tests_properties(MeterLedsTest PROPERTIES LABELS "unit;mixer;meter;contract:core")
+
+# Mixer rework slice 2: the fader slot's groove (3px plain + 1px lighter bands). Pure header.
+add_executable(SlotGrooveTest AestraUI/SlotGrooveTest.cpp)
+target_include_directories(SlotGrooveTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME SlotGrooveTest COMMAND SlotGrooveTest)
+set_tests_properties(SlotGrooveTest PROPERTIES LABELS "unit;mixer;fader;contract:core")
+
+# Mixer rework slice 3: the strip lane's geometry and the dished cap's gradient. Pure headers.
+add_executable(MixerLaneCapTest AestraUI/MixerLaneCapTest.cpp)
+target_include_directories(MixerLaneCapTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME MixerLaneCapTest COMMAND MixerLaneCapTest)
+set_tests_properties(MixerLaneCapTest PROPERTIES LABELS "unit;mixer;fader;contract:core")
+
+# Mixer rework slice 4: the Wash top's opacity curve. Pure header.
+add_executable(StripWashTest AestraUI/StripWashTest.cpp)
+target_include_directories(StripWashTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME StripWashTest COMMAND StripWashTest)
+set_tests_properties(StripWashTest PROPERTIES LABELS "unit;mixer;strip;contract:core")
+
+# Mixer rework slice 7: the inspector collapse handle's tab and hit rect. Pure header.
+add_executable(InspectorHandleTest AestraUI/InspectorHandleTest.cpp)
+target_include_directories(InspectorHandleTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME InspectorHandleTest COMMAND InspectorHandleTest)
+set_tests_properties(InspectorHandleTest PROPERTIES LABELS "unit;mixer;inspector;contract:core")
+
+# Mixer rework slice 5: the correlation meter as dotted LEDs. Pure header.
+add_executable(CorrelationLedsTest AestraUI/CorrelationLedsTest.cpp)
+target_include_directories(CorrelationLedsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME CorrelationLedsTest COMMAND CorrelationLedsTest)
+set_tests_properties(CorrelationLedsTest PROPERTIES LABELS "unit;mixer;meter;contract:core")
+
+# Mixer rework slice 6: where a label sits in its slot. Pure header.
+add_executable(SlotTextTest AestraUI/SlotTextTest.cpp)
+target_include_directories(SlotTextTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME SlotTextTest COMMAND SlotTextTest)
+set_tests_properties(SlotTextTest PROPERTIES LABELS "unit;mixer;text;contract:core")
+
 # Arsenal unit naming: pure header, no libraries. A new unit takes the lowest free number for its kind.
 add_executable(ArsenalUnitNamingTest Integration/ArsenalUnitNamingTest.cpp)
 target_include_directories(ArsenalUnitNamingTest PRIVATE
@@ -3909,6 +3973,17 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(ThemeChangeCacheTest PROPERTIES LABELS "ui;theme;cache;regression;contract:application")
 endif()
 
+# Transport pills: one height, one inset, glyphs centred in their cells (TransportPillLook.h, headless).
+if(AESTRA_ENABLE_UI)
+    add_executable(TransportPillGeometryTest AestraUI/TransportPillGeometryTest.cpp)
+    target_include_directories(TransportPillGeometryTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+    )
+    add_test(NAME TransportPillGeometryTest COMMAND TransportPillGeometryTest)
+    set_tests_properties(TransportPillGeometryTest PROPERTIES LABELS "ui;layout;geometry;regression;contract:application")
+endif()
+
 # Selection tokens guard: the accent / selection colours come from the theme's named tokens. Fails on a primary tinted
 # with an alpha, a lerp toward it, a violet literal, or a local given an alpha after being assigned from the accent.
 if(AESTRA_ENABLE_UI)
@@ -4887,6 +4962,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowser.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserNavigation.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserChrome.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserTheme.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserLibrary.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserScan.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserTheme.cpp
@@ -5025,6 +5101,7 @@ if(AESTRA_ENABLE_UI)
         InkSurfaceStepTest
         ThemeChangeCacheTest
         SelectionTokenGuardTest
+        TransportPillGeometryTest
     )
     foreach(_t IN LISTS AESTRA_REQUIRED_UI_TESTS)
         if(NOT TARGET ${_t})
@@ -5607,6 +5684,15 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/EditorSurfacePlacementTest.cpp")
     add_executable(EditorSurfacePlacementTest AestraUI/EditorSurfacePlacementTest.cpp)
     add_test(NAME EditorSurfacePlacementTest COMMAND EditorSurfacePlacementTest)
     set_tests_properties(EditorSurfacePlacementTest PROPERTIES LABELS "ui;layout;regression;contract:application")
+endif()
+
+# Mixer plugin finder scroll math: clamp, wheel convention, ensure-visible for
+# keyboard selection, hit-testing that honours the offset. Links nothing:
+# DropdownScroll.h is header-only, so this builds in every configuration.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/DropdownScrollTest.cpp")
+    add_executable(DropdownScrollTest AestraUI/DropdownScrollTest.cpp)
+    add_test(NAME DropdownScrollTest COMMAND DropdownScrollTest)
+    set_tests_properties(DropdownScrollTest PROPERTIES LABELS "ui;input;regression;contract:application")
 endif()
 
 # V8-C14 step 2 (FD-23): the store half of the resolution contract, driven through
