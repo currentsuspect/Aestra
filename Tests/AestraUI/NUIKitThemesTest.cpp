@@ -88,7 +88,7 @@ void testAllKitThemes() {
         check(t.neuLo.a > 0.0f && t.neuHi.a > 0.0f, key + " has depth light and shade");
         check(t.glassEdge.a > 0.0f, key + " has a glass edge");
         if (k.mode != 1)
-            check(same(t.timelineBed, key == "ink-dark" ? NUIColor::fromHex(0x050709) : NUIColor::black()), key + " keeps its outer bed (pure black, or Ink dark's slate near-black)");
+            check(same(t.timelineBed, key == "ink-dark" ? NUIColor::fromHex(0x050504) : NUIColor::black()), key + " keeps its outer bed (pure black, or Ink dark's warm near-black)");
         if (k.mode == 2)
             check(t.neuEdge.a > 0.0f, key + " keeps an inner edge on controls");
         else
@@ -110,24 +110,24 @@ void testInk() {
             check(std::string(k.name) == "Ink", std::string(k.key) + " is named simply Ink");
         }
     check(inkRows == 3, "Ink has dark, light and high contrast");
-    check(same(dark.timelineBed, hex(0x050709)) && same(dark.editorWell, hex(0x050709)) &&
-              same(dark.meterBackground, hex(0x050709)),
-          "Ink dark: the outer bed, editor well and meter background are the slate near-black (owner pick S)");
-    check(same(dark.backgroundPrimary, hex(0x151a1f)) && same(dark.backgroundSecondary, hex(0x1b2025)) &&
-              same(dark.surfaceTertiary, hex(0x272c32)) && same(dark.surfaceRaised, hex(0x32373d)),
-          "Ink dark surfaces are the slate charcoal ladder: panel, card, control, raised");
-    check(same(dark.mixerStripBg, hex(0x1b2025)) && same(dark.editorCard, hex(0x1b2025)) &&
-              same(dark.editorControl, hex(0x151a1f)),
+    check(same(dark.timelineBed, hex(0x050504)) && same(dark.editorWell, hex(0x050504)) &&
+              same(dark.meterBackground, hex(0x050504)),
+          "Ink dark: the outer bed, editor well and meter background are the warm near-black (clay charcoal, 23 Nov)");
+    check(same(dark.backgroundPrimary, hex(0x1a1816)) && same(dark.backgroundSecondary, hex(0x211e1c)) &&
+              same(dark.surfaceTertiary, hex(0x2f2b29)) && same(dark.surfaceRaised, hex(0x3d3835)),
+          "Ink dark surfaces are the warm charcoal ladder: panel, card, control, raised");
+    check(same(dark.mixerStripBg, hex(0x211e1c)) && same(dark.editorCard, hex(0x211e1c)) &&
+              same(dark.editorControl, hex(0x1a1816)),
           "Ink dark mixer strip, editor card and control");
-    check(same(dark.borderSubtle, hex(0x32373d)) && same(dark.border, hex(0x4c535a)) &&
-              same(dark.borderStrong, hex(0x727a81)) && same(dark.controlEdge, hex(0x727a81)),
-          "Ink dark borders are tinted slate");
+    check(same(dark.borderSubtle, hex(0x2f2b29)) && same(dark.border, hex(0x4f4943)) &&
+              same(dark.borderStrong, hex(0x756d65)) && same(dark.controlEdge, hex(0x756d65)),
+          "Ink dark borders are warm charcoal");
     {
-        // The whole family is tinted: every surface, border, wash and shade has the same cool hue and a little chroma, so no
-        // neutral grey is left in it (the old #1e1e1e / #303030 read as dirty). A neutral grey fails the same check.
+        // The whole family is tinted: every surface, border, wash and shade leans the same warm way (red >= green >= blue,
+        // red above blue), so no neutral or cool grey is left in it (the old #1e1e1e / #303030 read as dirty, and the
+        // slate before the clay pick read as muddy). A neutral grey fails the same check.
         const auto tinted = [](const NUIColor& c) {
-            const float mx = std::max({c.r, c.g, c.b}), mn = std::min({c.r, c.g, c.b});
-            return (mx - mn) * 255.0f >= 3.0f && c.b >= c.r && c.b >= c.g - 1e-4f && c.b > c.r; // blue-leaning, not grey
+            return c.r > c.b && c.r >= c.g - 1e-4f && c.g >= c.b - 1e-4f; // warm-leaning, not grey
         };
         const std::pair<const char*, NUIColor> family[] = {
             {"timelineBed", dark.timelineBed}, {"backgroundPrimary", dark.backgroundPrimary}, {"backgroundSecondary", dark.backgroundSecondary},
@@ -138,7 +138,7 @@ void testInk() {
             {"hover", dark.hover}, {"pressed", dark.pressed}, {"gridMajor", dark.gridMajor}, {"gridMinor", dark.gridMinor},
             {"overlay", dark.overlay}, {"shadow", dark.shadow}, {"neuHi", dark.neuHi}, {"neuLo", dark.neuLo},
             {"glassHi", dark.glassHi}, {"glassShade", dark.glassShade}};
-        for (const auto& [name, col] : family) check(tinted(col), std::string("Ink dark ") + name + " is slate-tinted, not a neutral grey");
+        for (const auto& [name, col] : family) check(tinted(col), std::string("Ink dark ") + name + " is warm-tinted, not a neutral grey");
         check(!tinted(NUIColor::fromHex(0x1e1e1e)) && !tinted(NUIColor::fromHex(0x303030)), "(negative control) the old neutral greys fail the check");
         // The steps: outer < panel < card < control < raised, each at least 1.07, panel to card the compromise that keeps
         // the selected violet 3:1 on a card; outer to panel and control steps are 1.15 or more.
@@ -154,8 +154,8 @@ void testInk() {
                   contrast(dark.textMuted, dark.backgroundSecondary) >= 4.5f, "muted text reads on the outer bed, the panel and the card");
         check(contrast(dark.accentText, dark.timelineBed) >= 4.5f && contrast(dark.accentText, dark.backgroundSecondary) >= 4.5f, "accent text reads on the outer bed and the card");
     }
-    check(same(dark.textPrimary, hex(0xf5f5f5)) && same(dark.textSecondary, hex(0xc7c7c7)) &&
-              same(dark.textMuted, hex(0x9e9e9e)) && same(dark.textDisabled, hex(0x717171)),
+    check(same(dark.textPrimary, hex(0xf4f0ea)) && same(dark.textSecondary, hex(0xcbc4ba)) &&
+              same(dark.textMuted, hex(0x9f978c)) && same(dark.textDisabled, hex(0x717171)),
           "Ink dark text greys");
     check(same(dark.primary, hex(0x764bdf)) && same(dark.primaryHover, hex(0x8a66ea)) &&
               same(dark.primaryPressed, hex(0x6538c5)) && same(dark.textOnPrimary, hex(0xffffff)),

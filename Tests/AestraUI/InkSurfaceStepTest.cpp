@@ -53,7 +53,7 @@ struct Site {
 
 int main() {
     // Part 1: the order of the surfaces, every theme.
-    constexpr float kCardStep = 1.10f; // the card over the bed, as a contrast ratio (Ink dark, slate ladder: panel to card 1.07)
+    constexpr float kCardStep = 1.10f; // the card over the bed, as a contrast ratio (Ink dark, warm charcoal ladder: panel to card 1.07)
     for (const auto& kit : NUIThemePresets::kitThemes()) {
         const std::string key = kit.key;
         const NUIThemeProperties t = NUIThemePresets::createKitTheme(key);
@@ -62,7 +62,7 @@ int main() {
         const std::string at = key + ": ";
         check(ratio(t.backgroundSecondary, t.backgroundPrimary) >= (key == "ink-dark" ? 1.065f : kCardStep), at + "the card rises from the bed by the design step");
         check(luma(t.backgroundSecondary) > luma(t.backgroundPrimary), at + "the card is lighter than the bed");
-        if (key == "ink-dark") { // owner pick S (21 Nov): a slate charcoal ladder; the panel is the old "bed", the outer bed is darker
+        if (key == "ink-dark") { // clay charcoal (23 Nov): a warm charcoal ladder; the panel is the old "bed", the outer bed is darker
             check(ratio(t.backgroundPrimary, t.timelineBed) >= 1.15f, at + "the panel body is one step above the outer bed");
             check(ratio(t.backgroundSecondary, t.backgroundPrimary) >= 1.065f && ratio(t.backgroundSecondary, t.backgroundPrimary) <= 1.08f, at + "card over panel is 1.07:1");
         }

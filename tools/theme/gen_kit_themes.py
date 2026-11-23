@@ -24,11 +24,11 @@ DEPTH = {
 }
 
 
-# Ink dark is a cool-slate family: its depth and glass tokens use the same slate light and slate black as its washes, so no
-# neutral grey is left in it (owner pick S, 21 Nov 2026).
+# Ink dark is a warm charcoal family: its depth and glass tokens use the same warm light and warm black as its washes, so no
+# neutral or cool grey is left in it (owner pick "clay charcoal", 23 Nov 2026; it replaced the cool slate of pick S).
 DEPTH_BY_KEY = {
-    "ink-dark": {"neuHi": "#c8d8e80e", "neuLo": "#02040ad9", "neuEdge": "#00000000",
-                 "glassHi": "#c8d8e81a", "glassEdge": "#c8d8e826", "glassShade": "#02040ab3"},
+    "ink-dark": {"neuHi": "#e8d8c80e", "neuLo": "#0a0604d9", "neuEdge": "#00000000",
+                 "glassHi": "#e8d8c81a", "glassEdge": "#e8d8c826", "glassShade": "#0a0604b3"},
 }
 
 
