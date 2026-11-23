@@ -10,8 +10,10 @@
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <memory>
 #include <random>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -277,6 +279,60 @@ void testReentrancy() {
     }
 }
 
+// A callback that throws must not wedge delivery: the remaining subscribers still see the change, the mutation
+// still applied, and the failure reaches the caller once the queue is drained.
+void testCallbackThrows() {
+    SelectionModel m;
+    std::vector<int> order;
+    int healthyCalls = 0;
+    Subscription thrower = m.subscribe([&](const SelectionChange&) {
+        order.push_back(1);
+        throw std::runtime_error("callback failed");
+    });
+    Subscription healthy = m.subscribe([&](const SelectionChange&) {
+        order.push_back(2);
+        ++healthyCalls;
+    });
+
+    bool threw = false;
+    try {
+        m.select(S::Takes, {1}, M::Replace, R::Click);
+    } catch (const std::runtime_error&) {
+        threw = true;
+    }
+    check(threw, "a throwing callback reports the failure to the caller");
+    check(order == (std::vector<int>{1, 2}), "delivery continues to the remaining subscribers after a throw");
+    check(healthyCalls == 1, "the subscriber after the thrower still saw the change");
+    check(m.active() && m.active()->primary == 1, "the mutation that threw is still applied");
+
+    thrower.reset();
+    m.select(S::Takes, {2}, M::Replace, R::Click);
+    check(healthyCalls == 2, "delivery resumes for later changes after a callback threw");
+}
+
+// removeIds may be handed the selection's own id list (a delete command passing m.active()->ids).
+void testRemoveIdsAliasing() {
+    SelectionModel m;
+    m.select(S::Takes, {4, 5, 6}, M::Replace, R::Click);
+    m.removeIds(S::Takes, m.active()->ids, R::Command);
+    check(!m.active(), "removing the selection through an aliased id list clears it");
+}
+
+// A callback may destroy the model; delivery must not resume on freed storage. The callback also drops its own
+// Subscription: that releases the registry's last weak reference, so the storage really is freed (make_shared keeps
+// it allocated while a weak_ptr exists, which would hide a use-after-free from the sanitizers).
+void testModelDestroyedInCallback() {
+    auto model = std::make_unique<SelectionModel>();
+    Subscription sub;
+    sub = model->subscribe([&](const SelectionChange&) {
+        model.reset();
+        sub.reset();
+    });
+    model->select(S::Takes, {1}, M::Replace, R::Click);
+    check(!model, "a callback may destroy the model");
+    check(!sub, "and release its own subscription while doing it");
+}
+
 void testAffectedKeys() {
     SelectionModel m;
     SelectionChange last;
@@ -363,6 +419,9 @@ int main() {
     testRemoveIds();
     testNotifications();
     testReentrancy();
+    testCallbackThrows();
+    testRemoveIdsAliasing();
+    testModelDestroyedInCallback();
     testAffectedKeys();
     testFuzz();
     std::cout << "SelectionModelTest: " << g_checks << " checks passed\n";

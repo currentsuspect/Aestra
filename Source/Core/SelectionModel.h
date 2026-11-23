@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <deque>
+#include <exception>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -82,18 +83,28 @@ struct Registry {
     bool has(uint64_t token) const {
         return std::any_of(entries.begin(), entries.end(), [&](const Entry& e) { return e.token == token; });
     }
+    // A callback that throws must not wedge delivery or starve the subscribers after it: every callback and every
+    // queued change is still delivered, then the first failure is rethrown to the caller that made the change.
     void publish(SelectionChange change) {
         pending.push_back(std::move(change));
         if (delivering) return;  // the outer loop below delivers it
         delivering = true;
+        std::exception_ptr firstFailure;
         while (!pending.empty()) {
             const SelectionChange current = std::move(pending.front());
             pending.pop_front();
             const std::vector<Entry> snapshot = entries;  // callbacks may subscribe/unsubscribe
-            for (const Entry& e : snapshot)
-                if (has(e.token)) (*e.fn)(current);
+            for (const Entry& e : snapshot) {
+                if (!has(e.token)) continue;
+                try {
+                    (*e.fn)(current);
+                } catch (...) {
+                    if (!firstFailure) firstFailure = std::current_exception();
+                }
+            }
         }
         delivering = false;
+        if (firstFailure) std::rethrow_exception(firstFailure);
     }
 };
 }  // namespace selection_detail
@@ -203,9 +214,10 @@ public:
 
     /// For commands that delete things: drops the ids from `surface`'s selection, keeps the rest, clears if none
     /// remain. If the primary was removed it becomes the last remaining id.
-    void removeIds(SelectionSurface surface, const std::vector<uint64_t>& rawIds, Reason reason) {
+    void removeIds(SelectionSurface surface, const std::vector<uint64_t>& removed, Reason reason) {
         std::optional<Selection>& slot = slotFor(surface);
         if (!slot || slot->surface != surface) return;
+        const std::vector<uint64_t> rawIds = removed;  // a delete command may pass m.active()->ids, which erase() would invalidate
         const std::optional<Selection> before = slot;
         auto& v = slot->ids;
         for (uint64_t id : rawIds) v.erase(std::remove(v.begin(), v.end(), id), v.end());
@@ -275,7 +287,8 @@ private:
 
     void publishIfChanged(const std::optional<Selection>& before, const std::optional<Selection>& after, Reason reason) {
         if (before == after) return;
-        registry_->publish(SelectionChange{before, after, reason});
+        const std::shared_ptr<selection_detail::Registry> keepAlive = registry_;  // a callback may destroy this model
+        keepAlive->publish(SelectionChange{before, after, reason});
     }
 
     std::optional<Selection> active_, exempt_;
