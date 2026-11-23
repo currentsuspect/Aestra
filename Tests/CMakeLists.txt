@@ -236,6 +236,15 @@ target_include_directories(WorkspaceFocusModelTest PRIVATE
 add_test(NAME WorkspaceFocusModelTest COMMAND WorkspaceFocusModelTest)
 set_tests_properties(WorkspaceFocusModelTest PROPERTIES LABELS "unit;workspace;focus;contract:core")
 
+# The one selection model: single select across surfaces, the exempt Audition slot, select modes, pressedIn,
+# removeIds, subscription delivery and affectedKeys. Pure header, no libraries.
+add_executable(SelectionModelTest Integration/SelectionModelTest.cpp)
+target_include_directories(SelectionModelTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Core
+)
+add_test(NAME SelectionModelTest COMMAND SelectionModelTest)
+set_tests_properties(SelectionModelTest PROPERTIES LABELS "unit;selection;contract:core")
+
 # Mixer rework slice 1: the board's dB scale knots and the meter's height-fraction colour zones. Pure headers.
 add_executable(MixerScaleRulesTest AestraUI/MixerScaleRulesTest.cpp)
 target_include_directories(MixerScaleRulesTest PRIVATE
