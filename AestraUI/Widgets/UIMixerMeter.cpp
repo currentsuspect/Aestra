@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerMeter.h"
 #include "../Graphics/NUIDepth.h"
+#include "MeterZones.h"
 #include "MixerScale.h"
 
 #include "NUIRenderer.h"
@@ -46,7 +47,7 @@ void UIMixerMeter::cacheThemeColors()
 // mixer (and the whole app) awake even while dead silent, defeating idle
 // elision. The stored value only advances once the drift crosses the
 // threshold, so slow decays still animate — in ~0.1 dB steps — rather than
-// freezing. kMeterRepaintEpsilonDb is sub-perceptual on a -60..0 dB scale.
+// freezing. kMeterRepaintEpsilonDb is sub-perceptual on the -80..+6 dB scale.
 static constexpr float kMeterRepaintEpsilonDb = 0.1f;
 
 void UIMixerMeter::setLevels(float dbL, float dbR)
@@ -153,17 +154,19 @@ void UIMixerMeter::setIntegratedLufs(float lufs)
 }
 float UIMixerMeter::dbToNormalized(float db) const
 {
-    // The mixer's shared scale (MixerScale.h): +6 at the top, -60 at the floor, the same curve the fader cap
-    // and the scale at the panel's edge use, so level and gain read against each other.
-    return MixerScale::norm(db);
+    // The mixer's shared scale (MixerScale.h): +6 at the top, -80 at the floor, the same curve the fader cap
+    // and the scale at the panel's edge use, so level and gain read against each other. A silent meter is empty
+    // (the scale itself puts -80 at 0.02, which would leave a sliver of green at rest).
+    return db <= DB_MIN ? 0.0f : MixerScale::norm(db);
 }
 
 NUIColor UIMixerMeter::getColorForLevel(float db) const
 {
-    if (db >= DB_RED_THRESHOLD) {
-        return m_colorRed;
-    } else if (db >= DB_YELLOW_THRESHOLD) {
-        return m_colorYellow;
+    // Zones are fractions of the lane's height (MeterZones.h), read off the same scale the bar is drawn on.
+    switch (MeterZones::meterZone(dbToNormalized(db))) {
+    case MeterZones::Zone::Red: return m_colorRed;
+    case MeterZones::Zone::Amber: return m_colorYellow;
+    case MeterZones::Zone::Green: break;
     }
     return m_colorGreen;
 }
@@ -204,12 +207,10 @@ void UIMixerMeter::renderMeterBar(NUIRenderer& renderer, const NUIRect& bounds,
         NUIColor bottomColor = m_colorGreen;
         NUIColor topColor = m_colorGreen;
 
-        if (normalizedRms > 0.8f) { // High levels -> Red tip
-             topColor = m_colorRed;
-        } else if (normalizedRms > 0.5f) { // Mid levels -> Yellow tip
-             topColor = m_colorYellow;
-        } else {
-             topColor = m_colorGreen.lightened(0.2f);
+        switch (MeterZones::meterZone(normalizedRms)) { // zone by height fraction (MeterZones.h)
+        case MeterZones::Zone::Red: topColor = m_colorRed; break;
+        case MeterZones::Zone::Amber: topColor = m_colorYellow; break;
+        case MeterZones::Zone::Green: topColor = m_colorGreen.lightened(0.2f); break;
         }
 
         if (m_dimmed) {
