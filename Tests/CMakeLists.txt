@@ -5023,6 +5023,7 @@ if(AESTRA_ENABLE_UI)
     add_executable(FileBrowserLibraryTest
         AestraUI/FileBrowserLibraryTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowser.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserInteraction.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserNavigation.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserChrome.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserTheme.cpp
