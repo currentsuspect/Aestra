@@ -75,12 +75,12 @@ for runtime in OFF ON; do
             -DAESTRA_ENABLE_RUNTIME_TESTS="$runtime" \
             -DAESTRA_ENABLE_EXPERIMENTAL_TESTS="$experimental" \
             -DCMAKE_BUILD_TYPE=Release
-        ctest --test-dir "$CENSUS_ROOT/$name" --show-only=json-v1 >"$CENSUS_ROOT/census-${name}.json"
+        ctest --test-dir "$CENSUS_ROOT/$name" -C Release --show-only=json-v1 >"$CENSUS_ROOT/census-${name}.json"
     done
 done
 
 step "Verify test-contract coverage across all five configurations"
-ctest --test-dir "$APP_BUILD" --show-only=json-v1 >"$CENSUS_ROOT/census-build-maximal.json"
+ctest --test-dir "$APP_BUILD" -C Release --show-only=json-v1 >"$CENSUS_ROOT/census-build-maximal.json"
 python3 "$REPO_ROOT/scripts/ci/verify-test-contracts.py" \
     --allowlist "$REPO_ROOT/Tests/policy/benchmark-allowlist.txt" \
     --maximal maximal \
@@ -91,6 +91,9 @@ python3 "$REPO_ROOT/scripts/ci/verify-test-contracts.py" \
     --census "maximal=$CENSUS_ROOT/census-build-maximal.json"
 
 step "Run the app-size and headless-memory budget gate"
-python3 "$REPO_ROOT/scripts/ci/check-budgets.py" --bin-dir "$APP_BUILD/bin"
+# Multi-config generators (Ninja Multi-Config) put binaries under bin/Release; single-config trees use bin.
+BIN_DIR="$APP_BUILD/bin"
+[ -d "$APP_BUILD/bin/Release" ] && BIN_DIR="$APP_BUILD/bin/Release"
+python3 "$REPO_ROOT/scripts/ci/check-budgets.py" --bin-dir "$BIN_DIR"
 
 printf '\nPreflight passed: file-size ratchet, test-contract coverage, and build budgets.\n'
