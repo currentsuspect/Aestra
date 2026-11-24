@@ -3461,6 +3461,39 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(ExportDialogWidgetsTest PROPERTIES LABELS "ui;layout;export;regression;contract:application")
 endif()
 
+# A never-shown dialog is hidden at the base level, so it cannot cover drop targets (founder QA, 22 Nov 2026)
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(DialogsStartHiddenTest AestraUI_Core AestraUI_Platform)
+    add_executable(DialogsStartHiddenTest
+        AestraUI/DialogsStartHiddenTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Settings/SettingsDialog.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Settings/ConfirmationDialog.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Settings/RecoveryDialog.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Settings/MissingAssetsDialog.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Settings/ExportDialog.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Settings/ExportDialogBoard.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/UISurfaceStore.cpp
+    )
+    target_link_libraries(DialogsStartHiddenTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio AestraPlat)
+    target_include_directories(DialogsStartHiddenTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Settings
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+        ${CMAKE_SOURCE_DIR}/AestraPlat/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME DialogsStartHiddenTest COMMAND DialogsStartHiddenTest)
+    set_tests_properties(DialogsStartHiddenTest PROPERTIES LABELS "ui;dragdrop;modal;regression;contract:application")
+endif()
+
 # V8-A7: automation clip gestures (move, Ctrl-copy, refused drop, one undo step each).
 if(AESTRA_ENABLE_UI)
     aestra_require_ui_targets(AutomationClipLayerTest AestraUI_Core AestraUI_Platform)
@@ -5048,6 +5081,7 @@ if(AESTRA_ENABLE_UI)
         TransportClockFormatTest
         PanelResizeLayoutTest
         DropTargetZOrderTest
+        DialogsStartHiddenTest
         ArsenalDropOrderTest
         ExportDialogWidgetsTest
         AutomationClipLayerTest

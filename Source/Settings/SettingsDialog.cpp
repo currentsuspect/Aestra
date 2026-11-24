@@ -11,6 +11,9 @@ namespace Aestra {
 
 SettingsDialog::SettingsDialog()
     : m_visible(false), m_dialogBounds(0, 0, 940, 620), m_closeButtonHovered(false), m_blinkAnimation(0.0f) {
+    // Own m_visible shadows isVisible(): start hidden at the base level too, or a never-shown dialog sits in
+    // the tree as a full-window, drawn, drop-less cover (every drag-drop 'lands nowhere').
+    setVisible(false);
     createUI();
 }
 

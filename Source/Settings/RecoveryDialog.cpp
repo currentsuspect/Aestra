@@ -19,6 +19,9 @@ RecoveryDialog::RecoveryDialog()
     , m_recoverHovered(false)
     , m_discardHovered(false)
 {
+    // Own m_isVisible shadows the base flag: start hidden at the base level too, or a never-shown dialog
+    // sits in the tree as a full-window, drawn, drop-less cover (drops 'land nowhere').
+    setVisible(false);
 }
 
 bool RecoveryDialog::detectAutosave(const std::string& autosavePath, std::string& outTimestamp) {

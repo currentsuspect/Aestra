@@ -5,6 +5,12 @@
 #include "../../AestraCore/include/AestraLog.h"
 #include <cmath>
 #include <algorithm>
+#include <cstdlib>
+#include <memory>
+#include <typeinfo>
+#if defined(__GNUC__) || defined(__clang__)
+#include <cxxabi.h>
+#endif
 
 namespace AestraUI {
 
@@ -268,7 +274,16 @@ namespace {
 std::string nameOf(const NUIComponent* node) {
     if (!node) return "(nothing)";
     const std::string id = node->getId();
-    return id.empty() ? std::string("(unnamed)") : id;
+    if (!id.empty()) return id;
+    // Most components carry no id: name the class instead, so a cover in the drop log is findable.
+    const char* mangled = typeid(*node).name();
+#if defined(__GNUC__) || defined(__clang__)
+    int status = 0;
+    std::unique_ptr<char, void (*)(void*)> demangled(abi::__cxa_demangle(mangled, nullptr, nullptr, &status),
+                                                     std::free);
+    if (status == 0 && demangled) return demangled.get();
+#endif
+    return mangled;
 }
 
 // Why a component cannot take a drop, from itself up through its parents; empty when it can.
