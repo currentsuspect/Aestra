@@ -66,7 +66,7 @@ CI/CD & secrets
 
 Developer experience
 
-- Provide `assets_mock/` and `cmake/AestraPremiumFallback.cmake` (already added) so contributors can build core without premium assets.
+- Provide `assets_mock/` (already added) so contributors can build core without premium assets.
 - Document submodule setup in `docs/CONTRIBUTING_CORE.md`.
 
 Checklist before public push

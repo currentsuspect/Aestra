@@ -12,12 +12,17 @@ The public repository is currently on a **0.x pre-beta line**. The working roadm
 ## 📌 Current docs posture
 
 Some documents in this repo are active engineering references, while others are preserved historical notes.
-If you want the most accurate current picture, start with:
+The documents below describe the code as it stands today:
 
-- [Roadmap](technical/roadmap.md)
-- [Testing & CI](technical/testing_ci.md)
-- [Rumble MVP Plan](technical/RUMBLE_MVP_PLAN.md)
-- [Current Changelog](../meta/CHANGELOGS/CHANGELOG_2026Q2.md)
+- [Changelog](../CHANGELOG.md) — current through v0.8.2-alpha
+- [Testing & CI](technical/testing_ci.md) — test profiles, and what the public CI gate runs
+- [Engineering health](technical/engineering-health.md) — the properties a change must not break
+- [Audio engine ownership](technical/audio/AUDIO_ENGINE_OWNERSHIP.md) — who owns an `AudioEngine`, and who only borrows one
+- [Pan law policy](technical/audio/PAN_LAW_POLICY.md) — FD-64, as the code applies it
+
+Dated, and not a description of current state: the [Roadmap](technical/roadmap.md) is an internal memo
+from March 2026 and says of itself that its claims are based on repo state as of January 2026. Read it
+for direction. For what exists today, read the code, the tests, and the [changelog](../CHANGELOG.md).
 
 ## 🎯 What is Aestra?
 
@@ -35,6 +40,9 @@ Aestra is a source-available digital audio workstation under active development.
 ### 🏗️ Architecture & Design
 
 - **[Architecture Overview](architecture/overview.md)** — Aestra's modular architecture (Core, UI, Audio, Platform)
+- **[Engineering Health](technical/engineering-health.md)** — The properties a change must not break
+- **[Audio Engine Ownership](technical/audio/AUDIO_ENGINE_OWNERSHIP.md)** — Engine ownership contract, with known residuals
+- **[Pan Law Policy](technical/audio/PAN_LAW_POLICY.md)** — FD-64 as the signal path applies it
 - **[Coding Style Guide](developer/coding-style.md)** — Code conventions, formatting rules, and best practices
 - **[Glossary](technical/glossary.md)** — Technical terms and definitions
 
@@ -47,10 +55,10 @@ Aestra is a source-available digital audio workstation under active development.
 
 ### 📋 Project Management
 
-- **[Roadmap](technical/roadmap.md)** — High-level milestones and current execution plan
+- **[Roadmap](technical/roadmap.md)** — Direction memo (March 2026); not a description of current state
 - **[Testing & CI](technical/testing_ci.md)** — Current confidence suite and verification workflow
 - **[CI Workflows Map](technical/ci_workflows.md)** — What runs in GitHub Actions, what is blocking vs preview
-- **[Current Changelog](../meta/CHANGELOGS/CHANGELOG_2026Q2.md)** — Current milestone history
+- **[Changelog](../CHANGELOG.md)** — Current milestone history, through v0.8.2-alpha
 - **[License Reference](about/license-reference.md)** — Licensing information and ASSAL v1.1 details
 
 ### 📝 Templates
@@ -79,8 +87,8 @@ Aestra is a source-available digital audio workstation under active development.
 3. Include logs, screenshots, and system information
 
 ### For Maintainers
-1. Review [Roadmap](technical/roadmap.md) for project milestones
-2. Check [Current Changelog](../meta/CHANGELOGS/CHANGELOG_2026Q2.md) for recent milestone history
+1. Review [Roadmap](technical/roadmap.md) for project direction (March 2026 memo)
+2. Check the [Changelog](../CHANGELOG.md) for recent milestone history
 3. Check [License Reference](about/license-reference.md) for ASSAL v1.1 details
 4. Use [Issue Template](TEMPLATE/ISSUE_TEMPLATE.md) for documentation issues
 
@@ -121,7 +129,7 @@ Aestra is a source-available digital audio workstation under active development.
 We welcome contributions from the community! Before contributing:
 
 1. Read our [Contributing Guide](developer/contributing.md)
-2. Check the [Roadmap](technical/roadmap.md) for current priorities
+2. Check the [changelog](../CHANGELOG.md) for what has landed, and the [roadmap](technical/roadmap.md) for direction
 3. Review existing issues and discussions
 4. Follow our [Coding Style Guide](developer/coding-style.md)
 

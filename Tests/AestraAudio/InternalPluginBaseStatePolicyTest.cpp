@@ -49,7 +49,7 @@ void check(bool condition, const std::string& what) {
     }
 }
 
-// Sat is the reference implementation (AGENTS.md §19) and has a wide, plain
+// Sat is the reference implementation (AGENTS.md "DSP") and has a wide, plain
 // range on kDrive, which makes it a clean probe for both directions.
 /// Overwrite one parameter's value, finding its entry by id. The old
 /// `8 + 4 * id` arithmetic was correct for v1's positional layout and silently
@@ -59,7 +59,7 @@ void check(bool condition, const std::string& what) {
 /// A missing entry COUNTS AS A FAILURE, not a printed warning. This harness
 /// aggregates through g_failures and returns EXIT_SUCCESS when it is zero, so an
 /// un-counted miss prints [FAIL] and still exits 0 -- CTest green, nothing
-/// tested. That is the misleading-success path AGENTS.md §2 names, and it is
+/// tested. That is the misleading-success path AGENTS.md "Boundaries" names, and it is
 /// exactly the failure mode this file was rewritten to eliminate.
 void pokeFloat(std::vector<uint8_t>& blob, uint32_t paramId, float value) {
     if (!AestraTestBlob::setValueForId(blob, paramId, value)) {
@@ -214,7 +214,7 @@ int main() {
     // ---------------------------------------------------------------------
     // A rejected blob must leave EVERY parameter alone, including ones whose
     // entries appear BEFORE the poisoned one. This is the half-updated instance
-    // AGENTS.md §12 forbids, and it is invisible unless the poisoned entry is
+    // AGENTS.md "Project persistence" forbids, and it is invisible unless the poisoned entry is
     // deliberately LATE: with a single pass, entries 0..n-1 are applied and the
     // function then returns false, so the caller is told "rejected" while most
     // of the state has already moved. CodeRabbit found exactly this in

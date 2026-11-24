@@ -4,7 +4,7 @@ This document explains how to confirm the public repository build configures and
 
 Steps:
 
-1) Ensure `assets_mock/` exists in the repo root (it was added for this purpose).
+1) No manual `assets_mock/` needed: the core-mode helper sets `Aestra_ASSETS_DIR` to `<repo>/assets_mock/` and creates it empty during configure if it is missing. The placeholders the tree ships live in `aestra-core/assets_mock/cards/`.
 
 2) Confirm the top-level `CMakeLists.txt` includes the public core-mode helper from `aestra-core/cmake/AestraCoreMode.cmake`. This is what forces `Aestra_CORE_MODE=ON` when premium modules are not present.
 

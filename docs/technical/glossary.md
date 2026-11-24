@@ -18,10 +18,10 @@ Comprehensive glossary of technical terms, acronyms, and concepts used in Aestra
 A fixed-size block of audio samples processed together. Smaller buffers reduce latency but increase CPU usage. Typical sizes: 128, 256, 512, or 1024 samples.
 
 ### Audio Driver
-Software interface between application and audio hardware. Examples include WASAPI, ASIO, and ALSA. CoreAudio is relevant for planned future macOS work.
+Software interface between application and audio hardware. Examples include WASAPI, ASIO, and ALSA. CoreAudio is relevant for possible future macOS work.
 
 ### ASIO (Audio Stream Input/Output)
-Low-latency audio driver protocol developed by Steinberg. Widely used in professional audio applications (planned for Aestra).
+Low-latency audio driver protocol developed by Steinberg. Widely used in professional audio applications. Aestra loads ASIO drivers on Windows; hardening is ongoing.
 
 ### Bit Depth
 Number of bits used to represent each audio sample. Common values:
@@ -246,7 +246,7 @@ Rendering order of overlapping UI elements. Higher z-order renders on top.
 **Jules' Utility Class Extensions** - C++ framework for audio applications (not used in Aestra, but referenced).
 
 ### MIDI
-**Musical Instrument Digital Interface** - Protocol for communicating musical data (planned for Aestra).
+**Musical Instrument Digital Interface** - Protocol for communicating musical data. Aestra reads live MIDI input; MIDI file import/export is in progress.
 
 ### ML
 **Machine Learning** - AI technique used in Muse.
@@ -276,7 +276,7 @@ Rendering order of overlapping UI elements. Higher z-order renders on top.
 **User Experience** - Overall experience of using software.
 
 ### VST
-**Virtual Studio Technology** - Plugin format for audio effects and instruments (planned for Aestra).
+**Virtual Studio Technology** - Plugin format for audio effects and instruments. Aestra hosts VST3 and CLAP plugins.
 
 ### WASAPI
 **Windows Audio Session API** - Modern Windows audio API.
