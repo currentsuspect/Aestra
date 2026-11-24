@@ -215,7 +215,7 @@ private:
 // to that if the project's standard ever rises). Note this adds no real-time
 // hazard that is not already there by a wide margin: ConsoleLogger::log already
 // takes a mutex and writes to std::cout, so logging was never RT-safe and
-// AGENTS.md section 10 forbids it on audio paths regardless.
+// AGENTS.md ("Critical Areas") forbids it on audio paths regardless.
 class Log {
 public:
     static void init(std::shared_ptr<ILogger> logger) { std::atomic_store(&instance().logger_, std::move(logger)); }

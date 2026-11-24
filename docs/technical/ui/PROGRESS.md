@@ -38,7 +38,7 @@ The framework internally uses the `NUI` prefix for class names (NUIRenderer, NUI
 
 This directory previously contained a "PROGRESS.md" from the project's first week of development (January 2026), describing the framework as 25% complete with ~3,500 lines. That document has been superseded. The framework is now complete and fully integrated.
 
-For current architecture details, see [ARCHITECTURE.md](ARCHITECTURE.md) and [FRAMEWORK_STATUS.md](FRAMEWORK_STATUS.md).
+For current architecture details, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ---
 

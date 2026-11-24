@@ -13,7 +13,6 @@ graph TB
     subgraph Framework
         UI[AestraUI]
         Audio[AestraAudio]
-        SDK[AestraSDK]
     end
     
     subgraph Platform
@@ -26,18 +25,15 @@ graph TB
     
     DAW --> UI
     DAW --> Audio
-    DAW --> SDK
     
     UI --> Plat
     Audio --> Plat
-    SDK --> Plat
     
     Plat --> Core
     
     style DAW fill:#5c6bc0,color:#fff
     style UI fill:#00d9ff,color:#000
     style Audio fill:#00d9ff,color:#000
-    style SDK fill:#00d9ff,color:#000
     style Plat fill:#7e57c2,color:#fff
     style Core fill:#9575cd,color:#fff
 ```
@@ -68,7 +64,6 @@ graph TB
 #include "AestraCore/Logging/Logger.h"
 ```
 
-[View AestraCore Details →](Aestra-core.md)
 
 ---
 
@@ -76,7 +71,7 @@ graph TB
 
 **Purpose:** Provides unified API for platform-specific operations.
 
-**Status:** ✅ Complete (Windows), 🚧 In Progress (Linux), 📅 Planned (macOS)
+**Status:** ✅ Complete (Windows), 🚧 Pre-beta (Linux), 📅 Post-Beta (macOS)
 
 **Dependencies:** AestraCore
 
@@ -91,7 +86,7 @@ graph TB
 | Platform | Status | Implementation |
 |----------|--------|----------------|
 | Windows 10/11 | ✅ Complete | Win32 API |
-| Linux | 🚧 In Progress | X11, Wayland planned |
+| Linux | 🚧 Pre-beta | Window, input and portal file dialogs |
 | macOS | 📅 Post-Beta | Cocoa | Deferred until after v1 Beta |
 
 **Public API:**
@@ -101,7 +96,6 @@ graph TB
 #include "AestraPlat/FileDialog.h"
 ```
 
-[View AestraPlat Details →](Aestra-plat.md)
 
 ---
 
@@ -138,7 +132,6 @@ graph TB
 #include "AestraUI/Theme.h"
 ```
 
-[View AestraUI Details →](Aestra-ui.md)
 
 ---
 
@@ -171,33 +164,12 @@ graph TB
 #include "AestraAudio/AudioBuffer.h"
 ```
 
-[View AestraAudio Details →](Aestra-audio.md)
 
 ---
 
-#### AestraSDK (Plugin System)
+#### Plugin hosting
 
-**Purpose:** Plugin hosting and extension system.
-
-**Status:** Phase 4 decision gate (Sep 2026) — see [Roadmap](../technical/roadmap.md)
-
-Internal Arsenal plugins (Rumble) are validated. Third-party VST3/CLAP hosting ships only if stability targets are met.
-
-**Dependencies:** AestraCore, AestraPlat
-
-**Planned Features:**
-- VST3 plugin hosting
-- Effect processing (inserts, sends)
-- Parameter automation
-- MIDI routing
-- Plugin scanning and caching
-
-**Planned API:**
-```cpp
-#include "AestraSDK/PluginHost.h"
-#include "AestraSDK/Effect.h"
-#include "AestraSDK/Automation.h"
-```
+There is no separate SDK module. VST3 and CLAP hosting lives in `AestraAudio/` (`Plugin/`, with a scanning helper process), and the editors that embed a plugin's own window live in `AestraUI/`. Aestra's own instruments and effects are in `AestraPlugins/` and `AestraAudio/Plugin/`. See the [Roadmap](../technical/roadmap.md) for scope decisions.
 
 ---
 
@@ -207,7 +179,7 @@ Internal Arsenal plugins (Rumble) are validated. Third-party VST3/CLAP hosting s
 
 **Status:** 🚧 Active Development
 
-**Dependencies:** All framework modules (AestraUI, AestraAudio, AestraSDK)
+**Dependencies:** All framework modules (AestraUI, AestraAudio)
 
 **Key Components:**
 - Timeline/Sequencer (Pattern-based)
@@ -224,9 +196,9 @@ Internal Arsenal plugins (Rumble) are validated. Third-party VST3/CLAP hosting s
 | Audio Playback | ✅ Complete |
 | Theme System | ✅ Complete |
 | Sample Manipulation | 🚧 In Progress |
-| Mixing Controls | 🚧 In Progress |
-| VST3 Hosting | Phase 4 decision gate (Sep 2026) |
-| MIDI Support | Phase 4 decision gate (Sep 2026) |
+| Mixing Controls | ✅ Complete |
+| VST3 and CLAP Hosting | ✅ Implemented |
+| MIDI | 🚧 Live input works; file import/export in review |
 
 ---
 
@@ -295,26 +267,17 @@ while (app.running) {
 
 ### Code Metrics
 
-| Module | Lines of Code | Header Files | Source Files | Dependencies |
-|--------|--------------|--------------|--------------|--------------|
-| AestraCore | ~5,000 | 25 | 20 | 0 |
-| AestraPlat | ~8,000 | 15 | 35 | 1 (Core) |
-| AestraUI | ~12,000 | 45 | 60 | 2 (Core, Plat) |
-| AestraAudio | ~10,000 | 30 | 50 | 2 (Core, Plat) |
-| AestraSDK | ~0 (planned) | - | - | 2 (Core, Plat) |
-| Application | ~15,000 | 60 | 80 | 4 (All) |
-| **Total** | **~50,000** | **175** | **245** | - |
+Counted from tracked source files, excluding `External/` (Nov 2026):
 
-### Build Times (Release, 8-core CPU)
-
-| Module | Full Build | Incremental |
-|--------|-----------|-------------|
-| AestraCore | ~15s | ~3s |
-| AestraPlat | ~25s | ~5s |
-| AestraUI | ~45s | ~8s |
-| AestraAudio | ~35s | ~7s |
-| Application | ~60s | ~10s |
-| **Total** | **~3 min** | **~30s** |
+| Module | Lines | Headers | Source files |
+|--------|------:|--------:|-------------:|
+| AestraCore | ~8,100 | 16 | 12 |
+| AestraPlat | ~4,600 | 10 | 10 |
+| AestraUI | ~72,900 | 131 | 103 |
+| AestraAudio | ~98,000 | 280 | 127 |
+| AestraPlugins | ~2,100 | 8 | 7 |
+| AestraLicense | ~4,900 | 17 | 14 |
+| Application (`Source/`) | ~81,200 | 153 | 108 |
 
 ## 🎯 Design Guidelines
 
@@ -366,12 +329,8 @@ When adding a new module to Aestra:
 
 ## 🔍 Module Exploration
 
-Dive deeper into each module:
+Each module is described in its section above, and in its own README at the root of the module directory.
 
-- [AestraCore Details →](Aestra-core.md)
-- [AestraPlat Details →](Aestra-plat.md)
-- [AestraUI Details →](Aestra-ui.md)
-- [AestraAudio Details →](Aestra-audio.md)
 
 Or return to:
 - [Architecture Overview →](overview.md)

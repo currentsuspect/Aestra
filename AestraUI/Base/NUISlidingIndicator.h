@@ -17,6 +17,7 @@
 // Deliberately free of widget, renderer and theme dependencies so the behaviour
 // can be tested without linking AestraUI (which AESTRA_CI=ON disables).
 
+#include <algorithm>
 #include <cmath>
 
 namespace AestraUI {
@@ -72,7 +73,11 @@ public:
             return false; // already there — unchanged target does nothing
         }
 
-        position_ += diff * speed * static_cast<float>(deltaTime);
+        // Exponential approach: the share of the remaining distance covered in dt is 1 - e^(-speed*dt), which is below 1
+        // however long the frame was. (The earlier diff * speed * dt overshot and then diverged once speed*dt passed 2:
+        // a hitch threw the selected pill off to the right of the title bar.)
+        const float step = 1.0f - std::exp(-speed * static_cast<float>(std::max(0.0, deltaTime)));
+        position_ += diff * step;
         if (std::abs(target - position_) < kSettleEpsilon) {
             position_ = target;
         }

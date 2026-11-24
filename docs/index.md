@@ -143,7 +143,7 @@ This table reflects engineering-module posture, not release readiness. A module 
     <tr>
       <td><strong>AestraPlat</strong></td>
       <td><span class="status-icon success"></span>Complete</td>
-      <td>Platform abstraction (Win32, X11)</td>
+      <td>Platform abstraction (Windows and Linux)</td>
     </tr>
     <tr>
       <td><strong>AestraUI</strong></td>
@@ -172,28 +172,33 @@ This table reflects engineering-module posture, not release readiness. A module 
     </tr>
     <tr>
       <td><strong>Undo/Redo</strong></td>
-      <td><span class="status-icon warning"></span>In Progress</td>
-      <td>Command history exists, needs broader main-UX integration hardening</td>
+      <td><span class="status-icon success"></span>Complete</td>
+      <td>Every step is named in the history, and the Versions dock takes you back to any of them</td>
     </tr>
     <tr>
-      <td><strong>Internal Arsenal Plugins</strong></td>
-      <td><span class="status-icon warning"></span>In Progress</td>
-      <td>Rumble validated through discovery, project persistence, and audible headless playback</td>
+      <td><strong>Built-in Plugins</strong></td>
+      <td><span class="status-icon success"></span>Complete</td>
+      <td>About a dozen instruments and effects, including Rumble, EQ, Comp, Verb and Limit</td>
     </tr>
     <tr>
       <td><strong>Third-Party Plugin Hosting</strong></td>
-      <td><span class="status-icon info"></span>Decision Gate</td>
-      <td>VST3/CLAP scaffolding exists; Phase 4 decision (Sep 2026)</td>
+      <td><span class="status-icon success"></span>Available</td>
+      <td>VST3 and CLAP plugins load in a sandbox process on Windows and Linux</td>
+    </tr>
+    <tr>
+      <td><strong>MIDI</strong></td>
+      <td><span class="status-icon warning"></span>In Progress</td>
+      <td>Live MIDI input and the piano roll work; MIDI file import/export (v1) is in review</td>
     </tr>
     <tr>
       <td><strong>Recording</strong></td>
       <td><span class="status-icon warning"></span>In Progress</td>
-      <td>Phase 3 target (Jul–Sep 2026)</td>
+      <td>Audio recording works, including one take per pass when loop-recording; stereo recording is being finished for 0.8.3</td>
     </tr>
     <tr>
       <td><strong>Offline Render/Export</strong></td>
-      <td><span class="status-icon warning"></span>In Progress</td>
-      <td>Phase 3 target (Jul–Sep 2026)</td>
+      <td><span class="status-icon success"></span>Complete</td>
+      <td>Export with a loudness target (-14, -9 or -23 LUFS)</td>
     </tr>
   </tbody>
 </table>

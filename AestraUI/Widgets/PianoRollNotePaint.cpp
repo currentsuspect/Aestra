@@ -28,7 +28,7 @@ void PianoRollNoteLayer::paintNote(NUIRenderer& renderer, const NUIRect& r, cons
     for (const float x : PianoRollLook::ratchetTicks(r, n.ratchet))
         renderer.fillRect(NUIRect(std::round(x) - 1.0f, r.y, 2.0f, r.height), NUIColor(0.0f, 0.0f, 0.0f, 0.85f));
 
-    if (n.selected) renderer.strokeRect(r, 1.0f, NUIColor::fromHex(0xeee9e1));
+    if (n.selected) renderer.strokeRect(r, 1.0f, NUIThemeManager::getInstance().getColor("textPrimary"));
 
     // Selected notes keep their resize grips; the edge under the pointer goes full white.
     if (n.selected || (hovered && (hoverOnRightEdge_ || hoverOnLeftEdge_))) {

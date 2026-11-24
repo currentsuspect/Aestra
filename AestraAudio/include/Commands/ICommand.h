@@ -76,7 +76,7 @@ public:
     virtual std::string displayValue() const { return {}; }
 
     /// What this step touched, for pickable undo (SPEC-026). Commands that do not say count as touching
-    /// everything, so they are never undone around. New commands declare it (AGENTS.md §3a).
+    /// everything, so they are never undone around. New commands declare it (AGENTS.md "Compounding Rules").
     virtual Footprint footprint() const { return Footprint::everything(); }
 
     /// When the command was made (epoch ms): the moment of the user's action, which the Versions steps list shows.

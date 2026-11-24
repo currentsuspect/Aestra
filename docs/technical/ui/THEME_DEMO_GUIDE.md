@@ -144,5 +144,4 @@ Try modifying the demo to:
 ## See Also
 
 - [AESTRA_COLOR_SYSTEM.md](AESTRA_COLOR_SYSTEM.md) - Complete color palette reference
-- [CUSTOM_WINDOW_INTEGRATION.md](CUSTOM_WINDOW_INTEGRATION.md) - Custom window guide
 - NUIThemeSystem.h - Theme system API reference

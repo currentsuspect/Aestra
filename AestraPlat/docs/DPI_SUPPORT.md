@@ -41,7 +41,7 @@ AestraPlat now includes comprehensive DPI (Dots Per Inch) awareness support for 
 
 - `AestraPlat/src/Win32/PlatformDPIWin32.h` - DPI helper class interface
 - `AestraPlat/src/Win32/PlatformDPIWin32.cpp` - DPI implementation
-- `AestraPlat/src/Tests/PlatformDPITest.cpp` - DPI test application
+- `Tests/AestraPlat/PlatformDPITest.cpp` - DPI test application
 
 ### Files Modified
 

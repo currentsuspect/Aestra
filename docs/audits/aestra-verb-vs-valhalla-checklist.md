@@ -166,7 +166,7 @@ Freeze note explicitly allows "More factory presets" and "Preset artwork and too
 
 | Doc | Have | Need |
 |---|---|---|
-| Public plugin page | None. | Per AGENTS.md §17, only if implemented and validated. |
+| Public plugin page | None. | Per AGENTS.md ("Public docs describe only what is implemented and validated"), only if implemented and validated. |
 | Internal architecture note | `aestra-verb-beta-freeze-note.md` ✅. Quality baseline + material lab reports. | Continuation of these for new presets. |
 | User manual (controls, signal flow) | None for end users. | Short one-pager with sections, mode guide, recommended starting points per source. |
 | Tooltips on each knob | Engine returns display strings (`AestraVerb.h:574-599`); UI does not surface them as hover text. | Add hover tooltips. |
@@ -229,7 +229,7 @@ Group C — research only, no code yet:
 - Not a release plan.
 - Not a commitment to ship any specific feature.
 - Not a benchmark or A/B test result. A/B vs Valhalla is out of scope; AestraVerb's quality is evaluated against its own lab baseline (`labs/reverb/quality/reverb_quality_baseline.md`).
-- Not a public-facing claim. Per AGENTS.md §17, no public docs should describe features that are not implemented and validated.
+- Not a public-facing claim. Per AGENTS.md ("Public docs describe only what is implemented and validated"), no public docs should describe features that are not implemented and validated.
 
 ---
 

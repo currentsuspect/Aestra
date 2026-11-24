@@ -235,3 +235,6 @@ labs/perf/
 # One-off fix-up scripts written to the root mid-change (tmp_p5fix3.py rode in
 # with #1025 the same way).
 /tmp_*.py
+
+# Generated audit output
+audit_results.txt

@@ -456,15 +456,16 @@ void testEditorNeutralsFollowTheme() {
     check(colorsEqual(editorNeutral(0.045f, 0.9f), NUIColor(0.045f, 0.045f, 0.045f, 0.9f)),
           "a neutral theme leaves editor grays untouched");
 
-    // Ink is pure neutral too, and it is what the old names resolve to.
+    // Ink dark is a warm charcoal ladder (clay charcoal, 23 Nov), and it is what the old names resolve to: not a neutral
+    // grey ramp, so the editors' near-blacks take its warm surface temperature like any tinted theme.
     manager.setActiveTheme("Aestra-dark");
-    check(manager.getCurrentTheme().backgroundPrimary.r == manager.getCurrentTheme().backgroundPrimary.b,
-          "the default dark theme is a neutral grey ramp");
-    check(colorsEqual(editorNeutral(0.045f, 0.9f), NUIColor(0.045f, 0.045f, 0.045f, 0.9f)),
-          "Ink leaves editor grays exactly as tuned");
-    check(colorsEqual(manager.getColor("backgroundSecondary"), NUIColor::fromHex(0x1e1e1e)) &&
-              colorsEqual(manager.getColor("surfaceRaised"), NUIColor::fromHex(0x3e3e3e)),
-          "the default dark surfaces are Ink's exact greys");
+    check(manager.getCurrentTheme().backgroundPrimary.r > manager.getCurrentTheme().backgroundPrimary.b,
+          "the default dark theme is a warm-tinted ramp, not a neutral grey one");
+    check(editorNeutral(0.045f, 0.9f).r > editorNeutral(0.045f, 0.9f).b && std::fabs(editorNeutral(0.045f, 0.9f).a - 0.9f) < 1e-5f,
+          "Ink's editor near-blacks take the warm temperature");
+    check(colorsEqual(manager.getColor("backgroundSecondary"), NUIColor::fromHex(0x211e1c)) &&
+              colorsEqual(manager.getColor("surfaceRaised"), NUIColor::fromHex(0x3d3835)),
+          "the default dark surfaces are Ink's warm card and raised steps");
 }
 
 void testControlKitTokens() {

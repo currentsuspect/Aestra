@@ -87,7 +87,7 @@ int main() {
 
 - `NUIRendererGL::drawGlow` is not a shader glow: it fills an expanded translucent rect (`AestraUI/Graphics/OpenGL/NUIRendererGL.cpp`).
 - The widget render cache (`NUIRenderCache`, toggled with `setCachingEnabled`) exists and has real consumers, but the application disables it on Linux (`Source/Core/AestraWindowManager.cpp`). Widgets must render correctly with the cache off — losing it may only cost frame rate, never content.
-- `NUIDirtyRegionManager` (`AestraUI/Graphics/OpenGL/NUIDirtyRegion.h`) is present but has no working consumer: the only `markAllDirty` call in `beginFrame` is commented out, nothing else marks regions, and no render pass skips clean regions. Treat dirty-region tracking as inert scaffolding, not an optimization.
+- `NUIDirtyRegionManager` (`AestraUI/Core/NUIDirtyRegion.h`) is present but has no working consumer: the only `markAllDirty` call in `beginFrame` is commented out, nothing else marks regions, and no render pass skips clean regions. Treat dirty-region tracking as inert scaffolding, not an optimization.
 - Text rendering is a FreeType bitmap atlas. There is no SDF or MSDF text renderer in the tree.
 - There is no Vulkan backend — `Graphics/` contains only `OpenGL/` — and no `Win32`/`Cocoa`/`X11` platform layer: windowing goes through `NUIPlatformBridge` on top of `AestraPlat`.
 - The V8-X2b layout contract covers only migrated surfaces — `WindowPanel`'s title-bar buttons, and the mixer's master/inspector placement and scrolling strip row; every other surface still positions its children by hand.

@@ -1916,15 +1916,15 @@ void AestraContent::onRender(AestraUI::NUIRenderer& renderer) {
         }
 
         const auto base = themeManager.getColor("border").withAlpha(0.60f);
-        const auto accent = themeManager.getColor("primary").withAlpha(0.52f);
+        const auto accent = themeManager.getColor("selectionEdge");
         renderer.drawLine({x, y0}, {x, y1}, 1.0f, base);
         const float cy = (y0 + y1) * 0.5f;
         const AestraUI::NUIRect handle{x - 3.0f, cy - 18.0f, 7.0f, 36.0f};
         renderer.fillRoundedRect(handle, 3.5f, themeManager.getColor("backgroundSecondary").withAlpha(0.78f));
-        renderer.strokeRoundedRect(handle, 3.5f, 1.0f, accent.withAlpha(0.55f));
+        renderer.strokeRoundedRect(handle, 3.5f, 1.0f, accent);
         for (int i = -1; i <= 1; ++i) {
             const float gy = cy + static_cast<float>(i) * 7.0f;
-            renderer.drawLine({x - 1.5f, gy}, {x + 1.5f, gy}, 1.0f, accent.withAlpha(0.82f));
+            renderer.drawLine({x - 1.5f, gy}, {x + 1.5f, gy}, 1.0f, accent);
         }
     };
 

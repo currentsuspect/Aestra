@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <string>
 #include <algorithm>
+#include <array>
 #include <memory>
 #include <cstdint>
 #include <functional>
@@ -13,6 +14,23 @@
 #include <vector>
 
 namespace AestraUI {
+
+/// The Aestra Kit's metrics, generated into NUIKitMetrics.inc by tools/theme/gen_kit_metrics.py.
+namespace NUIKitMetrics {
+enum SpacingStep { XXS, XS, S, M, L, XL, XXL, Count }; // order of the lines in NUIKitMetrics.inc
+inline constexpr float kSpacing[] = {
+#define AESTRA_KIT_SPACING(step, px) px,
+#include "NUIKitMetrics.inc"
+#undef AESTRA_KIT_SPACING
+};
+static_assert(sizeof(kSpacing) / sizeof(kSpacing[0]) == Count, "NUIKitMetrics.inc and SpacingStep disagree");
+inline std::array<float, Count> spacingScale() {
+    std::array<float, Count> out{};
+    for (int i = 0; i < Count; ++i)
+        out[i] = kSpacing[i];
+    return out;
+}
+} // namespace NUIKitMetrics
 
 // Theme variants
 enum class NUIThemeVariant {
@@ -84,21 +102,23 @@ struct NUIThemeProperties {
     NUIColor outline;
     NUIColor outlineVariant;
     
-    // Interactive States
+    // Generic interaction states: how any control reacts to the pointer and the keyboard.
     NUIColor hover;
     NUIColor pressed;
     NUIColor focused;
     NUIColor selected;
     NUIColor disabled;
     NUIColor focusRing;
+    NUIColor dragTarget;
 
-    // Domain states remain separate from generic interaction states so
-    // selection does not compete with transport and mixer status.
-    NUIColor armed;
+    // Domain and control states: what a track, channel or effect is doing. A separate group from the generic
+    // interaction states above, so selection never competes with transport and mixer status, and from the
+    // status colours (success/warning/error/info), which they merely default to when a theme does not state them.
+    NUIColor armed;                  // ready to record
+    NUIColor recording;              // capture is happening now (defaults to armed)
     NUIColor muted;
     NUIColor soloed;
     NUIColor bypassed;
-    NUIColor dragTarget;
     
     // Interactive Element Defaults
     NUIColor buttonBgDefault;        // #242428
@@ -154,6 +174,18 @@ struct NUIThemeProperties {
     NUIColor controlEdge;       ///< legacy outline colour: high contrast only, never a control at rest
     NUIColor controlSelected;
     NUIColor controlGuide;
+
+    // The selection family (21 Nov 2026). Every draw site that marks something selected, highlighted, hovered-while-
+    // selected, or draws the accent as text reads one of these instead of tinting `primary` with an alpha. All are
+    // opaque, so a fill is drawn under the content it marks and never washes over it. Kit themes state them
+    // (tools/theme gen); older presets and JSON overrides derive them in deriveSelectionFamily().
+    NUIColor selectedText;    ///< a label on a solid `selected` fill (textOnPrimary when solid, else textPrimary)
+    NUIColor selectionFill;   ///< a broad opaque selection area: loop range, ruler/scale highlight, selected row; text on it is textPrimary
+    NUIColor selectionTint;   ///< a quiet opaque tint: hover on a row, a scale-highlight lane, a drop target, a chip at rest
+    NUIColor selectionEdge;   ///< the outline of a selected thing
+    NUIColor hoverSelected;   ///< the selected fill under the pointer
+    NUIColor accentText;      ///< the accent as text or a hairline (key names, links, chips): 4.5:1 on the bed and cards
+    NUIColor playhead;        ///< the playhead line / pad fill: first of hover accent, primary, text that reads 3:1 on every surface
     NUIColor textOnStatus;
 
     // Depth (Design Spec rule 1: three depths, light from above). A well is shaded on its top-left inner edge
@@ -170,12 +202,15 @@ struct NUIThemeProperties {
     int mode = 0;
     
     // Spacing
-    float spacingXS = 4.0f;
-    float spacingS = 8.0f;
-    float spacingM = 16.0f;
-    float spacingL = 24.0f;
-    float spacingXL = 32.0f;
-    float spacingXXL = 48.0f;
+    // The legacy names equal the kit's steps xs..xxl (checked when the kit scale arrived), so they read the kit.
+    float spacingXS = NUIKitMetrics::kSpacing[NUIKitMetrics::XS];
+    float spacingS = NUIKitMetrics::kSpacing[NUIKitMetrics::S];
+    float spacingM = NUIKitMetrics::kSpacing[NUIKitMetrics::M];
+    float spacingL = NUIKitMetrics::kSpacing[NUIKitMetrics::L];
+    float spacingXL = NUIKitMetrics::kSpacing[NUIKitMetrics::XL];
+    float spacingXXL = NUIKitMetrics::kSpacing[NUIKitMetrics::XXL];
+    // The Aestra Kit's scale, smallest first (space-xxs .. space-xxl). Not used by any layout yet.
+    std::array<float, NUIKitMetrics::Count> kitSpacing = NUIKitMetrics::spacingScale();
     
     // Border radius — "dense instrument" scale, recentered onto the 5-7px
     // mass the UI actually uses (see Aestra-Internals: aestra-docs/ui-type-space-grammar.md).
@@ -385,6 +420,11 @@ public:
     NUIColor getPressedColor(const NUIColor& baseColor) const;
     NUIColor getDisabledColor(const NUIColor& baseColor) const;
     
+    /// Counts theme changes (every notifyThemeChanged: a switch, or an edit of the active theme). Anything built from theme
+    /// colours and kept (a rendered cache, a cached colour set) records the generation it was built in and is stale
+    /// when this has moved on.
+    uint64_t themeGeneration() const { return themeGeneration_; }
+
     // Animation utilities
     std::shared_ptr<NUIAnimation> createColorTransition(
         const NUIColor& from, const NUIColor& to, float durationMs = -1.0f) const;
@@ -401,6 +441,7 @@ private:
     std::function<void(const NUIThemeProperties&)> onThemeChanged_;
     std::map<ThemeSubscriptionId, std::function<void(const NUIThemeProperties&)>> themeSubscribers_;
     ThemeSubscriptionId nextSubscriptionId_ = 1;
+    uint64_t themeGeneration_ = 1;
     
     // Animation for theme switching
     std::shared_ptr<NUIAnimation> themeTransitionAnimation_;
@@ -460,8 +501,14 @@ public:
     static const std::vector<KitTheme>& kitThemes();
     /// The variant called @p key; Ember dark when there is none.
     static NUIThemeProperties createKitTheme(const std::string& key);
+    /// Builds a theme from raw kit tokens ({name, 0xRRGGBBAA}); createKitTheme runs on this same path. Tokens the
+    /// kit does not state keep their derived values.
+    static NUIThemeProperties createThemeFromKitTokens(int mode,
+                                                       const std::vector<std::pair<std::string, uint32_t>>& rgbaTokens);
     /// Fills the surface and depth tokens an older preset does not state, from its polarity.
     static void finishDerivedTokens(NUIThemeProperties& theme);
+    /// Fills the selection family (selectedText ... playhead) from primary, selected, secondary and the surfaces.
+    static void deriveSelectionFamily(NUIThemeProperties& theme);
 };
 
 // ---------------------------------------------------------------------------

@@ -244,12 +244,11 @@ void TrackUIComponent::drawCompOverlay(AestraUI::NUIRenderer& renderer, const Ae
             m_compHintMs = 0;
         } else {
             const float fade = 1.0f - static_cast<float>(age) / static_cast<float>(kHintMs);
-            const AestraUI::NUIColor violet = AestraUI::NUIThemeManager::getInstance().getColor("primary");
+            const AestraUI::NUIColor violet = AestraUI::NUIThemeManager::getInstance().getColor("selectionEdge");
             const float x0 = std::max(xOf(m_compHintStart), gridStart), x1 = std::min(xOf(m_compHintEnd), bounds.right());
             if (x1 > x0) {
-                renderer.fillRect(AestraUI::NUIRect(x0, bounds.y, x1 - x0, bounds.height), violet.withAlpha(0.22f * fade));
-                renderer.drawLine(AestraUI::NUIPoint(x0, bounds.y + 1), AestraUI::NUIPoint(x1, bounds.y + 1), 2.0f, violet.withAlpha(fade));
-                renderer.drawLine(AestraUI::NUIPoint(x0, bounds.y + bounds.height - 1), AestraUI::NUIPoint(x1, bounds.y + bounds.height - 1), 2.0f, violet.withAlpha(fade));
+                renderer.drawLine(AestraUI::NUIPoint(x0, bounds.y + 1), AestraUI::NUIPoint(x1, bounds.y + 1), 2.0f, violet);
+                renderer.drawLine(AestraUI::NUIPoint(x0, bounds.y + bounds.height - 1), AestraUI::NUIPoint(x1, bounds.y + bounds.height - 1), 2.0f, violet);
             }
             repaint(); // keep fading
         }
@@ -258,10 +257,12 @@ void TrackUIComponent::drawCompOverlay(AestraUI::NUIRenderer& renderer, const Ae
     // The span being dragged, in the live-gesture violet.
     if (m_compPressed && m_compDragging) {
         const double a = std::min(m_compAnchorBeat, m_compEndBeat), b = std::max(m_compAnchorBeat, m_compEndBeat);
-        const AestraUI::NUIColor violet = AestraUI::NUIThemeManager::getInstance().getColor("primary");
+        const AestraUI::NUIColor violet = AestraUI::NUIThemeManager::getInstance().getColor("selectionEdge");
         const float x0 = std::max(xOf(a), gridStart), x1 = std::min(xOf(b), bounds.right());
         if (x1 > x0) {
-            renderer.fillRect(AestraUI::NUIRect(x0, bounds.y, x1 - x0, bounds.height), violet.withAlpha(0.32f));
+            // Outline only: this pass runs over the waveforms, and an opaque fill would hide what is being chosen.
+            renderer.drawLine(AestraUI::NUIPoint(x0, bounds.y + 1), AestraUI::NUIPoint(x1, bounds.y + 1), 2.0f, violet);
+            renderer.drawLine(AestraUI::NUIPoint(x0, bounds.y + bounds.height - 1), AestraUI::NUIPoint(x1, bounds.y + bounds.height - 1), 2.0f, violet);
             renderer.drawLine(AestraUI::NUIPoint(x0, bounds.y), AestraUI::NUIPoint(x0, bounds.y + bounds.height), 2.0f,
                               violet);
             renderer.drawLine(AestraUI::NUIPoint(x1, bounds.y), AestraUI::NUIPoint(x1, bounds.y + bounds.height), 2.0f,

@@ -1525,14 +1525,15 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
     const AestraUI::NUIRect controlColumn(bounds.x, bounds.y, controlAreaWidth, bounds.height);
 
     if (isSelected()) {
-        renderer.fillRect(controlColumn,
-                          themeManager.getColor("accentSecondary").lightened(0.12f).withAlpha(0.045f));
-        const auto selectionEdge = AestraUI::NUIColor::white().withAlpha(0.18f);
+        // An opaque selection fill with a solid edge top and bottom (the header is repainted over it by the
+        // children; nothing washes over the controls).
+        renderer.fillRect(controlColumn, themeManager.getColor("selectionFill"));
+        const auto selectionEdge = themeManager.getColor("selectionEdge");
         renderer.drawLine({controlColumn.x, controlColumn.y}, {controlColumn.right(), controlColumn.y}, 1.0f,
                           selectionEdge);
         renderer.drawLine({controlColumn.x, controlColumn.bottom() - 1.0f},
                           {controlColumn.right(), controlColumn.bottom() - 1.0f}, 1.0f,
-                          selectionEdge.withAlpha(0.12f));
+                          selectionEdge);
     } else if (isHovered()) {
         renderer.fillRect(bounds, themeManager.getCurrentTheme().textPrimary.withAlpha(0.026f));
     }
@@ -1549,7 +1550,7 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
         // Static Playlist-lane state is independent from mixer insert state.
         if (lane) {
             if (m_selected) {
-                 baseControlColor = themeManager.getColor("accentSecondary").withAlpha(0.035f);
+                 baseControlColor = themeManager.getColor("selectionFill");
             } else if (lane->solo) {
                  baseControlColor = themeManager.getColor("accentCyan").withAlpha(0.10f);
             } else if (lane->muted) {
@@ -1678,8 +1679,8 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
     const AestraUI::NUIRect controlAreaBounds(bounds.x, bounds.y, controlAreaWidth, bounds.height);
     if (m_isAutomationRow) return renderAutomationRowHeader(renderer, controlAreaBounds); // V82-T1
 
-    // Quiet control slab overlay (recedes so clips stay Level 1).
-    renderer.fillRect(controlAreaBounds, themeManager.getColor("surfaceRaised").withAlpha(isHovered() ? 0.12f : 0.04f));
+    // The header is the bed at rest (a 4% raised wash made a grey that was neither bed nor card); hover lifts it.
+    if (isHovered()) renderer.fillRect(controlAreaBounds, themeManager.getColor("surfaceRaised").withAlpha(0.12f));
 
     AestraUI::NUIRect highlightRect = controlAreaBounds;
     highlightRect.height = 1.0f;
@@ -1729,10 +1730,9 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
 
         // SELECTION OVERLAY
         if (m_selected) {
-            renderer.fillRect(controlAreaBounds, themeManager.getColor("accentSecondary").withAlpha(0.035f));
             AestraUI::NUIRect selectionBar(controlAreaBounds.x, controlAreaBounds.y, 3.0f, controlAreaBounds.height);
             renderer.fillRect(selectionBar,
-                              themeManager.getColor("accentSecondary").lightened(0.12f).withAlpha(0.82f));
+                              themeManager.getColor("selected"));
         }
     }
 
@@ -3068,7 +3068,7 @@ void TrackUIComponent::drawLiveWaveform(AestraUI::NUIRenderer& renderer, const A
     if (endX < gridStartX || startX > bounds.right()) return;
 
     // Drawing Loop — one filled envelope per decimated bucket (#846/#849).
-    const AestraUI::NUIColor waveColor = AestraUI::NUIThemeManager::getInstance().getColor("error"); // Red for recording
+    const AestraUI::NUIColor waveColor = AestraUI::NUIThemeManager::getInstance().getColor("recording"); // capture in progress
 
     const size_t bucketCount = peaks.size() / 2;
     // Same stride as getRecordingDataPeaks (ceiling), so spans line up with

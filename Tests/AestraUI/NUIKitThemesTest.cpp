@@ -9,9 +9,14 @@
 #include "NUIThemeSystem.h"
 
 #include <algorithm>
+#include <cstdio>
+#include <fstream>
 #include <cmath>
+#include <cstdio>
+#include <fstream>
 #include <iostream>
 #include <string>
+#include <utility>
 #include <vector>
 
 using namespace AestraUI;
@@ -86,7 +91,7 @@ void testAllKitThemes() {
         check(t.neuLo.a > 0.0f && t.neuHi.a > 0.0f, key + " has depth light and shade");
         check(t.glassEdge.a > 0.0f, key + " has a glass edge");
         if (k.mode != 1)
-            check(same(t.timelineBed, NUIColor::black()), key + " keeps the pure-black timeline bed");
+            check(same(t.timelineBed, key == "ink-dark" ? NUIColor::fromHex(0x050504) : NUIColor::black()), key + " keeps its outer bed (pure black, or Ink dark's warm near-black)");
         if (k.mode == 2)
             check(t.neuEdge.a > 0.0f, key + " keeps an inner edge on controls");
         else
@@ -108,27 +113,69 @@ void testInk() {
             check(std::string(k.name) == "Ink", std::string(k.key) + " is named simply Ink");
         }
     check(inkRows == 3, "Ink has dark, light and high contrast");
-    check(same(dark.timelineBed, hex(0x000000)) && same(dark.editorWell, hex(0x030303)) &&
-              same(dark.meterBackground, hex(0x030303)),
-          "Ink dark: bed, editor well and meter background are the near-blacks");
-    check(same(dark.backgroundPrimary, hex(0x0a0a0a)) && same(dark.backgroundSecondary, hex(0x1e1e1e)) &&
-              same(dark.surfaceTertiary, hex(0x303030)) && same(dark.surfaceRaised, hex(0x3e3e3e)),
-          "Ink dark surfaces are exact neutral greys");
-    check(same(dark.mixerStripBg, hex(0x1e1e1e)) && same(dark.editorCard, hex(0x1e1e1e)) &&
-              same(dark.editorControl, hex(0x141414)),
+    check(same(dark.timelineBed, hex(0x050504)) && same(dark.editorWell, hex(0x050504)) &&
+              same(dark.meterBackground, hex(0x050504)),
+          "Ink dark: the outer bed, editor well and meter background are the warm near-black (clay charcoal, 23 Nov)");
+    check(same(dark.backgroundPrimary, hex(0x1a1816)) && same(dark.backgroundSecondary, hex(0x211e1c)) &&
+              same(dark.surfaceTertiary, hex(0x2f2b29)) && same(dark.surfaceRaised, hex(0x3d3835)),
+          "Ink dark surfaces are the warm charcoal ladder: panel, card, control, raised");
+    check(same(dark.mixerStripBg, hex(0x211e1c)) && same(dark.editorCard, hex(0x211e1c)) &&
+              same(dark.editorControl, hex(0x1a1816)),
           "Ink dark mixer strip, editor card and control");
-    check(same(dark.borderSubtle, hex(0x3e3e3e)) && same(dark.border, hex(0x525252)) &&
-              same(dark.borderStrong, hex(0x747474)) && same(dark.divider, hex(0x3e3e3e)) &&
-              same(dark.controlEdge, hex(0x747474)),
-          "Ink dark borders");
-    check(same(dark.textPrimary, hex(0xf5f5f5)) && same(dark.textSecondary, hex(0xc7c7c7)) &&
-              same(dark.textMuted, hex(0x9e9e9e)) && same(dark.textDisabled, hex(0x717171)),
+    check(same(dark.borderSubtle, hex(0x2f2b29)) && same(dark.border, hex(0x4f4943)) &&
+              same(dark.borderStrong, hex(0x756d65)) && same(dark.controlEdge, hex(0x756d65)),
+          "Ink dark borders are warm charcoal");
+    {
+        // The whole family is tinted: every surface, border, wash and shade leans the same warm way (red >= green >= blue,
+        // red above blue), so no neutral or cool grey is left in it (the old #1e1e1e / #303030 read as dirty, and the
+        // slate before the clay pick read as muddy). A neutral grey fails the same check.
+        const auto tinted = [](const NUIColor& c) {
+            return c.r > c.b && c.r >= c.g - 1e-4f && c.g >= c.b - 1e-4f; // warm-leaning, not grey
+        };
+        const std::pair<const char*, NUIColor> family[] = {
+            {"timelineBed", dark.timelineBed}, {"backgroundPrimary", dark.backgroundPrimary}, {"backgroundSecondary", dark.backgroundSecondary},
+            {"surfaceTertiary", dark.surfaceTertiary}, {"surfaceRaised", dark.surfaceRaised}, {"editorCard", dark.editorCard},
+            {"editorWell", dark.editorWell}, {"editorControl", dark.editorControl}, {"meterBackground", dark.meterBackground},
+            {"mixerStripBg", dark.mixerStripBg}, {"border", dark.border}, {"borderSubtle", dark.borderSubtle},
+            {"borderStrong", dark.borderStrong}, {"divider", dark.divider}, {"controlEdge", dark.controlEdge},
+            {"hover", dark.hover}, {"pressed", dark.pressed}, {"gridMajor", dark.gridMajor}, {"gridMinor", dark.gridMinor},
+            {"overlay", dark.overlay}, {"shadow", dark.shadow}, {"neuHi", dark.neuHi}, {"neuLo", dark.neuLo},
+            {"glassHi", dark.glassHi}, {"glassShade", dark.glassShade}};
+        for (const auto& [name, col] : family) check(tinted(col), std::string("Ink dark ") + name + " is warm-tinted, not a neutral grey");
+        check(!tinted(NUIColor::fromHex(0x1e1e1e)) && !tinted(NUIColor::fromHex(0x303030)), "(negative control) the old neutral greys fail the check");
+        // The steps: outer < panel < card < control < raised, each at least 1.07, panel to card the compromise that keeps
+        // the selected violet 3:1 on a card; outer to panel and control steps are 1.15 or more.
+        check(contrast(dark.backgroundPrimary, dark.timelineBed) >= 1.15f, "outer to panel is at least 1.15:1");
+        check(contrast(dark.backgroundSecondary, dark.backgroundPrimary) >= 1.065f, "panel to card is 1.07:1 (the 3:1 selected-on-card compromise)");
+        check(contrast(dark.surfaceTertiary, dark.backgroundSecondary) >= 1.15f && contrast(dark.surfaceRaised, dark.surfaceTertiary) >= 1.15f,
+              "card to control and control to raised are at least 1.15:1");
+        check(contrast(dark.selected, dark.backgroundSecondary) >= 3.0f && contrast(dark.selected, dark.backgroundPrimary) >= 3.0f &&
+                  contrast(dark.selected, dark.timelineBed) >= 3.0f, "the selected violet is 3:1 on the card, the panel and the outer bed");
+        for (const NUIColor* s : {&dark.timelineBed, &dark.backgroundPrimary, &dark.backgroundSecondary, &dark.surfaceTertiary, &dark.surfaceRaised})
+            check(contrast(dark.textPrimary, *s) >= 4.5f && contrast(dark.textSecondary, *s) >= 4.5f, "primary and secondary text read on every level");
+        check(contrast(dark.textMuted, dark.timelineBed) >= 4.5f && contrast(dark.textMuted, dark.backgroundPrimary) >= 4.5f &&
+                  contrast(dark.textMuted, dark.backgroundSecondary) >= 4.5f, "muted text reads on the outer bed, the panel and the card");
+        check(contrast(dark.accentText, dark.timelineBed) >= 4.5f && contrast(dark.accentText, dark.backgroundSecondary) >= 4.5f, "accent text reads on the outer bed and the card");
+    }
+    check(same(dark.textPrimary, hex(0xf4f0ea)) && same(dark.textSecondary, hex(0xcbc4ba)) &&
+              same(dark.textMuted, hex(0x9f978c)) && same(dark.textDisabled, hex(0x717171)),
           "Ink dark text greys");
-    check(same(dark.primary, hex(0x9f63fd)) && same(dark.primaryHover, hex(0xab7cff)) &&
-              same(dark.primaryPressed, hex(0x8e4fe8)) && same(dark.textOnPrimary, hex(0x070707)),
-          "Ink dark accent");
+    check(same(dark.primary, hex(0x764bdf)) && same(dark.primaryHover, hex(0x8a66ea)) &&
+              same(dark.primaryPressed, hex(0x6538c5)) && same(dark.textOnPrimary, hex(0xffffff)),
+          "Ink dark accent (option C: deep violet, white labels)");
+    check(contrast(dark.primaryHover, dark.primary) > 1.0f && contrast(dark.primaryPressed, dark.backgroundPrimary) > 1.0f &&
+              (dark.primaryHover.r + dark.primaryHover.g + dark.primaryHover.b) >
+                  (dark.primary.r + dark.primary.g + dark.primary.b) &&
+              (dark.primaryPressed.r + dark.primaryPressed.g + dark.primaryPressed.b) <
+                  (dark.primary.r + dark.primary.g + dark.primary.b),
+          "Ink dark hover is lighter and pressed is darker than the primary");
+    check(contrast(dark.primary, dark.backgroundPrimary) >= 3.0f && contrast(dark.primary, dark.backgroundSecondary) >= 3.0f,
+          "the selected fill is a 3:1 mark on the bed and on a card");
+    check(contrast(dark.accentText, dark.backgroundPrimary) >= 4.5f && contrast(dark.accentText, dark.backgroundSecondary) >= 4.5f,
+          "violet used as text (accentText) reads 4.5:1 on the bed and on a card");
+    check(same(dark.focusRing, dark.primary), "the focus ring follows the primary");
     check(same(dark.selected, dark.primary) && dark.selected.a == 1.0f,
-          "variant B: selected is the solid lit primary, no alpha");
+          "selected is the solid deep-violet primary, no alpha");
     check(same(dark.focusRing, dark.primary) && dark.focusRing.a == 1.0f, "the focus ring is opaque");
     check(contrast(dark.textOnPrimary, dark.selected) >= 4.5f, "textOnPrimary reads on the selected fill");
     check(same(dark.success, hex(0x3fc168)) && same(dark.warning, hex(0xfcab00)) && same(dark.error, hex(0xfd7468)) &&
@@ -137,7 +184,7 @@ void testInk() {
     check(std::fabs(dark.hover.a - 15.0f / 255.0f) < 1e-3f,
           "the hover overlay stays an alpha for now");
     check(same(light.backgroundPrimary, hex(0xede9e1)) && same(light.backgroundSecondary, hex(0xfffbf4)) &&
-              same(light.timelineBed, hex(0xf2f0eb)) && same(light.primary, hex(0x8f50ea)) &&
+              same(light.timelineBed, hex(0xf2f0eb)) && same(light.primary, hex(0x764bdf)) &&
               same(light.textOnPrimary, hex(0xffffff)),
           "Ink light is Paper's surfaces under Ink's accent");
     check(same(light.selected, light.primary) && contrast(light.textOnPrimary, light.selected) >= 4.5f,
@@ -145,6 +192,11 @@ void testInk() {
     check(contrast(light.borderStrong, light.backgroundSecondary) >= 3.0f &&
               contrast(light.borderStrong, light.backgroundPrimary) >= 3.0f,
           "Ink light strong border reads at 3:1");
+    check(light.primaryHover.r < light.primary.r && light.primaryPressed.r < light.primaryHover.r,
+          "Ink light hover and pressed step darker");
+    check(contrast(light.primary, light.backgroundPrimary) >= 3.0f && contrast(light.accentText, light.backgroundPrimary) >= 4.5f &&
+              contrast(light.accentText, light.backgroundSecondary) >= 4.5f,
+          "Ink light: the selection is a mark on the bed, violet text reads 4.5:1");
     check(hc.mode == 2 && same(hc.timelineBed, NUIColor::black()), "Ink high contrast is a high-contrast theme");
     check(same(hc.primary, NUIThemePresets::createKitTheme("ember-hc").primary), "Ink high contrast copies Ember's");
 
@@ -153,6 +205,56 @@ void testInk() {
     check(same(ember.primary, hex(0x8a3ff0)) && same(ember.backgroundPrimary, hex(0x0a0908)),
           "Ember dark is unchanged");
     check(ember.selected.a < 0.5f, "Ember dark keeps its alpha selection");
+}
+
+// The selection family: every theme states it, all opaque, and each pairing meets its floor.
+void testSelectionFamily() {
+    std::cout << "selection family\n";
+    for (const auto& k : NUIThemePresets::kitThemes()) {
+        const std::string key = k.key;
+        const auto t = NUIThemePresets::createKitTheme(key);
+        const bool solid = t.selected.a >= 0.9f;
+        check(t.selectionFill.a == 1.0f && t.selectionTint.a == 1.0f && t.selectionEdge.a == 1.0f && t.hoverSelected.a == 1.0f &&
+                  t.accentText.a == 1.0f && t.playhead.a == 1.0f && t.selectedText.a == 1.0f,
+              key + ": the selection family is opaque");
+        check(contrast(t.selectedText, solid ? t.selected : t.selectionFill) >= 4.5f,
+              key + ": selectedText reads on what it labels");
+        check(contrast(t.textPrimary, t.selectionFill) >= 4.5f, key + ": textPrimary reads on selectionFill");
+        check(contrast(t.accentText, t.backgroundPrimary) >= 4.5f && contrast(t.accentText, t.backgroundSecondary) >= 4.5f,
+              key + ": accentText reads on the bed and on a card");
+        check(contrast(t.textPrimary, t.selectionTint) >= 4.5f, key + ": textPrimary reads on selectionTint");
+        check(contrast(t.selectionEdge, t.selectionTint) >= 3.0f, key + ": selectionEdge is a mark on selectionTint");
+        check(contrast(t.selectionEdge, t.backgroundSecondary) >= 3.0f, key + ": selectionEdge is a mark on a card");
+        check(contrast(t.playhead, t.backgroundPrimary) >= 3.0f && contrast(t.playhead, t.surfaceTertiary) >= 3.0f &&
+                  contrast(t.playhead, t.surfaceRaised) >= 3.0f,
+              key + ": the playhead reads 3:1 on the bed, a control and a raised surface");
+    }
+}
+
+// A key that is an alias of a property (accent for primary, selection for selected) loses to the property's own key when a
+// file supplies both (owner's note in applyJSONThemeOverrides, 21 Nov 2026). accent/accentHover/accentPressed used to win.
+void testCanonicalKeyBeatsAlias() {
+    std::cout << "canonical keys beat their aliases\n";
+    const std::string path = "theme_alias_test.json";
+    {
+        std::ofstream out(path);
+        out << R"({"colors": {
+            "accent": "#aa0000", "primary": "#00aa00", "accentHover": "#bb0000", "primaryHover": "#00bb00",
+            "accentPressed": "#cc0000", "primaryPressed": "#00cc00", "selection": "#dd0000", "selected": "#00dd00",
+            "recessedPanel": "#110000", "backgroundSecondary": "#001100"}})";
+    }
+    const auto hex = [](unsigned v) { return NUIColor::fromHex(v); };
+    auto& manager = NUIThemeManager::getInstance();
+    check(manager.loadThemeFromFile("alias-test", path, "ink-dark"), "the theme file loads over Ink dark");
+    manager.setActiveTheme("alias-test");
+    const auto& t = manager.getCurrentTheme();
+    check(same(t.primary, hex(0x00aa00)), "primary beats accent");
+    check(same(t.primaryHover, hex(0x00bb00)), "primaryHover beats accentHover");
+    check(same(t.primaryPressed, hex(0x00cc00)), "primaryPressed beats accentPressed");
+    check(same(t.selected, hex(0x00dd00)), "selected beats selection");
+    check(same(t.backgroundSecondary, hex(0x001100)), "backgroundSecondary beats recessedPanel");
+    manager.setActiveTheme("ink-dark");
+    std::remove(path.c_str());
 }
 
 void testAliases() {
@@ -222,13 +324,123 @@ void testDepth() {
     manager.setActiveTheme("Aestra-dark");
 }
 
+using Tokens = std::vector<std::pair<std::string, uint32_t>>;
+
+NUIColor rgba(uint32_t v) {
+    return NUIColor(((v >> 24) & 0xffu) / 255.0f, ((v >> 16) & 0xffu) / 255.0f, ((v >> 8) & 0xffu) / 255.0f,
+                    (v & 0xffu) / 255.0f);
+}
+
+// Status colours, domain states and generic interaction states are three groups: a kit that states a domain state
+// keeps it, and only a kit that leaves one out gets the status colour it historically aliased.
+void testDomainStatesSurvive() {
+    std::cout << "kit states its own domain tokens\n";
+    const Tokens base = {{"warning", 0xe0a010ffu}, {"error", 0xd02030ffu}, {"secondary", 0x2090d0ffu},
+                         {"textDisabled", 0x707070ffu}};
+    Tokens stated = base;
+    stated.insert(stated.end(), {{"muted", 0x111111ffu}, {"soloed", 0x222222ffu}, {"armed", 0x333333ffu},
+                                 {"bypassed", 0x444444ffu}, {"info", 0x555555ffu}, {"recording", 0x666666ffu}});
+    const auto t = NUIThemePresets::createThemeFromKitTokens(0, stated);
+    check(same(t.muted, rgba(0x111111ffu)) && !same(t.muted, t.warning), "explicit muted survives and is not warning");
+    check(same(t.soloed, rgba(0x222222ffu)) && !same(t.soloed, t.secondary), "explicit soloed survives");
+    check(same(t.armed, rgba(0x333333ffu)) && !same(t.armed, t.error), "explicit armed survives and is not error");
+    check(same(t.bypassed, rgba(0x444444ffu)) && !same(t.bypassed, t.textDisabled), "explicit bypassed survives");
+    check(same(t.info, rgba(0x555555ffu)) && !same(t.info, t.secondary), "explicit info survives");
+    check(same(t.recording, rgba(0x666666ffu)) && !same(t.recording, t.armed), "explicit recording differs from armed");
+
+    Tokens armedOnly = base;
+    armedOnly.push_back({"armed", 0x333333ffu});
+    const auto a = NUIThemePresets::createThemeFromKitTokens(0, armedOnly);
+    check(same(a.recording, a.armed) && same(a.armed, rgba(0x333333ffu)), "recording follows a stated armed");
+
+    auto& manager = NUIThemeManager::getInstance();
+    manager.setCustomTheme("domain-test", t);
+    manager.setActiveTheme("domain-test");
+    check(same(manager.getColor("recording"), rgba(0x666666ffu)), "getColor reads recording");
+    check(same(manager.getColor("muted"), rgba(0x111111ffu)), "getColor reads the stated muted");
+    manager.setActiveTheme("Aestra-dark");
+}
+
+void testDomainStatesFallBack() {
+    std::cout << "kit without domain tokens aliases the status colours\n";
+    const Tokens tokens = {{"warning", 0xe0a010ffu}, {"error", 0xd02030ffu}, {"secondary", 0x2090d0ffu},
+                           {"textDisabled", 0x707070ffu}};
+    for (int mode : {0, 1, 2}) {
+        const auto t = NUIThemePresets::createThemeFromKitTokens(mode, tokens);
+        const std::string m = " (mode " + std::to_string(mode) + ")";
+        check(same(t.muted, t.warning), "muted is warning" + m);
+        check(same(t.armed, t.error), "armed is error" + m);
+        check(same(t.soloed, t.secondary), "soloed is secondary" + m);
+        check(same(t.info, t.secondary), "info is secondary" + m);
+        check(same(t.bypassed, t.textDisabled), "bypassed is textDisabled" + m);
+        check(same(t.recording, t.armed), "recording is armed" + m);
+    }
+}
+
+void testJsonDomainStates() {
+    std::cout << "JSON themes keep the legacy fallbacks\n";
+    const char* path = "theme_domain_states_test.json";
+    auto& manager = NUIThemeManager::getInstance();
+    const auto load = [&](const std::string& body, const std::string& name) {
+        std::ofstream(path, std::ios::binary | std::ios::trunc) << body;
+        const bool ok = manager.loadThemeFromFile(name, path, "ember-dark");
+        std::remove(path);
+        return ok;
+    };
+    check(load(R"({"colors": {"warning": "#e0a010", "error": "#d02030", "muted": "#111111"}})", "json-explicit"),
+          "theme with an explicit muted loads");
+    manager.setActiveTheme("json-explicit");
+    check(same(manager.getColor("muted"), rgba(0x111111ffu)), "explicit muted beats the warning fallback");
+    check(same(manager.getColor("armed"), manager.getColor("error")), "absent armed falls back to error");
+    check(same(manager.getColor("recording"), manager.getColor("armed")), "absent recording follows armed");
+    check(load(R"({"colors": {"warning": "#e0a010"}})", "json-fallback"), "theme without muted loads");
+    manager.setActiveTheme("json-fallback");
+    check(same(manager.getColor("muted"), manager.getColor("warning")), "absent muted falls back to warning");
+    check(load(R"({"colors": {"error": "#d02030", "recording": "#777777"}})", "json-recording"), "recording theme loads");
+    manager.setActiveTheme("json-recording");
+    check(same(manager.getColor("recording"), rgba(0x777777ffu)) && !same(manager.getColor("recording"), manager.getColor("armed")),
+          "explicit recording beats the armed fallback");
+    manager.setActiveTheme("Aestra-dark");
+}
+
+// The kit's spacing scale (tokens.json, group "spacing") is pinned here; regenerate NUIKitMetrics.inc with
+// tools/theme/gen_kit_metrics.py when the kit changes it. The legacy names keep their values: no layout moves.
+void testKitSpacing() {
+    std::cout << "kit spacing scale\n";
+    auto& manager = NUIThemeManager::getInstance();
+    manager.setActiveTheme("ember-dark");
+    const std::pair<const char*, float> kit[] = {{"space-xxs", 2.0f}, {"space-xs", 4.0f}, {"space-s", 8.0f},
+                                                 {"space-m", 16.0f},  {"space-l", 24.0f}, {"space-xl", 32.0f},
+                                                 {"space-xxl", 48.0f}};
+    float previous = 0.0f;
+    for (const auto& [name, px] : kit) {
+        const float v = manager.getSpacing(name);
+        check(v == px, std::string(name) + " is " + std::to_string(static_cast<int>(px)) + "px");
+        check(v > previous, std::string(name) + " is larger than the step before");
+        previous = v;
+    }
+    check(manager.getSpacing("xxs") == 2.0f, "short name xxs reads the kit");
+    check(manager.getSpacing("xl") == 32.0f && manager.getSpacing("xxl") == 48.0f, "short names xl and xxl read the kit");
+    check(manager.getSpacing("xs") == 4.0f && manager.getSpacing("s") == 8.0f && manager.getSpacing("m") == 16.0f &&
+              manager.getSpacing("l") == 24.0f,
+          "legacy names xs, s, m, l are unchanged");
+    check(manager.getSpacing("no-such-step") == 16.0f, "an unknown name still falls back to m");
+    manager.setActiveTheme("Aestra-dark");
+}
+
 } // namespace
 
 int main() {
     testAllKitThemes();
     testInk();
+    testSelectionFamily();
+    testCanonicalKeyBeatsAlias();
     testAliases();
     testDepth();
+    testDomainStatesSurvive();
+    testDomainStatesFallBack();
+    testJsonDomainStates();
+    testKitSpacing();
     std::cout << (gFailures == 0 ? "ALL PASS\n" : "FAILURES: " + std::to_string(gFailures) + "\n");
     return gFailures == 0 ? 0 : 1;
 }

@@ -6,7 +6,7 @@ Aestra is a digital audio workstation. This page says why it exists and what it 
 
 Making music should not mean fighting your tools first. Most music software assumes a powerful computer, money to spend, and time to learn a complicated interface. Many people have none of these.
 
-Free DAWs are no longer rare, and that is good for everyone who makes music. So being free is not our reason to exist. **Aestra exists to care for and protect the people who make music, and the music they make**, especially people working on modest computers and modest budgets.
+**Aestra exists to care for and protect the people who make music, and the music they make**, especially people working on modest computers and modest budgets.
 
 ## What we promise
 
@@ -37,7 +37,7 @@ We ask for money only for things that cost us money each time they are used, suc
 ## How we behave
 
 **We are honest about limits.**
-We say when something is unfinished, when it cannot do what you asked, and when a recovery attempt failed. Where Aestra uses AI, a guess is marked as a guess.
+We say when something is unfinished, when it cannot do what you asked, and when a recovery attempt failed. We explain where Aestra uses AI, what it is uncertain about, and where we stand.
 
 **We underpromise.**
 We describe Aestra by what it does today. We do not market it by running down other tools, or by playing on the fear of losing work.
@@ -53,7 +53,3 @@ The changelog is in plain words. Known issues are tracked in the open. When a de
 This philosophy is the highest authority for decisions about Aestra, within the law and our duty to keep people safe. Popular demand, commercial pressure and the preference of the moment do not override it on their own.
 
 It can change, rarely and on purpose. A change that strengthens a promise can be made readily. A change that weakens one, above all on protection, privacy or what is free, needs real evidence and a deliberate decision. Every change is dated and published with what changed and why.
-
-## Changes
-
-- **31 October 2026:** added "It understands you". It is the principle our features kept coming back to without a name; naming it lets us check every change against it. It strengthens what Aestra owes you.

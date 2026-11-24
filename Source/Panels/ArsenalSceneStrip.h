@@ -6,6 +6,7 @@
 #include "NUIThemeSystem.h"
 #include "NUIDoubleClick.h"
 #include "UnitRowLook.h"
+#include "NUIDepth.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -181,14 +182,31 @@ public:
         const float after = m_placed.empty() ? m_rect.x : m_rect.x + m_placed.back().x + m_placed.back().w + kGap;
         return {std::min(limit, after), m_rect.y, kAddW, m_rect.height};
     }
-    AestraUI::NUIRect swingRect() const { return {m_rect.right() - kRightW, m_rect.y, kSwingW, m_rect.height}; }
-    AestraUI::NUIRect swingTrackRect() const {
-        const auto sw = swingRect();
-        // 16 high and centred on the same line as the Place button (and the cards), so the row reads as one band.
-        constexpr float h = 16.0f;
-        return {sw.x, sw.y + (sw.height - h) * 0.5f, sw.width, h};
+    /// The right end of the strip (owner pick B, 21 Nov): a labelled swing slider, a divider, and ONE primary button, all
+    /// one height and level on the strip's centre line. Pure geometry, so ArsenalSceneStripTest checks it headless.
+    struct HeaderLayout {
+        AestraUI::NUIRect label;   ///< the word "Swing"
+        AestraUI::NUIRect track;   ///< the slider: drag anywhere on it, as before
+        AestraUI::NUIRect divider; ///< a 1 px rule between the swing group and the button
+        AestraUI::NUIRect place;   ///< "Place in timeline"
+    };
+    static constexpr float kControlH = 30.0f; ///< the slider and the button
+    static constexpr float kLabelW = 40.0f;
+    static constexpr float kLabelGap = 6.0f;
+    static HeaderLayout headerLayout(const AestraUI::NUIRect& strip) {
+        const float y = strip.y + (strip.height - kControlH) * 0.5f;
+        HeaderLayout l;
+        l.place = {strip.right() - kPlaceW, y, kPlaceW, kControlH};
+        l.divider = {l.place.x - kGap - 1.0f, y + 5.0f, 1.0f, kControlH - 10.0f};
+        const float groupRight = l.divider.x - kGap;
+        const float groupLeft = strip.right() - kRightW;
+        l.label = {groupLeft, y, kLabelW, kControlH};
+        l.track = {groupLeft + kLabelW + kLabelGap, y, groupRight - (groupLeft + kLabelW + kLabelGap), kControlH};
+        return l;
     }
-    AestraUI::NUIRect placeRect() const { return {m_rect.right() - kPlaceW, m_rect.y + (m_rect.height - 34.0f) * 0.5f, kPlaceW, 34.0f}; }
+    AestraUI::NUIRect swingRect() const { const auto l = headerLayout(m_rect); return {l.label.x, l.label.y, l.track.right() - l.label.x, kControlH}; }
+    AestraUI::NUIRect swingTrackRect() const { return headerLayout(m_rect).track; }
+    AestraUI::NUIRect placeRect() const { return headerLayout(m_rect).place; }
     float swing() const { return m_swing; }
     /// How much swing, 0 to 100% (100% = every odd sixteenth half a step late), as the mock shows it.
     static int swingPercent(float swing) { return static_cast<int>(std::lround(std::clamp(swing, 0.0f, 1.0f) * 100.0f)); }
@@ -206,7 +224,7 @@ public:
     Hit hitTest(const AestraUI::NUIPoint& pt) const {
         if (!m_rect.contains(pt)) return {};
         if (placeRect().contains(pt)) return {Hit::Kind::Place, 0};
-        if (swingRect().contains(pt)) return {Hit::Kind::Swing, 0};
+        if (swingTrackRect().contains(pt)) return {Hit::Kind::Swing, 0}; // the label is not a control
         if (addRect().contains(pt)) return {Hit::Kind::Add, 0};
         if (pt.x >= addRect().x - kGap) return {};
         for (const auto& p : m_placed) {
@@ -257,37 +275,39 @@ public:
         const float cx = add.x + add.width * 0.5f, cy = add.y + add.height * 0.5f, arm = 6.0f;
         renderer.drawLine({cx - arm, cy}, {cx + arm, cy}, 1.5f, plus);
         renderer.drawLine({cx, cy - arm}, {cx, cy + arm}, 1.5f, plus);
-        // A bounded slider makes the full 0–100% range visible and the current value easy to place.
-        const auto sw = swingRect();
-        const auto track = swingTrackRect();
-        // Keep the value fill inside the rounded track's AA fringe. The GL
-        // rounded-rect primitive expands its quad by 1.5 px, which was visible
-        // as a sliver escaping the left edge for small swing values.
-        constexpr float fillInset = 2.0f;
-        const float fillTrackWidth = std::max(0.0f, track.width - fillInset * 2.0f);
-        const float fillWidth = fillTrackWidth * std::clamp(m_swing, 0.0f, 1.0f);
-        renderer.fillRoundedRect(track, track.height * 0.5f, theme.getColor("backgroundPrimary"));
-        if (fillWidth > 0.0f) {
-            const AestraUI::NUIRect fillRect(track.x + fillInset, track.y + fillInset, fillWidth,
-                                             std::max(1.0f, track.height - fillInset * 2.0f));
-            renderer.fillRoundedRect(fillRect, std::min(fillRect.height * 0.5f, fillRect.width * 0.5f),
-                                     theme.getColor("accentPrimary"));
+        const auto lay = headerLayout(m_rect);
+        const auto& track = lay.track;
+        const float font = tp.fontSizeXS + 1.0f;
+        const auto lineTop = [&](const AestraUI::NUIRect& r) { return r.y + (r.height - renderer.getFontMetrics(font).lineHeight) * 0.5f; };
+        // The label, level with the slider and the button.
+        renderer.drawText("Swing", {lay.label.x, lineTop(lay.label)}, font, theme.getColor("textSecondary"));
+        // The slider: a card-coloured capsule (the panel body is the bed, so a sunk bed would vanish on it), its fill a thumb in the
+        // selection colour, the value centred over both.
+        renderer.fillRoundedRect(track, track.height * 0.5f, theme.getColor("backgroundSecondary"));
+        constexpr float inset = 3.0f; // the pill inset (TransportPillLook / the switcher's pad)
+        const float full = std::max(0.0f, track.width - inset * 2.0f);
+        const float fillW = full * std::clamp(m_swing, 0.0f, 1.0f);
+        if (fillW > 0.0f) {
+            const AestraUI::NUIRect fill(track.x + inset, track.y + inset, std::max(track.height - inset * 2.0f, fillW), track.height - inset * 2.0f);
+            renderer.setClipRect(AestraUI::intersectRects(track, {fill.x, fill.y, std::min(fillW, full), fill.height}));
+            renderer.fillRoundedRect(fill, fill.height * 0.5f, theme.getColor(m_hover.kind == Hit::Kind::Swing || m_swingDrag ? "hoverSelected" : "selected"));
+            renderer.clearClipRect();
+        } else if (m_hover.kind == Hit::Kind::Swing) {
+            renderer.fillRoundedRect({track.x + inset, track.y + inset, track.width - inset * 2.0f, track.height - inset * 2.0f}, (track.height - inset * 2.0f) * 0.5f, theme.getColor("surfaceTertiary"));
         }
-        renderer.strokeRoundedRect(track, track.height * 0.5f, 1.0f, theme.getColor("borderSubtle"));
-        renderer.drawTextCentered("SWING", {sw.x, sw.y + 1.0f, sw.width, 12.0f}, tp.fontSizeMicro,
-                                  theme.getColor("textMuted"));
-        renderer.drawTextCentered(m_swingMixed ? "MIX" : (std::to_string(swingPercent(m_swing)) + "%"),
-                                  track, tp.fontSizeXS, theme.getColor("textPrimary"));
-        const auto pl = placeRect();
-        // This is a chrome action, so use neutral control colors instead of
-        // coupling its fill and label contrast to the theme accent.
-        renderer.fillRoundedRect(pl, tp.radiusXS, m_hover.kind == Hit::Kind::Place ? AestraUI::NUIColor::lerp(theme.getColor("buttonBgDefault"), theme.getColor("surfaceRaised"), 0.6f) : theme.getColor("buttonBgDefault"));
-        renderer.strokeRoundedRect(pl, tp.radiusXS, 1.0f, theme.getColor("borderSubtle"));
-        const auto buttonText = theme.getColor("buttonTextDefault");
-        const float labelFont = tp.fontSizeXS + 1.0f, arrowW = 11.0f, arrowGap = 8.0f;
-        const float labelW = renderer.measureText("Place in timeline", labelFont).width;
+        const bool onFill = fillW > track.width * 0.5f - inset;
+        renderer.drawTextCentered(m_swingMixed ? "MIX" : (std::to_string(swingPercent(m_swing)) + "%"), track, font,
+                                  theme.getColor(onFill ? "selectedText" : "textPrimary"));
+        renderer.fillRect(lay.divider, theme.getColor("borderSubtle"));
+        // The one primary button: the selection colour, one step lighter under the pointer.
+        const auto& pl = lay.place;
+        const bool placeHot = m_hover.kind == Hit::Kind::Place;
+        renderer.fillRoundedRect(pl, pl.height * 0.5f, theme.getColor(placeHot ? "hoverSelected" : "selected"));
+        const auto buttonText = theme.getColor("selectedText");
+        const float arrowW = 11.0f, arrowGap = 8.0f;
+        const float labelW = renderer.measureText("Place in timeline", font).width;
         const float startX = pl.x + (pl.width - (labelW + arrowGap + arrowW)) * 0.5f, midY = pl.y + pl.height * 0.5f;
-        renderer.drawText("Place in timeline", {startX, midY - renderer.getFontMetrics(labelFont).lineHeight * 0.5f}, labelFont, buttonText);
+        renderer.drawText("Place in timeline", {startX, lineTop(pl)}, font, buttonText);
         // The board's trailing arrow: it sends the pattern on to the timeline.
         const float ax = startX + labelW + arrowGap;
         renderer.drawLine({ax, midY}, {ax + arrowW, midY}, 1.5f, buttonText);

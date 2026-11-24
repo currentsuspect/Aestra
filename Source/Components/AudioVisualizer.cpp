@@ -28,8 +28,8 @@ AudioVisualizer::AudioVisualizer()
     , mode_(AudioVisualizationMode::Waveform)
     , sensitivity_(0.8f)
     , decayRate_(0.95f)
-    , primaryColor_(NUIColor::fromHex(0xbb86fc))    // Aestra Purple
-    , secondaryColor_(NUIColor::fromHex(0xd1b3ff))  // Lighter complementary purple
+    , primaryColor_(NUIThemeManager::getInstance().getColor("accentText"))       // the theme accent, read as text/line
+    , secondaryColor_(NUIThemeManager::getInstance().getColor("hoverSelected"))  // its lighter step
     , showStereo_(true)
     , showPeakHold_(true)
     , displayBufferSize_(1024)

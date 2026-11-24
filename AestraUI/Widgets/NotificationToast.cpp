@@ -152,7 +152,7 @@ void NotificationToast::drawAction(NUIRenderer& renderer)
     renderer.setOpacity(static_cast<float>(std::clamp(std::min(age / kFadeIn, remaining / kFadeOut), 0.0, 1.0)));
 
     // Design Spec, Toast: a floating card, no outline. The dot is the row's own colour; the primary is a raised cap.
-    Depth::floatingCard(renderer, pill_, 8.0f, t.surfaceRaised);
+    Depth::floatingCard(renderer, pill_, 8.0f, t.surfaceTertiary); // the floating layer, one step, as a menu is
     float cx = x + kPad;
     const float midY = y + kActionH * 0.5f;
     renderer.fillRoundedRect({cx, midY - kDot * 0.5f, kDot, kDot}, 2.0f, NUIColor::fromHex(action_->dotRgb));
@@ -160,7 +160,7 @@ void NotificationToast::drawAction(NUIRenderer& renderer)
     renderer.drawText(action_->text, {cx, renderer.calculateTextY(NUIRect{0.0f, y, 0.0f, kActionH}, kFont)}, kFont, t.textPrimary);
     cx += textW + kGap;
     primaryRect_ = {cx, midY - kBtnH * 0.5f, primW, kBtnH};
-    Depth::object(renderer, primaryRect_, 5.0f, Depth::ObjectLook{t.surfaceRaised.lightened(0.10f), false});
+    Depth::object(renderer, primaryRect_, 5.0f, Depth::ObjectLook{t.surfaceRaised, false});
     renderer.drawTextCentered(action_->primaryLabel, primaryRect_, kFont, t.textPrimary);
     cx += primW + 4.0f;
     secondaryRect_ = {};

@@ -53,7 +53,7 @@ constexpr float kPresetArtworkPixels = 256.0f; // matches the committed 256x256 
 NUIColor verbSurfaceBg() { return editorNeutral(0.044f, 0.985f); }
 NUIColor verbInsetBg() { return editorNeutral(0.025f, 0.965f); }
 NUIColor verbGold() { return NUIColor(0.88f, 0.63f, 0.13f, 1.0f); }
-NUIColor verbAccent() { return NUIColor(0.498f, 0.353f, 0.941f, 1.0f); }
+NUIColor verbAccent() { return NUIThemeManager::getInstance().getColor("selected"); }
 float presetColumnWidth(float editorWidth) { return std::clamp(editorWidth * 0.235f, 168.0f, 210.0f); }
 float editorContentX(const NUIRect& b) { return b.x + 18.0f + presetColumnWidth(b.width) + 18.0f; }
 float rightColWidth(float editorWidth) { return std::clamp(editorWidth * 0.29f, 196.0f, 238.0f); }
@@ -936,7 +936,7 @@ void AestraVerbEditor::drawSectionLabels(NUIRenderer& renderer) {
         const NUIRect card(rightX, y, rightW, height);
         renderer.fillRoundedRect(card, 9.0f, editorNeutral(NUIColor(0.030f, 0.030f, 0.035f, 0.97f)));
         renderer.strokeRoundedRect(card, 9.0f, 1.0f, editorInk(0.075f));
-        renderer.fillCircle({rightX + 13.0f, y + 13.0f}, 2.0f, verbAccent().withAlpha(0.72f));
+        renderer.fillCircle({rightX + 13.0f, y + 13.0f}, 2.0f, verbAccent());
         const NUIRect headerRow(rightX + 21.0f, y, rightW - 33.0f, headerH);
         renderer.drawText(label, {headerRow.x, std::round(renderer.calculateTextY(headerRow, 8.5f))}, 8.5f,
                           NUIColor(0.72f, 0.70f, 0.80f, 0.78f));

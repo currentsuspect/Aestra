@@ -10,9 +10,6 @@
 namespace AestraUI {
 
 namespace {
-constexpr float kRadius = 4.0f;
-constexpr float kDot = 6.0f;
-constexpr float kFont = 9.5f;
 } // namespace
 
 void UIOutputChip::setLabel(std::string label) {
@@ -50,26 +47,17 @@ void UIOutputChip::onRender(NUIRenderer& renderer) {
         renderer.fillRoundedRect(NUIRect{b.x, b.y, b.width, b.height}, 2.0f, m_color.withAlpha(0.85f * alpha));
         return;
     }
-    const NUIRect r{std::floor(b.x) + 0.5f, std::floor(b.y) + 0.5f, std::max(1.0f, std::floor(b.width) - 1.0f),
-                    std::max(1.0f, std::floor(b.height) - 1.0f)};
-
-    renderer.fillRoundedRect(r, kRadius, m_color.withAlpha((m_hovered ? 0.24f : 0.14f) * alpha));
-    renderer.strokeRoundedRect(r, kRadius, 1.0f, m_color.withAlpha((m_hovered ? 0.70f : 0.42f) * alpha));
-
-    const NUIRect dot{r.x + 5.0f, r.y + (r.height - kDot) * 0.5f, kDot, kDot};
-    renderer.fillRoundedRect(dot, kDot * 0.5f, m_color.withAlpha(alpha));
-
-    const float textX = dot.right() + 4.0f;
-    const NUIRect textRect{textX, r.y, std::max(1.0f, r.right() - textX - 4.0f), r.height};
-    // The arrow says "goes to"; ellipsis keeps a long bus name inside the pill.
-    std::string text = "\xE2\x86\x92 " + m_label;
-    const float avail = textRect.width;
-    while (text.size() > 4 && renderer.measureText(text, kFont).width > avail)
+    // Design Spec, Mixer (board p-mixer2): the output is one line of muted text under the name, "to Master", with
+    // no pill. Hover brightens it; it is still the click target for the route picker.
+    constexpr float kLine = 10.0f;
+    std::string text = "to " + m_label;
+    while (text.size() > 4 && renderer.measureText(text, kLine).width > b.width) {
         text.pop_back();
-    if (text.size() < m_label.size() + 4)
-        text += "\xE2\x80\xA6";
-    renderer.drawText(text, {textRect.x, textRect.y + (textRect.height - kFont) * 0.5f - 1.0f}, kFont,
-                      theme.getColor("textPrimary").withAlpha(0.9f * alpha));
+        while (!text.empty() && (static_cast<unsigned char>(text.back()) & 0xC0) == 0x80) text.pop_back();
+        if (renderer.measureText(text + "\xE2\x80\xA6", kLine).width <= b.width) { text += "\xE2\x80\xA6"; break; }
+    }
+    renderer.drawTextCentered(text, b, kLine,
+                              (m_hovered ? theme.getColor("textPrimary") : theme.getColor("textMuted")).withAlpha(alpha));
 }
 
 bool UIOutputChip::onMouseEvent(const NUIMouseEvent& event) {

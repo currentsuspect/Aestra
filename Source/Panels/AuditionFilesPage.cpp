@@ -104,7 +104,7 @@ void AuditionFilesPage::onRender(NUIRenderer& r) {
     for (size_t i = 0; i < l.places.size(); ++i) {
         const bool here = m_places[i].path == m_dir;
         const bool hot = m_hoverControl == "place" + std::to_string(i);
-        r.fillRect(l.places[i], here ? theme.getColor("accentPrimary").withAlpha(0.28f) : hot ? theme.getColor("surfaceRaised") : theme.getColor("surfaceTertiary"));
+        r.fillRect(l.places[i], here ? theme.getColor("selectionFill") : hot ? theme.getColor("surfaceRaised") : theme.getColor("surfaceTertiary"));
         const float tw = r.measureText(m_places[i].name, 11.0f).width;
         r.drawText(m_places[i].name, {l.places[i].x + (l.places[i].width - tw) * 0.5f, std::round(r.calculateTextY(l.places[i], 11.0f))}, 11.0f, here ? text : muted);
     }
@@ -125,7 +125,7 @@ void AuditionFilesPage::onRender(NUIRenderer& r) {
             r.fillRect({row.x + 24.0f, cy - 8.0f, 7.0f, 3.0f}, muted);
         } else {
             static const float bars[] = {4, 9, 6, 12, 8, 5, 10, 4};
-            for (int k = 0; k < 8; ++k) r.fillRect({row.x + 24.0f + static_cast<float>(k) * 2.2f, cy - bars[k] * 0.5f, 1.4f, bars[k]}, theme.getColor("accentPrimary").withAlpha(0.85f));
+            for (int k = 0; k < 8; ++k) r.fillRect({row.x + 24.0f + static_cast<float>(k) * 2.2f, cy - bars[k] * 0.5f, 1.4f, bars[k]}, theme.getColor("selectionEdge"));
         }
         std::string name = e.name;
         const float maxName = row.width - 24.0f - 56.0f - 24.0f - (hot && !e.folder ? 150.0f : 74.0f);

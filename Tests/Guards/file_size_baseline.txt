@@ -10,10 +10,10 @@
 3588 AestraUI/Graphics/OpenGL/NUIRendererGL.cpp
 5646 AestraUI/Widgets/AestraEQEditor.cpp
 1585 AestraUI/Widgets/AestraVerbEditor.cpp
-1927 AestraUI/Widgets/PianoRollNoteLayer.cpp
-1937 AestraUI/Widgets/UnitRow.cpp
+1925 AestraUI/Widgets/PianoRollNoteLayer.cpp
+1936 AestraUI/Widgets/UnitRow.cpp
 2577 Source/App/AestraApp.cpp
-3856 Source/Components/FileBrowser.cpp
+3840 Source/Components/FileBrowser.cpp
 3170 Source/Components/TrackUIComponent.cpp
 4876 Source/Core/AestraContent.cpp
 2880 Source/Core/ProjectSerializer.cpp
