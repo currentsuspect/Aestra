@@ -25,3 +25,21 @@ void AestraApp::watchAudioDevice() {
             });
         });
 }
+
+// At startup the stream is opened once, in finalizeAudioSetup(). If no real device could be opened the app runs on the
+// silent safety driver, or with no stream at all, and nothing else would tell the user why there is no sound.
+// The manager keeps the technical cause; it goes to the log, and the user gets a plain sentence, once.
+void AestraApp::announceAudioUnavailableAtStart(bool streamOpened) {
+    if (!m_audioController) return;
+    auto* manager = m_audioController->getDeviceManager();
+    const bool onSilentDriver = manager && manager->getActiveDriverType() == Audio::AudioDriverType::DUMMY;
+    if (streamOpened && !onSilentDriver) return;
+
+    const std::string cause = manager ? manager->getDriverRegistrationFailure() : std::string();
+    Log::warning(std::string("[Audio] No real audio device at startup (") +
+                 (streamOpened ? "running on the silent driver" : "the stream did not open") + ")" +
+                 (cause.empty() ? std::string() : ": " + cause));
+
+    const AudioDeviceNotice notice = m_audioDeviceNotice.onUnavailableAtStart();
+    if (notice.show && m_content) m_content->showToast(notice.text);
+}

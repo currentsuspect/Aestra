@@ -1502,6 +1502,19 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/DeviceManagerRaceTest.cpp")
 endif()
 
 # #650 (FD-64): the wording the user sees when the audio interface drops out and returns. Header-only, no UI.
+# The real audio driver is missing at startup: the manager keeps the cause and reports it with the fallback (#1274)
+add_executable(DriverRegistrationFailureTest AestraAudio/DriverRegistrationFailureTest.cpp)
+target_link_libraries(DriverRegistrationFailureTest PRIVATE AestraAudio)
+target_include_directories(DriverRegistrationFailureTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+    ${CMAKE_SOURCE_DIR}/AestraAudio/src
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME DriverRegistrationFailureTest COMMAND DriverRegistrationFailureTest)
+set_tests_properties(DriverRegistrationFailureTest PROPERTIES LABELS "audio;device;regression;contract:audio" TIMEOUT 60)
+
 add_executable(AudioDeviceNoticeTest App/AudioDeviceNoticeTest.cpp)
 target_include_directories(AudioDeviceNoticeTest PRIVATE ${CMAKE_SOURCE_DIR}/Source)
 add_test(NAME AudioDeviceNoticeTest COMMAND AudioDeviceNoticeTest)

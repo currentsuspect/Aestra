@@ -293,6 +293,7 @@ private:
     std::shared_ptr<Aestra::UpdateNotifier> m_updateNotifier;
     // Audio interface lost / back (AestraAppAudioStatus.cpp, #650): tells the user in a toast.
     void watchAudioDevice();
+    void announceAudioUnavailableAtStart(bool streamOpened); // no real device at startup: say so, once
     Aestra::AudioDeviceNoticeState m_audioDeviceNotice;
 
     // Declared before m_content so it outlives every surface that reads it (reverse destruction order).

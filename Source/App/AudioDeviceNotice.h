@@ -30,10 +30,19 @@ public:
         return {true, who + " is back.", 6.0};
     }
 
+    /// Startup: no real audio device could be opened, so Aestra is running on the silent driver. Said once.
+    /// The technical reason goes to the log; the user is told what it means and what to try.
+    AudioDeviceNotice onUnavailableAtStart() {
+        if (m_unavailableAtStartSaid) return {};
+        m_unavailableAtStartSaid = true;
+        return {true, "Aestra couldn't open an audio device, so it's running without sound. Check your sound settings, then restart Aestra.", 15.0};
+    }
+
     bool substituted() const { return m_substituted; }
 
 private:
     bool m_substituted = false;
+    bool m_unavailableAtStartSaid = false;
 };
 
 } // namespace Aestra
