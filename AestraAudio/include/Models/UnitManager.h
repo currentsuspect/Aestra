@@ -409,8 +409,9 @@ public:
      *
      * Call from the main/control thread whenever Arsenal state changes
      * (unit created/destroyed, route changed, plugin attached, mute/solo/enabled changed).
-     * The audio thread reads the published snapshot via getAudioSnapshot() without
-     * allocating, locking, or mutating project state.
+     * The audio thread reads it through readAudioSnapshotRt() (lock-free pin, nothing freed on the
+     * audio thread). getAudioSnapshot() is for control threads: it goes through AtomicSharedPtr, which
+     * is not guaranteed lock-free, and it reports a real-time misuse if the audio thread calls it.
      */
     void publishSnapshot();
 
@@ -429,9 +430,9 @@ private:
     /**
      * @brief Published immutable snapshot for the audio thread.
      *
-     * Updated by publishSnapshot() on the control thread.
-     * Read by getAudioSnapshot() on the audio thread via atomic_load.
-     * Release semantics on store ensures the audio thread never sees a partial snapshot.
+     * Updated by publishSnapshot() on the control thread; read by control threads via getAudioSnapshot().
+     * The audio thread uses m_realtimeSnapshot below. Release semantics on store ensure a reader never
+     * sees a partial snapshot.
      */
     mutable AtomicSharedPtr<AudioArsenalSnapshot> m_publishedSnapshot{std::make_shared<AudioArsenalSnapshot>()};
     // The same snapshot for the audio thread (readAudioSnapshotRt). AtomicSharedPtr::load
