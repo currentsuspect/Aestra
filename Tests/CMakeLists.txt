@@ -287,6 +287,34 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/SessionRecoveryTest.cpp")
     set_tests_properties(SessionRecoveryTest PROPERTIES LABELS "integration;recovery;autosave;contract:durability")
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/AutosaveRecoveryCorruptionContractTest.cpp")
+    add_executable(AutosaveRecoveryCorruptionContractTest
+        Integration/AutosaveRecoveryCorruptionContractTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+    )
+    target_link_libraries(AutosaveRecoveryCorruptionContractTest PRIVATE AestraAudio)
+    target_include_directories(AutosaveRecoveryCorruptionContractTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Source
+    )
+    target_compile_definitions(AutosaveRecoveryCorruptionContractTest PRIVATE
+        $<$<CONFIG:Debug>:AESTRA_ENABLE_PROJECT_LOAD_LOGS>
+    )
+    add_test(NAME AutosaveRecoveryCorruptionContractTest COMMAND AutosaveRecoveryCorruptionContractTest)
+    set_tests_properties(AutosaveRecoveryCorruptionContractTest PROPERTIES
+        LABELS "integration;recovery;autosave;contract:durability" TIMEOUT 120)
+endif()
+
 # AutosaveManager unit test (background thread, dirty tracking, backup rotation)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/AutosaveManagerTest.cpp")
     add_executable(AutosaveManagerTest AestraAudio/AutosaveManagerTest.cpp)
