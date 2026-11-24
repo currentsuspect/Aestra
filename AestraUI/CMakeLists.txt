@@ -177,7 +177,9 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/GenericPluginEditor.cpp
     Widgets/NativePluginPanel.cpp
     Widgets/AestraEQEditor.h
+    Widgets/AestraEQEditorInternal.h
     Widgets/AestraEQEditor.cpp
+    Widgets/AestraEQEditorMouse.cpp
     Widgets/AestraCompEditor.h
     Widgets/AestraCompEditor.cpp
     Widgets/AestraVerbEditor.h
