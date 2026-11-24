@@ -200,7 +200,8 @@ Reviews depend on maintainer availability and PR complexity.
 - 📋 JACK is opt-in at configure time (`-DRTAUDIO_API_JACK=ON`) and is not a supported path yet
 
 Both platforms also register a silent dummy driver as a last-resort fallback. Windows tries ASIO first when a
-driver is installed, then WASAPI Exclusive, then WASAPI Shared, then RtAudio.
+driver is installed, then WASAPI Exclusive, then WASAPI Shared, then RtAudio — and only a driver that fails to
+*open* moves the chain on. A driver that opens and then fails to start does not fall through to the next one.
 
 ### What's the typical audio latency?
 

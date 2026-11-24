@@ -552,7 +552,16 @@ making music is fixed.
 
 ## [Unreleased]
 
-Nothing yet — v0.8.2-alpha was cut on 2026-10-31. v0.8.3 work lands here.
+### Docs
+- `philosophy.md` reworded, and the page's own rule kept: every change is dated and
+  published with what changed and why. The "free DAWs are no longer rare" sentence is
+  gone (free DAWs are no longer the reason Aestra exists); "We are honest about limits"
+  now says Aestra explains where it uses AI, what it is uncertain about and where it
+  stands; and the in-page "Changes" list is retired in favour of this changelog, which
+  now carries its entries — the promise "It understands you" was added to the page on
+  31 October 2026 and is unchanged.
+
+v0.8.2-alpha was cut on 2026-10-31. v0.8.3 work lands here.
 
 ## Unfiled — shipped before v0.7.0, never assigned to a release
 

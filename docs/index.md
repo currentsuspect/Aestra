@@ -173,7 +173,7 @@ This table reflects engineering-module posture, not release readiness. A module 
     <tr>
       <td><strong>Undo/Redo</strong></td>
       <td><span class="status-icon success"></span>Complete</td>
-      <td>Every step says what it touched, and you can undo just one step and keep the rest</td>
+      <td>Every step is named in the history, and the Versions dock takes you back to any of them</td>
     </tr>
     <tr>
       <td><strong>Built-in Plugins</strong></td>
