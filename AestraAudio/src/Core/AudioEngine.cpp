@@ -464,7 +464,7 @@ void AudioEngine::applyPendingCommands() {
         // must never be handled on the RT audio thread — they involve I/O, allocation,
         // thread joins, or async decode. They are intentionally dropped here; route them
         // to the UI/main thread before reaching the audio queue. Do NOT add logging here
-        // (AGENTS.md §10 forbids logging in the RT path).
+        // (AGENTS.md "Critical Areas" forbids logging in the RT path).
         default:
             break;
         }

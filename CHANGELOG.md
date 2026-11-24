@@ -31,7 +31,7 @@ The public repository is currently on a `0.x` pre-beta line. The release target 
 
 ### Build / CI
 - Nightly build workflow (`nightly.yml`) with ASan/UBSan, auto-issue on failure
-- Versioning/tagging policy (AGENTS.md §27) and nightly policy (AGENTS.md §28)
+- Versioning/tagging policy and nightly policy
 - macOS CI test exclusions aligned (#229, #230)
 - CodeRabbit review fixes (#236, #237)
 

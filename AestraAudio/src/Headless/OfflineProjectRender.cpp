@@ -13,7 +13,7 @@ AudioExporter::Result renderProjectOffline(AudioEngine& engine, TrackManager& tr
                                            const OfflineRenderRequest& request) {
     // AudioExporter::render drives AudioEngine::processBlock -- the same path the
     // live engine uses -- so committed MIDI clips synthesize through their
-    // sampler units (live/export parity, AGENTS.md §20).
+    // sampler units (live/export parity).
     //
     // Restores everything this render mutates on every exit path, so a
     // synchronous export leaves the caller's engine and session unchanged:

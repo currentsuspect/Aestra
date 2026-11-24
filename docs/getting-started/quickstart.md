@@ -60,7 +60,7 @@ Aestra's interface consists of several key areas:
 1. **Menu Bar** — File operations, preferences, and help
 2. **Transport Controls** — Play, pause, stop, record
 3. **Timeline** — Pattern and playlist view with adaptive grid
-4. **Mixer** — Volume, pan, mute, solo controls (in progress)
+4. **Mixer** — Volume, pan, mute, solo controls
 5. **Status Bar** — CPU usage, audio latency, sample rate
 
 ## 🎵 Your First Project
@@ -85,11 +85,9 @@ Aestra's interface consists of several key areas:
 2. Name your pattern (e.g., "Kick Pattern")
 3. The pattern editor will open
 
-### Step 3: Add Samples (Coming Soon)
+### Step 3: Add Samples
 
-!!! warning "In Development"
-    Sample manipulation and drag-and-drop features are currently in development.
-    This section will be updated when these features are completed.
+Browse your sample folders in the file browser, audition a sound, and drag it onto the timeline or into the Arsenal.
 
 ### Step 4: Use the Timeline
 
@@ -110,11 +108,9 @@ The timeline in Aestra uses a pattern-based workflow:
 | Zoom Out | `Ctrl + -` | Decrease timeline zoom |
 | Scroll | `Mouse Wheel` | Navigate timeline |
 
-### Step 5: Basic Mixing (In Progress)
+### Step 5: Basic Mixing
 
-!!! warning "In Development"
-    Mixing controls are currently being implemented.
-    Volume, pan, mute, and solo features will be available soon.
+Open the mixer to give each track its own channel strip with volume, pan, mute, and solo.
 
 ## 🎨 Customizing Your Workspace
 
@@ -147,8 +143,7 @@ Adjust the interface to your liking:
 Aestra project files use the `.Aestra` extension.
 
 !!! tip "Save Often"
-    Use `Ctrl+S` frequently to save your work.
-    Auto-save features are planned for a future update.
+    Use `Ctrl+S` frequently to save your work. Aestra also autosaves a recovery copy in the background (every 30 seconds by default, once the project has changed) and offers it back after a crash. It never overwrites your project file.
 
 ## 📊 Performance Monitoring
 

@@ -123,7 +123,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripTest.cpp")
     )
     # Registered unconditionally: exercises ProjectSerializer + TrackManager only —
     # no audio device or host runtime needed (verified headless). Serialization is
-    # AGENTS.md §12 high-risk; roundtrip coverage must run on every CI build.
+    # AGENTS.md "Project persistence" high-risk; roundtrip coverage must run on every CI build.
     add_test(NAME ProjectRoundTripTest COMMAND ProjectRoundTripTest)
     add_test(NAME AutosaveRoundTripTest COMMAND ProjectRoundTripTest)
     set_tests_properties(ProjectRoundTripTest AutosaveRoundTripTest PROPERTIES LABELS "integration;serialization;contract:durability")
@@ -154,7 +154,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectDamageSweepTest.cpp")
     )
     # Registered unconditionally: exercises ProjectSerializer + TrackManager only —
     # no audio device or host runtime needed (verified headless). Serialization is
-    # AGENTS.md §12 high-risk; roundtrip coverage must run on every CI build.
+    # AGENTS.md "Project persistence" high-risk; roundtrip coverage must run on every CI build.
     add_test(NAME ProjectDamageSweepTest COMMAND ProjectDamageSweepTest)
     # The TIMEOUT is part of the test: before #1243 one bad byte in an array made load loop until memory ran out.
     set_tests_properties(ProjectDamageSweepTest PROPERTIES TIMEOUT 120 LABELS "integration;serialization;durability;regression;contract:durability")
@@ -189,7 +189,7 @@ endif()
 
 # Workspace-state roundtrip test (phase-3): the optional viewFocus/pianoRollOpen/
 # sequencerOpen UIState fields roundtrip, legacy files keep default, malformed
-# focus names are dropped. Serialization is AGENTS.md §12 high-risk; this runs
+# focus names are dropped. Serialization is AGENTS.md "Project persistence" high-risk; this runs
 # on every CI build alongside the other ProjectSerializer roundtrips.
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/WorkspaceStateRoundTripTest.cpp")
     add_executable(WorkspaceStateRoundTripTest

@@ -4,18 +4,12 @@
 
 ### Architecture & Design
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** - AestraUI system architecture and design patterns
-- **[IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md)** - Implementation guidelines and best practices
 
 ### Development
-- **[BUILD_AND_TEST.md](BUILD_AND_TEST.md)** - Build instructions and testing procedures
-- **[TESTING_STRATEGY.md](TESTING_STRATEGY.md)** - Testing strategy and test coverage
+- **[TESTING_NOTES.md](TESTING_NOTES.md)** - Testing notes
 
 ### Progress & Status
 - **[PROGRESS.md](PROGRESS.md)** - Development progress tracking
-
-### Renderer Documentation
-- **[OPENGL_RENDERER_COMPLETE.md](OPENGL_RENDERER_COMPLETE.md)** - OpenGL renderer implementation
-- **[OPENGL_NEXT_STEPS.md](OPENGL_NEXT_STEPS.md)** - OpenGL renderer roadmap
 
 ## 🚀 Quick Start
 

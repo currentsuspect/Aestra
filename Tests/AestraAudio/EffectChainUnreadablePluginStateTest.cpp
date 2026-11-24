@@ -148,7 +148,7 @@ int main() {
     if (!manager.initialize()) {
         // FAIL, not skip-as-pass. If the manager will not start, neither case
         // below ran, and a CTest green here would mean this file has stopped
-        // guarding #1014 without anyone noticing (AGENTS.md §2: no misleading
+        // guarding #1014 without anyone noticing (AGENTS.md "Boundaries": no misleading
         // success paths). The built-ins are always present in core mode, so a
         // failure here is a real problem, not an environment quirk.
         std::cerr << "[FAIL] PluginManager did not initialize; the installed-but-rejecting branch\n"

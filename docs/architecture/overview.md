@@ -414,17 +414,16 @@ commandQueue.push(AudioCommand::Start);  // Main thread
 
 ### v1 Beta Focus (Dec 2026)
 
-1. **Internal Arsenal Plugins** — Built-in instruments (Rumble) validated through discovery, persistence, and audible playback
-2. **Recording Reliability** — Multi-track audio recording with device stress testing
-3. **Offline Render/Export** — Bounce that matches playback
-4. **Plugin Decision Gate** — VST3/CLAP hosting ships only if it can be made boringly stable (Phase 4, Sep 2026)
+1. **Built-in Plugins** — About a dozen instruments and effects (Rumble, EQ, Comp, Verb and more), ready to use
+2. **Recording Reliability** — Multi-track audio recording with device stress testing; stereo recording is in progress for 0.8.3
+3. **Offline Render/Export** — Bounce that matches playback, with a loudness target
+4. **Plugin Hosting** — VST3 and CLAP plugins load in a sandbox on Windows and Linux; the work left is making it boringly stable
 
 ### Post-Beta (Deferred)
 
 - **Muse AI Integration** — AI-powered music generation (post-Beta only)
 - **Video Support** — Video timeline and scoring
-- **MIDI Support** — Full MIDI I/O and routing
-- **Automation** — Parameter automation system
+- **MIDI Routing** — Beyond live input and the piano roll; MIDI file import/export (v1) is in review for 0.8.3
 
 ### Scalability
 

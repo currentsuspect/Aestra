@@ -77,7 +77,7 @@ using PluginEditorFactory = std::function<std::shared_ptr<AestraPanelWindow>(
  * of editors, so neither list's order matters and a mismatch does not build.
  */
 struct PluginEditorRegistration {
-    /// Permanent plugin id. Never a display name -- see AGENTS.md §19.
+    /// Permanent plugin id. Never a display name -- see AGENTS.md "DSP".
     const char* pluginId;
     /// The editor's class name, exactly. The .cpp finds this row's factory by it.
     const char* editorName;

@@ -84,7 +84,7 @@ std::string msg = ASIODriverScanner::getAvailabilityMessage();
 
 **Integrate into AudioDeviceManager.cpp** and test!
 
-See: `DRIVER_IMPLEMENTATION_QUICKSTART.md` for details.
+See: `RTAUDIO_INTEGRATION.md` for details.
 
 ---
 

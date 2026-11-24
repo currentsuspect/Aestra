@@ -14,9 +14,7 @@ Local setup to build core when private repos are not present:
    git clone <public-core-url>
    cd Aestra
 
-2. Ensure mock assets exist (they are included in `assets_mock`):
-
-   The CMake helper `cmake/AestraPremiumFallback.cmake` automatically defines `Aestra_CORE_ONLY` when `AestraMuse` is missing and points `Aestra_ASSETS_DIR` to `assets_mock`.
+2. The public tree builds without any private repository. Small mock assets live in `assets_mock/`; follow [BUILD.md](https://github.com/currentsuspect/Aestra/blob/develop/BUILD.md) for the exact configure flags.
 
 3. Build (Windows example):
 

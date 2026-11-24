@@ -666,7 +666,7 @@ bool loadState(const std::vector<uint8_t>& state) {
         // not keeps its default (an added one).
         //
         // TWO PASSES, and the first one is not optional: a NaN in entry 5 must
-        // not leave entries 0-4 already written (AGENTS.md §12).
+        // not leave entries 0-4 already written (AGENTS.md, Project persistence).
         std::array<EQKeyedParam, kMaxInternalPluginParams> entries{};
         for (uint32_t i = 0; i < count; ++i) {
             std::memcpy(&entries[i], state.data() + kHeaderSize + sizeof(EQKeyedParam) * i, sizeof(EQKeyedParam));
