@@ -3654,14 +3654,13 @@ bool FileBrowser::loadState(const std::string& filePath) {
         return false;
     }
 
-    // Non-const on purpose: AestraJSON's const asArray()/asObject() return empty stubs.
-    Aestra::JSON& j = *parsed;
+    const Aestra::JSON& j = *parsed;
     if (!j.isObject()) return false;
 
     const auto readStrings = [&](const char* key, std::vector<std::string>& out) {
         if (!j.has(key) || !j[key].isArray()) return false;
         out.clear();
-        for (auto& v : j[key].asArray()) {
+        for (const auto& v : j[key].asArray()) {
             if (v.isString() && !v.asString().empty()) out.push_back(v.asString());
         }
         return true;
@@ -3701,10 +3700,10 @@ bool FileBrowser::loadState(const std::string& filePath) {
 
     if (j.has("tagsByPath") && j["tagsByPath"].isObject()) {
         tagsByPath_.clear();
-        for (auto& [pathKey, val] : j["tagsByPath"].asObject()) {
+        for (const auto& [pathKey, val] : j["tagsByPath"].asObject()) {
             if (pathKey.empty() || !val.isArray()) continue;
             std::vector<std::string> tags;
-            for (auto& t : val.asArray()) {
+            for (const auto& t : val.asArray()) {
                 if (t.isString() && !t.asString().empty()) tags.push_back(t.asString());
             }
             if (!tags.empty()) tagsByPath_[mapKeyForPath(pathKey)] = std::move(tags);
