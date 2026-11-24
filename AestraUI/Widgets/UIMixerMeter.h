@@ -97,6 +97,10 @@ public:
 
     /// Where the bars start below the meter's top: the readout band (track strips) plus the clip lamp's band.
     /// The channel fader lines its track up with this, so level and gain read against each other.
+    /// The correlation meter as dotted LEDs (CorrelationLeds.h) in @p well: a sunk well, a zero marker, and the
+    /// segments between zero and @p correlation (-1..+1) lit. The master's readout card draws the same.
+    static void renderCorrelation(NUIRenderer& renderer, const NUIRect& well, float correlation, bool dimmed = false);
+
     float barsTopOffset() const { return (m_masterMode ? 0.0f : READOUT_BAND) + LAMP_BAND; }
 
     /// True when either channel has a latched clip.
@@ -145,18 +149,14 @@ private:
     static constexpr float PEAK_OVERLAY_HEIGHT = 2.0f; // Height of fast peak overlay marker
     static constexpr float PEAK_HOLD_HEIGHT = 1.0f; // Height of peak hold line
 
-    // dB thresholds for color zones
-    static constexpr float DB_YELLOW_THRESHOLD = -12.0f;
-    static constexpr float DB_RED_THRESHOLD = -3.0f;
-    static constexpr float DB_MIN = -60.0f;
+    // Colour zones are height fractions (MeterZones.h), not dB thresholds.
+    static constexpr float DB_MIN = -80.0f; // MixerScale::kFloorDb: at or below it the meter reads silence
     static constexpr float DB_MAX = 6.0f;
 
     /**
      * @brief Convert dB to normalized value (0.0 to 1.0) for rendering.
      *
-     * Uses segmented linear mapping for predictable visual behavior:
-     * - -60 to -20 dB maps to 0.0 to 0.5
-     * - -20 to 0 dB maps to 0.5 to 1.0
+     * The mixer's shared scale (MixerScale.h); at or below DB_MIN the bar is empty.
      */
     float dbToNormalized(float db) const;
 

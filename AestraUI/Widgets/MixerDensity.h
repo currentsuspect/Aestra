@@ -6,14 +6,14 @@ namespace AestraUI {
 /**
  * @brief How much a mixer strip shows (V81-M1, FD-28 point 4).
  *
- *  - Wide (120 px): every insert name and each send's level; about 11 channels at 1440.
- *  - Normal (84 px): the default; 16 channels at 1920 with the master and inspector.
- *  - Narrow (44 px): meter, fader, M S and the output's colour; 30+ channels at 1920.
+ *  - Wide (136 px): every insert name and each send's level; the board's 96 scaled by 1.4 (a Trial will rule on it).
+ *  - Normal (96 px): the default, the board's strip width (p-mixer2, locked).
+ *  - Narrow (44 px): meter, fader, M S and the output's colour, no printed scale (no room for the lane).
  */
 enum class MixerDensity { Wide, Normal, Narrow };
 
 inline constexpr float mixerStripWidth(MixerDensity d) {
-    return d == MixerDensity::Wide ? 120.0f : d == MixerDensity::Narrow ? 44.0f : 84.0f;
+    return d == MixerDensity::Wide ? 136.0f : d == MixerDensity::Narrow ? 44.0f : 96.0f;
 }
 
 inline constexpr const char* mixerDensityName(MixerDensity d) {

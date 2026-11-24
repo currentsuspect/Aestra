@@ -118,7 +118,7 @@ struct AutomationCurve {
     // which plugin instance, resolved through the chain snapshot's
     // findSlotByInstanceId. effectSlot is LEGACY — kept only for v1 project
     // migration and older-build compatibility; it never participates in
-    // resolution. paramId is the plugin's stable parameter id (AGENTS.md §19).
+    // resolution. paramId is the plugin's stable parameter id (AGENTS.md "DSP").
     // The engine applies a Custom curve through the plugin's render-thread
     // contract (IPluginInstance::supportsRealtimeAutomation / applyAutomation,
     // V8-A5), never by checking the plugin's format. Internal plugins satisfy

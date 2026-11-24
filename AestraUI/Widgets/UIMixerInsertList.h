@@ -36,8 +36,9 @@ public:
     /// Height needed to show @p rowCount rows (an empty chain needs one row for the invitation).
     static float heightForRows(int rowCount);
     static constexpr int kMaxRows = 8; // Wide shows every name; Normal asks for three
-    static constexpr float kRowH = 15.0f;
-    static constexpr float kPad = 3.0f;
+    static constexpr float kRowH = 22.0f; // a 20px chip and 2px of strip between rows (board p-mixer2)
+    static constexpr float kChipH = 20.0f;
+    static constexpr float kPad = 0.0f;
 
     const std::vector<Row>& rows() const { return m_rows; }
     /// How many insert rows fit in the current bounds (the rest fold into "+N more").

@@ -5,6 +5,7 @@
 #include "Helpers/MixerPluginListPolicy.h"
 #include "NUIIcon.h"
 #include "NUIRenderer.h"
+#include "NUIWheel.h"
 #include "NUIThemeSystem.h"
 
 #include <algorithm>
@@ -152,6 +153,7 @@ void UIMixerPluginDropdown::filter()
         // A cleared query restores a different row set: drop the selection
         // rather than let Enter activate a stale index in the new rows.
         m_selectedRow = -1;
+        m_scrollOffset = 0.0f;
         return;
     }
     m_filtered.clear();
@@ -170,6 +172,7 @@ void UIMixerPluginDropdown::filter()
     // The result set changed under any selection: drop it rather than load
     // a row that no longer matches.
     m_selectedRow = -1;
+    m_scrollOffset = 0.0f;
 }
 
 void UIMixerPluginDropdown::showAt(const NUIRect& triggerRect, float panelBottomY, float panelTopY) {
@@ -219,6 +222,7 @@ void UIMixerPluginDropdown::showAt(const NUIRect& triggerRect, float panelBottom
     m_hoveredRow = -1;
     m_hoveredFooter = -1;
     m_selectedRow = -1;
+    m_scrollOffset = 0.0f;
     filter();
     m_searchInput->setFocused(true);
     repaint();
@@ -273,6 +277,7 @@ void UIMixerPluginDropdown::moveSelection(int direction)
     }
     m_selectedRow = next;
     m_hoveredRow = next;
+    scrollRowIntoView(next);
     repaint();
 }
 
@@ -303,7 +308,7 @@ void UIMixerPluginDropdown::activateSelected()
 std::vector<UIMixerPluginDropdown::FlatRow> UIMixerPluginDropdown::flatten(const std::vector<Category>& cats) const
 {
     std::vector<FlatRow> rows;
-    float y = SEARCH_H;
+    float y = 0.0f;
     for (size_t ci = 0; ci < cats.size(); ++ci) {
         rows.push_back({true, static_cast<int>(ci), -1, y, CAT_HEADER_H});
         y += CAT_HEADER_H;
@@ -315,20 +320,46 @@ std::vector<UIMixerPluginDropdown::FlatRow> UIMixerPluginDropdown::flatten(const
     return rows;
 }
 
+float UIMixerPluginDropdown::listViewportH() const
+{
+    return std::max(0.0f, getBounds().height - SEARCH_H - FOOTER_H);
+}
+
+float UIMixerPluginDropdown::contentHeight(const std::vector<FlatRow>& rows) const
+{
+    return rows.empty() ? 0.0f : rows.back().y + rows.back().h;
+}
+
+void UIMixerPluginDropdown::scrollRowIntoView(int flatIndex)
+{
+    const auto rows = flatten(displayCategories());
+    if (flatIndex < 0 || flatIndex >= static_cast<int>(rows.size())) {
+        return;
+    }
+    const auto& row = rows[static_cast<size_t>(flatIndex)];
+    // A first item sits under its category header: reveal the header too so
+    // arrowing up to the top of a group shows what group it is.
+    float top = row.y;
+    float h = row.h;
+    if (!row.isCategory && row.itemIndex == 0 && flatIndex > 0) {
+        top = rows[static_cast<size_t>(flatIndex - 1)].y;
+        h += rows[static_cast<size_t>(flatIndex - 1)].h;
+    }
+    m_scrollOffset = DropdownScroll::ensureVisible(m_scrollOffset, top, h, contentHeight(rows), listViewportH());
+}
+
 int UIMixerPluginDropdown::hitTestRow(const NUIPoint& p) const
 {
     auto b = getBounds();
     if (!b.contains(p)) return -1;
     // Same data source as the render path so hit-testing matches the rows
     // the user can actually see (see onRender for why this fallback exists).
-    auto rows = flatten(displayCategories());
-    for (size_t i = 0; i < rows.size(); ++i) {
-        float ry = b.y + rows[i].y;
-        if (p.y >= ry && p.y < ry + rows[i].h) {
-            return static_cast<int>(i);
-        }
-    }
-    return -1;
+    // Rows scrolled out of the viewport are clipped, so they are not hittable.
+    const auto rows = flatten(displayCategories());
+    std::vector<DropdownScroll::Span> spans;
+    spans.reserve(rows.size());
+    for (const auto& r : rows) spans.push_back({r.y, r.h});
+    return DropdownScroll::hitTest(spans, p.y - (b.y + SEARCH_H), m_scrollOffset, listViewportH());
 }
 
 bool UIMixerPluginDropdown::hitTestFooter(const NUIPoint& p) const
@@ -382,11 +413,16 @@ void UIMixerPluginDropdown::onRender(NUIRenderer& renderer)
     auto rows = flatten(display);
     float listTop = b.y + SEARCH_H;
     float listH = b.height - SEARCH_H - FOOTER_H;
+    // The offset can go stale if the result set shrank under it.
+    m_scrollOffset = DropdownScroll::clampOffset(m_scrollOffset, contentHeight(rows), listH);
 
+    // Rows are clipped to the list viewport so a partly scrolled row never
+    // bleeds over the search field or the footer.
+    renderer.setClipRect(NUIRect{b.x, listTop, b.width, listH});
     bool anyItem = false;
     for (size_t ri = 0; ri < rows.size(); ++ri) {
         const auto& row = rows[ri];
-        float ry = b.y + row.y;
+        float ry = listTop + row.y - m_scrollOffset;
         if (ry + row.h < listTop || ry > listTop + listH) continue;
 
         if (row.isCategory) {
@@ -416,6 +452,21 @@ void UIMixerPluginDropdown::onRender(NUIRenderer& renderer)
             float tx = cx + 28.0f;
             renderer.drawText(item.name, {tx, ry + 5.0f}, 13.0f, m_textPrimary);
             renderer.drawText(item.typeLabel, {tx, ry + 18.0f}, 11.0f, m_textTertiary);
+        }
+    }
+
+    renderer.setClipRect(b);
+
+    // Slim indicator, same idiom as the plugin browser's list (2 px rail + thumb).
+    {
+        const float trackY = listTop + 4.0f;
+        const float trackH = std::max(0.0f, listH - 8.0f);
+        const auto t = DropdownScroll::thumb(m_scrollOffset, contentHeight(rows), listH, trackH);
+        if (t.height > 0.0f) {
+            const float barX = b.right() - 7.0f;
+            renderer.fillRoundedRect(NUIRect{barX, trackY, 2.0f, trackH}, 1.0f, m_borderTertiary);
+            renderer.fillRoundedRect(NUIRect{barX, trackY + t.top, 2.0f, t.height}, 1.0f,
+                                     m_textTertiary.withAlpha(0.6f));
         }
     }
 
@@ -471,6 +522,18 @@ bool UIMixerPluginDropdown::onMouseEvent(const NUIMouseEvent& event)
 
     if (!b.contains(event.position)) {
         return false;
+    }
+
+    // Wheel over the dropdown scrolls its list and is consumed here, so it
+    // never reaches the mixer's horizontal channel scroll underneath.
+    if (event.wheelDelta != 0.0f) {
+        const auto rows = flatten(displayCategories());
+        m_scrollOffset = DropdownScroll::applyWheel(m_scrollOffset, event.wheelDelta, kWheelNotchPx,
+                                                    contentHeight(rows), listViewportH());
+        // The row under a stationary pointer changed.
+        m_hoveredRow = hitTestRow(event.position);
+        repaint();
+        return true;
     }
 
     // Give the search input first dibs on events inside its bounds

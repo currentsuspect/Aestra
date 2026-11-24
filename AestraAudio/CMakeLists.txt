@@ -73,7 +73,7 @@ endif()
 # RtMidi Integration (MIT-style License) — hardware MIDI input
 # =============================================================================
 # Vendored like RtAudio (same author/license family, owner-approved 2026-07-09).
-# Compiled ONLY into the platform backend targets (AGENTS.md §8), never into
+# Compiled ONLY into the platform backend targets (AGENTS.md "Building and Testing"), never into
 # AestraAudioCore — core/headless builds get the MidiInputService stub instead.
 
 set(RTMIDI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/External/rtmidi)
@@ -621,7 +621,7 @@ endif()
 # AestraAudioCore stays license-free: no AestraAudio source references any
 # AestraLicense symbol (grep-verified 2026-07-09), and a PUBLIC link here dragged
 # licensing into every headless/test/core consumer, contradicting core-mode
-# semantics (AGENTS.md §2; architecture audit 2026Q2 §1.1). Consumers that
+# semantics (AGENTS.md "Boundaries"; architecture audit 2026Q2 §1.1). Consumers that
 # genuinely need licensing (the app at Source/CMakeLists.txt, license tests)
 # link AestraLicense directly.
 target_link_libraries(AestraAudioCore PUBLIC AestraPlat)
@@ -712,7 +712,7 @@ if(WIN32)
         src/IO/MidiInputService.cpp
     )
 
-    # Real hardware MIDI input lives in the backend (AGENTS.md §8); the
+    # Real hardware MIDI input lives in the backend (AGENTS.md "Building and Testing"); the
     # no-backend stub build of MidiInputService.cpp happens in AestraAudioCore
     # only when no platform backend target exists (see end of backend section).
     target_compile_definitions(AestraAudioWin PRIVATE AESTRA_HAS_RTMIDI)
@@ -765,7 +765,7 @@ elseif(UNIX)
 
         # RtMidi reuses __LINUX_ALSA__ (global add_definitions above) and the
         # ALSA libs already in RTAUDIO_LIBS. Real implementation is backend-only
-        # (AGENTS.md §8); the stub fallback is below the backend section.
+        # (AGENTS.md "Building and Testing"); the stub fallback is below the backend section.
         target_compile_definitions(AestraAudioLinux PRIVATE AESTRA_HAS_RTMIDI)
 
         target_include_directories(AestraAudioLinux
@@ -825,7 +825,7 @@ endif()
 # MidiInputService compiles exactly once per build: into the platform backend
 # above (real RtMidi implementation, AESTRA_HAS_RTMIDI defined) when one
 # exists, otherwise here into AestraAudioCore as the no-backend stub — same
-# API, zero ports. Keeps RtMidi out of core/headless builds (AGENTS.md §8).
+# API, zero ports. Keeps RtMidi out of core/headless builds (AGENTS.md "Building and Testing").
 if(NOT TARGET AestraAudioWin AND NOT TARGET AestraAudioLinux)
     target_sources(AestraAudioCore PRIVATE src/IO/MidiInputService.cpp)
 endif()

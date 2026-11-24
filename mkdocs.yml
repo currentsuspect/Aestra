@@ -38,22 +38,12 @@ not_in_nav: |
   /technical/engineering-health.md
   /technical/muse_state_ownership.md
   /technical/settings_view_state_map.md
-  /technical/audio/IMPLEMENTATION_COMPLETE.md
   /technical/ui/ADAPTIVE_FPS_QUICKREF.md
-  /technical/ui/BUTTON_CUSTOMIZATION_GUIDE.md
   /technical/ui/COMPONENT_CHECKLIST.md
-  /technical/ui/CUSTOM_WINDOW_INTEGRATION.md
-  /technical/ui/ICON_QUALITY_GUIDE.md
-  /technical/ui/MSAA_IMPLEMENTATION_GUIDE.md
-  /technical/ui/OPENGL_NEXT_STEPS.md
-  /technical/ui/OPENGL_RENDERER_COMPLETE.md
   /technical/ui/PLATFORM_MIGRATION.md
   /technical/ui/TESTING_NOTES.md
-  /technical/ui/TEXT_RENDERING_COMPLETE.md
   /technical/ui/THEME_DEMO_GUIDE.md
   /technical/ui/THORVG_INTEGRATION.md
-  /technical/ui/WINDOWS_SNAP_GUIDE.md
-  /technical/ui/WidgetDemoCatalog.md
 
 copyright: >
   Copyright © 2026 <strong>Aestra Studios</strong>.
@@ -234,10 +224,6 @@ nav:
   - 🧩 Architecture:
       - System Overview: architecture/overview.md
       - Module Hierarchy: architecture/modules.md
-      - AestraCore: architecture/Aestra-core.md
-      - AestraPlat: architecture/Aestra-plat.md
-      - AestraUI: architecture/Aestra-ui.md
-      - AestraAudio: architecture/Aestra-audio.md
   - 👨‍💻 Developer Guide:
       - Contributing: developer/contributing.md
       - Coding Style: developer/coding-style.md
@@ -256,21 +242,15 @@ nav:
       - Rumble MVP Plan: technical/RUMBLE_MVP_PLAN.md
       - v1 Beta Task List: technical/v1_beta_task_list.md
       - Audio Internals:
-          - Architecture Plan: technical/audio/AUDIO_ENGINE_ARCH_PLAN.md
-          - Driver Quickstart: technical/audio/DRIVER_IMPLEMENTATION_QUICKSTART.md
-          - ASIO Strategy: technical/audio/MINIMAL_ASIO_STRATEGY.md
-          - Multi-Driver Arch: technical/audio/MULTI_DRIVER_ARCHITECTURE.md
-          - Preview Engine Spec: technical/audio/PREVIEW_ENGINE_SPEC.md
+          - ASIO Support: technical/audio/MINIMAL_ASIO_STRATEGY.md
+          - Engine Ownership: technical/audio/AUDIO_ENGINE_OWNERSHIP.md
+          - Pan Law Policy: technical/audio/PAN_LAW_POLICY.md
+          - Decode Failure Policy: technical/audio/DECODE_FAILURE_POLICY.md
           - Sinc64 Turbo Paper: technical/audio/SINC64_TURBO_PAPER.md
       - UI Internals:
           - Overview: technical/ui/README.md
           - Architecture: technical/ui/ARCHITECTURE.md
-          - Framework Status: technical/ui/FRAMEWORK_STATUS.md
-          - Implementation Guide: technical/ui/IMPLEMENTATION_GUIDE.md
-          - Components: technical/ui/COMPONENTS.md
-          - Testing Strategy: technical/ui/TESTING_STRATEGY.md
           - Progress: technical/ui/PROGRESS.md
-          - Build & Test: technical/ui/BUILD_AND_TEST.md
           - Color System: technical/ui/AESTRA_COLOR_SYSTEM.md
           - Icon System: technical/ui/ICON_SYSTEM_GUIDE.md
           - Coordinate System: technical/ui/COORDINATE_SYSTEM_QUICK_REF.md

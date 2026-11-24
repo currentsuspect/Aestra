@@ -3,6 +3,7 @@
 #include "NUITheme.h"
 #include <algorithm>
 #include <cmath>
+#include <unordered_set>
 #include <vector>
 
 namespace AestraUI {
@@ -27,12 +28,12 @@ void applyJSONThemeOverrides(const NUITheme& source, NUIThemeProperties& target)
     color("surface", target.surface);
     color("surfaceVariant", target.surfaceVariant);
 
-    color("primary", target.primary);
     color("accent", target.primary);
-    color("primaryHover", target.primaryHover);
+    color("primary", target.primary);
     color("accentHover", target.primaryHover);
-    color("primaryPressed", target.primaryPressed);
+    color("primaryHover", target.primaryHover);
     color("accentPressed", target.primaryPressed);
+    color("primaryPressed", target.primaryPressed);
     color("secondary", target.secondary);
     color("accentCyan", target.accentCyan);
     color("accentMagenta", target.accentMagenta);
@@ -59,6 +60,10 @@ void applyJSONThemeOverrides(const NUITheme& source, NUIThemeProperties& target)
     color("borderStrong", target.borderStrong);
     color("borderActive", target.borderActive);
     color("divider", target.divider);
+    // Alias precedence (answering the owner's note here): where a file may name a property by two keys, the canonical key (the
+    // property's own name) always wins. Each alias is applied BEFORE its canonical key, so a file that supplies both gets the
+    // canonical one. It was inconsistent: backgroundPrimary/surfaceTertiary/selected/... did this, but accent, accentHover and
+    // accentPressed were applied after primary, primaryHover and primaryPressed, so the alias won. NUIThemeJSONTest pins it.
     color("selection", target.selected);
     color("selected", target.selected);
     color("hover", target.hover);
@@ -67,6 +72,7 @@ void applyJSONThemeOverrides(const NUITheme& source, NUIThemeProperties& target)
     color("disabled", target.disabled);
     color("focusRing", target.focusRing);
     color("armed", target.armed);
+    color("recording", target.recording);
     color("muted", target.muted);
     color("soloed", target.soloed);
     color("bypassed", target.bypassed);
@@ -111,6 +117,14 @@ void applyJSONThemeOverrides(const NUITheme& source, NUIThemeProperties& target)
     color("gridMinor", target.gridMinor);
     color("mixerStripBg", target.mixerStripBg);
     color("mixerMasterBorder", target.mixerMasterBorder);
+    // The kit's surface tokens, so a preview can move a whole layer (theme_preview.sh --set timelineBed=#000000).
+    color("timelineBed", target.timelineBed);
+    color("editorCard", target.editorCard);
+    color("editorWell", target.editorWell);
+    color("editorControl", target.editorControl);
+    color("controlEdge", target.controlEdge);
+    color("controlSelected", target.controlSelected);
+    color("controlGuide", target.controlGuide);
 
     const auto hasColor = [&](const char* primaryName, const char* alias = nullptr) {
         return source.hasColorOverride(primaryName) || (alias && source.hasColorOverride(alias));
@@ -157,6 +171,10 @@ void applyJSONThemeOverrides(const NUITheme& source, NUIThemeProperties& target)
     }
     if (hasColor("info") && !hasColor("soloed"))
         target.soloed = target.info;
+    // Recording follows whatever armed ended up as when the file moves armed (or error) without stating recording;
+    // otherwise the base theme's own recording stands.
+    if (!hasColor("recording") && (hasColor("armed") || hasColor("error")))
+        target.recording = target.armed;
 
     const auto dimension = [&](const char* name, float& value) {
         if (source.hasDimensionOverride(name))
@@ -460,16 +478,19 @@ NUIColor NUIThemeManager::getColor(const std::string& colorName) const {
     if (colorName == "list.hover") return theme.hover;
     if (colorName == "textSelect") return theme.textPrimary;
     
-    // Interactive States
+    // Generic interaction states
     if (colorName == "hover") return theme.hover;
     if (colorName == "pressed") return theme.pressed;
     if (colorName == "focused") return theme.focused;
     if (colorName == "focusRing") return theme.focusRing;
+    if (colorName == "dragTarget") return theme.dragTarget;
+
+    // Domain and control states
     if (colorName == "armed") return theme.armed;
+    if (colorName == "recording") return theme.recording;
     if (colorName == "muted") return theme.muted;
     if (colorName == "soloed") return theme.soloed;
     if (colorName == "bypassed") return theme.bypassed;
-    if (colorName == "dragTarget") return theme.dragTarget;
     
     // Dropdown theme tokens
     if (colorName == "dropdown.background") return theme.surfaceTertiary.withAlpha(0.97f);
@@ -604,6 +625,14 @@ NUIColor NUIThemeManager::getColor(const std::string& colorName) const {
 float NUIThemeManager::getSpacing(const std::string& spacingName) const {
     const auto& theme = getCurrentTheme();
     
+    // The kit's own names, plus the short ones the legacy scale never had (xxs).
+    static const std::unordered_map<std::string, int> kitSteps = {
+        {"space-xxs", NUIKitMetrics::XXS}, {"space-xs", NUIKitMetrics::XS}, {"space-s", NUIKitMetrics::S},
+        {"space-m", NUIKitMetrics::M},     {"space-l", NUIKitMetrics::L},   {"space-xl", NUIKitMetrics::XL},
+        {"space-xxl", NUIKitMetrics::XXL}, {"xxs", NUIKitMetrics::XXS}};
+    if (const auto it = kitSteps.find(spacingName); it != kitSteps.end())
+        return theme.kitSpacing[static_cast<size_t>(it->second)];
+
     if (spacingName == "xs") return theme.spacingXS;
     if (spacingName == "s") return theme.spacingS;
     if (spacingName == "m") return theme.spacingM;
@@ -976,6 +1005,7 @@ static NUIThemeProperties legacyAestraDark() {
     theme.disabled = NUIColor(0.5f, 0.5f, 0.5f, 0.38f);
     theme.focusRing = theme.primary.withAlpha(0.86f);
     theme.armed = theme.error;
+    theme.recording = theme.armed;
     theme.muted = theme.warning;
     theme.soloed = theme.info;
     theme.bypassed = theme.textDisabled;
@@ -1075,6 +1105,7 @@ static NUIThemeProperties legacyAestraLight() {
     theme.disabled = NUIColor(0.6f, 0.6f, 0.6f, 0.38f);
     theme.focusRing = theme.primary.withAlpha(0.82f);
     theme.armed = theme.error;
+    theme.recording = theme.armed;
     theme.muted = theme.warning;
     theme.soloed = theme.info;
     theme.bypassed = theme.textDisabled;
@@ -1280,6 +1311,12 @@ NUIColor* kitTokenSlot(NUIThemeProperties& t, const std::string& name) {
         {"pressed", &NUIThemeProperties::pressed},
         {"selected", &NUIThemeProperties::selected},
         {"focused", &NUIThemeProperties::focused},
+        {"info", &NUIThemeProperties::info},
+        {"armed", &NUIThemeProperties::armed},
+        {"recording", &NUIThemeProperties::recording},
+        {"muted", &NUIThemeProperties::muted},
+        {"soloed", &NUIThemeProperties::soloed},
+        {"bypassed", &NUIThemeProperties::bypassed},
         {"dragTarget", &NUIThemeProperties::dragTarget},
         {"gridMajor", &NUIThemeProperties::gridMajor},
         {"gridMinor", &NUIThemeProperties::gridMinor},
@@ -1310,8 +1347,10 @@ NUIColor* kitTokenSlot(NUIThemeProperties& t, const std::string& name) {
 }
 
 /// The legacy fields every widget still reads, restated from the kit's tokens so no part of the app keeps an
-/// older theme's colour after a theme change.
-void deriveFromKitTokens(NUIThemeProperties& t) {
+/// older theme's colour after a theme change. `explicitNames` are the tokens the kit stated itself: a stated
+/// info/armed/recording/muted/soloed/bypassed is kept, and only an unstated one takes the colour it aliases.
+void deriveFromKitTokens(NUIThemeProperties& t, const std::unordered_set<std::string>& explicitNames) {
+    const auto derive = [&](const char* name) { return explicitNames.count(name) == 0; };
     t.background = t.backgroundPrimary;
     t.surface = t.backgroundSecondary;
     t.surfaceVariant = t.surfaceTertiary;
@@ -1319,7 +1358,7 @@ void deriveFromKitTokens(NUIThemeProperties& t) {
     t.secondaryVariant = t.primary;
     t.accentPrimary = t.primary;
     t.accentSecondary = t.secondary;
-    t.info = t.secondary;
+    if (derive("info")) t.info = t.secondary;
     t.textLink = t.secondary;
     t.textCritical = t.error;
     t.textOnSecondary = t.textOnPrimary;
@@ -1349,10 +1388,11 @@ void deriveFromKitTokens(NUIThemeProperties& t) {
     t.inputBgDefault = t.backgroundPrimary; // Design Spec: a field is a well in the bed
     t.inputBgHover = t.backgroundPrimary;
     t.inputBorderFocus = t.focusRing;
-    t.armed = t.error;
-    t.muted = t.warning;
-    t.soloed = t.secondary;
-    t.bypassed = t.textDisabled;
+    if (derive("armed")) t.armed = t.error;
+    if (derive("recording")) t.recording = t.armed;
+    if (derive("muted")) t.muted = t.warning;
+    if (derive("soloed")) t.soloed = t.secondary;
+    if (derive("bypassed")) t.bypassed = t.textDisabled;
     t.highlightGlow = t.primary.withAlpha(0.20f);
     t.meterActive = t.meterSafe;
     t.mixerMasterBorder = t.primary.withAlpha(0.34f);
@@ -1377,13 +1417,25 @@ NUIThemeProperties NUIThemePresets::createKitTheme(const std::string& key) {
     const KitThemeRow& row = it != rows.end() ? *it : rows.front();
 
     // Type, spacing, radii, shadows and motion are shared; only colours differ between variants.
-    NUIThemeProperties theme = row.info.mode == 1 ? legacyAestraLight() : legacyAestraDark();
-    theme.mode = row.info.mode;
-    for (const auto& token : row.tokens) {
-        if (NUIColor* slot = kitTokenSlot(theme, token.name))
-            *slot = colorFromRgba(token.rgba);
+    std::vector<std::pair<std::string, uint32_t>> tokens;
+    tokens.reserve(row.tokens.size());
+    for (const auto& token : row.tokens)
+        tokens.emplace_back(token.name, token.rgba);
+    return createThemeFromKitTokens(row.info.mode, tokens);
+}
+
+NUIThemeProperties NUIThemePresets::createThemeFromKitTokens(
+    int mode, const std::vector<std::pair<std::string, uint32_t>>& rgbaTokens) {
+    NUIThemeProperties theme = mode == 1 ? legacyAestraLight() : legacyAestraDark();
+    theme.mode = mode;
+    std::unordered_set<std::string> explicitNames;
+    for (const auto& token : rgbaTokens) {
+        if (NUIColor* slot = kitTokenSlot(theme, token.first)) {
+            *slot = colorFromRgba(token.second);
+            explicitNames.insert(token.first);
+        }
     }
-    deriveFromKitTokens(theme);
+    deriveFromKitTokens(theme, explicitNames);
     return theme;
 }
 

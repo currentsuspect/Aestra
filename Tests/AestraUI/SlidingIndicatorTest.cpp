@@ -177,6 +177,37 @@ int main() {
         }
     }
 
+    // --- 8. a frame hitch must not throw the pill across the bar (21 Nov 2026)
+    // The step was position += diff * speed * dt, which is only stable while speed * dt < 2. A long frame (software
+    // rendering, a stall while a panel opens, a tab change on a busy frame) made it overshoot further each frame, so
+    // the selected pill appeared far to the right of the control, over the window buttons. A step may be as long as it
+    // likes and the pill still stays between where it was and where it is going.
+    for (const double hitch : {0.1, 0.17, 0.25, 0.5, 2.0, 30.0}) {
+        for (const float from : {0.0f, 1.0f, 2.0f}) {
+            for (const float to : {0.0f, 1.0f, 2.0f}) {
+                NUISlidingIndicator ind;
+                ind.snapTo(from);
+                const float lo = std::min(from, to), hi = std::max(from, to);
+                for (int i = 0; i < 40; ++i) {
+                    ind.sync(to, hitch, kSpeed);
+                    check(ind.position() >= lo - 1e-4f && ind.position() <= hi + 1e-4f,
+                          "a " + std::to_string(hitch) + " s frame keeps the pill between its start and its target");
+                }
+                nearly(ind.position(), to, "and it still arrives");
+            }
+        }
+    }
+    {
+        // A longer frame never moves it less far than a shorter one, and 1/60 s still glides (it is not a snap).
+        NUISlidingIndicator a, b;
+        a.snapTo(0.0f);
+        b.snapTo(0.0f);
+        a.sync(2.0f, 1.0 / 60.0, kSpeed);
+        b.sync(2.0f, 0.1, kSpeed);
+        check(a.position() > 0.0f && a.position() < 2.0f, "one 60 Hz frame is partway");
+        check(b.position() >= a.position(), "a longer frame goes at least as far as a shorter one");
+    }
+
     // --- backwards motion works too (higher index -> lower)
     {
         NUISlidingIndicator ind;

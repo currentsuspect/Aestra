@@ -1,6 +1,8 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerFooter.h"
+#include "SlotText.h"
 #include "../Graphics/NUIDepth.h"
+#include "UIMixerFader.h"
 
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
@@ -11,7 +13,9 @@
 namespace AestraUI {
 
 namespace {
-constexpr float kFont = 10.5f;
+constexpr float kFont = 11.0f;     // the dB pill: 11px / 500, tabular (board p-mixer2)
+constexpr float kPillMinW = 58.0f;
+constexpr float kPillH = 23.0f;
 constexpr float kFloorDb = -89.0f;
 } // namespace
 
@@ -38,7 +42,7 @@ std::string UIMixerFooter::formatDb(float db) {
 
 void UIMixerFooter::setGainDb(float db) {
     // The fader floor reads as minus infinity, the same as the fader itself (UIMixerFader::FADER_FLOOR_THRESHOLD).
-    const std::string text = db <= -60.0f ? formatDb(-90.0f) : formatDb(db);
+    const std::string text = db <= UIMixerFader::FADER_FLOOR_THRESHOLD ? formatDb(-90.0f) : formatDb(db);
     if (text == m_gainText)
         return;
     m_gainText = text;
@@ -62,25 +66,27 @@ void UIMixerFooter::onRender(NUIRenderer& renderer) {
     const auto b = getBounds();
     if (b.isEmpty())
         return;
-    const float ty = b.y + (b.height - kFont) * 0.5f - 1.0f;
-    // Design Spec, Mixer: the level under the fader sits in a sunk pill.
+    // Design Spec, Mixer (board p-mixer2): the gain sits in one sunk pill at the strip's foot, at least 58 wide and
+    // 23 tall, 11px / 500, tabular. A Narrow strip keeps its small pill.
     if (m_compact) {
         Depth::bed(renderer, b, b.height * 0.5f, Depth::Cut::Shallow);
         renderer.drawTextCentered(m_gainText, b, 9.5f, m_text.withAlpha(0.95f));
         return;
     }
-    const float gainW = renderer.measureText(m_gainText, kFont).width;
-    const NUIRect gainPill{b.x, b.y + 1.0f, gainW + 12.0f, b.height - 2.0f};
+    const NUIRect gainPill{b.x, b.y + (b.height - kPillH) * 0.5f, std::min(b.width, std::max(kPillMinW, renderer.measureText(m_gainText, kFont).width + 16.0f)), kPillH};
     Depth::bed(renderer, gainPill, gainPill.height * 0.5f, Depth::Cut::Shallow);
-    renderer.drawText(m_gainText, {gainPill.x + 6.0f, ty}, kFont, m_text.withAlpha(0.95f));
+    const float pillTextY = SlotText::slotTextY(renderer, gainPill, kFont);
+    renderer.drawText(m_gainText, {std::round(gainPill.x + (gainPill.width - renderer.measureText(m_gainText, kFont).width) * 0.5f), pillTextY},
+                      kFont, m_text);
 
     const float peakW = renderer.measureText(m_peakText, kFont).width;
     if (m_clipped) {
         const NUIRect block{b.right() - peakW - 8.0f, b.y + 2.0f, peakW + 6.0f, b.height - 4.0f};
         renderer.fillRoundedRect(block, 2.0f, m_clip);
-        renderer.drawText(m_peakText, {block.x + 3.0f, ty}, kFont, m_clipInk);
+        renderer.drawText(m_peakText, {block.x + 3.0f, SlotText::slotTextY(renderer, block, kFont)}, kFont, m_clipInk);
     } else {
-        renderer.drawText(m_peakText, {b.right() - peakW - 2.0f, ty}, kFont, m_textSecondary.withAlpha(0.85f));
+        renderer.drawText(m_peakText, {b.right() - peakW - 2.0f, SlotText::slotTextY(renderer, b, kFont)}, kFont,
+                          m_textSecondary.withAlpha(0.85f));
     }
 }
 

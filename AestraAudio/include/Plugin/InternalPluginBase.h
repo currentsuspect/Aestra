@@ -124,7 +124,7 @@ namespace Audio {
 /// third-party VST3/CLAP hosting — OutOfProcessPluginInstance keeps its own
 /// path — so nothing here changes a plugin boundary.
 ///
-/// State (AGENTS.md §12): the base writes a keyed v2 blob, {magic, version=2,
+/// State (AGENTS.md, Project persistence): the base writes a keyed v2 blob, {magic, version=2,
 /// count, (id, value) * count}, and rejects v1 by decision -- FD-24 reset the
 /// format while no released project existed. See saveState(). A plugin whose
 /// blob carries extra fields (EQ's dynamic bands) overrides saveState()/
@@ -303,7 +303,7 @@ public:
     ///
     ///  - **Non-finite rejects the blob.** Corruption, unambiguously: no build
     ///    widens a parameter's range to include NaN, so there is no innocent
-    ///    version of it. This is the case AGENTS.md §12's "a corrupt blob must
+    ///    version of it. This is the case AGENTS.md "Project persistence"'s "a corrupt blob must
     ///    not leave the instance half-updated" is about.
     ///
     ///  - **Out-of-range clamps.** Either corruption, or a legitimate value

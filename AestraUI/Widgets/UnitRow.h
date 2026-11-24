@@ -159,7 +159,7 @@ public:
     /// The output chip's column at the row's right end (the chip, its 16 px margin, a gap): the grid stops before it.
     /// Where the head (stripe, name, M S and the open-lanes key) ends, from the row's left edge.
     float headRight() const { return m_controlWidth; }
-    float routeColumn() const { return (m_density == Density::Minimal ? 24.0f : m_density == Density::Compact ? 64.0f : 96.0f) + 24.0f; }
+    float routeColumn() const { return UnitRowLook::routeColumnWidth(m_density == Density::Minimal ? 24.0f : m_density == Density::Compact ? 64.0f : 96.0f); }
     NUIRect stepStrip() const {
         const auto b = getBounds();
         const float sepX = m_controlWidth; // refreshed on every render and pointer event

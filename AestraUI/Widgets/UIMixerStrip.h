@@ -58,6 +58,8 @@ public:
     const UIParamBar* panBar() const { return m_panBar.get(); }
     /// The meters' own bars (below the clip lamp): the height the shared dB scale is drawn against.
     NUIRect meterBarsRect() const;
+    /// Height of the solid top tint: from the strip's top to the top of the meter well, where the lane starts.
+    float tintHeight() const;
 
     // Platform bridge propagation for cursor warp
     void setPlatformBridge(NUIPlatformBridge* bridge);
@@ -135,7 +137,7 @@ private:
 
     /// Master-only readouts, computed in layoutChildren. Split so each number
     /// sits under the column that owns it: observed signal vs applied gain.
-    NUIRect m_panValueRect{};
+    int m_trackColorIndex{-1};
     NUIRect m_masterMeterReadoutRect{};
     NUIRect m_masterGainReadoutRect{};
 
@@ -143,7 +145,8 @@ private:
     void layoutChildren();
     void invalidateStaticCache();
     void renderStaticLayer(NUIRenderer& renderer);
-    void renderPanValue(NUIRenderer& renderer, const Aestra::ChannelViewModel& channel);
+    /// The top tint: a flat solid tint of the track colour over the strip's top half (StripWash.h).
+    void renderWash(NUIRenderer& renderer, const NUIRect& bounds);
     void renderMasterReadout(NUIRenderer& renderer, const Aestra::ChannelViewModel& channel);
 };
 

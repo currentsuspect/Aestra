@@ -29,7 +29,9 @@ Each run writes `/tmp/preview/<label>/<scene>.png` (1366 x 768) and the `overrid
 `audition`, `versions`, `settings`.
 
 Keys in `--set` are theme property names: `primary`, `selected`, `textOnPrimary`, `backgroundPrimary` (the bed),
-`backgroundSecondary` (the card), `surfaceTertiary`, `surfaceRaised`, `textPrimary`, and the rest of the list in
+`backgroundSecondary` (the card), `surfaceTertiary`, `surfaceRaised`, `timelineBed`, `editorCard`, `editorWell`,
+`editorControl`, `mixerStripBg`, `border`, `borderSubtle`, `divider`, the selection family (`selected`, `selectedText`,
+`selectionFill`, `selectionTint`, `selectionEdge`, `hoverSelected`, `accentText`, `playhead`), `textPrimary`, and the rest of the list in
 `AestraUI/Core/NUIThemeSystem.cpp` (`applyJSONThemeOverrides`). Setting `primary` alone derives `selected` as an 18%
 wash, so for a solid selection set both. The overrides reach the app through the `AESTRA_THEME_OVERRIDES` environment
 variable (a theme JSON laid over the chosen theme at start-up, `Source/Core/AestraWindowManager.cpp`); it is unset in

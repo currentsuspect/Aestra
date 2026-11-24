@@ -24,6 +24,14 @@ DEPTH = {
 }
 
 
+# Ink dark is a warm charcoal family: its depth and glass tokens use the same warm light and warm black as its washes, so no
+# neutral or cool grey is left in it (owner pick "clay charcoal", 23 Nov 2026; it replaced the cool slate of pick S).
+DEPTH_BY_KEY = {
+    "ink-dark": {"neuHi": "#e8d8c80e", "neuLo": "#0a0604d9", "neuEdge": "#00000000",
+                 "glassHi": "#e8d8c81a", "glassEdge": "#e8d8c826", "glassShade": "#0a0604b3"},
+}
+
+
 def rgba(hex_value: str) -> str:
     h = hex_value.lstrip("#")
     if len(h) == 6:
@@ -46,7 +54,7 @@ def main() -> int:
     for key in data["order"]:
         family, mode = key.rsplit("-", 1)
         values = dict(data["values"][key])
-        for name, value in DEPTH[mode].items():
+        for name, value in DEPTH_BY_KEY.get(key, DEPTH[mode]).items():
             values[name] = value if value is not None else values["borderSubtle"]
         pairs = ", ".join(f'{{"{n}", {rgba(v)}}}' for n, v in values.items())
         mode_index = {"dark": 0, "light": 1, "hc": 2}[mode]

@@ -1,5 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerPanel.h"
+#include "InspectorHandle.h"
+#include "MixerMinimal.h"
 #include "../Graphics/NUIDepth.h"
 #include "UIMixerStrip.h"
 #include "MixerScale.h"
@@ -533,7 +535,7 @@ void UIMixerPanel::layoutMeters()
     }
 
     // Layout channel strips to the left, keeping them out of the inspector/master area.
-    const float left = bounds.x + SCALE_W; // the shared dB scale sits at the far left
+    const float left = bounds.x;
     const float right = trailing.inspectorRect.x - STRIP_SPACING;
     const float maxScroll = getChannelMaxScroll();
     m_scrollX = safeClampMixerScroll(m_scrollX, maxScroll);
@@ -574,33 +576,6 @@ void UIMixerPanel::layoutMeters()
     }
 }
 
-void UIMixerPanel::renderDbScale(NUIRenderer& renderer)
-{
-    // One scale for every strip (FD-28 point 2), drawn once at the far left against the meters' own height.
-    const UIMixerStrip* ref = nullptr;
-    for (const auto& strip : m_strips) {
-        if (strip && strip->isVisible()) { ref = strip.get(); break; }
-    }
-    if (!ref) return;
-    const NUIRect bars = ref->meterBarsRect();
-    if (bars.isEmpty()) return;
-    auto& theme = NUIThemeManager::getInstance();
-    const auto b = getBounds();
-    const NUIColor label = theme.getColor("textSecondary").withAlpha(0.75f);
-    const NUIColor tick = theme.getColor("border").withAlpha(0.55f);
-    float lastY = 1e9f;
-    for (const float db : MixerScale::kTicks) {
-        const float y = bars.bottom() - MixerScale::norm(db) * bars.height;
-        if (std::fabs(y - lastY) < 11.0f) continue; // never print two labels on top of each other
-        lastY = y;
-        char buf[8];
-        std::snprintf(buf, sizeof(buf), "%s%d", db > 0.0f ? "+" : (db < 0.0f ? "\xE2\x88\x92" : ""), static_cast<int>(std::fabs(db)));
-        const float w = renderer.measureText(buf, 8.5f).width;
-        renderer.drawText(buf, {b.x + SCALE_W - 8.0f - w, y - 5.5f}, 8.5f, label);
-        renderer.fillRect(NUIRect{b.x + SCALE_W - 5.0f, y, 4.0f, 1.0f}, tick);
-    }
-}
-
 void UIMixerPanel::renderGroupBands(NUIRenderer& renderer)
 {
     if (m_groupBands.empty()) return;
@@ -613,21 +588,37 @@ void UIMixerPanel::renderGroupBands(NUIRenderer& renderer)
         } else if (band.master) {
             color = theme.getColor("textSecondary");
         }
-        renderer.fillRoundedRect(band.rect, 3.0f, color.withAlpha(band.master ? 0.10f : 0.18f));
-        renderer.fillRect(NUIRect{band.rect.x, band.rect.y, band.rect.width, 2.0f}, color.withAlpha(band.master ? 0.45f : 0.9f));
+        // Neutral band; the bus's colour is only the thin line that names it.
+        renderer.fillRoundedRect(band.rect, 3.0f, theme.getColor("textSecondary").withAlpha(MixerMinimal::kBandFillAlpha));
+        renderer.fillRect(NUIRect{band.rect.x, band.rect.y, band.rect.width, 1.0f},
+                          color.withAlpha(band.master ? MixerMinimal::kBandMasterLineAlpha : MixerMinimal::kBandLineAlpha));
         renderer.drawText("\xE2\x86\x92 " + band.label, {band.rect.x + 6.0f, band.rect.y + 3.0f}, 10.0f,
                           theme.getColor("textPrimary").withAlpha(0.88f));
     }
 }
 
-NUIRect UIMixerPanel::getInspectorToggleRect() const
+NUIRect UIMixerPanel::getInspectorRailRect() const
 {
     const TrailingLayout trailing = trailingLayout();
 
-    // Collapsed: the whole thin rail is the target. Expanded: a grip strip down
-    // the inspector's leading edge.
+    // Collapsed: the thin strip that is left. Expanded: a 10px strip down the inspector's leading edge. Only the
+    // handle (InspectorHandle.h) on it is drawn and reacts; the rail is where the handle is centred.
     const float railW = isInspectorCollapsed() ? INSPECTOR_COLLAPSED_WIDTH : 10.0f;
     return NUIRect{trailing.inspectorRect.x, trailing.inspectorRect.y, railW, trailing.inspectorRect.height};
+}
+
+NUIRect UIMixerPanel::getInspectorTabRect() const
+{
+    const NUIRect rail = getInspectorRailRect();
+    const auto t = InspectorHandle::tab(rail.x, rail.y, rail.width, rail.height);
+    return NUIRect{t.x, t.y, t.w, t.h};
+}
+
+NUIRect UIMixerPanel::getInspectorToggleRect() const
+{
+    const NUIRect rail = getInspectorRailRect();
+    const auto h = InspectorHandle::hit(rail.x, rail.y, rail.width, rail.height);
+    return NUIRect{h.x, h.y, h.w, h.h};
 }
 
 void UIMixerPanel::updateInspectorWidthConstraint()
@@ -773,13 +764,12 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
 
     // Render channel strips with a clip so they never draw into the inspector/master area.
     const TrailingLayout trailing = trailingLayout();
-    const float channelW = std::max(0.0f, (trailing.inspectorRect.x - STRIP_SPACING) - (bounds.x + SCALE_W));
+    const float channelW = std::max(0.0f, (trailing.inspectorRect.x - STRIP_SPACING) - (bounds.x));
     const NUIRect minimapRect = getMinimapRect();
     const float channelY = minimapRect.bottom() + MINIMAP_GAP;
-    const NUIRect channelClip(bounds.x + SCALE_W, channelY, channelW, std::max(0.0f, bounds.bottom() - channelY));
+    const NUIRect channelClip(bounds.x, channelY, channelW, std::max(0.0f, bounds.bottom() - channelY));
 
     // The scale lives left of the clipped strip area, so it is drawn before the clip is set.
-    renderDbScale(renderer);
 
     bool clipEnabled = false;
     if (!channelClip.isEmpty()) {
@@ -818,19 +808,19 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
     // inspector; expanded it is a slim grip on the panel's leading edge.
     {
         auto& theme = NUIThemeManager::getInstance();
-        const NUIRect rail = getInspectorToggleRect();
+        const NUIRect rail = getInspectorTabRect(); // the drawn handle; its hit area is this plus a little slop
         const bool collapsed = isInspectorCollapsed();
         const bool forced = isInspectorForcedCollapsed();
 
-        // A width-imposed collapse reads as unavailable rather than chosen: the
-        // rail still accepts the click (it records intent) but must not look
-        // like it will open the panel right now, or it feels broken.
-        const NUIColor railColor = m_inspectorToggleHovered
-            ? theme.getColor(forced ? "selectionTint" : "selectionFill")
-            : theme.getColor("surfaceTertiary").withAlpha(collapsed ? 0.72f : 0.34f);
-        renderer.fillRoundedRect(rail, 3.0f, railColor);
+        // A width-imposed collapse reads as unavailable rather than chosen: the handle still accepts the click (it
+        // records intent) but must not look like it will open the panel right now, or it feels broken.
+        // Owner, 22 Nov: at rest only the chevron shows; near it a small round-cornered tab rises behind it, one
+        // flat quiet step (no accent wash, no glow, no lift). Nothing else along the edge reacts.
+        const NUIColor lit = (forced ? theme.getColor("hover") : theme.getColor("surfaceRaised")).withAlpha(forced ? 0.6f : 0.95f);
+        if (m_inspectorToggleHovered)
+            renderer.fillRoundedRect(rail, 4.0f, lit);
 
-        // Chevron points the way the panel will move.
+        // Chevron points the way the panel will move: a 1.5px stroke, 4 wide by 8 tall.
         float glyphAlpha = m_inspectorToggleHovered ? 0.95f : 0.6f;
         if (forced) {
             glyphAlpha *= 0.45f;
@@ -839,11 +829,8 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
         const float cx = rail.x + rail.width * 0.5f;
         const float cy = rail.y + rail.height * 0.5f;
         const float dir = collapsed ? -1.0f : 1.0f;
-        for (int i = 0; i < 5; ++i) {
-            const float dy = static_cast<float>(i) - 2.0f;
-            const float dx = dir * (2.0f - std::abs(dy));
-            renderer.fillRect(NUIRect{cx + dx - 0.5f, cy + dy * 2.0f, 1.5f, 2.0f}, glyph);
-        }
+        const NUIPoint pts[3] = {{cx - dir * 2.0f, cy - 4.0f}, {cx + dir * 2.0f, cy}, {cx - dir * 2.0f, cy + 4.0f}};
+        renderer.drawPolyline(pts, 3, 1.5f, glyph);
     }
 
     // Master strip renders on top / outside the clip.
@@ -928,6 +915,14 @@ bool UIMixerPanel::onMouseEvent(const NUIMouseEvent& event)
         }
     }
 
+    // An open plugin finder floats over the channel strips: a wheel over it
+    // scrolls its list. Offer it the event first, or the horizontal channel
+    // scroll below swallows the wheel before the dropdown ever sees it.
+    if (event.wheelDelta != 0.0f && m_pluginDropdown && m_pluginDropdown->isOpen() &&
+        m_pluginDropdown->getBounds().contains(event.position)) {
+        return m_pluginDropdown->onMouseEvent(event);
+    }
+
     if (event.wheelDelta != 0.0f) {
         auto bounds = getBounds();
         // These three already matched getChannelViewportWidth()/
@@ -937,7 +932,7 @@ bool UIMixerPanel::onMouseEvent(const NUIMouseEvent& event)
         const float maxScroll = getChannelMaxScroll();
         const float channelY = minimapRect.bottom() + MINIMAP_GAP;
 
-        const NUIRect channelClip(bounds.x + SCALE_W, channelY, visibleW, std::max(0.0f, bounds.bottom() - channelY));
+        const NUIRect channelClip(bounds.x, channelY, visibleW, std::max(0.0f, bounds.bottom() - channelY));
         if (maxScroll > 0.0f && channelClip.contains(event.position)) {
             constexpr float SCROLL_PX = 60.0f;
             m_targetScrollX = std::clamp(m_targetScrollX - static_cast<float>(event.wheelDelta) * SCROLL_PX, 0.0f, maxScroll);
@@ -952,7 +947,7 @@ bool UIMixerPanel::navigatorShown() const
 {
     // Derived from the layout constants rather than trailingLayout(), which itself needs the navigator's height.
     const auto bounds = getBounds();
-    const float viewport = bounds.width - MASTER_STRIP_WIDTH - inspectorWidth() - STRIP_SPACING * 2.0f - SCALE_W;
+    const float viewport = bounds.width - MASTER_STRIP_WIDTH - inspectorWidth() - STRIP_SPACING * 2.0f;
     return getChannelContentWidth() > viewport + 0.5f;
 }
 
@@ -965,16 +960,16 @@ NUIRect UIMixerPanel::getMinimapRect() const
 {
     // The navigator's rect (zero height when channels fit): kept under its old name for the callers below.
     const auto bounds = getBounds();
-    const float width = std::max(0.0f, bounds.width - MASTER_STRIP_WIDTH - inspectorWidth() - STRIP_SPACING * 2.0f - SCALE_W);
+    const float width = std::max(0.0f, bounds.width - MASTER_STRIP_WIDTH - inspectorWidth() - STRIP_SPACING * 2.0f);
     const float h = navigatorShown() ? UIMixerNavigator::heightFor(m_grouping.grouped()) : 0.0f;
-    return NUIRect(bounds.x + SCALE_W, bounds.y + 2.0f + TOOLBAR_H, width, h);
+    return NUIRect(bounds.x, bounds.y + 2.0f + TOOLBAR_H, width, h);
 }
 
 float UIMixerPanel::getChannelViewportWidth() const
 {
     const auto bounds = getBounds();
     const TrailingLayout trailing = trailingLayout();
-    return std::max(0.0f, (trailing.inspectorRect.x - STRIP_SPACING) - (bounds.x + SCALE_W));
+    return std::max(0.0f, (trailing.inspectorRect.x - STRIP_SPACING) - (bounds.x));
 }
 
 float UIMixerPanel::getChannelContentWidth() const

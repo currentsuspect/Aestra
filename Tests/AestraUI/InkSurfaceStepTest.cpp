@@ -53,15 +53,19 @@ struct Site {
 
 int main() {
     // Part 1: the order of the surfaces, every theme.
-    constexpr float kCardStep = 1.10f; // the card over the bed, as a contrast ratio (Ink dark is about 1.19)
+    constexpr float kCardStep = 1.10f; // the card over the bed, as a contrast ratio (Ink dark, warm charcoal ladder: panel to card 1.07)
     for (const auto& kit : NUIThemePresets::kitThemes()) {
         const std::string key = kit.key;
         const NUIThemeProperties t = NUIThemePresets::createKitTheme(key);
         const bool dark = kit.mode != 1;
         if (key.rfind("ink-", 0) != 0 || kit.mode == 2) continue; // Ink dark and light; high contrast keeps its own, smaller steps
         const std::string at = key + ": ";
-        check(ratio(t.backgroundSecondary, t.backgroundPrimary) >= kCardStep, at + "the card rises from the bed by the design step");
+        check(ratio(t.backgroundSecondary, t.backgroundPrimary) >= (key == "ink-dark" ? 1.065f : kCardStep), at + "the card rises from the bed by the design step");
         check(luma(t.backgroundSecondary) > luma(t.backgroundPrimary), at + "the card is lighter than the bed");
+        if (key == "ink-dark") { // clay charcoal (23 Nov): a warm charcoal ladder; the panel is the old "bed", the outer bed is darker
+            check(ratio(t.backgroundPrimary, t.timelineBed) >= 1.15f, at + "the panel body is one step above the outer bed");
+            check(ratio(t.backgroundSecondary, t.backgroundPrimary) >= 1.065f && ratio(t.backgroundSecondary, t.backgroundPrimary) <= 1.08f, at + "card over panel is 1.07:1");
+        }
         for (const NUIColor* control : {&t.surfaceTertiary, &t.surfaceRaised}) {
             if (dark) { // on dark the control greys climb past the card; on light they step down from the bed instead
                 check(luma(*control) > luma(t.backgroundSecondary), at + "a control grey is lighter than the card");
@@ -91,6 +95,9 @@ int main() {
         {"Source/Components/TrackManagerUIToolbar.cpp", "renderer.fillRect(row, theme.getColor(\"backgroundPrimary\"));", "backgroundPrimary", "timeline toolbar strip"},
         {"Source/Panels/WindowPanel.cpp", "auto titleBarColor = theme.getColor(\"backgroundSecondary\");", "backgroundSecondary", "panel title strip (opaque)"},
         {"AestraUI/Widgets/PianoRollToolbar.cpp", "toolbarBg = themeManager.getColor(\"backgroundSecondary\");", "backgroundSecondary", "piano roll toolbar strip"},
+        {"AestraUI/Base/NUICustomTitleBar.cpp", "const NUIColor bgColor = themeManager.getColor(\"timelineBed\");", "timelineBed", "title bar (the outer bed)"},
+        {"Source/Panels/TransportBar.cpp", "renderer.fillRect(bounds, theme.getColor(\"timelineBed\"));", "timelineBed", "transport strip (the outer bed)"},
+        {"Source/Components/FileBrowser.cpp", "renderer.fillRect(fileBrowserBounds, themeManager.getColor(\"backgroundPrimary\"));", "backgroundPrimary", "file browser sidebar (one panel, header and list)"},
         {"Source/Settings/MissingAssetsDialog.cpp", "theme.radiusL, theme.backgroundSecondary)", "backgroundSecondary", "Missing assets dialog card"},
     };
     for (const auto& s : sites) {

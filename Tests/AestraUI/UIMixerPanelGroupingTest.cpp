@@ -137,9 +137,9 @@ int main() {
         const uint32_t id = kick->getChannelId();
         check(panel.density() == AestraUI::MixerDensity::Normal, "Normal is the default");
         const auto* strip = panel.stripForChannel(id);
-        check(strip && std::fabs(strip->getBounds().width - 84.0f) < 0.5f, "a Normal strip is 84 px wide");
+        check(strip && std::fabs(strip->getBounds().width - 96.0f) < 0.5f, "a Normal strip is 96 px wide");
         panel.setDensity(AestraUI::MixerDensity::Wide);
-        check(std::fabs(panel.stripForChannel(id)->getBounds().width - 120.0f) < 0.5f, "Wide is 120 px");
+        check(std::fabs(panel.stripForChannel(id)->getBounds().width - 136.0f) < 0.5f, "Wide is 136 px");
         panel.setDensity(AestraUI::MixerDensity::Narrow);
         const auto* narrow = panel.stripForChannel(id);
         check(std::fabs(narrow->getBounds().width - 44.0f) < 0.5f, "Narrow is 44 px");

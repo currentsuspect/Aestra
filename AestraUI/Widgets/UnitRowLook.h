@@ -111,6 +111,49 @@ inline Pads pads(const NUIThemeProperties& t) {
 /// The part of an active pad above its velocity bar: opaque, so it never depends on what is behind the pad.
 inline NUIColor velocityBase(const Pads& p, const NUIColor& rest) { return NUIColor::lerp(rest, p.active, 0.40f); }
 
+/// The output chip on a row ("[] Channel 1 v"): a colour dot, the destination's name and a chevron. The three are one
+/// group, centred in the chip: the same space to the chip's left and right edge, and the same gap between the parts
+/// whatever the name's length (it used to be pinned to the left edge, so a short name left a hole before the chevron).
+constexpr float kRouteDot = 6.0f;      ///< the colour square
+constexpr float kRouteGap = 6.0f;      ///< dot to name, and name to chevron
+constexpr float kRouteChevHalf = 3.0f; ///< the chevron is 2 * this wide
+constexpr float kRouteMinPad = 8.0f;   ///< the least space the group keeps to either edge
+
+/// Where the output chip sits in the right column of a row (owner, 21 Nov: "it's the component, not the inside"). Measured on
+/// the screenshot the chip hugged the pad lane (2.6 px from it) and stood 16 px from the card's right edge. The chip keeps
+/// its right edge at the card margin, which lines up with the Fit | Scroll button above, and the lane now stops the same
+/// distance before it, so the gap to the lane equals the gap to the card edge.
+constexpr float kRouteMargin = 16.0f;    ///< chip to card edge, and lane to chip
+constexpr float kLaneInsetAdjust = 6.0f; ///< the lane well is cut 8 px after the head divider but measured from 2 px (UnitRow::draw)
+inline float routeChipX(float rowRight, float routeW) { return rowRight - kRouteMargin - routeW; }
+inline float routeColumnWidth(float routeW) { return routeW + 2.0f * kRouteMargin + kLaneInsetAdjust; }
+/// The lane well's right edge for a row whose right edge is @p rowRight (UnitRow::drawContextBlock's rect).
+inline float laneRight(float rowRight, float routeW) { return rowRight + kLaneInsetAdjust - routeColumnWidth(routeW); }
+
+/// The widest name that fits a chip of this width.
+inline float routeChipTextRoom(float chipWidth) {
+    return std::max(0.0f, chipWidth - 2.0f * kRouteMinPad - kRouteDot - 2.0f * kRouteGap - 2.0f * kRouteChevHalf);
+}
+
+struct RouteChip {
+    float dotX = 0.0f;   ///< left edge of the dot
+    float textX = 0.0f;  ///< left edge of the name
+    float chevX = 0.0f;  ///< centre of the chevron
+    float leftPad = 0.0f, rightPad = 0.0f;
+};
+
+/// Places the group for a name of @p textWidth pixels (already cut to routeChipTextRoom) in a chip.
+inline RouteChip routeChip(float chipX, float chipWidth, float textWidth) {
+    const float group = kRouteDot + kRouteGap + textWidth + kRouteGap + 2.0f * kRouteChevHalf;
+    RouteChip c;
+    c.leftPad = std::max(0.0f, (chipWidth - group) * 0.5f);
+    c.rightPad = c.leftPad;
+    c.dotX = chipX + c.leftPad;
+    c.textX = c.dotX + kRouteDot + kRouteGap;
+    c.chevX = c.textX + textWidth + kRouteGap + kRouteChevHalf;
+    return c;
+}
+
 /// A scene card in the strip above the rack.
 struct SceneTile {
     NUIColor fill;

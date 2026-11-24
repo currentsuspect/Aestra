@@ -1,260 +1,82 @@
-# Minimal ASIO Integration Strategy
+# ASIO support
 
-## 🎯 Philosophy: Detection Only, No Loading
+ASIO is a Windows-only driver model. Aestra loads an installed ASIO driver over COM and streams
+through it, so an interface whose own driver beats its WASAPI endpoint can be used at its own
+latency. The implementation is `AestraAudio/src/Drivers/ASIODriver.cpp`.
 
-Aestra implements a **safe, minimal ASIO detection system** that provides visibility without risk.
+This page describes what the code does today. It replaced an earlier strategy note written before
+the driver existed, which said Aestra would only *detect* ASIO drivers and run everything through
+WASAPI. That is no longer true.
 
-## ✅ What We Do (Read-Only Detection)
+## Where Aestra looks
 
-### **ASIODriverInfo** - Information Display Only
+`ASIODriver::getDevices()` reads `HKLM\SOFTWARE\ASIO` — one subkey per installed driver — taking
+`CLSID` and `Description`, and falling back to the key name when there is no description. Each
+entry becomes a device of type `AudioDriverType::ASIO_EXTERNAL`.
 
-**Purpose**: Show users what ASIO drivers are installed on their system.
+The channel counts and sample rates reported at this stage are guesses: the driver has not been
+loaded yet, so nothing has been asked. They are refined when a stream opens.
 
-**Implementation**:
-```cpp
-// Scan Windows Registry
-auto drivers = ASIODriverScanner::scanInstalledDrivers();
+## How a driver is loaded
 
-// Display to user
-for (const auto& driver : drivers) {
-    std::cout << "Found: " << driver.name << std::endl;
-}
-```
+`loadDriver()`:
 
-**What It Scans**:
-- `HKLM\SOFTWARE\ASIO` (64-bit drivers)
-- `HKLM\SOFTWARE\WOW6432Node\ASIO` (32-bit drivers)
+1. Initialises COM apartment-threaded (`CoInitializeEx(..., COINIT_APARTMENTTHREADED)`). An MTA
+   session is tolerated, but it is not what ASIO expects.
+2. `CLSIDFromString` → `CoCreateInstance(CLSCTX_INPROC_SERVER)`.
+3. `QueryInterface(IID_IASIO)` — `{47d6d9d4-e949-11d1-86ba-006008caaa53}` — with a fallback that
+   queries the driver's own CLSID as the interface ID, because some older drivers do that.
+4. `init(hwnd)`, trying `GetForegroundWindow()`, then `GetDesktopWindow()`, then `nullptr`.
+   ASIO4ALL and others behave better with an owned window handle.
 
-**What It Reads**:
-- Driver name (e.g., "ASIO4ALL v2", "FL Studio ASIO")
-- CLSID (COM identifier)
-- Description (optional)
+`IASIO` itself is declared in `AestraAudio/include/Drivers/ASIOInterface.h`: the vtable and the
+4-byte-packed structs are written out in the tree. Aestra therefore has no Steinberg SDK
+dependency and links nothing against one — but it does load and drive the driver.
 
-**What It Does NOT Do**:
-- ❌ Load any DLLs
-- ❌ Call ASIO functions
-- ❌ Initialize drivers
-- ❌ Create audio streams
-- ❌ Require Steinberg SDK
+## Opening a stream
 
-## 🎨 UI Integration
+`openStream()`:
 
-### Audio Settings Dialog
+- Asks `getChannels()` and `getBufferSize()`. The requested buffer size is clamped into the
+  driver's min/max, so a driver that only offers 256 frames gets 256.
+- Calls `createBuffers()` with one planar buffer per active channel.
+- Sample rate: if the driver's current rate differs from the requested one and `canSampleRate()`
+  allows it, `setSampleRate()` is called. Otherwise the stream runs at the driver's rate and the
+  engine is told so through `getStreamSampleRate()`.
 
-```cpp
-// Example usage in AudioSettingsDialog
-auto asioInfo = ASIODriverScanner::getAvailabilityMessage();
+## Inside the callback
 
-// Display in info panel:
-// "ASIO drivers detected: ASIO4ALL v2, FL Studio ASIO.
-//  Aestra uses WASAPI Exclusive mode for the same low latency.
-//  Your ASIO devices will work through their WASAPI endpoints."
-```
+`asioBufferSwitch()` runs on the driver's own thread:
 
-### Benefits for Users
+1. On the first callback, the thread is raised to pro-audio priority through `MMCSS::setProAudio()`
+   (`AestraCore/include/AestraThreading.h`).
+2. Input is de-interleaved into a buffer allocated in `openStream`.
+3. The engine's callback runs.
+4. Output is interleaved back and clamped to ±1.0 for integer formats.
+5. `outputReady()` is called.
 
-1. **Transparency**: "You have ASIO4ALL installed"
-2. **Education**: "Aestra uses WASAPI instead, which gives the same performance"
-3. **Reassurance**: "Your ASIO interface will work fine"
-4. **Future-proof**: Easy to upgrade to full ASIO if needed
+Sample formats converted: `ASIOSTInt16LSB`, `ASIOSTInt32LSB`, `ASIOSTFloat32LSB`. Any other format
+a driver reports leaves that channel silent — the buffers are zeroed rather than guessed at.
 
-## 🔒 Safety Guarantees
-
-### What Can't Go Wrong
+Nothing allocates inside the callback. The scratch buffers are sized once, when the stream opens.
 
-✅ **No crashes** - We never load external DLLs  
-✅ **No licensing issues** - We never use Steinberg SDK  
-✅ **No driver bugs** - We never call ASIO functions  
-✅ **No COM registration** - We only read registry  
-✅ **No version conflicts** - We don't link against anything  
+## Latency
 
-### Registry Access Safety
+`getStreamLatency()` returns `(inputLatency + outputLatency) / sampleRate` from the driver's own
+`getLatencies()`. It is what the driver reports, not a measurement Aestra takes.
 
-```cpp
-// Safe registry reading with error handling
-LONG result = RegOpenKeyExA(HKEY_LOCAL_MACHINE, path, 0, KEY_READ, &hKey);
-if (result != ERROR_SUCCESS) {
-    // Gracefully handle - no ASIO drivers, that's fine
-    return empty_list;
-}
-```
-
-## 📊 Expected Detections
-
-### Common ASIO Drivers Users Might Have
-
-| Driver Name          | Typical CLSID Pattern                        | Notes                    |
-|----------------------|----------------------------------------------|--------------------------|
-| ASIO4ALL v2          | `{232685C6-...}`                             | Universal wrapper        |
-| FL Studio ASIO       | `{47814B90-...}`                             | FL-specific              |
-| Focusrite USB        | Various                                      | Hardware-specific        |
-| Universal Audio      | Various                                      | Hardware-specific        |
-| RME                  | Various                                      | Hardware-specific        |
-| Steinberg Generic    | `{00000000-...}`                             | Steinberg reference      |
-
-### Example Output
-
-```
-[ASIO Scanner] Found 2 ASIO driver(s)
-  - ASIO4ALL v2 ({232685C6-6548-49D8-846D-4141A3EF7560})
-  - FL Studio ASIO ({47814B90-C7D5-4B55-8E6F-8388C5503982})
-```
-
-## 💡 User Messaging Strategy
-
-### If ASIO Drivers Found
-
-**Message**:
-> "ASIO drivers detected: ASIO4ALL v2, FL Studio ASIO.
-> 
-> Aestra uses **WASAPI Exclusive mode** for professional low-latency audio (3-5ms).
-> This provides the same performance as ASIO without requiring special drivers.
-> 
-> Your ASIO-compatible audio interface will work perfectly with Aestra through its WASAPI endpoint."
-
-### If No ASIO Drivers Found
-
-**Message**:
-> "No ASIO drivers detected.
-> 
-> Aestra uses **WASAPI** (Windows Audio Session API) for professional low-latency audio.
-> WASAPI Exclusive mode provides 3-5ms latency - the same as ASIO."
-
-### Why This Works
-
-1. **Sets expectations**: Users know Aestra uses WASAPI
-2. **Educates**: WASAPI = ASIO performance
-3. **Reassures**: Their hardware will work
-4. **Professional**: Shows we know what we're doing
-
-## 🔧 Technical Implementation
-
-### File Structure
-
-```
-AestraAudio/
-├── include/
-│   └── ASIODriverInfo.h         ✅ Header with structs
-└── src/
-    └── ASIODriverInfo.cpp       ✅ Registry scanner implementation
-```
-
-### API Surface
-
-```cpp
-// Simple, clean API
-namespace Aestra::Audio {
-
-struct ASIODriverInfo {
-    std::string name;
-    std::string clsid;
-    std::string description;
-    bool isValid;
-};
-
-class ASIODriverScanner {
-public:
-    static std::vector<ASIODriverInfo> scanInstalledDrivers();
-    static bool hasInstalledDrivers();
-    static uint32_t getInstalledDriverCount();
-    static std::string getAvailabilityMessage();
-};
-
-}
-```
-
-### Usage Example
-
-```cpp
-// In AudioSettingsDialog.cpp
-#include "ASIODriverInfo.h"
-
-void AudioSettingsDialog::updateASIOInfo() {
-    using namespace Aestra::Audio;
-    
-    // Get user-friendly message
-    std::string message = ASIODriverScanner::getAvailabilityMessage();
-    
-    // Display in UI
-    m_asioInfoLabel->setText(message.c_str());
-    
-    // Optional: Show detailed list
-    auto drivers = ASIODriverScanner::scanInstalledDrivers();
-    for (const auto& driver : drivers) {
-        std::cout << "  • " << driver.name << std::endl;
-    }
-}
-```
-
-## 🚀 Future Upgrade Path (If Needed)
-
-### If Users Demand Full ASIO
-
-This minimal implementation makes it **easy to upgrade later**:
-
-1. Already have driver detection ✅
-2. Already have driver enumeration ✅
-3. Already have UI messaging ✅
-
-**To upgrade**:
-```cpp
-// Extend existing class
-class ASIODriverLoader : public ASIODriverScanner {
-public:
-    bool loadDriver(const std::string& clsid);
-    bool initializeDriver();
-    // ... rest of ASIO implementation
-};
-```
-
-But honestly, **you probably won't need to**. WASAPI Exclusive is that good.
-
-## ✅ Advantages of This Approach
-
-| Aspect           | Minimal ASIO | Full ASIO | Our Choice |
-|------------------|--------------|-----------|------------|
-| Latency          | N/A (use WASAPI) | ~2-3ms | ✅ WASAPI Exclusive ~3-5ms |
-| Stability        | 🟢 Perfect | 🟡 Depends on drivers | ✅ Minimal |
-| Maintenance      | 🟢 Zero | 🔴 High | ✅ Minimal |
-| Licensing        | 🟢 No issues | 🟡 SDK restrictions | ✅ Minimal |
-| Compatibility    | 🟢 Universal | 🟡 Driver-dependent | ✅ Minimal |
-| User Transparency| 🟢 Shows what's available | 🟢 Full control | ✅ Minimal |
-
-## 📈 Success Metrics
-
-### What Success Looks Like
-
-✅ **Users understand**: "Aestra uses WASAPI, which is great"  
-✅ **No confusion**: "Why doesn't my ASIO driver show up?"  
-✅ **Professional image**: "Aestra knows about ASIO but chose better"  
-✅ **Zero crashes**: No external DLLs = No DLL crashes  
-✅ **Zero maintenance**: No SDK updates, no driver testing  
-
-### What Failure Would Look Like (Full ASIO)
-
-❌ "ASIO4ALL crashes Aestra on my machine"  
-❌ "FL Studio ASIO doesn't work with Aestra"  
-❌ "Need to update Steinberg SDK"  
-❌ "Driver X works in FL but not Aestra"  
-❌ "Licensing issue with ASIO redistribution"  
-
-## 🎯 Conclusion
-
-**Minimal ASIO Detection = Best of Both Worlds**
-
-✅ Show users we're aware of ASIO  
-✅ Explain why WASAPI is better for Aestra  
-✅ Zero risk, zero maintenance  
-✅ Professional appearance  
-✅ Easy to upgrade if ever needed  
-
-**This is the smart, pragmatic choice.** 🚀
-
----
-
-**Status**: Implemented and Ready  
-**Risk Level**: Minimal (read-only registry access)  
-**Maintenance Burden**: Near-zero  
-**User Value**: Transparency and education  
-
-**Perfect for production.** ✨
+## Limits worth knowing
+
+- **One ASIO driver per process.** Callback routing goes through a single static instance, so two
+  live engines cannot hold two different ASIO drivers at the same time.
+- **`isAvailable()` returns true on Windows unconditionally.** The ASIO entry therefore appears in
+  the driver list even on a machine with no ASIO driver installed; choosing it fails at
+  `loadDriver()` with the COM error.
+- **Only three sample formats are converted.** Packed 24-bit and MSB-first formats are not.
+- **Device capabilities are guesses until a stream opens.**
+
+## Fallback
+
+`AestraAudio/src/Win32/WindowsDriverRegistry.cpp` registers ASIO first, then WASAPI Exclusive, then
+WASAPI Shared, then RtAudio, then a silent dummy driver. An ASIO failure is not fatal: the engine
+falls through to the next driver.

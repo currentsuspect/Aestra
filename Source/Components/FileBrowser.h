@@ -127,6 +127,11 @@ public:
     void onRender(NUIRenderer& renderer) override;
     void onUpdate(double deltaTime) override;
     void onThemeChanged(const NUIThemeProperties& theme) override; ///< FileBrowserTheme.cpp
+    /// The colours the browser keeps from the theme, and whether its rendered list is queued for a redraw (read by
+    /// FileBrowserLibraryTest to prove a theme change reaches them).
+    struct ThemeColors { NUIColor background, text, selected, hover; };
+    ThemeColors themeColors() const { return {backgroundColor_, textColor_, selectedColor_, hoverColor_}; }
+    bool listRedrawQueued() const { return m_cacheInvalidated; }
     void onResize(int width, int height) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
     bool onKeyEvent(const NUIKeyEvent& event) override;
