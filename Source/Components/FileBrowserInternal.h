@@ -2,8 +2,8 @@
 #pragma once
 
 // FileBrowser's private helpers and layout constants, shared by the translation
-// units the class is split across (FileBrowser.cpp, FileBrowserNavigation.cpp,
-// FileBrowserLibrary.cpp, FileBrowserScan.cpp). Not part of the public interface:
+// units the class is split across (FileBrowser.cpp, FileBrowserMouse.cpp,
+// FileBrowserNavigation.cpp, FileBrowserLibrary.cpp, FileBrowserScan.cpp). Not part of the public interface:
 // include it only from those files.
 
 #include "FileBrowser.h"

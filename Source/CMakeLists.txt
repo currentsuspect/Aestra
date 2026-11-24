@@ -127,6 +127,7 @@ set(Aestra_SOURCES
 	Components/BrowserLibraryIndex.cpp
 	Components/FileBrowser.h
 	Components/FileBrowser.cpp
+	Components/FileBrowserMouse.cpp
 	Components/FileBrowserNavigation.cpp
 	Components/FileBrowserChrome.cpp
 	Components/FileBrowserLibrary.cpp
