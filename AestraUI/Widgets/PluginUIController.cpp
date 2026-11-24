@@ -174,11 +174,12 @@ void PluginUIController::placeEditorComp(const std::shared_ptr<NUIComponent>& ed
         return;
     const auto layer = m_popupLayer->getBounds();
     const auto current = editorComp->getBounds();
-    const Layout::NUIWindowRect region(0.0f, 0.0f, layer.width, layer.height);
+    const auto region = EditorPlacement::editorPlacementRegion(layer.y, layer.width, layer.height, editorContentTop());
     const Layout::NUIAnchoredRect preference{anchorX, anchorY, static_cast<double>(current.width),
                                              static_cast<double>(current.height)};
-    const auto placement = Layout::resolveAnchoredPlacement(preference, Layout::NUIPlacementMode::Anchored, region,
-                                                            Layout::NUISizeLimits{0.0, 0.0});
+    // A native plugin's view is a fixed-size window: its panel is never shrunk to the region.
+    const bool holdSize = std::dynamic_pointer_cast<NativePluginPanel>(editorComp) != nullptr;
+    const auto placement = EditorPlacement::resolveEditorPlacement(preference, region, holdSize);
     if (placement.applicable)
         editorComp->setBounds(placement.resolved.raw());
 }
@@ -197,7 +198,7 @@ void PluginUIController::gatherEditors() {
     if (!m_popupLayer)
         return;
     const auto layer = m_popupLayer->getBounds();
-    const Layout::NUIWindowRect region(0.0f, 0.0f, layer.width, layer.height);
+    const auto region = EditorPlacement::editorPlacementRegion(layer.y, layer.width, layer.height, editorContentTop());
     for (const auto& editorComp : m_activeEditors) {
         const auto b = editorComp->getBounds();
         const Layout::NUIAnchoredRect prior{0.5, 0.5, static_cast<double>(b.width), static_cast<double>(b.height)};
@@ -759,16 +760,17 @@ void PluginUIController::openPluginEditor(
             EditorPlacement::editorOpenPreference(stored, intrinsic.width, intrinsic.height);
 
         const auto layerBounds = m_popupLayer->getBounds();
-        const Layout::NUILocalRect localRegion(0.0f, 0.0f, layerBounds.width, layerBounds.height);
-        const Layout::NUISizeLimits limits{0.0, 0.0};
+        const auto below = EditorPlacement::editorPlacementRegion(layerBounds.y, layerBounds.width, layerBounds.height,
+                                                                  editorContentTop());
+        const Layout::NUILocalRect localRegion(below.x, below.y, below.width, below.height);
+        const bool holdSize = std::dynamic_pointer_cast<NativePluginPanel>(editorComp) != nullptr;
         const auto popupGlobal = m_popupLayer->getBounds(); // window-absolute: the layer's origin
         bool placementApplied = false;
         if (!popupGlobal.isEmpty() && !layerBounds.isEmpty()) {
             // Measured window frame: resolve there, convert back for setBounds.
             const Layout::NUIWindowPoint popupOrigin(popupGlobal.x, popupGlobal.y);
             const Layout::NUIWindowRect regionWindow = Layout::localToWindow(localRegion, popupOrigin);
-            const auto placement = Layout::resolveAnchoredPlacement(preference, Layout::NUIPlacementMode::Anchored,
-                                                                    regionWindow, limits);
+            const auto placement = EditorPlacement::resolveEditorPlacement(preference, regionWindow, holdSize);
             if (placement.applicable) {
                 editorComp->setBounds(Layout::windowToLocal(placement.resolved, popupOrigin).raw());
                 placementApplied = true;
@@ -781,8 +783,7 @@ void PluginUIController::openPluginEditor(
             // stored anchor relative to the layer.
             const Layout::NUIWindowRect localRegionWindow(localRegion.x, localRegion.y, localRegion.width,
                                                           localRegion.height);
-            const auto placement = Layout::resolveAnchoredPlacement(preference, Layout::NUIPlacementMode::Anchored,
-                                                                    localRegionWindow, limits);
+            const auto placement = EditorPlacement::resolveEditorPlacement(preference, localRegionWindow, holdSize);
             if (placement.applicable) {
                 editorComp->setBounds(placement.resolved.raw());
             }

@@ -1,9 +1,11 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NativePluginPanel.h"
 
+#include "../Base/NUIContextMenu.h"
 #include "../Core/NUIThemeSystem.h"
 #include "../Graphics/NUIRenderer.h"
 #include "../Platform/NUIPlatformBridge.h"
+#include "EditorSurfacePlacement.h"
 
 #include <algorithm>
 #include <cmath>
@@ -51,6 +53,9 @@ NativePluginPanel::~NativePluginPanel() {
         m_bridge->placeChildWindow(m_child, 0, 0, 1, 1, false);
     if (auto instance = m_instance.lock())
         instance->closeEditor();
+    // The plugin's window may have held X input focus, and X hands it to nobody in particular when that window dies.
+    if (m_bridge && m_child)
+        m_bridge->reclaimInputFocus();
 }
 
 NUISize NativePluginPanel::panelSizeFor(int width, int height) const {
@@ -87,7 +92,12 @@ void NativePluginPanel::place(bool force) {
         return;
     // A child window always draws over the app. While the panel's own preset fold or menu is open it would cover
     // the fold, so the plugin steps aside until the fold closes.
-    const bool popoverOpen = titleAccessory() && titleAccessory()->wantsKeys();
+    // The header's "..." menu is an Aestra component in the same layer; the plugin's window would hide it too.
+    bool popoverOpen = titleAccessory() && titleAccessory()->wantsKeys();
+    if (!popoverOpen && getParent())
+        for (const auto& sibling : getParent()->getChildren())
+            if (auto* menu = dynamic_cast<NUIContextMenu*>(sibling.get()); menu && menu->isVisible())
+                popoverOpen = true;
     const bool visible = shownInTree() && !m_instance.expired() && !popoverOpen;
     const NUIRect view = viewRect();
     if (!force && m_everPlaced && visible == m_placedVisible && view.x == m_placed.x && view.y == m_placed.y &&
@@ -103,11 +113,26 @@ void NativePluginPanel::place(bool force) {
     m_placed = view;
     m_placedVisible = visible;
     m_everPlaced = true;
+    // First placement: the arrow on the container (and whatever inner windows exist yet). onUpdate repeats it twice
+    // more, once the plugin has made the rest; not continuously, so a plugin's own hover cursors stay.
+    if (!m_cursorPasses) {
+        m_bridge->applyArrowCursorToSubtree(m_child);
+        m_cursorPasses = 1;
+    }
 }
 
 void NativePluginPanel::onUpdate(double deltaTime) {
     AestraPanelWindow::onUpdate(deltaTime);
     place(false);
+
+    // The plugin makes its inner windows after the editor opens; give them the arrow at ~0.5 s and ~2 s.
+    if (m_cursorPasses > 0 && m_cursorPasses < 3 && m_bridge && m_child) {
+        m_sinceOpen += deltaTime;
+        if (m_sinceOpen >= (m_cursorPasses == 1 ? 0.5 : 2.0)) {
+            m_bridge->applyArrowCursorToSubtree(m_child);
+            ++m_cursorPasses;
+        }
+    }
 
     // The plugin can change its own size (a zoom menu, a page with more controls). Ask the window system now and then
     // and follow, unless the user is dragging the grip, whose size wins.
@@ -156,6 +181,12 @@ void NativePluginPanel::drawContent(NUIRenderer& renderer, const NUIRect& conten
     // Behind the plugin's window: the bed, in case the plugin is slow to draw its first frame.
     const auto& t = NUIThemeManager::getInstance().getCurrentTheme();
     renderer.fillRect(contentRect, t.backgroundPrimary);
+}
+
+bool NativePluginPanel::isInsideForOutsideClick(const NUIPoint& p) const {
+    const NUIRect b = getBounds();
+    const NUIRect v = viewRect();
+    return EditorPlacement::pressInsidePanel(p.x, p.y, b.x, b.y, b.width, b.height, true, v.x, v.y, v.width, v.height);
 }
 
 bool NativePluginPanel::onMouseEvent(const NUIMouseEvent& event) {

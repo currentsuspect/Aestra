@@ -244,6 +244,15 @@ public:
         (void)child; (void)x; (void)y; (void)width; (void)height; (void)visible;
         return false;
     }
+    /**
+     * @brief Give a child window and every window below it the arrow pointer (Aestra hides the native one and draws
+     * its own, which a plugin's window covers). Call it again once the plugin has made its inner windows.
+     * @return false when the platform cannot or the child is gone.
+     */
+    virtual bool applyArrowCursorToSubtree(std::uintptr_t child) {
+        (void)child;
+        return false;
+    }
     /** @brief The child's current size in pixels: the plugin may resize its own window. */
     virtual bool getChildWindowSize(std::uintptr_t child, int& width, int& height) const {
         (void)child; (void)width; (void)height;
@@ -319,6 +328,8 @@ public:
     virtual void setFocusCallback(std::function<void(bool focused)> callback) = 0;
     /** @brief Request the window to be brought to front and gain focus. */
     virtual void requestFocus() = 0;
+    /** @brief Take keyboard focus back when an embedded child window (a plugin editor) holds it. Default: nothing. */
+    virtual void reclaimInputFocus() {}
     /** @brief Set the DPI-change callback. */
     virtual void setDPIChangeCallback(std::function<void(float dpiScale)> callback) = 0;
 };

@@ -89,6 +89,7 @@ public:
      */
     void setPopupLayer(NUIComponent* layer);
 
+
     /**
      * @brief Provide the current mixer plugin catalog for on-demand popups.
      *
@@ -323,6 +324,8 @@ private:
     
     // UI components for popups
     NUIComponent* m_popupLayer = nullptr;
+    /// Window y of the first row below the app's title bar: the popup layer's parent is the content area.
+    float editorContentTop() const { return m_popupLayer && m_popupLayer->getParent() ? m_popupLayer->getParent()->getBounds().y : 0.0f; }
     std::shared_ptr<UIMixerPluginDropdown> m_activeMenu;
     std::vector<std::shared_ptr<NUIComponent>> m_activeEditors;
 

@@ -114,6 +114,10 @@ public:
     /// Height of everything above the content: 32 px, or 64 px with the two-row header.
     float headerHeight() const { return m_twoRowHeader ? 2.0f * TITLE_BAR_H : TITLE_BAR_H; }
     void setOnClose(std::function<void()> callback) { m_onClose = std::move(callback); }
+    /// The live panel whose bounds contain @p p, if any (AESTRA_INPUT_TRACE: was a press inside a panel?).
+    static const AestraPanelWindow* panelContaining(const NUIPoint& p);
+    /// Whether a press at @p p belongs to this panel for the close-on-outside-click rule (default: inside its bounds).
+    virtual bool isInsideForOutsideClick(const NUIPoint& p) const { return getBounds().contains(p); }
     void setCloseOnOutsideClick(bool close) { m_closeOnOutsideClick = close; }
     bool closesOnOutsideClick() const { return m_closeOnOutsideClick; }
     // SPEC 3 section 1.1: a docked panel is locked where it is; a right-click on the title bar asks for its menu.

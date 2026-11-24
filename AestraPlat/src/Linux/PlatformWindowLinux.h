@@ -1,4 +1,6 @@
 #pragma once
+#include <cstdint>
+#include <set>
 #include "../../include/AestraPlatform.h"
 
 #include <SDL2/SDL.h>
@@ -52,6 +54,7 @@ public:
     // Native handles
     void* getNativeHandle() const override;
     bool placeChildWindow(std::uintptr_t child, int x, int y, int width, int height, bool visible) override;
+    bool applyArrowCursorToSubtree(std::uintptr_t child) override;
     bool getChildWindowSize(std::uintptr_t child, int& width, int& height) const override;
     void* getNativeDisplayHandle() const override;
 
@@ -92,6 +95,7 @@ public:
     void setCloseCallback(std::function<void()> callback) override { m_closeCallback = callback; }
     void setFocusCallback(std::function<void(bool focused)> callback) override { m_focusCallback = callback; }
     void requestFocus() override;
+    void reclaimInputFocus() override;
     void setDPIChangeCallback(std::function<void(float dpiScale)> callback) override { m_dpiChangeCallback = callback; }
 
 private:
@@ -115,6 +119,14 @@ private:
     bool m_maximized = false;
 
     void rememberRestoreBoundsIfNormal();
+
+    // X input focus: diagnosis lines (AESTRA_INPUT_TRACE) and taking it back from an embedded plugin editor.
+    std::string describeInputFocus() const;
+    void traceInputEvent(const SDL_Event& e);
+    void traceFocusOwnerChange();
+    bool pressUnderChild(int x, int y) const;
+    void reclaimFocusForPress(int x, int y);
+    unsigned long m_lastTracedFocusWindow = ~0ul;
     bool m_isWindowVisible = true;
     bool m_isWindowMapped = true;
     float m_dpiScale = 1.0f;

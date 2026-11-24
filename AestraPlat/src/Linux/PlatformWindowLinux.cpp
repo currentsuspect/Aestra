@@ -3,9 +3,15 @@
 #include <SDL2/SDL_syswm.h>
 #include <algorithm>
 #include <iostream>
+#include <vector>
 #if defined(SDL_VIDEO_DRIVER_X11)
 #include <X11/Xlib.h>
+#include <X11/cursorfont.h>
+#include "InputFocusPolicy.h"
+#include "XErrorGuard.h"
+#include "XInputFocus.h"
 #endif
+#include "AestraInputTrace.h"
 
 namespace Aestra {
 
@@ -25,27 +31,6 @@ bool getX11WindowInfo(SDL_Window* window, Display*& display, ::Window& x11Window
     return (display != nullptr && x11Window != 0);
 }
 
-#if defined(SDL_VIDEO_DRIVER_X11)
-// A child window the plugin helper has already destroyed raises BadWindow, and Xlib's default handler exits the app
-// with unsaved work in it. Requests go out on the app's own connection and errors come back asynchronously, so the
-// handler stays installed until XSync has delivered them.
-class XErrorGuard {
-public:
-    explicit XErrorGuard(Display* display) : m_display(display) { m_previous = XSetErrorHandler(&swallow); }
-    ~XErrorGuard() {
-        XSync(m_display, False);
-        XSetErrorHandler(m_previous);
-    }
-    XErrorGuard(const XErrorGuard&) = delete;
-    XErrorGuard& operator=(const XErrorGuard&) = delete;
-
-private:
-    static int swallow(Display*, XErrorEvent*) { return 0; }
-
-    Display* m_display = nullptr;
-    int (*m_previous)(Display*, XErrorEvent*) = nullptr;
-};
-#endif
 } // namespace
 
 PlatformWindowLinux::PlatformWindowLinux() {
@@ -127,7 +112,9 @@ void PlatformWindowLinux::destroy() {
 
 bool PlatformWindowLinux::pollEvents() {
     SDL_Event e;
+    traceFocusOwnerChange();
     while (SDL_PollEvent(&e)) {
+        traceInputEvent(e);
         switch (e.type) {
         case SDL_QUIT:
             if (m_closeCallback) {
@@ -211,6 +198,10 @@ bool PlatformWindowLinux::pollEvents() {
 
         case SDL_MOUSEBUTTONDOWN:
         case SDL_MOUSEBUTTONUP:
+            // A plugin editor may hold X input focus; a left press on Aestra's own surface takes it back.
+            if (e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT &&
+                e.button.windowID == SDL_GetWindowID(m_window))
+                reclaimFocusForPress(e.button.x, e.button.y);
             if (m_mouseButtonCallback) {
                 MouseButton btn = MouseButton::Left;
                 if (e.button.button == SDL_BUTTON_RIGHT)
@@ -492,6 +483,45 @@ bool PlatformWindowLinux::placeChildWindow(std::uintptr_t child, int x, int y, i
     return true;
 #else
     (void)child; (void)x; (void)y; (void)width; (void)height; (void)visible;
+    return false;
+#endif
+}
+
+bool PlatformWindowLinux::applyArrowCursorToSubtree(std::uintptr_t child) {
+#if defined(SDL_VIDEO_DRIVER_X11)
+    Display* display = nullptr;
+    ::Window parent = 0;
+    if (!child || !getX11WindowInfo(m_window, display, parent))
+        return false;
+    // Aestra hides the native pointer on its own window (it draws one); a child inherits that blank cursor, and its
+    // own drawing covers Aestra's, so over a plugin the pointer vanished. The plugin makes inner windows of its own
+    // (JUCE, for one) under the helper's container, and XWayland takes the cursor from the window under the pointer,
+    // so every window in the subtree gets the arrow. A plugin that sets its own cursor later simply replaces it.
+    // Windows can vanish under us (helper closing); the guard keeps BadWindow from reaching Xlib's exiting handler.
+    XErrorGuard guard(display);
+    const ::Cursor arrow = XCreateFontCursor(display, XC_left_ptr);
+    std::vector<::Window> pending{static_cast<::Window>(child)};
+    bool any = false;
+    while (!pending.empty()) {
+        const ::Window w = pending.back();
+        pending.pop_back();
+        ::Window root = 0, par = 0;
+        ::Window* kids = nullptr;
+        unsigned count = 0;
+        if (!XQueryTree(display, w, &root, &par, &kids, &count))
+            continue; // gone
+        XDefineCursor(display, w, arrow);
+        any = true;
+        for (unsigned i = 0; i < count; ++i)
+            pending.push_back(kids[i]);
+        if (kids)
+            XFree(kids);
+    }
+    XFreeCursor(display, arrow);
+    XFlush(display);
+    return any;
+#else
+    (void)child;
     return false;
 #endif
 }

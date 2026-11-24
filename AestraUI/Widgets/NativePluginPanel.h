@@ -34,6 +34,8 @@ public:
     void drawContent(NUIRenderer& renderer, const NUIRect& contentRect) override;
     void onRender(NUIRenderer& renderer) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
+    /// The plugin's X child is not clipped to the panel: a press on it is never an outside press.
+    bool isInsideForOutsideClick(const NUIPoint& p) const override;
 
     std::shared_ptr<Aestra::Audio::IPluginInstance> instance() const { return m_instance.lock(); }
     /// Whether the plugin's editor window is still there (it can close its own editor and leave the panel behind).
@@ -67,6 +69,8 @@ private:
     bool m_placedVisible = false;
     bool m_everPlaced = false;
 
+    int m_cursorPasses = 0;     ///< arrow-cursor passes done: 0 none, 1 at placement, 2 at ~0.5 s, 3 at ~2 s
+    double m_sinceOpen = 0.0;
     double m_sizePoll = 0.0;
     bool m_resizing = false;
     NUIPoint m_resizeStart;

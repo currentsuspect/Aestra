@@ -5695,6 +5695,14 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/DropdownScrollTest.cpp")
     set_tests_properties(DropdownScrollTest PROPERTIES LABELS "ui;input;regression;contract:application")
 endif()
 
+# X input focus: when a left press on Aestra's own window takes focus back from an embedded plugin editor.
+# Header-only policy, links nothing.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/InputFocusPolicyTest.cpp")
+    add_executable(InputFocusPolicyTest AestraUI/InputFocusPolicyTest.cpp)
+    add_test(NAME InputFocusPolicyTest COMMAND InputFocusPolicyTest)
+    set_tests_properties(InputFocusPolicyTest PROPERTIES LABELS "ui;regression;contract:application")
+endif()
+
 # V8-C14 step 2 (FD-23): the store half of the resolution contract, driven through
 # UISurfaceGeometry — maximize restores the pre-maximize rect, dragging a maximized
 # surface restores it, absent entries resolve from defaults without writing.

@@ -13,11 +13,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(AESTRA_PLAT_SOURCES
     src/Platform.cpp
     src/AestraJSONFile.cpp
+    src/InputTrace.cpp
 )
 
 set(AESTRA_PLAT_HEADERS
     include/AestraPlatform.h
     include/AestraJSONFile.h
+    include/AestraInputTrace.h
 )
 
 set(AESTRA_PLAT_PRIVATE_DEFINITIONS)
@@ -39,12 +41,17 @@ elseif(UNIX AND NOT APPLE)
     if(SDL2_FOUND OR TARGET SDL2::SDL2)
         list(APPEND AESTRA_PLAT_SOURCES
             src/Linux/PlatformWindowLinux.cpp
+            src/Linux/PlatformWindowLinuxInput.cpp
+            src/Linux/XInputFocus.cpp
             src/Linux/PlatformUtilsLinux.cpp
             src/Linux/XdgPortalFileChooser.cpp
             src/Linux/PlatformThreadLinux.cpp
         )
         list(APPEND AESTRA_PLAT_HEADERS
             src/Linux/PlatformWindowLinux.h
+            src/Linux/XErrorGuard.h
+            src/Linux/XInputFocus.h
+            src/Linux/InputFocusPolicy.h
         )
         list(APPEND AESTRA_PLAT_PRIVATE_DEFINITIONS AESTRA_HAS_SDL2)
     else()

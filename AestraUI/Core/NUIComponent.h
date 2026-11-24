@@ -91,6 +91,8 @@ public:
     // rather than calling onMouseEvent() directly so hierarchy mutations are
     // deferred until the full component traversal unwinds.
     static bool dispatchMouseEvent(NUIComponent* target, const NUIMouseEvent& event);
+    /// Deepest component that took the press now held (AESTRA_INPUT_TRACE reads it right after a press dispatch).
+    static const NUIComponent* heldPressOwner() { return s_pressOwner; }
 
     // Canonical key-event entry point. Same deferral contract as the mouse
     // path: a key handler may close/destroy its own popup (mixer insert
