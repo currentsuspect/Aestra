@@ -7,6 +7,7 @@
 #include "PluginFactory.h"  // [NEW]
 #include "Plugin/InternalPluginRegistry.h"
 #include "Plugin/BuiltInPlugins.h"
+#include "Plugin/PluginHostStatus.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -67,6 +68,11 @@ bool PluginManager::initialize() {
     // Built-ins stay in-process. Third-party native plugin formats are routed
     // through the helper process so a plugin crash does not take down the DAW.
     m_factory = std::make_unique<HybridPluginFactory>();
+
+    // VST3 and CLAP only load through the helper. Say once, up front, if it is not there.
+    if (const auto host = externalPluginHostStatus(); host.status != PluginHostStatus::Ok) {
+        Aestra::Log::error("[PluginHost] " + host.message);
+    }
 
     // Load plugin cache when platform utilities are available.
     // In headless/internal-plugin test flows the platform layer may not be initialized,

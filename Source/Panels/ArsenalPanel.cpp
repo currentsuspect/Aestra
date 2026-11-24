@@ -407,10 +407,11 @@ void ArsenalPanel::refreshUnits() {
             if (m_onRequestLoadSample) m_onRequestLoadSample(id);
         });
 
-        row->setOnPluginDropped([this](UnitID unitId, const std::string& pluginId) {
+        row->setOnPluginDropped([this](UnitID unitId, const std::string& pluginId) -> AestraUI::PluginLoadResult {
             if (m_onPluginDroppedToUnit) {
-                m_onPluginDroppedToUnit(unitId, pluginId);
+                return m_onPluginDroppedToUnit(unitId, pluginId);
             }
+            return {false, "No Arsenal plugin drop handler bound"};
         });
         row->setOnSampleDropped([this](UnitID unitId, const std::string& samplePath) {
             if (m_trackManager) {
@@ -1659,12 +1660,12 @@ AestraUI::DropResult ArsenalPanel::onDrop(const AestraUI::DragData& data, const 
         if (m_onSelectedUnitChanged) {
             m_onSelectedUnitChanged(targetUnit);
         }
-        m_onPluginDroppedToUnit(targetUnit, data.sourceClipIdString);
+        const AestraUI::PluginLoadResult loaded = m_onPluginDroppedToUnit(targetUnit, data.sourceClipIdString);
         refreshUnits();
-        result.accepted = true;
-        result.message = "Loaded instrument into Arsenal unit";
-        Log::info("[Arsenal] Plugin dropped into unit " + std::to_string(targetUnit) +
-                  ": " + data.sourceClipIdString);
+        result.accepted = loaded.ok;
+        result.message = loaded.ok ? "Loaded instrument into Arsenal unit" : loaded.message;
+        Log::info("[Arsenal] Plugin dropped into unit " + std::to_string(targetUnit) + ": " + data.sourceClipIdString +
+                  (loaded.ok ? "" : " (refused: " + loaded.message + ")"));
         return result;
     }
 
@@ -1674,10 +1675,11 @@ AestraUI::DropResult ArsenalPanel::onDrop(const AestraUI::DragData& data, const 
         return result;
     }
 
-    m_onPluginDropped(data.sourceClipIdString);
-    result.accepted = true;
-    result.message = "Loaded instrument into Arsenal";
-    Log::info("[Arsenal] Plugin dropped into Arsenal: " + data.sourceClipIdString);
+    const AestraUI::PluginLoadResult loaded = m_onPluginDropped(data.sourceClipIdString);
+    result.accepted = loaded.ok;
+    result.message = loaded.ok ? "Loaded instrument into Arsenal" : loaded.message;
+    Log::info("[Arsenal] Plugin dropped into Arsenal: " + data.sourceClipIdString +
+              (loaded.ok ? "" : " (refused: " + loaded.message + ")"));
     return result;
 }
 

@@ -16,6 +16,7 @@
 
 #include "ArsenalPanel.h"
 #include "NUIDragDrop.h"
+#include "UnitRow.h"
 
 #include <iostream>
 #include <memory>
@@ -105,11 +106,39 @@ void testArsenalOpensUnderStillPointer() {
     check(rig.loadedPath == rig.data.filePath, "B: it loads into Arsenal");
 }
 
+// A plugin dropped on Arsenal is only accepted once the load worked; a failed load refuses the drop and says why.
+void testPluginDropResult() {
+    Rig rig;
+    DragData plugin;
+    plugin.type = DragDataType::Plugin;
+    plugin.sourceClipIdString = "surge-xt";
+    plugin.displayName = "Surge XT";
+
+    int calls = 0;
+    PluginLoadResult next{false, "Couldn't load Surge XT: plugin helper missing"};
+    const auto loader = [&](const std::string& id) {
+        ++calls;
+        return id == "surge-xt" ? next : PluginLoadResult{};
+    };
+    rig.arsenal->setOnPluginDropped(loader);
+    rig.arsenal->setOnPluginDroppedToUnit([&](Aestra::Audio::UnitID, const std::string& id) { return loader(id); });
+
+    const auto refused = rig.arsenal->onDrop(plugin, {800.0f, 600.0f});
+    check(calls == 1, "C: the loader ran");
+    check(!refused.accepted, "C: a failed load refuses the drop");
+    check(refused.message == "Couldn't load Surge XT: plugin helper missing", "C: the refusal carries the message");
+
+    next = PluginLoadResult{};
+    const auto accepted = rig.arsenal->onDrop(plugin, {800.0f, 600.0f});
+    check(accepted.accepted, "D: a good load accepts the drop");
+}
+
 } // namespace
 
 int main() {
     std::cout << "ArsenalDropOrderTest\n";
     testMoveOverArsenal();
     testArsenalOpensUnderStillPointer();
+    testPluginDropResult();
     return g_failures == 0 ? 0 : 1;
 }

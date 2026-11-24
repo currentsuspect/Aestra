@@ -26,6 +26,7 @@
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Helpers/MixerPluginListPolicy.h"
 #include "../AestraUI/Widgets/UIRoutingMap.h"
+#include "../AestraUI/Widgets/UnitRow.h" // AestraUI::PluginLoadResult, named by the load functions below
 #include "Events/Connection.h"
 #include "KeyboardNoteInput.h"
 #include "MusicalTypingController.h"
@@ -488,9 +489,11 @@ public:
     /** @brief Load an effect plugin onto the selected track. */
     void loadEffectToSelectedTrack(const std::string& pluginId);
     /** @brief Load an instrument plugin into Arsenal. */
-    void loadInstrumentToArsenal(const std::string& pluginId);
+    AestraUI::PluginLoadResult loadInstrumentToArsenal(const std::string& pluginId);
     /** @brief Load an instrument plugin into a specific Arsenal unit. */
-    void loadInstrumentIntoArsenalUnit(Aestra::Audio::UnitID unitId, const std::string& pluginId);
+    AestraUI::PluginLoadResult loadInstrumentIntoArsenalUnit(Aestra::Audio::UnitID unitId, const std::string& pluginId);
+    /** @brief Toast and return a refused plugin load ("Couldn't load <name>: <reason>"). */
+    AestraUI::PluginLoadResult reportPluginLoadFailure(const std::string& pluginName, const std::string& fallbackReason);
     /** @brief Open a pattern in the piano-roll editor. */
     // unitId: the unit to edit (a row's "Open in Piano Roll"); 0 resolves the pattern's own unit.
     void openPatternInPianoRoll(Aestra::Audio::PatternID patternId, Aestra::Audio::UnitID unitId = 0);

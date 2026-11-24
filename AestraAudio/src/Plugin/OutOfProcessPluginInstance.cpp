@@ -3,6 +3,7 @@
 #include "Plugin/OutOfProcessPluginInstance.h"
 
 #include "AestraLog.h"
+#include "Plugin/PluginHostStatus.h"
 #include "SharedAudioBlock.h"
 
 #include <cstdio>
@@ -253,26 +254,7 @@ void stripTrailingCR(std::string& line) {
 }
 
 std::string defaultHostPath() {
-    if (const char* env = std::getenv("AESTRA_PLUGIN_HOST_PATH")) {
-        if (*env != '\0') {
-            return env;
-        }
-    }
-#ifdef _WIN32
-    char exePath[MAX_PATH] = {};
-    const DWORD len = GetModuleFileNameA(nullptr, exePath, MAX_PATH);
-    if (len > 0 && len < MAX_PATH) {
-        return (std::filesystem::path(exePath).parent_path() / "AestraPluginHost.exe").string();
-    }
-#else
-    char exePath[4096] = {};
-    const ssize_t len = readlink("/proc/self/exe", exePath, sizeof(exePath) - 1);
-    if (len > 0) {
-        exePath[len] = '\0';
-        return (std::filesystem::path(exePath).parent_path() / "AestraPluginHost").string();
-    }
-#endif
-    return "AestraPluginHost";
+    return defaultExternalPluginHostPath();
 }
 
 #ifdef _WIN32
@@ -830,23 +812,38 @@ bool OutOfProcessPluginInstance::load() {
         return true;
     }
 
+    const auto fail = [this](PluginHostLoadFailure kind, const std::string& reply = {}) {
+        const bool exists = std::filesystem::exists(m_hostExecutablePath);
+        const auto error = describePluginHostLoadFailure(kind, m_info.name, m_hostExecutablePath, exists, reply);
+        recordPluginHostLoadFailure(error.reason);
+        Log::error(error.log);
+        markCrashed();
+        return false;
+    };
+
+    // Say so plainly when the helper was never built or shipped, instead of a generic start failure.
+    if (externalPluginHostStatus(m_hostExecutablePath).status != PluginHostStatus::Ok) {
+        return fail(PluginHostLoadFailure::HelperMissing);
+    }
+
     m_process = std::make_unique<PluginHostProcess>(m_hostExecutablePath);
     if (!m_process->start()) {
-        markCrashed();
-        Log::error("[PluginHost] Failed to start helper process: " + m_hostExecutablePath);
-        return false;
+        return fail(PluginHostLoadFailure::StartFailed);
     }
 
     std::ostringstream command;
     command << "LOAD " << formatToken(m_info.format) << " " << hexEncode(m_info.id) << " "
             << hexEncode(m_info.path.string());
     std::string response;
-    if (!sendCommand(command.str(), &response, std::chrono::seconds(30)) || response.find("OK") != 0) {
-        markCrashed();
-        Log::error("[PluginHost] Helper failed to load plugin: " + m_info.name);
-        return false;
+    if (!sendCommand(command.str(), &response, std::chrono::seconds(30))) {
+        return fail(m_process && m_process->isRunning() ? PluginHostLoadFailure::Timeout
+                                                        : PluginHostLoadFailure::HelperExited);
+    }
+    if (response.find("OK") != 0) {
+        return fail(PluginHostLoadFailure::HelperReplied, response);
     }
 
+    recordPluginHostLoadFailure({});
     m_loaded.store(true, std::memory_order_release);
     return true;
 }

@@ -1384,6 +1384,16 @@ target_include_directories(AestraAudioEngineEffectChainPrepareTest PRIVATE
 add_test(NAME AestraAudioEngineEffectChainPrepareTest COMMAND AestraAudioEngineEffectChainPrepareTest)
 set_tests_properties(AestraAudioEngineEffectChainPrepareTest PROPERTIES LABELS "audio;plugin;regression;contract:plugins")
 
+# The plugin helper's availability check and the wording of a failed external plugin load (founder: Surge XT drop did nothing)
+add_executable(PluginHostStatusTest AestraAudio/PluginHostStatusTest.cpp)
+target_link_libraries(PluginHostStatusTest PRIVATE AestraAudio)
+target_include_directories(PluginHostStatusTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME PluginHostStatusTest COMMAND PluginHostStatusTest)
+set_tests_properties(PluginHostStatusTest PROPERTIES LABELS "audio;plugin;regression;contract:plugins")
+
 # Plugin insert/remove graph invalidation regression tests
 add_executable(AestraPluginGraphInvalidationTest AestraAudio/PluginGraphInvalidationTest.cpp)
 target_link_libraries(AestraPluginGraphInvalidationTest PRIVATE AestraAudio)

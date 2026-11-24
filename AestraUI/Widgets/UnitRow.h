@@ -20,6 +20,12 @@ namespace Aestra {
 
 namespace AestraUI {
 
+/// What loading a dropped plugin came to. A refused drop carries the reason for the person.
+struct PluginLoadResult {
+    bool ok = true;
+    std::string message;
+};
+
 class UnitRow : public NUIComponent, public IDropTarget {
 public:
     /**
@@ -71,7 +77,7 @@ public:
     /** @brief Callback fired when a sample path is dropped directly onto the unit. */
     std::function<void(Aestra::Audio::UnitID, const std::string&)> m_onSampleDropped; // Direct sample path
     /** @brief Callback fired when a plugin identifier is dropped onto the unit. */
-    std::function<void(Aestra::Audio::UnitID, const std::string&)> m_onPluginDropped;
+    std::function<PluginLoadResult(Aestra::Audio::UnitID, const std::string&)> m_onPluginDropped;
     /** @brief Callback fired after the shared pattern backing this row is edited. */
     std::function<void(Aestra::Audio::PatternID)> m_onPatternEdited;
     std::function<void(Aestra::Audio::UnitID)> m_onStepGestureEnd;
@@ -97,7 +103,7 @@ public:
     void setOnRequestSampleEditor(std::function<void(Aestra::Audio::UnitID)> cb) { m_onRequestSampleEditor = cb; }
     void setOnLoadUnitSample(std::function<void(Aestra::Audio::UnitID)> cb) { m_onLoadUnitSample = cb; }
     void setOnSampleDropped(std::function<void(Aestra::Audio::UnitID, const std::string&)> cb) { m_onSampleDropped = cb; }
-    void setOnPluginDropped(std::function<void(Aestra::Audio::UnitID, const std::string&)> cb) { m_onPluginDropped = cb; }
+    void setOnPluginDropped(std::function<PluginLoadResult(Aestra::Audio::UnitID, const std::string&)> cb) { m_onPluginDropped = cb; }
     void setOnPatternEdited(std::function<void(Aestra::Audio::PatternID)> cb) { m_onPatternEdited = cb; }
     /** @brief Called when a press on the step grid is released (a pad was pressed and let go on this row). */
     void setOnStepGestureEnd(std::function<void(Aestra::Audio::UnitID)> cb) { m_onStepGestureEnd = cb; }
