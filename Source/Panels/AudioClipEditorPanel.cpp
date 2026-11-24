@@ -100,7 +100,7 @@ public:
         const auto bounds = getBounds();
         // One panel colour. What you read (waveform, value wells) sits on the darker bed; there are no cards inside
         // the panel, only one-pixel rules between the regions and under each section title.
-        renderer.fillRect(bounds, surface1Color());
+        renderer.fillRect(bounds, canvasColor());
 
         const NUIColor rule = NUIThemeManager::getInstance().getColor("borderSubtle");
         const float controlsTop = bounds.bottom() - kControlsCardHeight;

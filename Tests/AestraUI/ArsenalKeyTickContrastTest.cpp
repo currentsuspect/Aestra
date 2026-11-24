@@ -42,8 +42,8 @@ int main() {
     for (const std::string& name : names) {
         themes.setActiveTheme(name);
         const NUIColor tick = themes.getColor("accentPrimary");
-        // Arsenal: WindowPanel draws the title bar as backgroundSecondary at 0.98 over the surfaceTertiary body.
-        const NUIColor arsenalBar = over(themes.getColor("backgroundSecondary"), 0.98f, themes.getColor("surfaceTertiary"));
+        // Arsenal: WindowPanel draws the title bar as the opaque card (backgroundSecondary); it was 98% over the body.
+        const NUIColor arsenalBar = themes.getColor("backgroundSecondary");
         // Piano roll: full-window mode fills its header with backgroundSecondary.
         const NUIColor pianoBar = themes.getColor("backgroundSecondary");
         const float ra = ratio(tick, arsenalBar), rp = ratio(tick, pianoBar);

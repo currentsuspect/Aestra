@@ -123,7 +123,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripTest.cpp")
     )
     # Registered unconditionally: exercises ProjectSerializer + TrackManager only —
     # no audio device or host runtime needed (verified headless). Serialization is
-    # AGENTS.md §12 high-risk; roundtrip coverage must run on every CI build.
+    # AGENTS.md "Project persistence" high-risk; roundtrip coverage must run on every CI build.
     add_test(NAME ProjectRoundTripTest COMMAND ProjectRoundTripTest)
     add_test(NAME AutosaveRoundTripTest COMMAND ProjectRoundTripTest)
     set_tests_properties(ProjectRoundTripTest AutosaveRoundTripTest PROPERTIES LABELS "integration;serialization;contract:durability")
@@ -154,7 +154,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectDamageSweepTest.cpp")
     )
     # Registered unconditionally: exercises ProjectSerializer + TrackManager only —
     # no audio device or host runtime needed (verified headless). Serialization is
-    # AGENTS.md §12 high-risk; roundtrip coverage must run on every CI build.
+    # AGENTS.md "Project persistence" high-risk; roundtrip coverage must run on every CI build.
     add_test(NAME ProjectDamageSweepTest COMMAND ProjectDamageSweepTest)
     # The TIMEOUT is part of the test: before #1243 one bad byte in an array made load loop until memory ran out.
     set_tests_properties(ProjectDamageSweepTest PROPERTIES TIMEOUT 120 LABELS "integration;serialization;durability;regression;contract:durability")
@@ -189,7 +189,7 @@ endif()
 
 # Workspace-state roundtrip test (phase-3): the optional viewFocus/pianoRollOpen/
 # sequencerOpen UIState fields roundtrip, legacy files keep default, malformed
-# focus names are dropped. Serialization is AGENTS.md §12 high-risk; this runs
+# focus names are dropped. Serialization is AGENTS.md "Project persistence" high-risk; this runs
 # on every CI build alongside the other ProjectSerializer roundtrips.
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/WorkspaceStateRoundTripTest.cpp")
     add_executable(WorkspaceStateRoundTripTest
@@ -235,6 +235,79 @@ target_include_directories(WorkspaceFocusModelTest PRIVATE
 )
 add_test(NAME WorkspaceFocusModelTest COMMAND WorkspaceFocusModelTest)
 set_tests_properties(WorkspaceFocusModelTest PROPERTIES LABELS "unit;workspace;focus;contract:core")
+
+# The one selection model: single select across surfaces, the exempt Audition slot, select modes, pressedIn,
+# removeIds, subscription delivery and affectedKeys. Pure header, no libraries.
+add_executable(SelectionModelTest Integration/SelectionModelTest.cpp)
+target_include_directories(SelectionModelTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Core
+)
+add_test(NAME SelectionModelTest COMMAND SelectionModelTest)
+set_tests_properties(SelectionModelTest PROPERTIES LABELS "unit;selection;contract:core")
+
+# Mixer rework slice 1: the board's dB scale knots and the meter's height-fraction colour zones. Pure headers.
+add_executable(MixerScaleRulesTest AestraUI/MixerScaleRulesTest.cpp)
+target_include_directories(MixerScaleRulesTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME MixerScaleRulesTest COMMAND MixerScaleRulesTest)
+set_tests_properties(MixerScaleRulesTest PROPERTIES LABELS "unit;mixer;scale;contract:core")
+
+# Mixer rework slice 2: the stepped LED meter's geometry (4px pitch, 18px well). Pure headers.
+add_executable(MeterLedsTest AestraUI/MeterLedsTest.cpp)
+target_include_directories(MeterLedsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME MeterLedsTest COMMAND MeterLedsTest)
+set_tests_properties(MeterLedsTest PROPERTIES LABELS "unit;mixer;meter;contract:core")
+
+# Mixer rework slice 2: the fader slot's groove (3px plain + 1px lighter bands). Pure header.
+add_executable(SlotGrooveTest AestraUI/SlotGrooveTest.cpp)
+target_include_directories(SlotGrooveTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME SlotGrooveTest COMMAND SlotGrooveTest)
+set_tests_properties(SlotGrooveTest PROPERTIES LABELS "unit;mixer;fader;contract:core")
+
+# Mixer rework slice 3: the strip lane's geometry and the dished cap's gradient. Pure headers.
+add_executable(MixerLaneCapTest AestraUI/MixerLaneCapTest.cpp)
+target_include_directories(MixerLaneCapTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME MixerLaneCapTest COMMAND MixerLaneCapTest)
+set_tests_properties(MixerLaneCapTest PROPERTIES LABELS "unit;mixer;fader;contract:core")
+
+# Mixer rework slice 4: the Wash top's opacity curve. Pure header.
+add_executable(StripWashTest AestraUI/StripWashTest.cpp)
+target_include_directories(StripWashTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME StripWashTest COMMAND StripWashTest)
+set_tests_properties(StripWashTest PROPERTIES LABELS "unit;mixer;strip;contract:core")
+
+# Mixer rework slice 7: the inspector collapse handle's tab and hit rect. Pure header.
+add_executable(InspectorHandleTest AestraUI/InspectorHandleTest.cpp)
+target_include_directories(InspectorHandleTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME InspectorHandleTest COMMAND InspectorHandleTest)
+set_tests_properties(InspectorHandleTest PROPERTIES LABELS "unit;mixer;inspector;contract:core")
+
+# Mixer rework slice 5: the correlation meter as dotted LEDs. Pure header.
+add_executable(CorrelationLedsTest AestraUI/CorrelationLedsTest.cpp)
+target_include_directories(CorrelationLedsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME CorrelationLedsTest COMMAND CorrelationLedsTest)
+set_tests_properties(CorrelationLedsTest PROPERTIES LABELS "unit;mixer;meter;contract:core")
+
+# Mixer rework slice 6: where a label sits in its slot. Pure header.
+add_executable(SlotTextTest AestraUI/SlotTextTest.cpp)
+target_include_directories(SlotTextTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+)
+add_test(NAME SlotTextTest COMMAND SlotTextTest)
+set_tests_properties(SlotTextTest PROPERTIES LABELS "unit;mixer;text;contract:core")
 
 # Arsenal unit naming: pure header, no libraries. A new unit takes the lowest free number for its kind.
 add_executable(ArsenalUnitNamingTest Integration/ArsenalUnitNamingTest.cpp)
@@ -3895,6 +3968,64 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(UnitRowLookTest PROPERTIES LABELS "ui;theme;contrast;arsenal;contract:application")
 endif()
 
+# Ink theme: the bed, card and control greys keep their order, and the big areas the 21 Nov sweep corrected stay on the bed or card.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(InkSurfaceStepTest AestraUI_Core)
+    add_executable(InkSurfaceStepTest AestraUI/InkSurfaceStepTest.cpp)
+    target_link_libraries(InkSurfaceStepTest PRIVATE AestraUI_Core)
+    target_compile_definitions(InkSurfaceStepTest PRIVATE AESTRA_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+    target_include_directories(InkSurfaceStepTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Graphics
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME InkSurfaceStepTest COMMAND InkSurfaceStepTest)
+    set_tests_properties(InkSurfaceStepTest PROPERTIES LABELS "ui;theme;contrast;contract:application")
+endif()
+
+# A theme change reaches every cache: the generation, the render-cache stale rule, the component dispatch, and a source
+# check that a panel copying theme colours into members has an onThemeChanged.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(ThemeChangeCacheTest AestraUI_Core)
+    add_executable(ThemeChangeCacheTest AestraUI/ThemeChangeCacheTest.cpp)
+    target_link_libraries(ThemeChangeCacheTest PRIVATE AestraUI_Core)
+    target_compile_definitions(ThemeChangeCacheTest PRIVATE AESTRA_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+    target_include_directories(ThemeChangeCacheTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Graphics
+        ${CMAKE_SOURCE_DIR}/AestraUI/Graphics/OpenGL
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ThemeChangeCacheTest COMMAND ThemeChangeCacheTest)
+    set_tests_properties(ThemeChangeCacheTest PROPERTIES LABELS "ui;theme;cache;regression;contract:application")
+endif()
+
+# Transport pills: one height, one inset, glyphs centred in their cells (TransportPillLook.h, headless).
+if(AESTRA_ENABLE_UI)
+    add_executable(TransportPillGeometryTest AestraUI/TransportPillGeometryTest.cpp)
+    target_include_directories(TransportPillGeometryTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+    )
+    add_test(NAME TransportPillGeometryTest COMMAND TransportPillGeometryTest)
+    set_tests_properties(TransportPillGeometryTest PROPERTIES LABELS "ui;layout;geometry;regression;contract:application")
+endif()
+
+# Selection tokens guard: the accent / selection colours come from the theme's named tokens. Fails on a primary tinted
+# with an alpha, a lerp toward it, a violet literal, or a local given an alpha after being assigned from the accent.
+if(AESTRA_ENABLE_UI)
+    add_executable(SelectionTokenGuardTest AestraUI/SelectionTokenGuardTest.cpp)
+    target_compile_definitions(SelectionTokenGuardTest PRIVATE AESTRA_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+    add_test(NAME SelectionTokenGuardTest COMMAND SelectionTokenGuardTest)
+    set_tests_properties(SelectionTokenGuardTest PROPERTIES LABELS "ui;theme;guard;contract:application" TIMEOUT 120)
+endif()
+
 # Ink theme: no assignable unit/track colour is in the violet family; saved violet colours still decode.
 if(AESTRA_ENABLE_UI)
     aestra_require_ui_targets(TrackPaletteVioletTest AestraUI_Core)
@@ -4864,8 +4995,10 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowser.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserNavigation.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserChrome.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserTheme.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserLibrary.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserScan.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserTheme.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/BrowserLibrary.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/BrowserLibraryIndex.cpp
     )
@@ -4999,6 +5132,10 @@ if(AESTRA_ENABLE_UI)
         AdaptiveFPSIdleTest
         UnitRowLookTest
         TrackPaletteVioletTest
+        InkSurfaceStepTest
+        ThemeChangeCacheTest
+        SelectionTokenGuardTest
+        TransportPillGeometryTest
     )
     foreach(_t IN LISTS AESTRA_REQUIRED_UI_TESTS)
         if(NOT TARGET ${_t})
@@ -5581,6 +5718,15 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/EditorSurfacePlacementTest.cpp")
     add_executable(EditorSurfacePlacementTest AestraUI/EditorSurfacePlacementTest.cpp)
     add_test(NAME EditorSurfacePlacementTest COMMAND EditorSurfacePlacementTest)
     set_tests_properties(EditorSurfacePlacementTest PROPERTIES LABELS "ui;layout;regression;contract:application")
+endif()
+
+# Mixer plugin finder scroll math: clamp, wheel convention, ensure-visible for
+# keyboard selection, hit-testing that honours the offset. Links nothing:
+# DropdownScroll.h is header-only, so this builds in every configuration.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/DropdownScrollTest.cpp")
+    add_executable(DropdownScrollTest AestraUI/DropdownScrollTest.cpp)
+    add_test(NAME DropdownScrollTest COMMAND DropdownScrollTest)
+    set_tests_properties(DropdownScrollTest PROPERTIES LABELS "ui;input;regression;contract:application")
 endif()
 
 # V8-C14 step 2 (FD-23): the store half of the resolution contract, driven through

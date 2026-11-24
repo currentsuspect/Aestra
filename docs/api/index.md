@@ -25,7 +25,7 @@ Foundation utilities and data structures.
 - `Aestra::Logger` — Structured logging
 
 !!! tip "Full API Reference Available"
-    Complete API documentation can be generated via Doxygen — see the [API Documentation Guide](https://github.com/currentsuspect/Aestra/blob/main/docs/API_DOCUMENTATION_GUIDE.md). See the [Architecture documentation](../architecture/Aestra-core.md) for high-level design concepts.
+    Complete API documentation can be generated via Doxygen — see the [API Documentation Guide](https://github.com/currentsuspect/Aestra/blob/main/docs/API_DOCUMENTATION_GUIDE.md). See the [Architecture documentation](../architecture/modules.md#layer-0-aestracore-foundation) for high-level design concepts.
 
 ---
 
@@ -42,7 +42,7 @@ Platform-specific functionality with unified interface.
 - `Aestra::Timer` — High-resolution timing
 
 !!! tip "Full API Reference Available"
-    Complete API documentation can be generated via Doxygen — see the [API Documentation Guide](https://github.com/currentsuspect/Aestra/blob/main/docs/API_DOCUMENTATION_GUIDE.md). See the [Architecture documentation](../architecture/Aestra-plat.md) for high-level design concepts.
+    Complete API documentation can be generated via Doxygen — see the [API Documentation Guide](https://github.com/currentsuspect/Aestra/blob/main/docs/API_DOCUMENTATION_GUIDE.md). See the [Architecture documentation](../architecture/modules.md#layer-1-aestraplat-platform-abstraction) for high-level design concepts.
 
 ---
 
@@ -61,7 +61,7 @@ GPU-accelerated UI framework.
 - `Aestra::Theme` — Theme system
 
 !!! tip "Full API Reference Available"
-    Complete API documentation can be generated via Doxygen — see the [API Documentation Guide](https://github.com/currentsuspect/Aestra/blob/main/docs/API_DOCUMENTATION_GUIDE.md). See the [Architecture documentation](../architecture/Aestra-ui.md) for high-level design concepts.
+    Complete API documentation can be generated via Doxygen — see the [API Documentation Guide](https://github.com/currentsuspect/Aestra/blob/main/docs/API_DOCUMENTATION_GUIDE.md). See the [Architecture documentation](../architecture/modules.md#aestraui-gpu-accelerated-renderer) for high-level design concepts.
 
 ---
 
@@ -78,28 +78,22 @@ Professional audio processing system.
 - `Aestra::DSP::EQ` — Equalizer processor
 
 !!! tip "Full API Reference Available"
-    Complete API documentation can be generated via Doxygen — see the [API Documentation Guide](https://github.com/currentsuspect/Aestra/blob/main/docs/API_DOCUMENTATION_GUIDE.md). See the [Architecture documentation](../architecture/Aestra-audio.md) for high-level design concepts.
+    Complete API documentation can be generated via Doxygen — see the [API Documentation Guide](https://github.com/currentsuspect/Aestra/blob/main/docs/API_DOCUMENTATION_GUIDE.md). See the [Architecture documentation](../architecture/modules.md#aestraaudio-audio-engine) for high-level design concepts.
 
 ---
 
-### Plugin System (Decision Gate)
+### Plugin System
 
-#### AestraSDK API
-Plugin hosting and extension system.
+#### Plugin hosting API
+Plugin hosting lives in `AestraAudio/include/Plugin/` (there is no separate SDK module).
 
-**Status:** Phase 4 decision gate (Sep 2026) — see [Roadmap](../technical/roadmap.md)
+**Current APIs:**
+- `Aestra::Audio::PluginManager` — plugin discovery and lifecycle
+- `Aestra::Audio::CLAPPluginInstance` / `CLAPPluginFactory` — CLAP hosting
+- `VST3Host.h` — VST3 hosting
+- `Aestra::Audio::MidiInputService` and `LiveMidiQueue` — live MIDI input
 
-Internal Arsenal plugins (e.g., Rumble) are already validated through discovery, project persistence, and audible headless playback. Third-party VST3/CLAP hosting scaffolding exists but remains a scope decision for Beta.
-
-**Current APIs (Internal Arsenal):**
-- `Aestra::PluginManager` — Plugin discovery and lifecycle
-- `Aestra::ArsenalInstrument` — Internal instrument interface
-- `Aestra::MIDIRouter` — MIDI routing to instruments
-
-**Planned APIs (if third-party hosting ships):**
-- `Aestra::PluginHost` — VST3 plugin hosting
-- `Aestra::Effect` — Audio effect interface
-- `Aestra::Automation` — Parameter automation
+See the [Roadmap](../technical/roadmap.md) for which of this ships in a given release.
 
 ---
 
@@ -264,19 +258,19 @@ void AudioBuffer::read(float* buffer, int samples);
 
 Looking for specific functionality? See the architecture documentation:
 
-- **Window Management** → [AestraPlat Architecture](../architecture/Aestra-plat.md)
-- **Rendering** → [AestraUI Architecture](../architecture/Aestra-ui.md)
-- **Audio I/O** → [AestraAudio Architecture](../architecture/Aestra-audio.md)
-- **File Operations** → [AestraCore Architecture](../architecture/Aestra-core.md)
+- **Window Management** → [AestraPlat Architecture](../architecture/modules.md#layer-1-aestraplat-platform-abstraction)
+- **Rendering** → [AestraUI Architecture](../architecture/modules.md#aestraui-gpu-accelerated-renderer)
+- **Audio I/O** → [AestraAudio Architecture](../architecture/modules.md#aestraaudio-audio-engine)
+- **File Operations** → [AestraCore Architecture](../architecture/modules.md#layer-0-aestracore-foundation)
 
 ### By Module
 
 Exploring a specific module? See architecture docs:
 
-- [AestraCore Architecture](../architecture/Aestra-core.md)
-- [AestraPlat Architecture](../architecture/Aestra-plat.md)
-- [AestraUI Architecture](../architecture/Aestra-ui.md)
-- [AestraAudio Architecture](../architecture/Aestra-audio.md)
+- [AestraCore Architecture](../architecture/modules.md#layer-0-aestracore-foundation)
+- [AestraPlat Architecture](../architecture/modules.md#layer-1-aestraplat-platform-abstraction)
+- [AestraUI Architecture](../architecture/modules.md#aestraui-gpu-accelerated-renderer)
+- [AestraAudio Architecture](../architecture/modules.md#aestraaudio-audio-engine)
 
 ## 📝 Documentation Status
 
@@ -286,7 +280,6 @@ Exploring a specific module? See architecture docs:
 | AestraPlat | ✅ [Generate](https://github.com/currentsuspect/Aestra/blob/main/docs/API_DOCUMENTATION_GUIDE.md) | ✅ Complete | 75% |
 | AestraUI | ✅ [Generate](https://github.com/currentsuspect/Aestra/blob/main/docs/API_DOCUMENTATION_GUIDE.md) | 🚧 Partial | 60% |
 | AestraAudio | ✅ [Generate](https://github.com/currentsuspect/Aestra/blob/main/docs/API_DOCUMENTATION_GUIDE.md) | ✅ Complete | 85% |
-| AestraSDK | 📅 Planned | 📅 Planned | 0% |
 
 !!! success "Full API Reference Available"
     Complete API documentation can be generated via Doxygen — see the [API Documentation Guide](https://github.com/currentsuspect/Aestra/blob/main/docs/API_DOCUMENTATION_GUIDE.md). Additional resources:

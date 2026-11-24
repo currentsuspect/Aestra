@@ -136,7 +136,7 @@ bool testNanStateDoesNotEnterParametersOrProcessing() {
 
     // The contract is now InternalPluginBase's, not Comp's own reader's.
     // Comp used to accept such a blob and sanitise the two bad values; the base
-    // rejects the WHOLE blob, deliberately and citing AGENTS.md §12 -- a corrupt
+    // rejects the WHOLE blob, deliberately and citing AGENTS.md "Project persistence" -- a corrupt
     // blob must not leave the instance half-updated.
     //
     // So this asserts rejection, and then asserts the thing that actually

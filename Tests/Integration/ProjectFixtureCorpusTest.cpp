@@ -8,7 +8,7 @@
 //
 // The fixture file must NEVER be regenerated: it pins what shipped. If this
 // test breaks, the loader stopped reading real users' v1 projects correctly —
-// fix the loader or add a migration, never the fixture (AGENTS.md §12,
+// fix the loader or add a migration, never the fixture (AGENTS.md "Project persistence",
 // philosophy.md: "Session files must open correctly across versions").
 //
 // Complements ProjectLoadRegressionTest (v1_minimal.aes: skeleton + migration

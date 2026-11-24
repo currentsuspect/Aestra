@@ -154,7 +154,8 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
     const auto& props = themeManager.getCurrentTheme();
 
     // Draw title bar background - flat and minimal, slightly raised over canvas.
-    const NUIColor bgColor = themeManager.getColor("backgroundSecondary");
+    // The title bar is the outer bed (darkest), not a card: the panels sit on it (owner pick S, 21 Nov).
+    const NUIColor bgColor = themeManager.getColor("timelineBed");
     renderer.fillRect(bounds, bgColor);
     renderer.drawLine({bounds.x, bounds.bottom() - 1.0f},
                       {bounds.right(), bounds.bottom() - 1.0f},
@@ -167,7 +168,6 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
     const auto text = themeManager.getColor("textPrimary").withAlpha(0.90f);
     // A tier colour, not an alpha: textSecondary x 0.58 was 3.2:1 on light, below the 4.5 floor.
     const auto muted = themeManager.getColor("textSecondary");
-    const auto accent = themeManager.getColor("accentPrimary");
     const auto verifiedAccent = themeManager.getColor("success");
     const float userFont = props.fontSizeXS; // 12.0
     const std::string status = membershipStatus_;
@@ -253,7 +253,7 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
                     const float chipH = 24.0f;
                     versionChipRect_ = NUIRect(chipX, bounds.y + std::round((height_ - chipH) * 0.5f), chipW, chipH);
                     renderer.fillRect(versionChipRect_, chipHovered_ ? themeManager.getColor("surfaceRaised") : themeManager.getColor("surfaceTertiary"));
-                    renderer.strokeRect(versionChipRect_, 1.0f, themeManager.getColor("accentPrimary").withAlpha(chipHovered_ ? 0.9f : 0.55f));
+                    renderer.strokeRect(versionChipRect_, 1.0f, themeManager.getColor(chipHovered_ ? "hoverSelected" : "selectionEdge"));
                     renderer.fillCircle({versionChipRect_.x + 13.0f, versionChipRect_.y + chipH * 0.5f}, 3.5f, chipColor_);
                     renderer.drawText(label, {versionChipRect_.x + 22.0f, textY}, userFont, text);
                     const float cx = versionChipRect_.right() - 14.0f, cy = versionChipRect_.y + chipH * 0.5f;
@@ -296,9 +296,10 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
 void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
     auto& themeManager = NUIThemeManager::getInstance();
     // Use config colors for hover states
-    NUIColor hoverBgColor = themeManager.getColor("primary").withAlpha(0.16f);
+    NUIColor hoverBgColor = themeManager.getColor("selectionTint");
     NUIColor closeHoverBg = themeManager.getColor("error");
-    NUIColor exportColor = themeManager.getColor("accentPrimary");
+    NUIColor exportColor = themeManager.getColor("selected");
+    const NUIColor exportTrack = themeManager.getColor("selectionTint");
     NUIColor iconColor = themeManager.getColor("textPrimary").withAlpha(0.94f);
 
     // Draw export button (left of window controls)
@@ -309,14 +310,14 @@ void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
             float phase = std::sin(exportAnimPhase_) * 0.5f + 0.5f;
             float barWidth = exportButtonRect_.width * 0.4f;
             float barX = exportButtonRect_.x + (exportButtonRect_.width - barWidth) * phase;
-            renderer.fillRoundedRect(exportButtonRect_, 4.0f, exportColor.withAlpha(0.15f));
-            renderer.fillRoundedRect(NUIRect(barX, exportButtonRect_.y + 4.0f, barWidth, exportButtonRect_.height - 8.0f), 3.0f, exportColor.withAlpha(0.7f));
+            renderer.fillRoundedRect(exportButtonRect_, 4.0f, exportTrack);
+            renderer.fillRoundedRect(NUIRect(barX, exportButtonRect_.y + 4.0f, barWidth, exportButtonRect_.height - 8.0f), 3.0f, exportColor);
         } else if (exportProgress_ >= 0.0f) {
             // Determinate progress
-            renderer.fillRoundedRect(exportButtonRect_, 4.0f, exportColor.withAlpha(0.15f));
+            renderer.fillRoundedRect(exportButtonRect_, 4.0f, exportTrack);
             float filledWidth = std::max(2.0f, exportButtonRect_.width * exportProgress_);
             renderer.fillRoundedRect(NUIRect(exportButtonRect_.x + 2.0f, exportButtonRect_.y + 4.0f,
-                                             filledWidth - 4.0f, exportButtonRect_.height - 8.0f), 3.0f, exportColor.withAlpha(0.7f));
+                                             filledWidth - 4.0f, exportButtonRect_.height - 8.0f), 3.0f, exportColor);
         }
         // Show percentage text
         int pct = static_cast<int>(exportProgress_ * 100.0f);

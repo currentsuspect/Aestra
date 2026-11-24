@@ -422,7 +422,7 @@ set_tests_properties(PluginConformanceSweepTest PROPERTIES LABELS "audio;plugins
 
 # The base class must not change a byte of any plugin's saved state: every
 # built-in shipped {magic, version, params[count]}, and a migrated plugin has
-# to produce the identical blob or every saved project breaks (AGENTS.md §12).
+# to produce the identical blob or every saved project breaks (AGENTS.md, Project persistence).
 add_executable(InternalPluginBaseBlobTest AestraAudio/InternalPluginBaseBlobTest.cpp)
 target_link_libraries(InternalPluginBaseBlobTest PRIVATE AestraAudio)
 target_include_directories(InternalPluginBaseBlobTest PRIVATE

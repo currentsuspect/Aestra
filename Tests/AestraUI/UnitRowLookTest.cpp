@@ -8,6 +8,7 @@
 #include "NUIThemeSystem.h"
 #include "UnitRowLook.h"
 
+#include <cmath>
 #include <iostream>
 #include <string>
 
@@ -105,6 +106,48 @@ int main() {
         const Look::SceneTile lit = Look::sceneTile(t, true, false);
         check(lit.fill.r == t.primary.r && lit.fill.g == t.primary.g, key + " scene: a selected tile is the primary");
     }
+    // The output chip's geometry: dot, name and chevron are one group centred in the chip. Equal space to both edges and the
+    // same gap between the parts for every name length and both chip widths (owner, 21 Nov: the content was left-aligned).
+    for (const float chipW : {64.0f, 96.0f}) {
+        for (float textW = 0.0f; textW <= Look::routeChipTextRoom(chipW); textW += 2.5f) {
+            const Look::RouteChip c = Look::routeChip(100.0f, chipW, textW);
+            const std::string at = "chip " + std::to_string(static_cast<int>(chipW)) + " px, name " + std::to_string(textW) + " px: ";
+            const float rightEdge = 100.0f + chipW;
+            const float chevRight = c.chevX + Look::kRouteChevHalf;
+            check(std::fabs((c.dotX - 100.0f) - (rightEdge - chevRight)) < 0.01f, at + "equal space left of the dot and right of the chevron");
+            check(std::fabs((c.textX - (c.dotX + Look::kRouteDot)) - Look::kRouteGap) < 0.01f, at + "dot to name is the standard gap");
+            check(std::fabs(((c.chevX - Look::kRouteChevHalf) - (c.textX + textW)) - Look::kRouteGap) < 0.01f, at + "name to chevron is the same gap");
+            check(c.dotX - 100.0f >= Look::kRouteMinPad - 0.01f, at + "the group keeps its minimum padding");
+        }
+    }
+    {
+        // The old layout pinned the dot and the chevron to the edges and left the name at the left, so a short name left a
+        // hole before the chevron: the gap was not the standard one. The checks above fail on it, which is why they exist.
+        const float chipW = 96.0f, textW = 40.0f; // "Channel 1" at 10.5 px
+        const float textX = 10.0f + 6.0f + 6.0f;
+        const float chevLeft = chipW - 10.0f - 3.0f - 3.0f;
+        check(std::fabs((chevLeft - (textX + textW)) - Look::kRouteGap) > 1.0f, "(negative control) the old pinned layout leaves an uneven gap");
+    }
+
+    // The chip's slot: as far from the pad lane as from the card edge, for every density's chip width and any row width, and
+    // the same x and width on every row of a rack.
+    for (const float routeW : {24.0f, 64.0f, 96.0f}) {
+        for (const float rowRight : {440.0f, 620.0f, 900.0f, 1358.0f}) {
+            const float chipX = Look::routeChipX(rowRight, routeW);
+            const float gapToLane = chipX - Look::laneRight(rowRight, routeW);
+            const float gapToCard = rowRight - (chipX + routeW);
+            const std::string at = "chip " + std::to_string(static_cast<int>(routeW)) + " px, row right " + std::to_string(static_cast<int>(rowRight)) + ": ";
+            check(std::fabs(gapToLane - gapToCard) < 0.01f, at + "gap to the lane equals gap to the card edge");
+            check(std::fabs(gapToCard - Look::kRouteMargin) < 0.01f, at + "and it is the standard margin");
+        }
+    }
+    {
+        // The old column (routeW + 24) left 2 px to the lane and 16 to the card: the lean the owner saw.
+        const float rowRight = 1358.0f, routeW = 96.0f;
+        const float oldLane = rowRight + 6.0f - (routeW + 24.0f);
+        check(std::fabs((Look::routeChipX(rowRight, routeW) - oldLane) - Look::kRouteMargin) > 10.0f, "(negative control) the old column's gaps were unequal");
+    }
+
     std::cout << g_checks << " contrast checks, " << g_failures << " failure(s)\n";
     std::cout << (g_failures == 0 ? "ALL PASS\n" : "FAILURES\n");
     return g_failures == 0 ? 0 : 1;

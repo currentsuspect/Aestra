@@ -49,10 +49,10 @@ Welcome to the comprehensive documentation hub for **Aestra**! This guide helps 
 ### 🏗️ **Architecture**
 - **[System Overview](../architecture/overview.md)** - High-level architecture
 - **[Core Modules](../architecture/modules.md)** - Module dependencies
-- **[AestraCore](../architecture/Aestra-core.md)** - Foundation layer
-- **[AestraUI](../architecture/Aestra-ui.md)** - UI framework
-- **[AestraAudio](../architecture/Aestra-audio.md)** - Audio engine
-- **[AestraPlat](../architecture/Aestra-plat.md)** - Platform layer
+- **[AestraCore](../architecture/modules.md#layer-0-aestracore-foundation)** - Foundation layer
+- **[AestraUI](../architecture/modules.md#aestraui-gpu-accelerated-renderer)** - UI framework
+- **[AestraAudio](../architecture/modules.md#aestraaudio-audio-engine)** - Audio engine
+- **[AestraPlat](../architecture/modules.md#layer-1-aestraplat-platform-abstraction)** - Platform layer
 
 ### 👨‍💻 **Development**
 - **[Contributing Guide](../developer/contributing.md)** - How to contribute
@@ -71,7 +71,7 @@ Welcome to the comprehensive documentation hub for **Aestra**! This guide helps 
 
 ### 📡 **API Documentation**
 - **[API Overview](../api/index.md)** - Complete API reference
-- **[Generated Docs](../../docs/api-reference/html/index.html)** - Doxygen-generated docs (generate with `doxygen Doxyfile`)
+- **[API Reference](../api-reference/README.md)** - How the Doxygen reference is generated (`doxygen Doxyfile`)
 
 ### 📋 **Release Information**
 - **[Current Changelog](../../meta/CHANGELOGS/CHANGELOG_2026Q2.md)** - Current 2026 milestone history
@@ -80,9 +80,9 @@ Welcome to the comprehensive documentation hub for **Aestra**! This guide helps 
 - **[Milestone Updates](../../meta/README.md)** - Entry point for archived implementation notes
 
 ### 🌐 **Community**
-- **[Code of Conduct](community/code-of-conduct.md)** - Community guidelines
-- **[Support](community/support.md)** - Get help
-- **[Security](community/security.md)** - Security policy
+- **[Code of Conduct](../community/code-of-conduct.md)** - Community guidelines
+- **[Support](../community/support.md)** - Get help
+- **[Security](../community/security.md)** - Security policy
 
 ### 🧠 **About**
 - **[Philosophy](../about/philosophy.md)** - Design principles
@@ -112,7 +112,6 @@ Welcome to the comprehensive documentation hub for **Aestra**! This guide helps 
 ### 📊 **For Project Managers**
 1. Review [Roadmap](../technical/roadmap.md)
 2. Check [Current Changelog](../../meta/CHANGELOGS/CHANGELOG_2026Q2.md)
-3. Read [Development Logs](../../meta/SESSION_SUMMARY_DEC2024.md) for archive context
 4. Understand [Milestones](../technical/roadmap.md#roadmap-phases-now--dec-2026)
 
 ## 🔗 External Resources
@@ -126,7 +125,7 @@ Welcome to the comprehensive documentation hub for **Aestra**! This guide helps 
 
 ### 💬 **Community Support**
 - [GitHub Discussions](https://github.com/currentsuspect/Aestra/discussions)
-- [Community Support](community/support.md)
+- [Community Support](../community/support.md)
 
 ### 🐛 **Bug Reports**
 - [Bug Reports Guide](../developer/bug-reports.md)

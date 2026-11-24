@@ -181,7 +181,7 @@ Use tables for structured data:
 | Feature | Supported | Notes |
 |---------|-----------|-------|
 | WASAPI  | ✅        | Recommended |
-| ASIO    | 🚧        | Planned |
+| ASIO    | 🚧        | Windows, hardening ongoing |
 | CoreAudio | ❌      | Future |
 ```
 

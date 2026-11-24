@@ -23,6 +23,7 @@
 
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
 #include <iostream>
 
 using namespace Aestra;
@@ -199,6 +200,14 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
         preferences.theme = "Aestra-dark";
         themeManager.setActiveTheme(preferences.theme);
         Log::warning("Unknown saved theme; using Aestra-dark");
+    }
+    // Design previews (tools/ui/theme_preview.sh): AESTRA_THEME_OVERRIDES names a theme JSON ({"colors": {...}}) laid on
+    // top of the saved theme, so a colour idea is seen in the real renderer without a rebuild. Unset in normal use.
+    if (const char* overrides = std::getenv("AESTRA_THEME_OVERRIDES"); overrides && *overrides) {
+        if (themeManager.loadThemeFromFile("preview-overrides", overrides, preferences.theme))
+            themeManager.setActiveTheme("preview-overrides");
+        else
+            Log::warning(std::string("AESTRA_THEME_OVERRIDES: could not load ") + overrides);
     }
     Log::info("Theme system initialized");
 

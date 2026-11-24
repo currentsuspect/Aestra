@@ -74,6 +74,11 @@ void sliderCap(NUIRenderer& renderer, const NUIPoint& centre, bool held = false)
 /// master.
 void faderCap(NUIRenderer& renderer, const NUIRect& cap, bool master, bool held = false);
 
+/// Design Spec, Mixer (board p-mixer2, locked): the dished fader cap, 24 by 34 (CapLook.h): a five-stop gradient of
+/// surfaceRaised, a lit top edge, a shadow cast into the slot and a 2px index line across the middle (textPrimary on a
+/// channel, primary on the master). @p cap should be CapLook::kW by kH; @p held deepens the shadow.
+void consoleCap(NUIRenderer& renderer, const NUIRect& cap, bool master, bool held = false);
+
 /// Design Spec, Knob (locked): the cap is a lit disc of @p radius at @p centre, shaded underneath and casting a soft
 /// shadow, with a textPrimary pointer at @p angle (radians). The pointer turns; the light does not. @p held lifts it.
 void knobCap(NUIRenderer& renderer, const NUIPoint& centre, float radius, float angle, bool held = false,

@@ -5,6 +5,7 @@
 
 Commands run in order:
     click X Y            press and release the left button at X Y
+    rclick X Y           press and release the right button at X Y (a context menu)
     dblclick X Y         a real double-click (30 ms press, 60 ms gap)
     move X Y             move the pointer
     drag X0 Y0 X1 Y1     press at X0 Y0, move there in small steps, release (what drag and drop needs)
@@ -41,8 +42,8 @@ def main(argv):
         xtest.fake_input(d, X.MotionNotify, x=int(x), y=int(y))
         d.sync()
 
-    def button(down):
-        xtest.fake_input(d, X.ButtonPress if down else X.ButtonRelease, 1)
+    def button(down, which=1):
+        xtest.fake_input(d, X.ButtonPress if down else X.ButtonRelease, which)
         d.sync()
 
     def glide(x0, y0, x1, y1, steps=30):
@@ -86,6 +87,8 @@ def main(argv):
         a = argv[i + 1:]
         if cmd == "click":
             move(a[0], a[1]); time.sleep(0.1); button(True); time.sleep(0.05); button(False); i += 3
+        elif cmd == "rclick":
+            move(a[0], a[1]); time.sleep(0.1); button(True, 3); time.sleep(0.05); button(False, 3); i += 3
         elif cmd == "dblclick":
             move(a[0], a[1]); time.sleep(0.1)
             for _ in range(2):

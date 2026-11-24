@@ -4,6 +4,7 @@
 #include "NUIComponent.h"
 #include "NUIDoubleClick.h"
 #include "NUITypes.h"
+#include "MixerScale.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -58,14 +59,16 @@ public:
     bool isOverlay() const { return m_overlay; }
     /// The channel cap's height (Design Spec, Mixer: 20 by 26); an overlay fader's track is inset by half of it.
     static float overlayHandleHeight();
+    /// The master's gain readout band above the travel (the strip lays its meter out against it).
+    static constexpr float kReadoutBand = 18.0f;
 
     /// Wider scale/readout treatment for the master strip.
     void setShowScaleLabels(bool show) { m_showScaleLabels = show; repaint(); }
 
-    /// At or below this, a gain readout shows "−∞" rather than a number.
-    /// Public because any readout of the same value has to agree with the
+    /// At or below this, a gain readout shows "−∞" rather than a number: the scale's own floor (MixerScale), so −∞
+    /// reads only at the bottom of the throw. Public because any readout of the same value has to agree with the
     /// fader — two copies of the threshold drift the moment one is tuned.
-    static constexpr float FADER_FLOOR_THRESHOLD = -60.0f;
+    static constexpr float FADER_FLOOR_THRESHOLD = MixerScale::kFloorDb;
 
     bool isDragging() const { return m_dragging; }
     bool isEditing() const { return m_editing; }
@@ -142,6 +145,8 @@ private:
 
     /// Drawn width of the handle, and therefore its drag hit-box.
     float handleWidth() const;
+    /// The cap's height: 34 (the dished console cap), or the compact overlay cap's 26.
+    float capHeight() const;
 
     /// Readout band at the top of the fader — click target for inline entry.
     NUIRect readoutRect() const;

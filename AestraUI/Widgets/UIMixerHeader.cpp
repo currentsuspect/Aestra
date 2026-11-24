@@ -25,8 +25,8 @@ void UIMixerHeader::cacheThemeColors()
     m_text = theme.getColor("textPrimary");
     m_textSecondary = theme.getColor("textSecondary");
     m_selectedText = theme.getColor("textPrimary");
-    m_selectedBg = theme.getColor("primary").withAlpha(0.06f);
-    m_selectedBorder = theme.getColor("primary").withAlpha(0.16f);
+    m_selectedBg = theme.getColor("selectionTint");
+    m_selectedBorder = theme.getColor("selectionEdge");
 }
 
 NUIColor UIMixerHeader::colorFromARGB(uint32_t argb)
@@ -105,15 +105,10 @@ void UIMixerHeader::onRender(NUIRenderer& renderer)
     // header prevents the selected channel from acquiring a second card and a
     // second border inside the selected strip.
 
-    // Design Spec, Mixer (locked): the name sits on the track's colour with dark text; the master's on
-    // surfaceRaised. The plate is the strip's identity, so the eye scans channels by it.
-    auto& theme = NUIThemeManager::getInstance();
-    const NUIRect plate{std::floor(bounds.x), std::floor(bounds.y), std::ceil(bounds.width), std::ceil(bounds.height)};
-    const NUIColor plateColor =
-        m_isMaster ? theme.getColor("surfaceRaised") : colorFromARGB(m_trackColorArgb).withAlpha(1.0f);
-    renderer.fillRoundedRect(plate, 4.0f, plateColor);
-    const NUIColor ink = m_isMaster ? m_text : theme.getColor("textOnStatus");
-    const NUIColor routeInk = m_isMaster ? m_textSecondary.withAlpha(0.62f) : ink.withAlpha(0.68f);
+    // Design Spec, Mixer (board p-mixer2, locked): no plate. The name is textPrimary, centred, on the strip's Wash
+    // (the track's colour fading down from the top); the tag under it is muted.
+    const NUIColor ink = m_text;
+    const NUIColor routeInk = NUIThemeManager::getInstance().getColor("textMuted");
 
     NUIRect textRect{
         bounds.x + (m_compact ? 1.0f : PAD_X),
@@ -122,7 +117,7 @@ void UIMixerHeader::onRender(NUIRenderer& renderer)
         bounds.height - 4.0f
     };
 
-    const float nameFont = m_isMaster ? 12.0f : 11.5f;
+    const float nameFont = 12.0f;
     const float routeFont = 8.5f;
 
     if (m_isMaster) {
@@ -184,7 +179,9 @@ void UIMixerHeader::onRender(NUIRenderer& renderer)
     const float stackY = textRect.y + std::max(0.0f, (textRect.height - stackH) * 0.5f) - 0.5f;
 
     NUIRect nameRect{textRect.x, stackY, textRect.width, TRACK_NAME_H};
-    renderer.drawTextCentered(fitText(renderer, m_name, nameFont, nameRect.width), nameRect, nameFont, ink);
+    const std::string shown = fitText(renderer, m_name, nameFont, nameRect.width);
+    renderer.drawTextCentered(shown, nameRect, nameFont, ink);
+    renderer.drawTextCentered(shown, {nameRect.x + 0.5f, nameRect.y, nameRect.width, nameRect.height}, nameFont, ink); // 700 weight: the renderer has one weight, so it is struck twice
 
     if (!m_route.empty()) {
         NUIRect routeRect{textRect.x, stackY + TRACK_NAME_H + TRACK_GAP, textRect.width, TRACK_ROUTE_H};

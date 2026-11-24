@@ -18,11 +18,11 @@ Common questions and answers for contributors, developers, and users of Aestra.
 ### What is Aestra?
 
 Aestra is a modern digital audio workstation built with C++17, featuring:
-- Ultra-low latency audio engine with WASAPI support
+- Native audio engine: WASAPI (exclusive or shared) on Windows, with ASIO loading installed drivers and still hardening; RtAudio over ALSA or PulseAudio on Linux; plus headless render and export paths
 - GPU-accelerated custom UI framework (AestraUI)
-- Pattern-based workflow
+- Arrangement, a step-sequencer rack (Arsenal), and a chord-aware piano roll
 - Professional-grade audio processing
-- AI integration (Muse) — deferred to post-Beta
+- Muse, a scriptable control surface the interface, a terminal, and external tools all drive through one command system
 
 ### Who develops Aestra?
 
@@ -38,9 +38,9 @@ Aestra is developed by Dylan Makori in Kenya, with community contributions to th
 ### What platforms does Aestra support?
 
 **Current practical support surface:**
-- ✅ Windows 10/11 (64-bit) - primary platform
-- 🚧 Linux - active build/bring-up work
-- 📋 macOS - planned, not part of the current public build workflow
+- ✅ Windows 10/11 (64-bit)
+- ✅ Linux (64-bit)
+- 📋 macOS - the engine builds and is covered by CI, but no supported macOS application build exists yet
 
 ### Is Aestra open-source?
 
@@ -187,28 +187,40 @@ Reviews depend on maintainer availability and PR complexity.
 ### What audio drivers does Aestra support?
 
 **Windows:**
-- ✅ WASAPI
-- ✅ RtAudio-backed device support where configured
-- ✅ ASIO paths exist in the codebase and have targeted validation coverage, but broader compatibility hardening is still ongoing
+- 🚧 ASIO — loads an installed driver and streams through it, but hardening is ongoing:
+  treat it as usable with some interfaces rather than validated for all (ASIO4ALL, or your interface's own driver)
+- ✅ WASAPI Exclusive
+- ✅ WASAPI Shared
+- ✅ RtAudio (fallback)
 
 **Linux:**
-- 🚧 ALSA / PulseAudio through the Linux audio stack under active bring-up
-- 📋 JACK remains future/planned
+- ✅ ALSA, through RtAudio
+- ✅ PulseAudio, through RtAudio — tried first when the build was configured with libpulse
+  (`RTAUDIO_API_PULSE=ON`, the default), then ALSA
+- 📋 JACK is opt-in at configure time (`-DRTAUDIO_API_JACK=ON`) and is not a supported path yet
+
+Both platforms also register a silent dummy driver as a last-resort fallback. Windows tries ASIO first when a
+driver is installed, then WASAPI Exclusive, then WASAPI Shared, then RtAudio — and only a driver that fails to
+*open* moves the chain on. A driver that opens and then fails to start does not fall through to the next one.
 
 ### What's the typical audio latency?
 
-- **WASAPI Exclusive**: 5-10ms (best)
+- **ASIO**: whatever your interface's own driver achieves — usually the lowest option
+- **WASAPI Exclusive**: 5-10ms (best built-in)
 - **WASAPI Shared**: 10-20ms
-- **DirectSound**: 20-50ms (fallback)
 
 Latency depends on buffer size, sample rate, and hardware.
 
 ### Does Aestra support plugins?
 
-Not yet. Plugin support is planned:
-- 📋 VST3 hosting
-- 📋 AU hosting (future macOS work)
-- 📋 Native Aestra plugin format
+**Yes.** Third-party **VST3** and **CLAP** plugins load in a sandbox on Windows and Linux:
+
+- A plugin's own editor opens from the sandbox
+- Parameters and automation work through the sandbox
+- Tempo, time signature and play state reach plugins, so synced delays and arpeggiators follow the transport
+- Every plugin Aestra ships (Rumble included) is free
+
+AU hosting is macOS work, and no supported macOS application build exists yet.
 
 ### How does the UI rendering work?
 
@@ -225,7 +237,8 @@ See [Architecture Overview](../architecture/overview.md) for details.
 Aestra uses multiple threads:
 - **Main Thread**: UI and application logic
 - **Audio Thread**: Real-time audio processing (lock-free)
-- **Loader Thread**: Async file I/O and caching
+- **Worker Threads**: async file I/O, waveform decoding, plugin scanning
+- **Plugin sandbox process**: VST3 and CLAP plugins run outside the app, so a plugin that hangs cannot stall the audio thread
 
 See [Architecture Overview](../architecture/overview.md) for threading details.
 

@@ -779,7 +779,7 @@ void NUIContextMenu::drawItem(NUIRenderer& renderer, std::shared_ptr<NUIContextM
     {
         auto checkIcon = NUIIcon::createCheckIcon();
         checkIcon->setIconSize(iconSize_, iconSize_);
-        checkIcon->setColor(index == submenuItemIndex_ && activeSubmenu_ && activeSubmenu_->isVisible() ? labelOnSelected(themeManager.getColor("secondary")) : themeManager.getColor("secondary"));
+        checkIcon->setColor(index == submenuItemIndex_ && activeSubmenu_ && activeSubmenu_->isVisible() ? labelOnSelected(themeManager.getColor("accentText")) : themeManager.getColor("accentText"));
         checkIcon->setPosition(x, itemRect.y + (itemRect.height - iconSize_) * 0.5f);
         checkIcon->onRender(renderer);
     }

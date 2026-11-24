@@ -416,9 +416,10 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
     const float fontSize = theme.getFontSize("s");
     const float smallSize = theme.getFontSize("xs");
 
-    // The row: a raised strip with a hairline under it, so the band reads as toolbar, minimap, ruler.
+    // The row: the bed with a hairline under it, so the band reads as toolbar, minimap, ruler. (It was a raised-surface
+    // wash, which came out as a grey that is neither the bed nor a card: the slab the 21 Nov sweep removed.)
     const AestraUI::NUIRect row(bounds.x, bounds.y, bounds.width, kTimelineToolbarHeight);
-    renderer.fillRect(row, theme.getColor("surfaceRaised").withAlpha(0.35f));
+    renderer.fillRect(row, theme.getColor("backgroundPrimary"));
     renderer.fillRect({row.x, row.bottom() - 1.0f, row.width, 1.0f}, border.withAlpha(0.35f));
 
     // Design Spec: buttons in a toolbar are soft pills with the quiet hover (one step lighter, no outline).

@@ -26,7 +26,7 @@ AestraUI::NUIColor identityFromARGB(uint32_t argb) {
     const float mx = std::max({color.r, color.g, color.b});
     const float mn = std::min({color.r, color.g, color.b});
     if (mx - mn < 0.06f) {
-        return AestraUI::NUIThemeManager::getInstance().getColor("accentPrimary").withAlpha(1.0f);
+        return AestraUI::NUIThemeManager::getInstance().getColor("selected");
     }
     return color.withAlpha(1.0f);
 }
