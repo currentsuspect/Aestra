@@ -4481,6 +4481,14 @@ AestraUI::PluginLoadResult AestraContent::loadInstrumentIntoArsenalUnit(UnitID u
 
     const bool replacedSample = !unit->audioClipPath.empty();
 
+    {
+        // A sample decode still running for this unit would land on the main
+        // thread after this call and turn the row back into a sampler. Bumping
+        // the generation makes that result stale, so the loader drops it.
+        std::lock_guard<std::mutex> lock(m_sampleUnitLoadGenerationsMutex);
+        ++m_sampleUnitLoadGenerations[unitId];
+    }
+
     unitManager.setUnitName(unitId, unitName);
     unitManager.setUnitType(unitId, UnitType::Instrument);
     unitManager.clearUnitTimelineLane(unitId);
