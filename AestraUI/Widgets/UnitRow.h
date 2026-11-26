@@ -10,6 +10,7 @@
 #include "NUIContextMenu.h"
 #include <functional>
 #include <memory>
+#include <utility>
 #include <vector>
 
 namespace Aestra { 
@@ -78,6 +79,8 @@ public:
     std::function<void(Aestra::Audio::UnitID, const std::string&)> m_onSampleDropped; // Direct sample path
     /** @brief Callback fired when a plugin identifier is dropped onto the unit. */
     std::function<PluginLoadResult(Aestra::Audio::UnitID, const std::string&)> m_onPluginDropped;
+    /** @brief Provides the currently discovered instruments for the row context menu. */
+    std::function<std::vector<std::pair<std::string, std::string>>()> m_instrumentPluginProvider;
     /** @brief Callback fired after the shared pattern backing this row is edited. */
     std::function<void(Aestra::Audio::PatternID)> m_onPatternEdited;
     std::function<void(Aestra::Audio::UnitID)> m_onStepGestureEnd;
@@ -104,6 +107,7 @@ public:
     void setOnLoadUnitSample(std::function<void(Aestra::Audio::UnitID)> cb) { m_onLoadUnitSample = cb; }
     void setOnSampleDropped(std::function<void(Aestra::Audio::UnitID, const std::string&)> cb) { m_onSampleDropped = cb; }
     void setOnPluginDropped(std::function<PluginLoadResult(Aestra::Audio::UnitID, const std::string&)> cb) { m_onPluginDropped = cb; }
+    void setInstrumentPluginProvider(std::function<std::vector<std::pair<std::string, std::string>>()> cb) { m_instrumentPluginProvider = std::move(cb); }
     void setOnPatternEdited(std::function<void(Aestra::Audio::PatternID)> cb) { m_onPatternEdited = cb; }
     /** @brief Called when a press on the step grid is released (a pad was pressed and let go on this row). */
     void setOnStepGestureEnd(std::function<void(Aestra::Audio::UnitID)> cb) { m_onStepGestureEnd = cb; }

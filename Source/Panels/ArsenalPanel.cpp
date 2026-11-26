@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "ArsenalPanel.h"
 
+#include "PluginManager.h"
 #include "ArsenalEmptyNotice.h"
 #include "UnitGroupMenu.h"
 #include "ArsenalGridScroll.h"
@@ -413,6 +414,21 @@ void ArsenalPanel::refreshUnits() {
             }
             return {false, "No Arsenal plugin drop handler bound"};
         });
+
+        row->setInstrumentPluginProvider([]() {
+            const auto plugins = PluginManager::getInstance().getPluginsByType(PluginType::Instrument);
+
+            std::vector<std::pair<std::string, std::string>> entries;
+            entries.reserve(plugins.size());
+
+            for (const auto& plugin : plugins) {
+                if (!plugin.id.empty())
+                    entries.emplace_back(plugin.name, plugin.id);
+            }
+
+            return entries;
+        });
+
         row->setOnSampleDropped([this](UnitID unitId, const std::string& samplePath) {
             if (m_trackManager) {
                 m_trackManager->getUnitManager().setUnitEnabled(unitId, true);
