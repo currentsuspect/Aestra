@@ -11,10 +11,10 @@
 5646 AestraUI/Widgets/AestraEQEditor.cpp
 1585 AestraUI/Widgets/AestraVerbEditor.cpp
 1925 AestraUI/Widgets/PianoRollNoteLayer.cpp
-1937 AestraUI/Widgets/UnitRow.cpp
+1979 AestraUI/Widgets/UnitRow.cpp
 2577 Source/App/AestraApp.cpp
 3840 Source/Components/FileBrowser.cpp
 3170 Source/Components/TrackUIComponent.cpp
-4893 Source/Core/AestraContent.cpp
+4909 Source/Core/AestraContent.cpp
 2880 Source/Core/ProjectSerializer.cpp
-2081 Source/Panels/ArsenalPanel.cpp
+2097 Source/Panels/ArsenalPanel.cpp
