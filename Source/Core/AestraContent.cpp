@@ -4444,6 +4444,7 @@ AestraUI::PluginLoadResult AestraContent::loadInstrumentToArsenal(const std::str
     if (m_sequencerPanel) {
         m_sequencerPanel->refreshUnits();
     }
+    m_trackManager->markModified();
 
     AESTRA_LOG_DEBUG("Loaded instrument '" + unitName + "' to Arsenal as Unit " + std::to_string(newUnit));
     return {};
@@ -4478,12 +4479,27 @@ AestraUI::PluginLoadResult AestraContent::loadInstrumentIntoArsenalUnit(UnitID u
         return reportPluginLoadFailure(unitName, "plugin failed to start");
     }
 
+    const bool replacedSample = !unit->audioClipPath.empty();
+
     unitManager.setUnitName(unitId, unitName);
     unitManager.setUnitType(unitId, UnitType::Instrument);
     unitManager.clearUnitTimelineLane(unitId);
     unitManager.setUnitEnabled(unitId, true);
+    // Replacing the instrument replaces the unit's sound. A sample left behind
+    // would be rehydrated by the project restore path while the new plugin is
+    // what plays, so the row would carry two sources.
+    if (replacedSample)
+        unitManager.setUnitAudioClip(unitId, "");
     unitManager.attachPlugin(unitId, pluginId, instance);
     unitManager.captureUnitPluginState(unitId);
+
+    // The row draws the model, so it has to be rebuilt: dropping a plugin
+    // refreshes in ArsenalPanel::onDrop, a context-menu pick has no such caller.
+    if (m_sequencerPanel) {
+        m_sequencerPanel->setSelectedUnit(unitId);
+        m_sequencerPanel->refreshUnits();
+    }
+    m_trackManager->markModified();
 
     AESTRA_LOG_DEBUG("Attached instrument '" + unitName + "' to Arsenal Unit " + std::to_string(unitId));
     return {};

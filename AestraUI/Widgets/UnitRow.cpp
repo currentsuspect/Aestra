@@ -1759,11 +1759,16 @@ void UnitRow::showRowContextMenu(const NUIPoint& pos) {
     detachContextMenu(m_rowContextMenu);
 
     bool hasPattern = false;
+    bool hasSound = false;
     Aestra::Audio::UnitType type = Aestra::Audio::UnitType::Sampler;
     if (auto* unit = m_manager.getUnit(m_unitId)) {
         hasPattern = unit->defaultPatternId.isValid();
         type = unit->type;
+        // A sample or a plugin is a sound already; an empty sampler is a slot
+        // waiting for one, so the menu says Load there and Replace everywhere else.
+        hasSound = !unit->pluginId.empty() || !unit->audioClipPath.empty();
     }
+    const char* const instrumentVerb = hasSound ? "Replace instrument" : "Load instrument";
 
     m_rowContextMenu = std::make_shared<NUIContextMenu>();
     m_rowContextMenu->setOnHide([this]() { detachContextMenu(m_rowContextMenu); });
@@ -1807,6 +1812,43 @@ void UnitRow::showRowContextMenu(const NUIPoint& pos) {
             if (m_onLoadUnitSample)
                 m_onLoadUnitSample(m_unitId);
         });
+    }
+
+    // Instruments are loaded into this existing Arsenal unit through the
+    // same callback used by plugin drag-and-drop. The row only owns the
+    // presentation; ArsenalPanel supplies the discovered plugin catalog.
+    if (m_instrumentPluginProvider) {
+        auto instruments = m_instrumentPluginProvider();
+        auto instrumentMenu = std::make_shared<NUIContextMenu>();
+        instrumentMenu->setMaxHeight(360.0f);
+        instrumentMenu->setScrollable(true);
+
+        std::sort(instruments.begin(), instruments.end(),
+                  [](const auto& a, const auto& b) { return a.first < b.first; });
+
+        size_t validInstrumentCount = 0;
+
+        for (const auto& [name, pluginId] : instruments) {
+            if (pluginId.empty())
+                continue;
+
+            ++validInstrumentCount;
+            const std::string label = name.empty() ? pluginId : name;
+            instrumentMenu->addItem(label, [this, pluginId]() {
+                if (!m_manager.getUnit(m_unitId))
+                    return;
+                if (m_onPluginDropped)
+                    m_onPluginDropped(m_unitId, pluginId);
+            });
+        }
+
+        if (validInstrumentCount > 0) {
+            m_rowContextMenu->addSubmenu(instrumentVerb, instrumentMenu);
+        } else {
+            auto loadInstrument = std::make_shared<NUIContextMenuItem>(instrumentVerb);
+            loadInstrument->setEnabled(false);
+            m_rowContextMenu->addItem(loadInstrument);
+        }
     }
 
     m_rowContextMenu->addSeparator();
