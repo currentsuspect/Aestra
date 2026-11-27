@@ -9,6 +9,37 @@
 
 namespace Aestra {
 
+namespace {
+// Split `text` into paragraphs on \n, then greedily word-wrap each to `maxWidth`.
+// No renderer needed: approximate char width (matches renderer fallback fontSize*0.5).
+std::vector<std::string> wrapMessageLines(const std::string& text, float maxWidth, float fontSize) {
+    std::vector<std::string> lines;
+    const float charWidth = fontSize * 0.5f;
+    if (maxWidth <= 0.0f || charWidth <= 0.0f) { lines.push_back(text); return lines; }
+    const size_t maxChars = static_cast<size_t>(std::max(1.0f, maxWidth / charWidth));
+    size_t start = 0;
+    while (true) {
+        const size_t nl = text.find('\n', start);
+        const std::string paragraph = text.substr(start, nl == std::string::npos ? std::string::npos : nl - start);
+        std::string current;
+        size_t wordStart = 0;
+        while (wordStart <= paragraph.size()) {
+            const size_t sp = paragraph.find(' ', wordStart);
+            const std::string word = paragraph.substr(wordStart, sp == std::string::npos ? std::string::npos : sp - wordStart);
+            const std::string trial = current.empty() ? word : current + " " + word;
+            if (!current.empty() && trial.size() > maxChars) { lines.push_back(current); current = word; }
+            else { current = trial; }
+            if (sp == std::string::npos) break;
+            wordStart = sp + 1;
+        }
+        lines.push_back(current);
+        if (nl == std::string::npos) break;
+        start = nl + 1;
+    }
+    return lines;
+}
+} // namespace
+
 ConfirmationDialog::ConfirmationDialog()
     : m_response(DialogResponse::None)
     , m_isVisible(false)
@@ -131,21 +162,24 @@ void ConfirmationDialog::calculateLayout() {
     const float buttonHeight = theme.layout.dialogActionHeight;
     const float buttonSpacing = theme.spacingS;
     const float margin = theme.spacingL;
-    // Sized to its content (SPEC 3 §3.2): title bar, the one-line message band, the divider
-    // and the buttons. It was a fixed 172 + title bar: 172 was sized when the title was drawn
-    // inside the body, so once the title moved into the shared title bar the message sat at
-    // the top of an empty band.
+    // Sized to its content (SPEC 3 §3.2): title bar, the (wrapped, possibly multi-line)
+    // message band, the divider and the buttons. Buttons sit below the message so they
+    // never overlap text; the background grows to account for extra lines.
     constexpr float kMessageBandH = 24.0f;
     constexpr float kDividerGap = 16.0f; // divider sits this far above the buttons
+    const float lineHeight = theme.fontSizeM * 1.25f;
+    const float messageMaxWidth = dialogWidth - margin * 2.0f;
+    m_messageLines = wrapMessageLines(m_message, messageMaxWidth, theme.fontSizeM);
+    const float messageBandH = std::max(kMessageBandH, lineHeight * static_cast<float>(m_messageLines.size()));
     const float dialogHeight =
-        AestraUI::AestraPanelWindow::TITLE_BAR_H + margin + kMessageBandH + margin + kDividerGap + buttonHeight + margin;
+        AestraUI::AestraPanelWindow::TITLE_BAR_H + margin + messageBandH + margin + kDividerGap + buttonHeight + margin;
 
     // Center dialog in parent (rounded so 1px strokes/text stay crisp).
     m_dialogRect.x = std::round(parentBounds.x + (parentBounds.width - dialogWidth) / 2.0f);
     m_dialogRect.y = std::round(parentBounds.y + (parentBounds.height - dialogHeight) / 2.0f);
     m_dialogRect.width = dialogWidth;
     m_dialogRect.height = dialogHeight;
-    m_messageCentreY = m_dialogRect.y + AestraUI::AestraPanelWindow::TITLE_BAR_H + margin + kMessageBandH * 0.5f;
+    m_messageCentreY = m_dialogRect.y + AestraUI::AestraPanelWindow::TITLE_BAR_H + margin + messageBandH * 0.5f;
 
     // Right-aligned button row, primary rightmost — modern convention:
     // Save flow: [ Cancel ] [ Don't Save ] [ Save ].
@@ -206,16 +240,23 @@ void ConfirmationDialog::onRender(AestraUI::NUIRenderer& renderer) {
     const AestraUI::NUIRect content = AestraUI::drawDialogChrome(renderer, chrome);
 
     const float padX = content.x + theme.spacingL;
-    // Message and its dot share one centre line: the text optically by cap height, the dot
-    // geometrically (it used a hand-rolled messageY + 5).
-    const float messageY = std::round(renderer.calculateOpticalTextY(m_messageCentreY, theme.fontSizeM));
+    // Message and its dot share one centre line: the dot centres on m_messageCentreY;
+    // wrapped text stacks within the message band.
     const float dotR = 4.0f;
     if (!m_isConfirmMode) {
         renderer.fillCircle({padX + dotR, m_messageCentreY}, dotR, theme.warning);
     }
-    renderer.drawText(m_message,
-                      AestraUI::NUIPoint(m_isConfirmMode ? padX : padX + dotR * 2.0f + 10.0f, messageY),
-                      theme.fontSizeM, theme.textSecondary);
+    {
+        const float textX = m_isConfirmMode ? padX : padX + dotR * 2.0f + 10.0f;
+        const float lineHeight = renderer.measureText("Mg", theme.fontSizeM).height * 1.25f;
+        const float blockH = lineHeight * static_cast<float>(m_messageLines.size());
+        // top of first line optically aligned; stack; every line stays inside the dialog width
+        float lineY = std::round(renderer.calculateOpticalTextY(m_messageCentreY - blockH * 0.5f + lineHeight * 0.5f, theme.fontSizeM));
+        for (const auto& line : m_messageLines) {
+            renderer.drawText(line, AestraUI::NUIPoint(textX, lineY), theme.fontSizeM, theme.textSecondary);
+            lineY += lineHeight;
+        }
+    }
 
     // Divider above the button row.
     const float dividerY = std::round(m_saveButtonRect.y - 16.0f); // kDividerGap in calculateLayout

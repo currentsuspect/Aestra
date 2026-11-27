@@ -533,6 +533,16 @@ void PluginScanner::scanAsync(ScanProgressCallback progressCallback, ScanComplet
                 if (std::filesystem::exists(path) && std::filesystem::is_directory(path)) {
                     scanDirectory(path, results, progressCallback, currentIndex, totalCount);
                 }
+
+                // A cancelled scan must not report partial results as success.
+                if (m_cancelRequested.load()) {
+                    success = false;
+                    break;
+                }
+            }
+
+            if (m_cancelRequested.load()) {
+                success = false;
             }
 
             // Store results
@@ -567,12 +577,51 @@ void PluginScanner::scanAsync(ScanProgressCallback progressCallback, ScanComplet
 
 void PluginScanner::cancelScan() {
     m_cancelRequested.store(true);
+    cancelOutstandingApprovals();
 }
 
 void PluginScanner::cancelAndJoin() {
-    m_cancelRequested.store(true);
+    cancelScan();
     if (m_scanThread.joinable() && m_scanThread.get_id() != std::this_thread::get_id()) {
         m_scanThread.join();
+    }
+}
+
+bool PluginScanner::registerOutstandingApproval(const std::shared_ptr<FirstLoadApprovalRequest>& request) {
+    if (!request) {
+        return false;
+    }
+    std::lock_guard<std::mutex> lock(m_approvalsMutex);
+    if (m_cancelRequested.load()) {
+        return false;
+    }
+    m_outstandingApprovals.insert(request);
+    return true;
+}
+
+bool PluginScanner::isUntrustedPluginAcknowledged(const std::filesystem::path& path) const {
+    const std::string pathKey = normalizedGenericPath(path);
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_seenUntrustedPlugins.find(pathKey) != m_seenUntrustedPlugins.end();
+}
+
+void PluginScanner::unregisterOutstandingApproval(const std::shared_ptr<FirstLoadApprovalRequest>& request) {
+    if (!request) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(m_approvalsMutex);
+    m_outstandingApprovals.erase(request);
+}
+
+void PluginScanner::cancelOutstandingApprovals() {
+    std::vector<std::shared_ptr<FirstLoadApprovalRequest>> pending;
+    {
+        std::lock_guard<std::mutex> lock(m_approvalsMutex);
+        pending.assign(m_outstandingApprovals.begin(), m_outstandingApprovals.end());
+    }
+    // Resolve outside the tracking mutex: resolution takes the request's own mutex.
+    for (const auto& request : pending) {
+        request->cancel();
     }
 }
 
@@ -927,6 +976,11 @@ void PluginScanner::scanDirectory(const std::filesystem::path& dir, std::vector<
 
                 if (warningCb) {
                     allowed = warningCb(path, path.stem().string());
+                }
+
+                // A cancellation while waiting for approval means deny.
+                if (m_cancelRequested.load()) {
+                    allowed = false;
                 }
 
                 if (!allowed) {

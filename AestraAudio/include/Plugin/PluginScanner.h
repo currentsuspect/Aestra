@@ -4,9 +4,11 @@
 #include "PluginHost.h"
 
 #include <atomic>
+#include <condition_variable>
 #include <filesystem>
 #include <functional>
 #include <future>
+#include <memory>
 #include <mutex>
 #include <set>
 #include <thread>
@@ -14,6 +16,61 @@
 
 namespace Aestra {
 namespace Audio {
+
+/**
+ * @brief Shared first-load approval request.
+ *
+ * Created on the scanner worker thread; resolved exactly once from any thread
+ * (dialog response, scan cancellation, queue rejection, shutdown, or missing
+ * UI). The scanner worker blocks on wait() without busy-waiting.
+ */
+class FirstLoadApprovalRequest {
+public:
+    FirstLoadApprovalRequest() = default;
+
+    FirstLoadApprovalRequest(const FirstLoadApprovalRequest&) = delete;
+    FirstLoadApprovalRequest& operator=(const FirstLoadApprovalRequest&) = delete;
+
+    /** Resolve with a decision. Exactly-once: later calls are ignored. Returns true if this call resolved it. */
+    bool resolve(bool allowed) {
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            if (m_resolved) {
+                return false;
+            }
+            m_resolved = true;
+            m_allowed = allowed;
+        }
+        m_cv.notify_all();
+        return true;
+    }
+
+    /** Resolve as denied. Exactly-once. */
+    bool cancel() { return resolve(false); }
+
+    /** Block until resolved. No busy-waiting. */
+    bool wait() {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        m_cv.wait(lock, [this] { return m_resolved; });
+        return m_allowed;
+    }
+
+    bool isResolved() const {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        return m_resolved;
+    }
+
+    bool isAllowed() const {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        return m_resolved && m_allowed;
+    }
+
+private:
+    mutable std::mutex m_mutex;
+    std::condition_variable m_cv;
+    bool m_resolved{false};
+    bool m_allowed{false};
+};
 
 /**
  * @brief Plugin scanner for discovering installed plugins
@@ -281,6 +338,33 @@ public:
      */
     void setFirstLoadWarningCallback(FirstLoadWarningCallback cb);
 
+    // ==============================
+    // Cancellable first-load approval requests
+    // ==============================
+
+    /**
+     * @brief Register a pending first-load approval request.
+     *
+     * The caller creates a shared FirstLoadApprovalRequest, registers it here,
+     * then blocks on it. cancelScan()/cancelAndJoin() resolve all registered
+     * requests as denied and wake their waiters.
+     *
+     * @return false if a scan cancellation is already in progress (request not registered).
+     */
+    bool registerOutstandingApproval(const std::shared_ptr<FirstLoadApprovalRequest>& request);
+
+    /** @brief Unregister a request once its decision has been consumed. */
+    void unregisterOutstandingApproval(const std::shared_ptr<FirstLoadApprovalRequest>& request);
+
+    /** @brief Resolve all registered requests as denied and wake waiters. */
+    void cancelOutstandingApprovals();
+
+    /** @brief Whether a scan cancellation has been requested. */
+    bool isCancelRequested() const { return m_cancelRequested.load(); }
+
+    /** @brief Whether an untrusted plugin at `path` has been approved and recorded (per-plugin, session scope). */
+    bool isUntrustedPluginAcknowledged(const std::filesystem::path& path) const;
+
 private:
     mutable std::mutex m_mutex;
     std::set<std::filesystem::path> m_searchPaths;
@@ -297,6 +381,10 @@ private:
     // [SEC-RTM-005] First-load warning for untrusted-path plugins
     FirstLoadWarningCallback m_firstLoadWarningCb;
     std::set<std::string> m_seenUntrustedPlugins;  // path strings already acknowledged
+
+    // Cancellable first-load approvals currently blocked on a decision.
+    std::mutex m_approvalsMutex;
+    std::set<std::shared_ptr<FirstLoadApprovalRequest>> m_outstandingApprovals;
 
     // [SEC-RTM-005 Part B] User-configured trusted paths (loaded from config)
     std::vector<std::filesystem::path> m_userTrustedPaths;
