@@ -448,24 +448,12 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
         if (m_isPressed) {
             // Was a click
             if (m_pressedIndex >= 0 && m_pressedIndex < static_cast<int>(m_filteredPlugins.size())) {
-                // Check for double-click (same index within 300ms)
-                auto now = std::chrono::steady_clock::now();
-                double elapsed = std::chrono::duration<double>(now.time_since_epoch()).count() - m_lastClickTime;
-
-                if (m_pressedIndex == m_lastClickIndex && elapsed < 0.3) {
-                    // Double-click detected - trigger load
-                    requestLoad(m_filteredPlugins[m_pressedIndex]);
-                    m_lastClickIndex = -1; // Reset to prevent triple-click triggering
-                    m_lastClickTime = 0.0;
-                } else {
-                    // Single click - select and record for double-click detection
-                    m_selectedIndex = m_pressedIndex;
-                    if (m_onPluginSelected) {
-                        m_onPluginSelected(m_filteredPlugins[m_pressedIndex]);
-                    }
-                    m_lastClickIndex = m_pressedIndex;
-                    m_lastClickTime = std::chrono::duration<double>(now.time_since_epoch()).count();
+                // Single click: select AND request load immediately (no double-click required).
+                m_selectedIndex = m_pressedIndex;
+                if (m_onPluginSelected) {
+                    m_onPluginSelected(m_filteredPlugins[m_pressedIndex]);
                 }
+                requestLoad(m_filteredPlugins[m_pressedIndex]);
             }
             m_isPressed = false;
             m_pressedIndex = -1;
@@ -1103,32 +1091,40 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
 
     if (event.pressed && event.button == NUIMouseButton::Left) {
         if (slotIdx >= 0 && slotIdx < MAX_SLOTS) {
-             // 1. Knob Hit Test
-             if (isOverKnob(slotIdx)) {
-                 if (!m_slots[slotIdx].isEmpty) {
-                     m_activeKnobSlot = slotIdx;
-                     if (m_platformBridge) {
-                         m_platformBridge->beginCursorCapture(
-                             this, NUICursorRestorePolicy::KnobCenter,
-                             static_cast<int>(event.position.x), static_cast<int>(event.position.y));
-                     }
-                     return true;
+             // 1. Knob Hit Test (non-empty slots only; an empty slot's knob
+             // region must not swallow the add-effect click below).
+             if (!m_slots[slotIdx].isEmpty && isOverKnob(slotIdx)) {
+                 m_activeKnobSlot = slotIdx;
+                 if (m_platformBridge) {
+                     m_platformBridge->beginCursorCapture(
+                         this, NUICursorRestorePolicy::KnobCenter,
+                         static_cast<int>(event.position.x), static_cast<int>(event.position.y));
                  }
+                 return true;
              }
-             // 2. Bypass Hit Test
-             else if (isOverBypass(slotIdx)) {
-                 if (!m_slots[slotIdx].isEmpty) {
-                     bool newState = !m_slots[slotIdx].bypassed;
-                     m_slots[slotIdx].bypassed = newState;
-                     m_bypassOverride[slotIdx] = newState ? 1 : 0;
-                     if (m_onSlotBypassToggled) m_onSlotBypassToggled(slotIdx, newState);
-                     repaint();
-                     return true;
-                 }
+             // 2. Bypass Hit Test (non-empty slots only).
+             else if (!m_slots[slotIdx].isEmpty && isOverBypass(slotIdx)) {
+                 bool newState = !m_slots[slotIdx].bypassed;
+                 m_slots[slotIdx].bypassed = newState;
+                 m_bypassOverride[slotIdx] = newState ? 1 : 0;
+                 if (m_onSlotBypassToggled) m_onSlotBypassToggled(slotIdx, newState);
+                 repaint();
+                 return true;
              }
              // 3. Slot Click (Selection / Drag Start)
              else {
-                 // Double Click Check
+                 // Empty slot: add an effect on a single click. Reset any in-flight
+                 // gesture so a paired release can't swallow it or fire twice.
+                 if (m_slots[slotIdx].isEmpty) {
+                     m_activeKnobSlot = -1;
+                     m_draggingSlotIndex = -1;
+                     m_isDraggingReorder = false;
+                     m_lastClickSlot = -1;
+                     if (m_onAddPluginRequested) m_onAddPluginRequested(slotIdx);
+                     return true;
+                 }
+
+                 // Non-empty slot: double-click opens it; single press starts drag.
                  auto now = std::chrono::steady_clock::now();
                  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastClickTime).count();
                  bool isDoubleClick = (slotIdx == m_lastClickSlot && elapsed < 300);
@@ -1137,18 +1133,12 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
                   m_lastClickSlot = slotIdx;
 
                   if (isDoubleClick) {
-                     if (!m_slots[slotIdx].isEmpty) {
-                        if (m_onSlotClicked) m_onSlotClicked(slotIdx);
-                     } else {
-                        if (m_onAddPluginRequested) m_onAddPluginRequested(slotIdx);
-                     }
+                     if (m_onSlotClicked) m_onSlotClicked(slotIdx);
                      m_lastClickSlot = -1; // Reset to avoid triple-click issues
                  } else {
                      // Single click - Prepare for Drag
-                     if (!m_slots[slotIdx].isEmpty) {
-                         m_draggingSlotIndex = slotIdx;
-                         m_dragStartPos = event.position;
-                     }
+                     m_draggingSlotIndex = slotIdx;
+                     m_dragStartPos = event.position;
                   }
                   return true;
               }
