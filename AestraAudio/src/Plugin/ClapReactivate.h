@@ -17,7 +17,8 @@ namespace AestraHelper {
 namespace ClapAbi {
 
 /// @p processingScope(true/false) brackets the calls CLAP requires on the processing thread (stop and start), so the
-/// caller can mark that thread. May be empty. Returns false when the plugin could not be brought back.
+/// caller can mark that thread. May be empty. Returns false when the plugin could not be brought back; it is then
+/// left deactivated.
 inline bool reactivateClapPlugin(const ClapPlugin* plugin, double sampleRate, uint32_t blockSize,
                                  const std::function<void(bool)>& processingScope) {
     if (!plugin || !plugin->activate || !plugin->deactivate || !plugin->startProcessing) {
@@ -36,7 +37,13 @@ inline bool reactivateClapPlugin(const ClapPlugin* plugin, double sampleRate, ui
     if (!plugin->activate(plugin, sampleRate, 1, blockSize)) {
         return false;
     }
-    return scoped([&] { return plugin->startProcessing(plugin); });
+    if (!scoped([&] { return plugin->startProcessing(plugin); })) {
+        // CLAP: a plugin must be deactivated before it is destroyed. One that activated but would not start has to go
+        // back to inactive, or teardown would hand destroy() a still-active plugin.
+        plugin->deactivate(plugin);
+        return false;
+    }
+    return true;
 }
 
 } // namespace ClapAbi

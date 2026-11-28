@@ -86,9 +86,9 @@ int main() {
         const ClapPlugin plugin = makePlugin();
         const bool ok = reactivateClapPlugin(&plugin, 44100.0, 256, {});
         check(!ok, "a failed start is reported");
-        check(Fake::calls.size() >= 2 && Fake::calls[Fake::calls.size() - 2].rfind("activate", 0) == 0 &&
-                  Fake::calls.back() == "start",
-              "the failed start was attempted after a good activate");
+        check(Fake::calls.size() >= 3 && Fake::calls[Fake::calls.size() - 2] == "start" &&
+                  Fake::calls.back() == "deactivate",
+              "a plugin that activated but would not start is deactivated again, never left active (CLAP teardown rule)");
     }
 
     {
