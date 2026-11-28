@@ -135,6 +135,14 @@ void OutOfProcessPluginInstance::process(const float* const* inputs, float** out
     //    the callbacks, so every callback wanted frames that had not gone yet: a short silence in every block, a pulsing crackle.
     //    Sent this way, each callback's frames come back by the next one, which the one-chunk delay (the largest callback) covers.
     if (chunk > 0 && m_inFifo.frames() > 0) { // nothing before the first frames (a 0-frame callback)
+        // The worker holds the slot (3) only while it copies the chunk out: a bounded copy of at most one block. The second part
+        // of a split callback arrives right then often enough to be heard (the first part's post is what woke the worker), so
+        // wait out that copy, for a hard-capped few microseconds; past the cap it is treated as busy, as before.
+        for (int spin = 0; spin < 512 && m_pendingState.load(std::memory_order_acquire) == 3; ++spin) {
+#if defined(__x86_64__) || defined(__i386__)
+            __builtin_ia32_pause();
+#endif
+        }
         uint8_t pendingEmpty = 0;
         if (m_pendingState.compare_exchange_strong(pendingEmpty, 1, std::memory_order_acq_rel)) {
             if (m_inFifo.frames() > chunk) {
@@ -151,6 +159,10 @@ void OutOfProcessPluginInstance::process(const float* const* inputs, float** out
             m_pendingFrames.store(sendFrames, std::memory_order_release);
             m_pendingState.store(2, std::memory_order_release);
             wakeWorker();
+            sentChunk = true;
+        } else if (appendToPendingChunk()) {
+            // A callback split in two (a loop wrap renders up to the loop end, then from the loop start): the second part
+            // arrives before the helper has picked up the first, and joins it, so both come back by the next callback.
             sentChunk = true;
         } else {
             m_unsentBlocks.fetch_add(1, std::memory_order_relaxed);
@@ -232,6 +244,32 @@ void OutOfProcessPluginInstance::flushForRenderBoundary(bool startingRender) {
         const uint8_t soundOff[3] = {static_cast<uint8_t>(0xB0 | channel), 120, 0};
         m_midiQueue.push(0, soundOff);
     }
+}
+
+bool OutOfProcessPluginInstance::appendToPendingChunk() {
+    // Only while the helper has not picked the chunk up (2 -> 1 claims it back; the worker's 2 -> 3 take loses or wins the race),
+    // only when the new frames follow it exactly, and only while it fits the block size the plugin was prepared for.
+    uint8_t posted = 2;
+    if (!m_pendingState.compare_exchange_strong(posted, 1, std::memory_order_acq_rel)) {
+        return false;
+    }
+    const uint32_t have = m_pendingFrames.load(std::memory_order_acquire);
+    const auto add = static_cast<uint32_t>(m_inFifo.frames());
+    const uint64_t newStart = m_inFifoEnd - add;
+    if (add == 0 || newStart != m_pendingStart + have || have + add > m_maxBlockSize) {
+        m_pendingState.store(2, std::memory_order_release); // left as it was
+        return false;
+    }
+    m_inFifo.popInterleaved(m_pendingInput.data() + static_cast<size_t>(have) * m_transportChannels, add);
+    const size_t haveMidi = m_pendingMidiBytes.load(std::memory_order_acquire);
+    // Offsets stay relative to the chunk's start; the events taken are only the new frames' (earlier ones already went).
+    const size_t moreMidi = m_midiQueue.takeChunk(m_pendingStart, newStart + add, m_pendingMidiData.data() + haveMidi,
+                                                  m_pendingMidiData.size() - haveMidi);
+    m_pendingMidiBytes.store(haveMidi + moreMidi, std::memory_order_release);
+    m_pendingFrames.store(have + add, std::memory_order_release);
+    m_pendingState.store(2, std::memory_order_release);
+    wakeWorker();
+    return true;
 }
 
 } // namespace Audio

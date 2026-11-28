@@ -1386,12 +1386,28 @@ void OutOfProcessPluginInstance::workerLoop() {
         }
 
         uint8_t readyEmpty = 0;
+        bool posted = false;
         if (m_readyState.compare_exchange_strong(readyEmpty, 1, std::memory_order_acq_rel)) {
             const size_t outputSamples = std::min(sampleCount, m_workerOutput.size());
             std::copy_n(m_workerOutput.data(), outputSamples, m_readyOutput.data());
             m_readyStart = m_workerStart;
             m_readyFrames.store(frames, std::memory_order_release);
             m_readyState.store(2, std::memory_order_release);
+            posted = true;
+        } else if (uint8_t readyFull = 2; m_readyState.compare_exchange_strong(readyFull, 1, std::memory_order_acq_rel)) {
+            // The previous result has not been played yet (the two parts of a split callback were sent apart): this one
+            // follows it on the timeline, so it joins it, if it fits. Otherwise it is lost, as before.
+            const uint32_t have = m_readyFrames.load(std::memory_order_acquire);
+            const size_t at = static_cast<size_t>(have) * m_transportChannels;
+            if (m_workerStart == m_readyStart + have && at + sampleCount <= m_readyOutput.size() &&
+                sampleCount <= m_workerOutput.size()) {
+                std::copy_n(m_workerOutput.data(), sampleCount, m_readyOutput.data() + at);
+                m_readyFrames.store(have + frames, std::memory_order_release);
+                posted = true;
+            }
+            m_readyState.store(2, std::memory_order_release);
+        }
+        if (posted) {
             // Published last, so an observer that sees this advance is guaranteed
             // to find the result readable rather than half-written.
             const uint64_t blocks = m_processedBlocks.fetch_add(1, std::memory_order_acq_rel) + 1;

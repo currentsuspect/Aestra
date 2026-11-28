@@ -314,6 +314,46 @@ int main(int argc, char** argv) {
                                             " dry, " + std::to_string(partial) + " with a gap, of 290)");
     }
 
+    // --- A loop wrap splits a callback in two: the engine renders up to the loop end, then from the loop start -------------------
+    // Reported by the founder: missed blocks heard at the loop point. Both parts arrive back to back, inside one callback period.
+    for (const bool wobble : {false, true}) {
+        PluginInstancePtr lp;
+        factory.createPluginAsync(echoInfo(), [&](PluginInstancePtr instance) { lp = std::move(instance); });
+        if (!lp || !lp->initialize(44100.0, 1024)) {
+            std::cerr << "could not start the loop echo\n";
+            return 1;
+        }
+        lp->activate();
+        auto& live = *static_cast<OutOfProcessPluginInstance*>(lp.get());
+        OfflineRenderMode::setActive(false);
+        const uint64_t dryBefore = live.dryBlockCount();
+        int gapped = 0, callbacks = 0;
+        for (int k = 0; k < 300; ++k) {
+            const uint32_t n = wobble ? ((k % 2 == 0) ? 411 : 412) : 256;
+            const bool wrap = (k % 7 == 3);
+            const uint32_t first = wrap ? 100 : n;
+            for (const uint32_t part : {first, n - first}) {
+                if (part == 0) continue;
+                std::vector<float> one(part, 1.0f), l(part, -1.0f), r(part, -1.0f);
+                const float* in[2] = {one.data(), one.data()};
+                float* out[2] = {l.data(), r.data()};
+                live.process(in, out, 2, 2, part, nullptr, nullptr);
+                if (k >= 10) {
+                    for (uint32_t i = 0; i < part; ++i) {
+                        if (l[i] != 1.0f) { ++gapped; break; }
+                    }
+                }
+            }
+            if (k >= 10) ++callbacks;
+            std::this_thread::sleep_for(std::chrono::microseconds(n * 1000000 / 44100));
+        }
+        const uint64_t dry = live.dryBlockCount() - dryBefore;
+        check(dry == 0 && gapped == 0, std::string("callbacks split at a loop wrap play every part wet") +
+                                           (wobble ? " (411/412 frames)" : " (256 frames)") + " (" + std::to_string(dry) +
+                                           " dry, " + std::to_string(live.unsentBlockCount()) + " unsent, " + std::to_string(gapped) + " parts with a gap, " + std::to_string(callbacks) +
+                                           " callbacks)");
+    }
+
     // --- Cutting MIDI into slices: nothing lost, nothing doubled, offsets rebased, note identities kept -------------------------
     {
         MidiBuffer in;
