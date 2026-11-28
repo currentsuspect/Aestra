@@ -758,3 +758,9 @@ add_executable(ClapGuiResizeTest AestraAudio/ClapGuiResizeTest.cpp)
 target_include_directories(ClapGuiResizeTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include ${CMAKE_SOURCE_DIR}/AestraAudio/src)
 add_test(NAME ClapGuiResizeTest COMMAND ClapGuiResizeTest)
 set_tests_properties(ClapGuiResizeTest PROPERTIES LABELS "audio;plugins;editor;regression;contract:plugins" TIMEOUT 30)
+
+# The sandbox helper's standalone editor window carries a WM class and a dialog type, so tiling compositors float it.
+add_executable(EditorWindowIdentityTest AestraAudio/EditorWindowIdentityTest.cpp)
+target_include_directories(EditorWindowIdentityTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)
+add_test(NAME EditorWindowIdentityTest COMMAND EditorWindowIdentityTest)
+set_tests_properties(EditorWindowIdentityTest PROPERTIES LABELS "audio;plugins;editor;regression;contract:plugins" TIMEOUT 30)
