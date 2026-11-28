@@ -83,11 +83,14 @@ NUICursorService::Delta NUICursorService::feedPhysicalMotion(int physX, int phys
         return d; // no motion, no recenter (avoids warp spam while idle)
     }
 
-    // Recenter to the anchor so the next delta is measured from the anchor
-    // again — the pointer is pinned and can never drift to the window edge.
+    // Recenter to the anchor so the pointer can never drift to the window edge. The next reading is measured from THIS
+    // reading, not from the anchor: whether the warp lands is not known until its echo arrives (above, which moves the
+    // reference to the anchor). A platform that ignores the warp (native Wayland without a pointer lock) keeps the
+    // pointer moving, and measuring from the anchor made every reading report the whole distance from it, so the
+    // motion grew with each event and the value ran away from the hand.
     m_host.hostWarpCursor(m_grabOriginX, m_grabOriginY);
-    m_lastPhysX = m_grabOriginX;
-    m_lastPhysY = m_grabOriginY;
+    m_lastPhysX = physX;
+    m_lastPhysY = physY;
     m_expectRecenterEvent = true;
     return d;
 }
