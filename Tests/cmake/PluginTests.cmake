@@ -753,6 +753,12 @@ set_tests_properties(MarkerRoundTripTest PROPERTIES
     LABELS "integration;serialization;markers;contract:durability"
     TIMEOUT 120)
 
+# After a CLAP plugin loads state the helper reactivates it: the Riverflux plugins crash on the next block otherwise.
+add_executable(ClapReactivateTest AestraAudio/ClapReactivateTest.cpp)
+target_include_directories(ClapReactivateTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include ${CMAKE_SOURCE_DIR}/AestraAudio/src)
+add_test(NAME ClapReactivateTest COMMAND ClapReactivateTest)
+set_tests_properties(ClapReactivateTest PROPERTIES LABELS "audio;plugins;regression;contract:plugins" TIMEOUT 30)
+
 # The sandbox helper's standalone editor window carries a WM class and a dialog type, so tiling compositors float it.
 add_executable(EditorWindowIdentityTest AestraAudio/EditorWindowIdentityTest.cpp)
 target_include_directories(EditorWindowIdentityTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)
