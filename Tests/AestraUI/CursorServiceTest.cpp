@@ -12,6 +12,7 @@
 
 #include "../../AestraUI/Platform/NUICursorService.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <string>
 #include <vector>
@@ -170,6 +171,33 @@ void testFeedMotionDeltaAndRecenter() {
     std::puts("  feed-motion delta + recenter: ok");
 }
 
+// A warp the platform ignores (native Wayland: a warp without a pointer lock does nothing). The pointer keeps moving; each
+// reading must be measured from the previous reading, not from the anchor the service asked for. Measuring from the anchor
+// made the reported motion grow with every event (1, 2, 3, 4 for a steady 1 px per event), so the value ran away from the hand.
+void testSilentWarpDoesNotAccelerate() {
+    struct SilentHost : NUICursorHost {
+        int warps = 0;
+        void hostHideCursor() override {}
+        void hostShowCursor() override {}
+        void hostWarpCursor(int, int) override { ++warps; } // asked for, never lands
+        void hostSetPointerGrab(bool) override {}
+    } host;
+    NUICursorService svc(host);
+    svc.beginDragCapture(NUICursorRestorePolicy::KnobCenter, 100, 100);
+
+    int total = 0;
+    int largest = 0;
+    for (int y = 99; y >= 96; --y) { // the pointer drifts up 1 px per event: 4 px in all
+        const auto d = svc.feedPhysicalMotion(100, y);
+        total += -d.dy;
+        largest = std::max(largest, -d.dy);
+    }
+    CHECK(host.warps > 0);          // premise: the service did ask for recenter warps
+    CHECK(largest == 1);            // each step is the 1 px the pointer moved
+    CHECK(total == 4);              // and the total is the real travel
+    std::puts("  silent warp does not accelerate: ok");
+}
+
 } // namespace
 
 int main() {
@@ -180,6 +208,7 @@ int main() {
     testBeginWhileCapturedRecovers();
     testReentrantBeginRefused();
     testFeedMotionDeltaAndRecenter();
+    testSilentWarpDoesNotAccelerate();
     if (g_failures == 0) {
         std::puts("CursorServiceTest: PASS");
         return 0;
