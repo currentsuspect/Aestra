@@ -752,3 +752,8 @@ add_test(NAME MarkerRoundTripTest COMMAND MarkerRoundTripTest)
 set_tests_properties(MarkerRoundTripTest PROPERTIES
     LABELS "integration;serialization;markers;contract:durability"
     TIMEOUT 120)
+
+# The bridge sets NUIMouseEvent::doubleClick (nothing ever did), so flag-only controls such as plugin knobs can reset on double-click.
+add_executable(PressPairerTest AestraUI/PressPairerTest.cpp)
+add_test(NAME PressPairerTest COMMAND PressPairerTest)
+set_tests_properties(PressPairerTest PROPERTIES LABELS "unit;ui;input;regression;contract:plugins" TIMEOUT 30)
