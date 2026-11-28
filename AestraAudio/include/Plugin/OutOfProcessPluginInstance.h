@@ -241,6 +241,11 @@ private:
     ChunkMidiQueue m_midiQueue;
     uint64_t m_inFifoEnd{0};                ///< frames ever queued into m_inFifo: the MIDI queue's timeline
     uint64_t m_outStart{0};                 ///< timeline position of m_outFifo's first frame
+    uint32_t m_sliceOffset = 0;              ///< audio thread: where the slice being processed starts in its render block
+    std::atomic<bool> m_workerBusy{false};   ///< the worker holds a chunk: from taking it until its result is published or dropped
+    uint32_t m_seenRenderEpoch = 0;          ///< OfflineRenderMode::epoch() this instance last flushed for
+    void flushForRenderBoundary(bool startingRender);
+    bool appendToPendingChunk(); ///< audio thread: the frames waiting join a chunk the helper has not picked up yet ///< empties the hand-off and silences the plugin when a render starts or ends
     std::atomic<uint32_t> m_chunkFrames{0}; ///< chunk size: the largest callback seen, 0 before the first
     std::atomic<uint64_t> m_midiDrops{0};
 
@@ -283,6 +288,9 @@ private:
     mutable bool m_paramListValid = false;
     std::atomic<uint64_t> m_paramDrops{0};
     std::atomic<uint64_t> m_helperBlocks{0};
+    void reportLostBlocks(); ///< worker thread: once a second, log blocks lost since the last report (nothing when none)
+    uint64_t m_reportedDry = 0, m_reportedUnsent = 0;
+    std::chrono::steady_clock::time_point m_lastLostReport{};
     std::atomic<uint64_t> m_dryBlocks{0};
     std::atomic<uint64_t> m_unsentBlocks{0};
 

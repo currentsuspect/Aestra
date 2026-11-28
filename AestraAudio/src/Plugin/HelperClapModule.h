@@ -413,6 +413,18 @@ struct ClapModule {
         inputPlanes[1] = inputStorage[1].data();
         outputPlanes[0] = outputStorage[0].data();
         outputPlanes[1] = outputStorage[1].data();
+        // The app prepares a plugin again whenever the sample rate or block size changes (an export switches the rate for the
+        // render and back). CLAP only allows activate() on an inactive plugin; activating twice leaves stale internal state
+        // that sounds like noise, so an active plugin is taken down first.
+        if (active) {
+            if (plugin->stopProcessing) {
+                ClapHostContext::inProcess() = true;
+                plugin->stopProcessing(plugin);
+                ClapHostContext::inProcess() = false;
+            }
+            plugin->deactivate(plugin);
+            active = false;
+        }
         if (!plugin->activate(plugin, sampleRate, 1, maxBlockSize)) {
             error = "clap-activate-failed";
             return false;

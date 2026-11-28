@@ -36,6 +36,19 @@ struct HostTransport {
     double loopStartPpq = 0.0;
     double loopEndPpq = 0.0;
 
+    /// The same transport @p frames later: a slice of a larger block (an offline render cuts its blocks into plugin-sized slices)
+    /// starts there, so a tempo-synced plugin must see that position, not the block's. Tempo and play state are the block's.
+    HostTransport advancedBy(int64_t frames) const noexcept {
+        HostTransport t = *this;
+        if (!valid || frames == 0) {
+            return t;
+        }
+        t.samplePosition += frames;
+        t.ppqPosition = static_cast<double>(t.samplePosition) / sampleRate * tempo / 60.0;
+        t.barStartPpq = std::floor(t.ppqPosition / t.timeSigNumerator) * t.timeSigNumerator;
+        return t;
+    }
+
     /// The snapshot for a block starting at samplePosition. Beats are quarter notes: the engine's metre is n/4.
     static HostTransport at(int64_t samplePosition, double sampleRate, double tempo, int32_t beatsPerBar, bool playing,
                             bool looping, double loopStartBeat, double loopEndBeat) noexcept {

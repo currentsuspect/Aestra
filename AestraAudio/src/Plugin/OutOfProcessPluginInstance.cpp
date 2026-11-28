@@ -1,6 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "Plugin/OutOfProcessPluginInstance.h"
+#include "Plugin/OfflineRenderMode.h"
 
 #include "AestraLog.h"
 #include "Plugin/PluginHostStatus.h"
@@ -1322,6 +1323,7 @@ void OutOfProcessPluginInstance::stopWorker() {
 
 void OutOfProcessPluginInstance::workerLoop() {
     while (!m_workerStop.load(std::memory_order_acquire)) {
+        reportLostBlocks();
         if (m_crashed.load(std::memory_order_acquire)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
             continue;
@@ -1354,22 +1356,41 @@ void OutOfProcessPluginInstance::workerLoop() {
         }
         m_workerTransport = m_pendingTransport;
         m_workerStart = m_pendingStart;
+        m_workerBusy.store(true, std::memory_order_release); // before the slot is freed: a render start waits for this call
         m_pendingState.store(0, std::memory_order_release);
 
         if (sampleCount > m_workerInput.size() || midiBytes > m_workerMidiData.size() ||
             !processBlockInHelper(m_workerInput, m_transportChannels, frames, m_workerMidiData, midiBytes,
                                   m_workerTransport, m_workerOutput)) {
             markCrashed();
+            m_workerBusy.store(false, std::memory_order_release);
             continue;
         }
 
         uint8_t readyEmpty = 0;
+        bool posted = false;
         if (m_readyState.compare_exchange_strong(readyEmpty, 1, std::memory_order_acq_rel)) {
             const size_t outputSamples = std::min(sampleCount, m_workerOutput.size());
             std::copy_n(m_workerOutput.data(), outputSamples, m_readyOutput.data());
             m_readyStart = m_workerStart;
             m_readyFrames.store(frames, std::memory_order_release);
             m_readyState.store(2, std::memory_order_release);
+            posted = true;
+        } else if (uint8_t readyFull = 2; m_readyState.compare_exchange_strong(readyFull, 1, std::memory_order_acq_rel)) {
+            // The previous result has not been played yet (the two parts of a split callback were sent apart): this one
+            // follows it on the timeline, so it joins it, if it fits. Otherwise it is lost, as before.
+            const uint32_t have = m_readyFrames.load(std::memory_order_acquire);
+            const size_t at = static_cast<size_t>(have) * m_transportChannels;
+            if (m_workerStart == m_readyStart + have && at + sampleCount <= m_readyOutput.size() &&
+                sampleCount <= m_workerOutput.size()) {
+                std::copy_n(m_workerOutput.data(), sampleCount, m_readyOutput.data() + at);
+                m_readyFrames.store(have + frames, std::memory_order_release);
+                posted = true;
+            }
+            m_readyState.store(2, std::memory_order_release);
+        }
+        m_workerBusy.store(false, std::memory_order_release); // published, or lost: either way no longer in flight
+        if (posted) {
             // Published last, so an observer that sees this advance is guaranteed
             // to find the result readable rather than half-written.
             const uint64_t blocks = m_processedBlocks.fetch_add(1, std::memory_order_acq_rel) + 1;
@@ -1399,6 +1420,9 @@ bool OutOfProcessPluginInstance::processBlockInHelper(const std::vector<float>& 
                                                       size_t midiBytes, const HostTransport& transport,
                                                       std::vector<float>& output) {
     const size_t sampleCount = static_cast<size_t>(channels) * frames;
+    // A render waits up to 5 s for each block (OutOfProcessPluginInstanceRt.cpp); the request must allow as long, or a heavy plugin
+    // is marked crashed half-way through a bounce. Live keeps the short deadline.
+    const auto blockTimeout = OfflineRenderMode::active() ? std::chrono::milliseconds(5000) : std::chrono::milliseconds(500);
     if (sampleCount > input.size()) {
         return false;
     }
@@ -1411,7 +1435,7 @@ bool OutOfProcessPluginInstance::processBlockInHelper(const std::vector<float>& 
         const std::string command = "PROCESSSHM " + std::to_string(channels) + " " + std::to_string(frames) + " " +
                                     std::to_string(midiBytes) + transport.toWire();
         std::string response;
-        if (!sendCommand(command, &response) || response != "OK") {
+        if (!sendCommand(command, &response, blockTimeout) || response != "OK") {
             return false;
         }
         if (output.size() < sampleCount) {
@@ -1431,7 +1455,7 @@ bool OutOfProcessPluginInstance::processBlockInHelper(const std::vector<float>& 
     }
     command << transport.toWire();
     std::string response;
-    if (!sendCommand(command.str(), &response)) {
+    if (!sendCommand(command.str(), &response, blockTimeout)) {
         return false;
     }
     constexpr const char* kPrefix = "OK ";

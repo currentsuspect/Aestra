@@ -1,5 +1,6 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
+#include "Plugin/OfflineRenderMode.h"
 #include "AudioExporter.h"
 #include "Core/ManualRenderLease.h"
 #include "AudioGraphBuilder.h"
@@ -321,6 +322,7 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
         ~EngineStateGuard() {
             self.m_engine.trackOutputTap().disarm();
             self.m_engine.setOfflineRenderActive(false);
+            OfflineRenderMode::setActive(false); // sandboxed plugins go back to the real-time hand-off
             // A note still releasing at the range end must not ring into whatever plays next.
             self.m_engine.resetCachedSamplerVoicesRt();
             self.m_engine.setTransportPlaying(false);
@@ -386,6 +388,9 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     // (parity with a warmed live engine and isolated bounces, #745). Restored
     // by engineStateGuard on every exit path.
     m_engine.setOfflineRenderActive(true);
+    // A sandboxed plugin must wait for its helper on every block while rendering: the real-time hand-off drops late blocks and
+    // plays them dry, which a render bakes into the audio (OfflineRenderMode.h). Cleared with the engine's flag, on every exit path.
+    OfflineRenderMode::setActive(true);
     if (captureChannel) {
         m_engine.trackOutputTap().arm(config.captureMixerChannelId, RENDER_BLOCK_FRAMES, config.captureAfterFader);
     }

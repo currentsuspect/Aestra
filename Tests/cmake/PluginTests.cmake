@@ -758,3 +758,32 @@ add_executable(EditorWindowIdentityTest AestraAudio/EditorWindowIdentityTest.cpp
 target_include_directories(EditorWindowIdentityTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)
 add_test(NAME EditorWindowIdentityTest COMMAND EditorWindowIdentityTest)
 set_tests_properties(EditorWindowIdentityTest PROPERTIES LABELS "audio;plugins;editor;regression;contract:plugins" TIMEOUT 30)
+
+# An offline render (bounce, freeze, export) through a sandboxed plugin is exact: the plugin waits for the helper instead of dropping blocks.
+add_executable(SandboxOfflineRenderTest AestraAudio/SandboxOfflineRenderTest.cpp)
+target_include_directories(SandboxOfflineRenderTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include)
+target_compile_definitions(SandboxOfflineRenderTest PRIVATE AESTRA_ENABLE_TEST_HOOKS)
+target_link_libraries(SandboxOfflineRenderTest PRIVATE AestraAudio)
+add_test(NAME SandboxOfflineRenderTest COMMAND SandboxOfflineRenderTest $<TARGET_FILE:AestraPluginHost>)
+set_tests_properties(SandboxOfflineRenderTest PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120
+    LABELS "audio;plugins;regression;contract:plugins")
+
+# Preparing an already-active CLAP plugin deactivates it first (the exporter's sample-rate change re-inits every plugin).
+add_executable(ClapInitTwiceTest AestraAudio/ClapInitTwiceTest.cpp)
+target_include_directories(ClapInitTwiceTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include ${CMAKE_SOURCE_DIR}/AestraAudio/src ${CMAKE_SOURCE_DIR}/AestraAudio/src/Plugin)
+add_test(NAME ClapInitTwiceTest COMMAND ClapInitTwiceTest)
+set_tests_properties(ClapInitTwiceTest PROPERTIES LABELS "audio;plugins;regression;contract:plugins" TIMEOUT 30)
+
+# A real plugin sounds the same live before and after a render, and after being prepared again (needs AESTRA_STRESS_PLUGIN).
+add_executable(SandboxRenderBoundaryRealPluginTest AestraAudio/SandboxRenderBoundaryRealPluginTest.cpp)
+target_include_directories(SandboxRenderBoundaryRealPluginTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include)
+target_link_libraries(SandboxRenderBoundaryRealPluginTest PRIVATE AestraAudio)
+add_test(NAME SandboxRenderBoundaryRealPluginTest COMMAND SandboxRenderBoundaryRealPluginTest $<TARGET_FILE:AestraPluginHost>)
+set_tests_properties(SandboxRenderBoundaryRealPluginTest PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120
+    LABELS "audio;plugins;regression;contract:plugins")
