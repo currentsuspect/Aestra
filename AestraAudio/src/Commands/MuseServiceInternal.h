@@ -160,13 +160,11 @@ inline bool numberToId(double value, uint64_t& out) {
 
 // JSON args -> flag map for the schema/registry path. Returns false with
 // outError set when a value has a type the flag grammar cannot carry.
-inline bool jsonArgsToFlags(JSON& args, std::unordered_map<std::string, std::string>& outFlags,
+inline bool jsonArgsToFlags(const JSON& args, std::unordered_map<std::string, std::string>& outFlags,
                             std::string& outError) {
-    // Non-const asObject() returns a copy of the map (the const overload
-    // returns an empty static — a known footgun).
-    for (auto& entry : args.asObject()) {
+    for (const auto& entry : args.asObject()) {
         const std::string& key = entry.first;
-        JSON& value = entry.second;
+        const JSON& value = entry.second;
         if (value.isString()) {
             outFlags[key] = value.asString();
         } else if (value.isNumber()) {
