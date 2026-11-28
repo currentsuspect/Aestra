@@ -51,6 +51,8 @@ constexpr ArsenalRouteMode arsenalRouteModeFromRouteId(int routeId) noexcept {
 
 /**
  * @brief Return true when a project-loaded Arsenal plugin may be instantiated automatically.
+ *
+ * True for every known format: only plugins in the local scanned catalog are looked up, and third-party ones run in the sandbox.
  */
 bool shouldRestoreArsenalPluginFromProject(const PluginInfo& plugin) noexcept;
 
