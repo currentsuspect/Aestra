@@ -173,6 +173,7 @@ private:
                               const std::vector<uint8_t>& midiData, size_t midiBytes, const HostTransport& transport,
                               std::vector<float>& output);
     void markCrashed();
+    std::string editorUnavailableReason() const; ///< for the log: why an editor could not be opened
     void setupSharedBlock();     ///< audio through shared memory when the helper can map it (V82-H7 follow-up)
     void resetHandOff(double sampleRate, uint32_t maxBlockSize); ///< the hand-off buffers and timeline, before INIT
     static void raiseWorkerPriority();
