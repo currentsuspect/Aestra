@@ -174,17 +174,27 @@ int main() {
     require(shouldRestoreArsenalPluginFromProject(internalPlugin),
             "Project load may restore first-party/internal Arsenal plugins");
 
+    // Third-party plugins come back with the project too. The unit names a plugin by id and UnitManager only restores one
+    // that is in this machine's scanned catalog, so a project cannot bring in a binary: it can only pick among plugins that
+    // were installed and approved here. They are created through the sandbox helper (HybridPluginFactory: only built-in
+    // plugins run in-process), the same way mixer effects have always been restored. Until this, an instrument came back
+    // as a name with nothing behind it after every reopen (PR #340 restricted restore to built-in plugins).
     PluginInfo vstPlugin = internalPlugin;
     vstPlugin.id = "com.vendor.instrument";
     vstPlugin.format = PluginFormat::VST3;
-    require(!shouldRestoreArsenalPluginFromProject(vstPlugin),
-            "Project load must not auto-instantiate VST3 Arsenal plugins from untrusted JSON");
+    require(shouldRestoreArsenalPluginFromProject(vstPlugin),
+            "Project load restores an installed VST3 Arsenal plugin through the sandbox");
 
     PluginInfo clapPlugin = internalPlugin;
     clapPlugin.id = "com.vendor.clap-instrument";
     clapPlugin.format = PluginFormat::CLAP;
-    require(!shouldRestoreArsenalPluginFromProject(clapPlugin),
-            "Project load must not auto-instantiate CLAP Arsenal plugins from untrusted JSON");
+    require(shouldRestoreArsenalPluginFromProject(clapPlugin),
+            "Project load restores an installed CLAP Arsenal plugin through the sandbox");
+
+    // A format this build does not know (a value from a newer file) is never instantiated.
+    PluginInfo unknownPlugin = internalPlugin;
+    unknownPlugin.format = static_cast<PluginFormat>(99);
+    require(!shouldRestoreArsenalPluginFromProject(unknownPlugin), "An unknown plugin format is not restored");
 
     verifyExternalPluginJsonPreservesMetadataWithoutInstance();
 

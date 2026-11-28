@@ -24,7 +24,17 @@ namespace Aestra {
 namespace Audio {
 
 bool shouldRestoreArsenalPluginFromProject(const PluginInfo& plugin) noexcept {
-    return plugin.format == PluginFormat::Internal;
+    // Every format this build knows. The unit names a plugin by id and the caller restores only one that is in this machine's
+    // scanned catalog, so a project cannot introduce a binary, only choose among plugins installed (and approved) here, and
+    // VST3/CLAP plugins are always created in the sandbox helper (HybridPluginFactory). PR #340 restored built-in plugins only,
+    // which left every third-party instrument a name with nothing behind it after a reopen; mixer effects were never restricted.
+    switch (plugin.format) {
+    case PluginFormat::Internal:
+    case PluginFormat::VST3:
+    case PluginFormat::CLAP:
+        return true;
+    }
+    return false; // a format from a newer file
 }
 
 namespace {
@@ -1062,8 +1072,8 @@ void UnitManager::loadFromJSON(const JSON& json) {
             if (pluginInfo && shouldRestoreArsenalPluginFromProject(*pluginInfo)) {
                 unit.plugin = pluginManager.createInstance(*pluginInfo);
             } else if (pluginInfo) {
-                Aestra::Log::warning("[UnitManager] Skipping external Arsenal plugin restore from project for unit " +
-                                     std::to_string(unit.id) + ": " + unit.pluginId);
+                Aestra::Log::warning("[UnitManager] Not restoring Arsenal plugin for unit " + std::to_string(unit.id) + ": " +
+                                     unit.pluginId + " has a plugin format this build does not know");
             } else {
                 Aestra::Log::warning("[UnitManager] Missing Arsenal plugin during project restore for unit " +
                                      std::to_string(unit.id) + ": " + unit.pluginId);
