@@ -149,7 +149,7 @@ public:
     /**
      * @brief Load the highlighted plugin (spec item 4).
      *
-     * Same action as double-click (fires onPluginLoadRequested). No-op
+     * Same action as a single click (fires onPluginLoadRequested). No-op
      * without a valid selection.
      */
     void activateSelected();

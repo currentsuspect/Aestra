@@ -225,7 +225,7 @@ void PluginUIController::bindBrowser(PluginBrowserPanel* browser) {
         startScan();
     });
     
-    // Wire plugin selection (double-click)
+    // Wire plugin selection (single click)
     browser->setOnPluginLoadRequested([this](const PluginListItem& item) {
         // Just notify - actual loading depends on context (which slot/chain)
         pluginLoaded.emit({item.id, -1});

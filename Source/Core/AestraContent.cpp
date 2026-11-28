@@ -263,10 +263,11 @@ AestraContent::~AestraContent() {
         m_trackManager->setOnTakeCommitted(nullptr);
     }
 
-    // Cancel any running plugin scan to prevent callbacks from accessing dead pointers
+    // Cancel any running plugin scan, wake pending approvals, and join the
+    // scanner thread before content teardown; drop any stale queued UI work.
     auto& pm = Aestra::Audio::PluginManager::getInstance();
-    pm.getScanner().cancelScan();
-    // Note: PluginManager's destructor will join the scan thread
+    pm.getScanner().cancelAndJoin();
+    clearMainThreadTasks();
 
     // Clean up temporary audition files
     for (const auto& file : m_tempFiles) {
@@ -865,36 +866,62 @@ void AestraContent::setupBrowserPanels() {
             m_pluginBrowser->setScanStatus("Scanning...");
         }
 
-        pm.getScanner().scanAsync(
-            [this](const std::string& path, int current, int total) {
-                // Update progress
-                if (m_pluginBrowser && total > 0) {
-                    float progress = static_cast<float>(current) / static_cast<float>(total);
-                    m_pluginBrowser->setScanning(true, progress);
-                    m_pluginBrowser->setScanStatus("Scanning: " + path);
-                }
-            },
-            [this](const std::vector<Aestra::Audio::PluginInfo>& results, bool success) {
-                // Clear scanning state
-                if (m_pluginBrowser) {
-                    m_pluginBrowser->setScanning(false, 0.0f);
-                    m_pluginBrowser->setScanStatus("");
-                }
+        // Scanner callbacks fire on the scanner worker thread. Never touch UI
+        // from there: dispatch to the main thread via a heap-shared queue,
+        // capture weak_from_this() (no raw this), and no-op if AestraContent
+        // is destroyed before the queued work runs.
+        const auto weakSelf = weak_from_this();
+        const auto taskQueue = m_mainThreadTasks;
 
-                if (success) {
-                    // The scanner has already stored the results by the time
-                    // this callback runs, so one refreshPluginList() covers
-                    // both surfaces: the browser list and the mixer's
-                    // quick-add dropdown (which shares the catalog).
-                    refreshPluginList();
-                    AESTRA_LOG_DEBUG("Scan complete. UI updated with " + std::to_string(results.size()) + " plugins.");
-                } else {
-                    AESTRA_LOG_ERROR("Plugin scan failed or cancelled.");
+        pm.getScanner().scanAsync(
+            [weakSelf, taskQueue](const std::string& path, int current, int total) {
+                if (!taskQueue) {
+                    return;
                 }
+                std::string pathCopy = path;
+                std::lock_guard<std::mutex> lock(taskQueue->mutex);
+                taskQueue->tasks.push_back([weakSelf, pathCopy = std::move(pathCopy), current, total]() {
+                    auto self = std::dynamic_pointer_cast<AestraContent>(weakSelf.lock());
+                    if (!self || !self->m_pluginBrowser || total <= 0) {
+                        return;
+                    }
+                    float progress = static_cast<float>(current) / static_cast<float>(total);
+                    self->m_pluginBrowser->setScanning(true, progress);
+                    self->m_pluginBrowser->setScanStatus("Scanning: " + pathCopy);
+                });
+            },
+            [weakSelf, taskQueue](const std::vector<Aestra::Audio::PluginInfo>& results, bool success) {
+                if (!taskQueue) {
+                    return;
+                }
+                const size_t resultCount = results.size();
+                std::lock_guard<std::mutex> lock(taskQueue->mutex);
+                taskQueue->tasks.push_back([weakSelf, resultCount, success]() {
+                    auto self = std::dynamic_pointer_cast<AestraContent>(weakSelf.lock());
+                    if (!self) {
+                        return; // destroyed before execution: nothing to update
+                    }
+                    // Clear scanning state whenever the scan finished, appropriate or not.
+                    if (self->m_pluginBrowser) {
+                        self->m_pluginBrowser->setScanning(false, 0.0f);
+                        self->m_pluginBrowser->setScanStatus("");
+                    }
+
+                    if (success) {
+                        // The scanner has already stored the results by the time
+                        // this callback runs, so one refreshPluginList() covers
+                        // both surfaces: the browser list and the mixer's
+                        // quick-add dropdown (which shares the catalog).
+                        self->refreshPluginList();
+                        AESTRA_LOG_DEBUG("Scan complete. UI updated with " + std::to_string(resultCount) + " plugins.");
+                    } else {
+                        AESTRA_LOG_ERROR("Plugin scan failed or cancelled.");
+                    }
+                });
             });
     });
 
-    // Plugin load callback (double-click)
+    // Plugin load callback (single click)
     m_pluginBrowser->setOnPluginLoadRequested([this](const AestraUI::PluginListItem& plugin) {
         AESTRA_LOG_DEBUG("Plugin load requested: " + plugin.name + " (" + plugin.typeName + ")");
         if (plugin.typeName == "Effect") {
@@ -4026,18 +4053,18 @@ void AestraContent::stopSoundPreview() {
 }
 
 void AestraContent::enqueueMainThreadTask(std::function<void()> task) {
-    if (!task) {
+    if (!task || !m_mainThreadTasks) {
         return;
     }
-    std::lock_guard<std::mutex> lock(m_mainThreadTasksMutex);
-    m_mainThreadTasks.push_back(std::move(task));
+    std::lock_guard<std::mutex> lock(m_mainThreadTasks->mutex);
+    m_mainThreadTasks->tasks.push_back(std::move(task));
 }
 
 void AestraContent::drainMainThreadTasks() {
     std::vector<std::function<void()>> tasks;
     {
-        std::lock_guard<std::mutex> lock(m_mainThreadTasksMutex);
-        tasks.swap(m_mainThreadTasks);
+        std::lock_guard<std::mutex> lock(m_mainThreadTasks->mutex);
+        tasks.swap(m_mainThreadTasks->tasks);
     }
 
     for (auto& task : tasks) {
@@ -4045,6 +4072,14 @@ void AestraContent::drainMainThreadTasks() {
             task();
         }
     }
+}
+
+void AestraContent::clearMainThreadTasks() {
+    if (!m_mainThreadTasks) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(m_mainThreadTasks->mutex);
+    m_mainThreadTasks->tasks.clear();
 }
 
 void AestraContent::showToast(const std::string& message) {

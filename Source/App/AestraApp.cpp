@@ -95,7 +95,7 @@ AestraApp::AestraApp()
     Log::info("Logging initialized to console and " + logPath);
 
     // Project document paths are initialized lazily after Platform is ready.
-    m_windowManager = std::make_unique<AestraWindowManager>();
+    m_windowManager = std::make_shared<AestraWindowManager>();
     m_audioController = std::make_unique<AestraAudioController>();
 }
 
@@ -601,15 +601,11 @@ void AestraApp::buildMissingAssetsDialog() {
     m_windowManager->setMissingAssetsDialog(std::move(dialog));
 }
 
-void AestraApp::enqueueMainThreadTask(std::function<void()> task) {
-    if (!task || !m_mainThreadQueue) {
-        return;
+bool AestraApp::enqueueMainThreadTask(std::function<void()> task) {
+    if (!m_mainThreadQueue) {
+        return false;
     }
-    std::lock_guard<std::mutex> lock(m_mainThreadQueue->mutex);
-    if (m_mainThreadQueue->shuttingDown) {
-        return;
-    }
-    m_mainThreadQueue->tasks.push_back(std::move(task));
+    return m_mainThreadQueue->enqueue(std::move(task));
 }
 
 void AestraApp::drainMainThreadTasks() {
@@ -977,6 +973,93 @@ void AestraApp::buildMenuBar() {
 }
 
 void AestraApp::initializePlugins() {
+    // Register the first-load trust callback BEFORE PluginManager::initialize():
+    // initialize() can kick off an asynchronous scan when no plugin cache exists,
+    // and untrusted plugins must never be binary-loaded without explicit approval.
+    // The callback runs on the scanner worker thread; it captures no raw app or UI
+    // pointers, only the shared main-thread queue and a weak window-manager ref.
+    {
+        // The confirmation dialog is otherwise created lazily (buildSettingsAndDialogs);
+        // make sure one exists so plugin approval never fails closed on missing UI.
+        if (m_windowManager && !m_windowManager->getConfirmationDialog()) {
+            m_windowManager->setConfirmationDialog(std::make_shared<ConfirmationDialog>());
+        }
+
+        auto queue = m_mainThreadQueue;
+        std::weak_ptr<AestraWindowManager> weakWindowManager = m_windowManager;
+        auto& scanner = Aestra::Audio::PluginManager::getInstance().getScanner();
+
+        scanner.setFirstLoadWarningCallback(
+            [queue, weakWindowManager](const std::filesystem::path& pluginPath, const std::string& pluginName) -> bool {
+                auto& scanner = Aestra::Audio::PluginManager::getInstance().getScanner();
+
+                auto request = std::make_shared<Aestra::Audio::FirstLoadApprovalRequest>();
+                if (!scanner.registerOutstandingApproval(request)) {
+                    Log::warning("[PluginApproval] registration rejected (cancellation in progress); failing closed");
+                    return false; // scan cancellation already in progress: fail closed
+                }
+
+                const std::string fullPath = pluginPath.string();
+                const std::string title = "Allow third-party plugin?";
+                const std::string message =
+                    "Plugin: " + pluginName + "\n" +
+                    "Path: " + fullPath + "\n\n" +
+                    "Allowing runs native third-party code with your permissions. Only allow plugins you trust.";
+
+                const bool enqueued =
+                    queue && queue->enqueue([weakWindowManager, request, title, message]() {
+                        // Runs on the main thread; re-check lifetime + cancellation first.
+                        if (request->isResolved()) {
+                            return; // cancelled while queued: fail closed
+                        }
+
+                        auto windowManager = weakWindowManager.lock();
+                        if (!windowManager) {
+                            Log::warning("[PluginApproval] window manager unavailable; failing closed");
+                            request->cancel(); // missing UI: fail closed
+                            return;
+                        }
+
+                        auto dialog = windowManager->getConfirmationDialog();
+                        if (!dialog) {
+                            Log::warning("[PluginApproval] confirmation dialog unavailable; failing closed");
+                            request->cancel(); // missing UI: fail closed
+                            return;
+                        }
+
+                        // Never replace an already-visible confirmation dialog
+                        // (unsaved-project, destructive-action, ...): fail closed.
+                        if (dialog->isDialogVisible()) {
+                            Log::warning("[PluginApproval] confirmation dialog occupied; failing closed");
+                            request->cancel();
+                            return;
+                        }
+
+                        if (auto* root = windowManager->getRootComponent()) {
+                            dialog->setBounds(root->getBounds());
+                            root->removeChild(dialog);
+                            root->addChild(dialog);
+                        }
+
+                        dialog->showConfirm(title, message, "Allow", [request](Aestra::DialogResponse response) {
+                            // Confirm == allow; Cancel/Escape/click-outside deny. Resolved exactly once.
+                            request->resolve(response == Aestra::DialogResponse::Confirm);
+                        });
+                    });
+
+                if (!enqueued) {
+                    Log::warning("[PluginApproval] main-thread queue rejected task; failing closed");
+                    request->cancel(); // queue rejection / shutdown: fail closed
+                }
+
+                // Block the scanner worker until the dialog answers, the request is
+                // cancelled, or shutdown/cancelScan resolves it. No busy-waiting.
+                const bool allowed = request->wait();
+                scanner.unregisterOutstandingApproval(request);
+                return allowed;
+            });
+    }
+
     if (Aestra::Audio::PluginManager::getInstance().initialize()) {
         Log::info("Plugin Manager initialized");
         Aestra::Audio::PluginManager::getInstance().getScanner().addDefaultSearchPaths();
@@ -1710,14 +1793,22 @@ void AestraApp::shutdown() {
         m_audioController->closeStream();
     }
 
+    // Reject pending plugin approvals, stop + join the scanner thread, and
+    // clear the trust callback BEFORE destroying content or the window manager:
+    // no scanner work may still be submitting UI work or waiting on a dialog.
+    {
+        auto& pluginManager = Aestra::Audio::PluginManager::getInstance();
+        pluginManager.getScanner().cancelAndJoin();          // wakes outstanding approvals as denied
+        pluginManager.getScanner().setFirstLoadWarningCallback(nullptr);
+        pluginManager.shutdown();
+    }
+
     // AestraContent owns UI-facing preview state and detaches it from AudioEngine
     // in its destructor. Destroy content while the engine still exists.
     if (m_windowManager) {
         m_windowManager->shutdown();
     }
     m_content.reset();
-
-    Aestra::Audio::PluginManager::getInstance().shutdown();
 
     if (m_audioController) {
         m_audioController->shutdown();

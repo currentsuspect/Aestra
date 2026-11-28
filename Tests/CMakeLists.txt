@@ -1501,6 +1501,17 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/DeviceManagerRaceTest.cpp")
     set_tests_properties(DeviceManagerRaceTest PROPERTIES LABELS "audio;device;rt-safety;concurrency;contract:realtime" TIMEOUT 60)
 endif()
 
+# MainThreadQueue submission failure is explicit (plugin approval bridges fail closed)
+add_executable(ContentTaskQueueTest App/ContentTaskQueueTest.cpp)
+target_include_directories(ContentTaskQueueTest PRIVATE ${CMAKE_SOURCE_DIR}/Source/Core)
+add_test(NAME ContentTaskQueueTest COMMAND ContentTaskQueueTest)
+set_tests_properties(ContentTaskQueueTest PROPERTIES LABELS "app;concurrency;contract:application" TIMEOUT 30)
+
+add_executable(MainThreadQueueTest App/MainThreadQueueTest.cpp)
+target_include_directories(MainThreadQueueTest PRIVATE ${CMAKE_SOURCE_DIR}/Source ${CMAKE_SOURCE_DIR}/Source/App)
+add_test(NAME MainThreadQueueTest COMMAND MainThreadQueueTest)
+set_tests_properties(MainThreadQueueTest PROPERTIES LABELS "app;concurrency;contract:application" TIMEOUT 30)
+
 # #650 (FD-64): the wording the user sees when the audio interface drops out and returns. Header-only, no UI.
 add_executable(AudioDeviceNoticeTest App/AudioDeviceNoticeTest.cpp)
 target_include_directories(AudioDeviceNoticeTest PRIVATE ${CMAKE_SOURCE_DIR}/Source)
@@ -1882,6 +1893,17 @@ if(NOT WIN32)
     add_test(NAME PluginScannerSigpipeTest COMMAND PluginScannerSigpipeTest)
     set_tests_properties(PluginScannerSigpipeTest PROPERTIES LABELS "audio;plugin;security;contract:security")
 endif()
+
+# First-load trust approval for third-party plugins from untrusted paths (SEC-RTM-005)
+add_executable(PluginFirstLoadApprovalTest AestraAudio/PluginFirstLoadApprovalTest.cpp)
+target_link_libraries(PluginFirstLoadApprovalTest PRIVATE AestraAudioCore)
+target_include_directories(PluginFirstLoadApprovalTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Tests
+)
+add_test(NAME PluginFirstLoadApprovalTest COMMAND PluginFirstLoadApprovalTest)
+set_tests_properties(PluginFirstLoadApprovalTest PROPERTIES LABELS "audio;plugin;security;contract:security" TIMEOUT 60)
 
 # Arsenal bridge-mode terminology contract test (Phase 2B policy-only)
 add_executable(ArsenalBridgeContractTest AestraAudio/ArsenalBridgeContractTest.cpp)

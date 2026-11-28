@@ -29,6 +29,7 @@ inline void clearProjectContent(TrackManager& tm) {
     tm.getUnitManager().clear();
     tm.clearAllChannels();
     tm.clearAllTracks();
+    tm.markers().clear(); // song sections and cues must not carry over to a new project
 }
 
 } // namespace Audio

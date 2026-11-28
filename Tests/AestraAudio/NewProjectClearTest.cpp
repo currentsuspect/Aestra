@@ -48,6 +48,10 @@ int main() {
     Audio::MidiPayload empty;
     patterns.createMidiPattern("Pattern 1", 8.0, empty);
     patterns.createMidiPattern("Pattern 2", 8.0, empty);
+    // Song sections and cues belong to the project too.
+    tm.markers().add(4.0, "Verse");
+    tm.markers().add(16.0, "Drop");
+    expect(tm.markers().count() == 2, "old project has two markers");
     expect(units.getUnitCount() == 3, "old project has three units");
     expect(patterns.getAllPatterns().size() == 2, "old project has two patterns");
 
@@ -58,6 +62,7 @@ int main() {
     expect(tm.getTracks().empty(), "no tracks survive a new project");
     expect(tm.getChannelCount() == 0, "no channels survive a new project");
     expect(tm.getPlaylistModel().getLaneCount() == 0, "no lanes survive a new project");
+    expect(tm.markers().empty(), "no markers survive a new project");
 
     // Rebuild the defaults, as resetToDefaultProject() and the Arsenal do.
     seedTracks(tm, 4);

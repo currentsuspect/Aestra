@@ -753,6 +753,24 @@ set_tests_properties(MarkerRoundTripTest PROPERTIES
     LABELS "integration;serialization;markers;contract:durability"
     TIMEOUT 120)
 
+# The scanned-plugin catalog is a snapshot, not a reference into the scanner (CodeRabbit on #1493). Runs on every
+# platform: the contract is the return type, and the scan itself touches no disk.
+add_executable(PluginScannerSnapshotTest AestraAudio/PluginScannerSnapshotTest.cpp)
+target_link_libraries(PluginScannerSnapshotTest PRIVATE AestraAudioCore)
+target_include_directories(PluginScannerSnapshotTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME PluginScannerSnapshotTest COMMAND PluginScannerSnapshotTest)
+set_tests_properties(PluginScannerSnapshotTest PROPERTIES LABELS "audio;plugin;threading;contract:security")
+
+# The first-load prompt's message wrapping: a path longer than a line is split to fit, never drawn past the edge,
+# and never cut inside a UTF-8 character (CodeRabbit on #1493). Header-only, no UI libraries.
+add_executable(ConfirmationDialogWrapTest AestraUI/ConfirmationDialogWrapTest.cpp)
+target_include_directories(ConfirmationDialogWrapTest PRIVATE ${CMAKE_SOURCE_DIR}/Source/Settings)
+add_test(NAME ConfirmationDialogWrapTest COMMAND ConfirmationDialogWrapTest)
+set_tests_properties(ConfirmationDialogWrapTest PROPERTIES LABELS "unit;dialog;plugin;contract:security")
+
 # The sandbox helper's standalone editor window carries a WM class and a dialog type, so tiling compositors float it.
 add_executable(EditorWindowIdentityTest AestraAudio/EditorWindowIdentityTest.cpp)
 target_include_directories(EditorWindowIdentityTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)

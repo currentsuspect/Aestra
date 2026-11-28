@@ -536,14 +536,7 @@ bool UIMixerPluginDropdown::onMouseEvent(const NUIMouseEvent& event)
         return true;
     }
 
-    // Give the search input first dibs on events inside its bounds
-    if (m_searchInput && m_searchInput->isVisible() && m_searchInput->getBounds().contains(event.position)) {
-        if (m_searchInput->onMouseEvent(event)) {
-            return true;
-        }
-    }
-
-    // Update hover
+    // Update hover FIRST so the search field can't swallow hover tracking.
     int newRow = hitTestRow(event.position);
     if (newRow != m_hoveredRow) {
         m_hoveredRow = newRow;
@@ -555,19 +548,29 @@ bool UIMixerPluginDropdown::onMouseEvent(const NUIMouseEvent& event)
         repaint();
     }
 
+    // Give the search input first dibs on events inside its bounds (clicks/focus),
+    // after hover has been recorded.
+    if (m_searchInput && m_searchInput->isVisible() && m_searchInput->getBounds().contains(event.position)) {
+        if (m_searchInput->onMouseEvent(event)) {
+            return true;
+        }
+    }
+
     if (event.pressed && event.button == NUIMouseButton::Left) {
         if (m_hoveredFooter == 0) {
             dismiss();
             if (onBrowseAllRequested) onBrowseAllRequested(m_searchQuery);
             return true;
         }
-        if (m_hoveredRow >= 0) {
+        // Re-hit-test the live position so a click can't be swallowed by stale hover.
+        const int pressedRow = hitTestRow(event.position);
+        if (pressedRow >= 0) {
             // Same data source as render/hit-test so a click lands on the
             // row the user actually saw (m_filtered can be stale-empty
             // while the fallback display path shows m_categories).
             const auto& display = displayCategories();
             auto rows = flatten(display);
-            const auto& row = rows[m_hoveredRow];
+            const auto& row = rows[pressedRow];
             if (!row.isCategory) {
                 const auto& item = display[row.catIndex].items[row.itemIndex];
                 const std::string pluginId = item.id;

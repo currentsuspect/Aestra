@@ -5,6 +5,7 @@
 #include "NUICoreWidgets.h"
 #include <functional>
 #include <string>
+#include <vector>
 
 namespace Aestra {
 
@@ -113,6 +114,7 @@ private:
     AestraUI::NUIRect m_cancelButtonRect;
     AestraUI::NUIRect m_dialogRect;
     float m_messageCentreY = 0.0f; // the message line (and its dot) centre on this
+    std::vector<std::string> m_messageLines; // wrapped/paragraphed message lines
 
     void handleResponse(DialogResponse response);
     void calculateLayout();

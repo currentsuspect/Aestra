@@ -33,6 +33,7 @@
  * Manages the lifecycle of all AESTRA subsystems and the main event loop.
  * Refactored to delegate to AestraWindowManager and AestraAudioController.
  */
+#include "MainThreadQueue.h"
 #include "../Core/RecoveryInfo.h"
 #include "../Core/VersionEdits.h"
 #include "../Panels/AuditionBounceTile.h"
@@ -124,7 +125,8 @@ private:
     void relinkMissingAsset(const Aestra::MissingAssetsDialog::MissingEntry& entry);
     // Main-thread hop for workers (the dialog's picker+decode run off-thread so
     // the event loop never blocks behind a native dialog).
-    void enqueueMainThreadTask(std::function<void()> task);
+    // @return true if the task was queued; false if rejected (null task or shutdown in progress).
+    bool enqueueMainThreadTask(std::function<void()> task);
     void drainMainThreadTasks();
     // Idle frame elision (labs/perf/idle-frame-elision-spec.md)
     bool shouldRenderThisFrame();
@@ -261,7 +263,7 @@ private:
     void writeRecoveryMarkerForAutosave(const std::string& autosavePath, const std::string& canonicalProjectPath) const;
 
 private:
-    std::unique_ptr<AestraWindowManager> m_windowManager;
+    std::shared_ptr<AestraWindowManager> m_windowManager;
     std::unique_ptr<AestraAudioController> m_audioController;
 
     // Muse socket entry (opt-in via AESTRA_MUSE_PORT): agents drive the live
@@ -277,14 +279,7 @@ private:
     // the queue, and the shutdown gate outlive AestraApp itself. Workers and
     // their queued UI work must only use this struct plus other shared_ptrs
     // (track manager, dialog) — never raw `this` or plain members.
-    struct MainThreadQueue {
-        std::mutex mutex;
-        std::vector<std::function<void()>> tasks;
-        bool shuttingDown{false};
-        std::atomic<bool> relinkInFlight{false};
-        std::atomic<bool> fileDialogInFlight{false};
-    };
-    std::shared_ptr<MainThreadQueue> m_mainThreadQueue{std::make_shared<MainThreadQueue>()};
+    std::shared_ptr<Aestra::MainThreadQueue> m_mainThreadQueue{std::make_shared<Aestra::MainThreadQueue>()};
     void startMuseSocketIfConfigured();
     // Updates (AestraAppUpdates.cpp): the background check and its one notification.
     void startUpdateChecks();

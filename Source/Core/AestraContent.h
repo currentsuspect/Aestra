@@ -95,6 +95,7 @@ namespace AestraUI {
 // headless-constructible module shared by the app and the table-driven tests.
 #include "../Panels/DspLoadReadout.h"
 #include "WorkspaceFocus.h"
+#include "ContentTaskQueue.h"
 
 /**
  * @brief Playback scope - what the transport will play
@@ -665,9 +666,11 @@ private:
     void placeSampleOnTimeline(Aestra::Audio::ClipSourceID sourceId, const std::string& filePath);
     std::unordered_set<std::string> m_sampleImportsInFlight; ///< main thread only
     void drainMainThreadTasks();
+    void clearMainThreadTasks();
 
-    std::mutex m_mainThreadTasksMutex;
-    std::vector<std::function<void()>> m_mainThreadTasks;
+    // Heap-shared so scanner workers can queue work without dereferencing
+    // AestraContent; queued tasks capture weak_from_this() and no-op once destroyed.
+    std::shared_ptr<ContentTaskQueue> m_mainThreadTasks{std::make_shared<ContentTaskQueue>()};
     std::mutex m_sampleUnitLoadGenerationsMutex;
     std::unordered_map<Aestra::Audio::UnitID, uint64_t> m_sampleUnitLoadGenerations;
 
