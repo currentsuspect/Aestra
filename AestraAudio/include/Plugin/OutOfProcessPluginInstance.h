@@ -166,9 +166,14 @@ public:
 private:
     bool sendCommand(const std::string& command, std::string* response = nullptr,
                      std::chrono::milliseconds timeout = std::chrono::milliseconds(500));
+    /// sendCommand() for a caller that already holds m_ipcMutex (std::mutex is not recursive). The worker needs it: "is the
+    /// plugin active" and the PROCESS that follows must be one transaction, or deactivate() can slip in between.
+    bool sendCommandLocked(const std::string& command, std::string* response = nullptr,
+                           std::chrono::milliseconds timeout = std::chrono::milliseconds(500));
     void startWorker();
     void stopWorker();
     void workerLoop();
+    /// The caller holds m_ipcMutex.
     bool processBlockInHelper(const std::vector<float>& input, uint32_t channels, uint32_t frames,
                               const std::vector<uint8_t>& midiData, size_t midiBytes, const HostTransport& transport,
                               std::vector<float>& output);

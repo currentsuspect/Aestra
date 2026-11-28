@@ -12,6 +12,7 @@
 #include "Plugin/PluginHostTestHooks.h"
 
 #include <cstdint>
+#include <atomic>
 #include <chrono>
 #include <filesystem>
 #include <iostream>
@@ -102,6 +103,31 @@ int main(int argc, char** argv) {
     check(!created->isCrashed(), "blocks that reach a deactivated plugin are dropped, not taken for a crash");
     created->activate();
     check(instance.sendRawCommandForTest(block).rfind("OK", 0) == 0, "and the plugin works once it is activated again");
+
+    // The race itself, hammered: the audio path keeps handing blocks over while the plugin is deactivated and activated over
+    // and over, as a double stop does. Checking "is it active" and then sending is not enough when deactivate() can run in
+    // between; the helper answers ERR for a deactivated plugin and the failure marks the plugin crashed. Many cycles, because
+    // the window is narrow.
+    {
+        created->activate();
+        float inL[64] = {}, inR[64] = {}, outL[64] = {}, outR[64] = {};
+        const float* in[2] = {inL, inR};
+        float* out[2] = {outL, outR};
+        std::atomic<bool> stop{false};
+        std::thread audio([&] {
+            while (!stop.load()) {
+                instance.process(in, out, 2, 2, 64);
+                std::this_thread::sleep_for(std::chrono::microseconds(300));
+            }
+        });
+        for (int cycle = 0; cycle < 300 && !created->isCrashed(); ++cycle) {
+            created->deactivate();
+            created->activate();
+        }
+        stop = true;
+        audio.join();
+        check(!created->isCrashed(), "300 deactivate/activate cycles under audio traffic never mark the plugin crashed");
+    }
 
     // Activating a plugin that is already active changes nothing.
     created->activate();
