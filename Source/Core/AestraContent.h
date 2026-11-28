@@ -434,6 +434,10 @@ public:
     void setMidiInput(Aestra::Audio::MidiInputService* midiInput);
     /** @brief Propagate transport tempo to tempo-aware internal plugins. */
     void setPluginTempo(float bpm);
+    /** @brief File > Import MIDI File: one pattern per MIDI track, one undo step (AestraContentMidiFile.cpp). */
+    bool importMidiFile(const std::string& path);
+    /** @brief File > Export Selected Pattern as MIDI: the active pattern to a .mid, written atomically. */
+    bool exportActivePatternAsMidi(const std::string& path);
     /** @brief Get the playback graph controller for canonical graph invalidation. */
     Aestra::Audio::PlaybackGraphController* getPlaybackGraphController() const;
 

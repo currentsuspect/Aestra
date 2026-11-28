@@ -862,7 +862,7 @@ void AestraApp::buildMenuBar() {
         versionsItem->setShortcut("Ctrl+H"); versionsItem->setOnClick([this]() { if (m_content) m_content->toggleTakesPanel(); }); menu->addItem(versionsItem);
 
         menu->addSeparator();
-        menu->addItem("Export Audio...", [this]() { startExport(); });
+        addImportExportMenu(*menu); // MidiFileMenu.cpp
         menu->addSeparator();
         menu->addItem("Settings...", [this]() { openSettings(); });
         menu->addSeparator();
