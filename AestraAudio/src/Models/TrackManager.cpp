@@ -418,7 +418,12 @@ std::filesystem::path projectSubfolder(const std::string& projectPath, const cha
     namespace fs = std::filesystem;
     if (!projectPath.empty()) {
         const fs::path p(projectPath);
-        return (p.has_extension() ? p.parent_path() : p) / leaf;
+        // A project with an extension is a file; so is one that exists as a plain file: Aestra saves projects with no
+        // extension (Projects/EROS), and treating those as a folder tried to create a directory inside a file. Anything
+        // else with no extension is a project folder.
+        std::error_code ec;
+        const bool isFile = p.has_extension() || fs::is_regular_file(p, ec);
+        return (isFile ? p.parent_path() : p) / leaf;
     }
     if (const char* home = std::getenv("HOME")) return fs::path(home) / "Documents" / "Aestra" / leaf;
     return fs::current_path() / leaf;
