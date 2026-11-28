@@ -753,6 +753,44 @@ set_tests_properties(MarkerRoundTripTest PROPERTIES
     LABELS "integration;serialization;markers;contract:durability"
     TIMEOUT 120)
 
+# The helper answers an audio block while its main thread is busy with the editor: a late block plays dry, a click.
+add_executable(SandboxAudioThreadTest AestraAudio/SandboxAudioThreadTest.cpp)
+target_include_directories(SandboxAudioThreadTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include)
+target_compile_definitions(SandboxAudioThreadTest PRIVATE AESTRA_ENABLE_TEST_HOOKS)
+target_link_libraries(SandboxAudioThreadTest PRIVATE AestraAudio)
+add_test(NAME SandboxAudioThreadTest COMMAND SandboxAudioThreadTest $<TARGET_FILE:AestraPluginHost>)
+set_tests_properties(SandboxAudioThreadTest PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 60
+    LABELS "audio;plugins;rt-safety;regression;contract:plugins")
+
+# The hand-over between the helper's pipe thread and its main thread keeps one-command-at-a-time order.
+add_executable(HelperCommandMailboxTest AestraAudio/HelperCommandMailboxTest.cpp)
+target_include_directories(HelperCommandMailboxTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/src)
+target_link_libraries(HelperCommandMailboxTest PRIVATE Threads::Threads)
+add_test(NAME HelperCommandMailboxTest COMMAND HelperCommandMailboxTest)
+set_tests_properties(HelperCommandMailboxTest PROPERTIES TIMEOUT 30 LABELS "audio;plugins;threading;regression;contract:plugins")
+
+# The helper exits when told to: EXIT used to leave main() under a waiting pipe thread, and the process never ended.
+if(UNIX AND TARGET AestraPluginHost)
+    add_executable(SandboxHelperExitTest AestraAudio/SandboxHelperExitTest.cpp)
+    target_compile_definitions(SandboxHelperExitTest PRIVATE HELPER_PATH="$<TARGET_FILE:AestraPluginHost>")
+    add_dependencies(SandboxHelperExitTest AestraPluginHost)
+    add_test(NAME SandboxHelperExitTest COMMAND SandboxHelperExitTest)
+    set_tests_properties(SandboxHelperExitTest PROPERTIES TIMEOUT 120 LABELS "audio;plugins;regression;contract:plugins")
+endif()
+
+# The helper's audio thread runs at real-time priority where RLIMIT_RTPRIO allows it (the app's worker already does).
+if(UNIX AND NOT APPLE AND TARGET AestraPluginHost)
+    add_executable(SandboxHelperPriorityTest AestraAudio/SandboxHelperPriorityTest.cpp)
+    target_compile_definitions(SandboxHelperPriorityTest PRIVATE HELPER_PATH="$<TARGET_FILE:AestraPluginHost>")
+    add_dependencies(SandboxHelperPriorityTest AestraPluginHost)
+    add_test(NAME SandboxHelperPriorityTest COMMAND SandboxHelperPriorityTest)
+    set_tests_properties(SandboxHelperPriorityTest PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 60
+        LABELS "audio;plugins;rt-safety;regression;contract:plugins")
+endif()
+
 # The sandbox helper's standalone editor window carries a WM class and a dialog type, so tiling compositors float it.
 add_executable(EditorWindowIdentityTest AestraAudio/EditorWindowIdentityTest.cpp)
 target_include_directories(EditorWindowIdentityTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)

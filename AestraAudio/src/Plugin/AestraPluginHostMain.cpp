@@ -1,12 +1,14 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "HelperEditorHost.h"
+#include "HelperCommandMailbox.h"
 #include "HelperLineReader.h"
 #include "HelperParamCommands.h"
 #include "SharedAudioBlock.h"
 #include "Plugin/HostTransport.h"
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <csignal>
@@ -15,10 +17,16 @@
 #include <cstring>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <sstream>
 #include <string>
 #include <thread>
 #include <vector>
+
+#if defined(__linux__)
+#include <pthread.h> // SCHED_FIFO for the audio thread
+#include <sched.h>
+#endif
 
 #ifdef _WIN32
 #include <fcntl.h>
@@ -290,7 +298,15 @@ void installFatalSignalHandlers() noexcept {
 #endif
 }
 
+// Two threads answer: the pipe thread (audio blocks) and the main thread (everything else). One at a time, never one
+// reply cut into the middle of another.
+std::mutex& replyMutex() {
+    static std::mutex m;
+    return m;
+}
+
 void reply(const std::string& line) {
+    std::lock_guard<std::mutex> lock(replyMutex());
     std::cout << line << '\n';
     std::cout.flush();
 }
@@ -346,38 +362,199 @@ int main(int argc, char** argv) {
 #endif
     AestraHelper::EditLog editLog;
 
-    AestraHelper::LineReader lineReader;
-    // The next command. The same thread runs the plugin's timers and an open editor between commands
-    // (HelperLineReader.h).
-    auto readCommand = [&](std::string& out) -> bool {
-#ifdef _WIN32
-        return lineReader.next(
-            out,
-            [&](int& timeoutMs) {
-                clapModule.hostContext.limitWait(timeoutMs);
-                editorHost.limitWait(timeoutMs);
-            },
-            [&] {
-                clapModule.hostContext.service();
-                editorHost.service();
-            });
-#else
-        return lineReader.next(
-            out,
-            [&](std::vector<pollfd>& fds, int& timeoutMs) {
-                clapModule.hostContext.pollFds(fds, timeoutMs);
-#if defined(AESTRA_HELPER_HAS_EDITORS)
-                editorHost.pollFds(fds, timeoutMs);
-#endif
-            },
-            [&] {
-                clapModule.hostContext.service();
-#if defined(AESTRA_HELPER_HAS_EDITORS)
-                editorHost.service();
-#endif
+    std::atomic<bool> shuttingDown{false};
+    // An audio block: answered on the pipe thread, the moment it arrives, so it never waits behind the window's work on
+    // the main thread. It only touches what the other commands leave alone while it runs: the app sends one command at a
+    // time, and the pipe thread does not read the next until the main thread has finished the last.
+    auto handleProcess = [&](const std::string& command, std::istringstream& input) {
+        if (shuttingDown.load(std::memory_order_acquire)) {
+            reply("ERR shutting-down");
+            return;
+        }
+        if (!loaded || !active) {
+            reply("ERR inactive");
+            return;
+        }
+        // PROCESSSHM carries only the sizes: the samples and the MIDI are in the shared block, and so is the answer.
+        const bool viaShm = command == "PROCESSSHM";
+        uint32_t channels = 0;
+        uint32_t frames = 0;
+        input >> channels >> frames;
+        if (channels == 0 || channels > 2 || frames == 0 || frames > maxBlockSize) {
+            reply("ERR invalid-process-size");
+            return;
+        }
+        const size_t sampleCount = static_cast<size_t>(channels) * frames;
+        midiBuffer.clear();
+        if (viaShm) {
+            size_t midiBytes = 0;
+            input >> midiBytes;
+            if (!sharedBlock.isOpen() || sampleCount > sharedBlock.maxSamples() ||
+                midiBytes > sharedBlock.maxMidiBytes()) {
+                reply("ERR invalid-shm-process");
+                return;
             }
-        );
+            processBuffer.assign(sharedBlock.input(), sharedBlock.input() + sampleCount);
+            midiBuffer.assign(sharedBlock.midi(), sharedBlock.midi() + midiBytes);
+        } else {
+            std::string payloadHex;
+            std::string midiHex;
+            input >> payloadHex;
+            if (command == "PROCESSMIDI") {
+                input >> midiHex;
+            }
+            if (!hexDecodeFloats(payloadHex, processBuffer) || processBuffer.size() < sampleCount) {
+                reply("ERR invalid-process-payload");
+                return;
+            }
+            if (command == "PROCESSMIDI" && !hexDecodeRaw(midiHex, midiBuffer)) {
+                reply("ERR invalid-midi-payload");
+                return;
+            }
+        }
+        // The app's tempo and playhead for this block ("T ..." after the payload, HostTransport.h). The plugin hosts
+        // below read it from the clock; a line without one, or a malformed one, means no transport this block.
+        {
+            using Aestra::Audio::HostTransport;
+            std::string marker;
+            size_t fieldCount = 0;
+            if (input >> marker && marker == "T") {
+                while (fieldCount < transportFields.size() && input >> transportFields[fieldCount])
+                    ++fieldCount;
+                std::string extra;
+                if (input >> extra)
+                    fieldCount = 0;
+            }
+            Aestra::Audio::HostTransportClock::publish(
+                marker == "T" ? HostTransport::fromWire(transportFields.data(), fieldCount) : HostTransport{});
+        }
+        auto answer = [&](std::vector<float>& out) {
+            if (out.size() < sampleCount) {
+                out.resize(sampleCount, 0.0f);
+            }
+            if (viaShm) {
+                std::copy_n(out.data(), sampleCount, sharedBlock.output());
+                reply("OK");
+            } else {
+                reply("OK " + hexEncodeBytes(out.data(), sampleCount * sizeof(float)));
+            }
+        };
+
+        if (clapModule.plugin) {
+            const std::vector<uint8_t>* midiData = midiBuffer.empty() ? nullptr : &midiBuffer;
+            if (!clapModule.process(processBuffer, channels, frames, midiData, midiBuffer.size(), processed)) {
+                reply("ERR clap-process-failed");
+                return;
+            }
+            answer(processed);
+            return;
+        }
+#ifdef AESTRA_HAS_VST3
+        if (vst3Module.plugin) {
+            const std::vector<uint8_t>* midiData = midiBuffer.empty() ? nullptr : &midiBuffer;
+            if (!vst3Module.process(processBuffer, channels, frames, midiData, midiBuffer.size(), processed)) {
+                reply("ERR vst3-process-failed");
+                return;
+            }
+            answer(processed);
+            return;
+        }
 #endif
+
+#ifdef AESTRA_ENABLE_TEST_HOOKS
+        // Echo fake plugin: apply parameter 0 as an output gain so a test can
+        // observe host->child parameter delivery through the audio itself (#238).
+        if (echoPlugin) echoHasProcessed = true;
+        if (echoPlugin && echoParams[0] != 1.0f) {
+            for (size_t i = 0; i < sampleCount && i < processBuffer.size(); ++i) {
+                processBuffer[i] *= echoParams[0];
+            }
+        }
+#endif
+        answer(processBuffer);
+    };
+
+#ifdef AESTRA_ENABLE_TEST_HOOKS
+    // TESTPAINT <ms>: after its reply, the main thread stays busy for that long, as an editor repainting would be. The
+    // test uses it to prove an audio block is not queued behind the window's work.
+    int testPaintMs = 0;
+#endif
+    // Two threads, one conversation. The pipe thread reads the app's commands and answers audio blocks itself
+    // (handleProcess); every other command goes to the main thread, which owns the plugin and its editor and runs the
+    // plugin's timers and the window's events between commands (HelperCommandMailbox.h). The pipe thread waits for each
+    // command to be answered before it reads the next, so the app still sees one command at a time, in order.
+    AestraHelper::CommandMailbox mailbox;
+    std::thread pipeThread([&] {
+#if defined(__linux__)
+        // This thread does the plugin's audio. The app runs its own sandbox worker at SCHED_FIFO mid-range minus one so
+        // ordinary work never holds it back; this one sits just below it. At normal priority it lost to everything else
+        // on a busy machine, including the plugin's own GUI threads (a Vital editor open with the CPU busy: 10% of blocks
+        // late). Best effort: without RLIMIT_RTPRIO the call fails and the thread stays a normal one.
+        sched_param param{};
+        param.sched_priority = (sched_get_priority_max(SCHED_FIFO) + sched_get_priority_min(SCHED_FIFO)) / 2 - 2;
+        pthread_setschedparam(pthread_self(), SCHED_FIFO, &param);
+#endif
+        AestraHelper::LineReader lineReader;
+        std::string text;
+        for (;;) {
+            if (!lineReader.next(text, [](auto&&...) {}, [] {})) break;
+            // Binary stdin (above) means getline no longer strips a '\r' for us. The parent frames with '\n' alone, so
+            // this is belt-and-braces on an untrusted parse boundary rather than a live case.
+            if (!text.empty() && text.back() == '\r') text.pop_back();
+            std::istringstream parsed(text);
+            std::string name;
+            parsed >> name;
+            if (name == "PROCESS" || name == "PROCESSMIDI" || name == "PROCESSSHM") {
+                handleProcess(name, parsed);
+            } else if (!mailbox.postAndWait(text)) {
+                break;
+            }
+        }
+        mailbox.close();
+    });
+    // The process ends when the main thread is done; this thread may still be blocked reading the pipe.
+    pipeThread.detach();
+
+    bool commandInFlight = false;
+    // The next command for the main thread. Between commands this thread also runs the plugin's timers and an open editor.
+    auto readCommand = [&](std::string& out) -> bool {
+        if (commandInFlight) {
+            mailbox.finish(); // the last command has been answered: let the pipe thread read the next
+            commandInFlight = false;
+        }
+#ifdef AESTRA_ENABLE_TEST_HOOKS
+        if (testPaintMs > 0) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(testPaintMs));
+            testPaintMs = 0;
+        }
+#endif
+        for (;;) {
+            clapModule.hostContext.service();
+#if defined(AESTRA_HELPER_HAS_EDITORS)
+            editorHost.service();
+#endif
+            if (mailbox.take(out)) {
+                commandInFlight = true;
+                return true;
+            }
+            if (mailbox.closed()) return false;
+#ifdef _WIN32
+            int timeoutMs = -1;
+            clapModule.hostContext.limitWait(timeoutMs);
+            editorHost.limitWait(timeoutMs);
+            mailbox.waitFor(std::chrono::milliseconds(timeoutMs < 0 ? 30 : std::min(timeoutMs, 30)));
+#else
+            std::vector<pollfd> fds;
+            fds.push_back({mailbox.wakeFd(), POLLIN, 0});
+            int timeoutMs = -1;
+            clapModule.hostContext.pollFds(fds, timeoutMs);
+#if defined(AESTRA_HELPER_HAS_EDITORS)
+            editorHost.pollFds(fds, timeoutMs);
+#endif
+            ::poll(fds.data(), static_cast<nfds_t>(fds.size()), timeoutMs);
+            mailbox.drainWake();
+#endif
+        }
     };
 
     while (readCommand(line)) {
@@ -779,7 +956,8 @@ int main(int argc, char** argv) {
                         continue;
                     }
                     const int fd = atoi(entry->d_name);
-                    if (fd != dirFd) {
+                    // The mailbox's wake pipe is the helper's own, not inherited from the app.
+                    if (fd != dirFd && !mailbox.ownsFd(fd)) {
                         fds.push_back(fd);
                     }
                 }
@@ -825,6 +1003,9 @@ int main(int argc, char** argv) {
             std::cout << "OK stalled" << std::flush; // no '\n' yet, on purpose
             std::this_thread::sleep_for(std::chrono::milliseconds(3000));
             std::cout << "-completed\n" << std::flush;
+        } else if (command == "TESTPAINT") {
+            input >> testPaintMs;
+            reply("OK");
         } else if (command == "TESTCRLF") {
             // Terminate a reply with CRLF explicitly. This is what Windows' default
             // text-mode stdout did to EVERY reply before _setmode above, and it broke
@@ -902,7 +1083,10 @@ int main(int argc, char** argv) {
             vst3Module.close();
 #endif
             reply("OK EXIT");
-            return 0;
+            // Not `return 0`: the pipe thread is waiting for this command to finish, and returning from main() destroyed the
+            // hand-over's mutex and condition variable under it, so the process never ended. Leaving the loop takes the safe
+            // shutdown path below, the same as end of input does.
+            break;
         } else if (command == "STATUS") {
             reply(active ? "OK ACTIVE" : (loaded ? "OK LOADED" : "OK EMPTY"));
         } else if (command == "SHM") {
@@ -919,111 +1103,23 @@ int main(int argc, char** argv) {
             }
             reply("OK SHM");
         } else if (command == "PROCESS" || command == "PROCESSMIDI" || command == "PROCESSSHM") {
-            if (!loaded || !active) {
-                reply("ERR inactive");
-                continue;
-            }
-            // PROCESSSHM carries only the sizes: the samples and the MIDI are in the shared block, and so is the answer.
-            const bool viaShm = command == "PROCESSSHM";
-            uint32_t channels = 0;
-            uint32_t frames = 0;
-            input >> channels >> frames;
-            if (channels == 0 || channels > 2 || frames == 0 || frames > maxBlockSize) {
-                reply("ERR invalid-process-size");
-                continue;
-            }
-            const size_t sampleCount = static_cast<size_t>(channels) * frames;
-            midiBuffer.clear();
-            if (viaShm) {
-                size_t midiBytes = 0;
-                input >> midiBytes;
-                if (!sharedBlock.isOpen() || sampleCount > sharedBlock.maxSamples() ||
-                    midiBytes > sharedBlock.maxMidiBytes()) {
-                    reply("ERR invalid-shm-process");
-                    continue;
-                }
-                processBuffer.assign(sharedBlock.input(), sharedBlock.input() + sampleCount);
-                midiBuffer.assign(sharedBlock.midi(), sharedBlock.midi() + midiBytes);
-            } else {
-                std::string payloadHex;
-                std::string midiHex;
-                input >> payloadHex;
-                if (command == "PROCESSMIDI") {
-                    input >> midiHex;
-                }
-                if (!hexDecodeFloats(payloadHex, processBuffer) || processBuffer.size() < sampleCount) {
-                    reply("ERR invalid-process-payload");
-                    continue;
-                }
-                if (command == "PROCESSMIDI" && !hexDecodeRaw(midiHex, midiBuffer)) {
-                    reply("ERR invalid-midi-payload");
-                    continue;
-                }
-            }
-            // The app's tempo and playhead for this block ("T ..." after the payload, HostTransport.h). The plugin hosts
-            // below read it from the clock; a line without one, or a malformed one, means no transport this block.
-            {
-                using Aestra::Audio::HostTransport;
-                std::string marker;
-                size_t fieldCount = 0;
-                if (input >> marker && marker == "T") {
-                    while (fieldCount < transportFields.size() && input >> transportFields[fieldCount])
-                        ++fieldCount;
-                    std::string extra;
-                    if (input >> extra)
-                        fieldCount = 0;
-                }
-                Aestra::Audio::HostTransportClock::publish(
-                    marker == "T" ? HostTransport::fromWire(transportFields.data(), fieldCount) : HostTransport{});
-            }
-            auto answer = [&](std::vector<float>& out) {
-                if (out.size() < sampleCount) {
-                    out.resize(sampleCount, 0.0f);
-                }
-                if (viaShm) {
-                    std::copy_n(out.data(), sampleCount, sharedBlock.output());
-                    reply("OK");
-                } else {
-                    reply("OK " + hexEncodeBytes(out.data(), sampleCount * sizeof(float)));
-                }
-            };
-
-            if (clapModule.plugin) {
-                const std::vector<uint8_t>* midiData = midiBuffer.empty() ? nullptr : &midiBuffer;
-                if (!clapModule.process(processBuffer, channels, frames, midiData, midiBuffer.size(), processed)) {
-                    reply("ERR clap-process-failed");
-                    continue;
-                }
-                answer(processed);
-                continue;
-            }
-#ifdef AESTRA_HAS_VST3
-            if (vst3Module.plugin) {
-                const std::vector<uint8_t>* midiData = midiBuffer.empty() ? nullptr : &midiBuffer;
-                if (!vst3Module.process(processBuffer, channels, frames, midiData, midiBuffer.size(), processed)) {
-                    reply("ERR vst3-process-failed");
-                    continue;
-                }
-                answer(processed);
-                continue;
-            }
-#endif
-
-#ifdef AESTRA_ENABLE_TEST_HOOKS
-            // Echo fake plugin: apply parameter 0 as an output gain so a test can
-            // observe host->child parameter delivery through the audio itself (#238).
-            if (echoPlugin) echoHasProcessed = true;
-            if (echoPlugin && echoParams[0] != 1.0f) {
-                for (size_t i = 0; i < sampleCount && i < processBuffer.size(); ++i) {
-                    processBuffer[i] *= echoParams[0];
-                }
-            }
-#endif
-            answer(processBuffer);
+            handleProcess(command, input);
         } else {
             reply("ERR unknown-command");
         }
     }
 
-    return 0;
+    shuttingDown.store(true, std::memory_order_release);
+    if (commandInFlight) mailbox.finish();
+    // The pipe thread may still be blocked reading stdin, and it refers to this function's locals, so the process ends
+    // here instead of unwinding them: close what their destructors would, then leave.
+#if defined(AESTRA_HELPER_HAS_EDITORS)
+    editorHost.close();
+#endif
+    clapModule.close();
+#ifdef AESTRA_HAS_VST3
+    vst3Module.close();
+#endif
+    std::cout.flush();
+    std::_Exit(0);
 }
