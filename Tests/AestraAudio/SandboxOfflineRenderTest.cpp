@@ -226,6 +226,61 @@ int main(int argc, char** argv) {
         check(!after.isCrashed(), "and the plugin is not crash-marked");
     }
 
+    // --- An instrument renders on the grid: no hand-off delay in a render ---------------------------------------------------------
+    // Reported by the founder: bounces start with a blank (412 frames) and pop when looped. Delay compensation covers insert
+    // effects only; an instrument's one-chunk hand-off delay was in every render and nothing took it out. In a render each block
+    // waits for its own answer, so an instrument's output is its input at the same position. The exporter's first block is short
+    // (about 3 ms) and the rest are 4096 frames.
+    {
+        PluginInfo instrumentInfo = echoInfo();
+        instrumentInfo.type = PluginType::Instrument;
+        instrumentInfo.category = "Instrument";
+        PluginInstancePtr inst;
+        factory.createPluginAsync(instrumentInfo, [&](PluginInstancePtr instance) { inst = std::move(instance); });
+        if (!inst || !inst->initialize(44100.0, 256)) {
+            std::cerr << "could not start the instrument echo\n";
+            return 1;
+        }
+        inst->activate();
+        auto& synth = *static_cast<OutOfProcessPluginInstance*>(inst.get());
+        // It played live first, at the device's 256 frames.
+        OfflineRenderMode::setActive(false);
+        {
+            std::vector<float> z(256, 0.0f), l(256), r(256);
+            const float* in[2] = {z.data(), z.data()};
+            float* out[2] = {l.data(), r.data()};
+            for (int k = 0; k < 20; ++k) {
+                synth.process(in, out, 2, 2, 256, nullptr, nullptr);
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+        }
+        const uint32_t liveLatency = synth.getLatencySamples();
+        OfflineRenderMode::setActive(true);
+        const uint32_t blocks[] = {132, 4096, 4096, 4096, 1000};
+        uint64_t pos = 0;
+        int wrong = 0, firstWrong = -1;
+        for (const uint32_t n : blocks) {
+            std::vector<float> inL(n), outL(n, -1.0f), outR(n, -1.0f);
+            for (uint32_t i = 0; i < n; ++i) inL[i] = static_cast<float>(pos + i + 1);
+            const float* in[2] = {inL.data(), inL.data()};
+            float* out[2] = {outL.data(), outR.data()};
+            synth.process(in, out, 2, 2, n, nullptr, nullptr);
+            for (uint32_t i = 0; i < n; ++i) {
+                if (outL[i] != inL[i]) {
+                    if (firstWrong < 0) firstWrong = static_cast<int>(pos + i);
+                    ++wrong;
+                }
+            }
+            pos += n;
+        }
+        OfflineRenderMode::setActive(false);
+        check(wrong == 0, "a sandboxed instrument renders with no hand-off delay: output sample n is input sample n (" +
+                              std::to_string(wrong) + " wrong, first at " + std::to_string(firstWrong) + ")");
+        check(synth.getLatencySamples() == liveLatency, "and the render leaves its live latency as it was (" +
+                                                            std::to_string(liveLatency) + " -> " +
+                                                            std::to_string(synth.getLatencySamples()) + ")");
+    }
+
     // --- Cutting MIDI into slices: nothing lost, nothing doubled, offsets rebased, note identities kept -------------------------
     {
         MidiBuffer in;

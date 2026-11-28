@@ -285,6 +285,9 @@ private:
     mutable bool m_paramListValid = false;
     std::atomic<uint64_t> m_paramDrops{0};
     std::atomic<uint64_t> m_helperBlocks{0};
+    void reportLostBlocks(); ///< worker thread: once a second, log blocks lost since the last report (nothing when none)
+    uint64_t m_reportedDry = 0, m_reportedUnsent = 0;
+    std::chrono::steady_clock::time_point m_lastLostReport{};
     std::atomic<uint64_t> m_dryBlocks{0};
     std::atomic<uint64_t> m_unsentBlocks{0};
 

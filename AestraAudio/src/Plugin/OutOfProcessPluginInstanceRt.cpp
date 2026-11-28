@@ -55,7 +55,8 @@ void OutOfProcessPluginInstance::process(const float* const* inputs, float** out
     // is the chunk the plugin already uses live, so the delay it reports for delay compensation stays the one it applies here.
     if (OfflineRenderMode::active() && m_maxBlockSize > 0 && numFrames > m_maxBlockSize && !m_crashed.load(std::memory_order_acquire)) {
         const uint32_t learned = m_chunkFrames.load(std::memory_order_relaxed);
-        const uint32_t slice = learned > 0 ? std::min(learned, m_maxBlockSize) : m_maxBlockSize;
+        const bool instrument = m_info.type == PluginType::Instrument; // renders with no hand-off delay: any slice size will do
+        const uint32_t slice = (!instrument && learned > 0) ? std::min(learned, m_maxBlockSize) : m_maxBlockSize;
         std::array<const float*, kMaxOutputChannels> inSlice{};
         std::array<float*, kMaxOutputChannels> outSlice{};
         const uint32_t inCount = std::min<uint32_t>(numInputChannels, kMaxOutputChannels);
@@ -77,12 +78,19 @@ void OutOfProcessPluginInstance::process(const float* const* inputs, float** out
         return;
     }
 
-    // The chunk grows to the largest callback seen (and PDC hears about the new size).
+    // In a render an instrument has no hand-off delay: each block waits for its own answer, and delay compensation covers insert
+    // effects only, so an instrument's chunk of delay was in every bounce and nothing took it out (a blank start, a pop when
+    // looped). Its chunk is this call's block and its output is read at the same position. An effect keeps the one-chunk delay in
+    // a render too, because delay compensation lines the other tracks up against the latency it reports.
+    const bool renderOnGrid = OfflineRenderMode::active() && m_info.type == PluginType::Instrument;
+
+    // The chunk grows to the largest callback seen (and PDC hears about the new size). Not from a render on the grid: that
+    // chunk is the render's, and live latency must stay what live playback set.
     const uint32_t previousChunk = m_chunkFrames.load(std::memory_order_relaxed);
-    if (numFrames > previousChunk) {
+    if (!renderOnGrid && numFrames > previousChunk) {
         m_chunkFrames.store(numFrames, std::memory_order_release);
     }
-    const uint32_t chunk = std::max(previousChunk, numFrames);
+    const uint32_t chunk = renderOnGrid ? numFrames : std::max(previousChunk, numFrames);
 
     // 1. A finished chunk joins the output, at its place on the timeline. A gap (a result the
     //    helper could not hand over) restarts the output there.
@@ -164,7 +172,7 @@ void OutOfProcessPluginInstance::process(const float* const* inputs, float** out
     // 4. Play the wet frames for one chunk ago. Late ones are skipped. Before the first chunk
     //    there is nothing yet (silence); with no wet frame at all, the helper missed its
     //    deadline and the input plays dry for this callback.
-    const int64_t want = static_cast<int64_t>(callbackStart) - static_cast<int64_t>(chunk);
+    const int64_t want = static_cast<int64_t>(callbackStart) - static_cast<int64_t>(renderOnGrid ? 0 : chunk);
     if (m_outFifo.frames() > 0 && static_cast<int64_t>(m_outStart) < want) {
         const uint64_t late = std::min<uint64_t>(m_outFifo.frames(), static_cast<uint64_t>(want) - m_outStart);
         m_outFifo.discard(late);

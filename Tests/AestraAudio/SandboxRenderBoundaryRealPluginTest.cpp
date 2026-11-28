@@ -10,6 +10,7 @@
 #include "Plugin/OutOfProcessPluginInstance.h"
 #include "Plugin/PluginFactory.h"
 
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
@@ -170,6 +171,47 @@ int main(int argc, char** argv) {
                   << " latency " << second.getLatencySamples() << std::endl;
         check(rFresh > 0 && rFresh < rBefore * 1.5 + 0.02, "a plugin whose first audio was a render is as smooth live afterwards");
         check(second.dryBlockCount() < 8, "with next to no dry blocks (" + std::to_string(second.dryBlockCount()) + ")");
+    }
+
+    // An undo rebuilds the graph while the audio callback is running: another thread prepares the plugin again under it.
+    {
+        PluginInstancePtr busy;
+        factory.createPluginAsync(info, [&](PluginInstancePtr instance) { busy = std::move(instance); });
+        if (!busy || !busy->initialize(44100.0, 512)) {
+            std::cerr << "could not start the third instance\n";
+            return 1;
+        }
+        busy->activate();
+        auto& third = *static_cast<OutOfProcessPluginInstance*>(busy.get());
+        std::atomic<bool> stop{false};
+        std::thread audio([&] {
+            std::vector<float> l(kDevice), r(kDevice);
+            float* out[2] = {l.data(), r.data()};
+            uint64_t k = 0;
+            while (!stop.load()) {
+                MidiBuffer midi;
+                const uint8_t on[3] = {0x90, 57, 110};
+                if (k++ == 0) midi.addEvent(0, on, 3);
+                third.process(nullptr, out, 0, 2, kDevice, &midi, nullptr);
+                std::this_thread::sleep_for(std::chrono::microseconds(static_cast<int>(kDevice * 1e6 / 44100.0)));
+            }
+        });
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        for (int i = 0; i < 25; ++i) { // the main thread, preparing the plugin again while it plays
+            third.initialize(44100.0, 512);
+            third.activate();
+            std::this_thread::sleep_for(std::chrono::milliseconds(40));
+        }
+        stop.store(true);
+        audio.join();
+        const uint64_t dryAfterStorm = third.dryBlockCount();
+        const auto settled = playLive(third, kDevice, 200, true);
+        const double rSettled = roughness(settled);
+        std::cout << "after preparing it under a running audio thread: roughness " << rSettled << " peak " << peak(settled)
+                  << " dry " << (third.dryBlockCount() - dryAfterStorm) << " crashed " << third.isCrashed() << std::endl;
+        check(!third.isCrashed(), "preparing a playing plugin again does not crash-mark it");
+        check(rSettled > 0 && rSettled < rBefore * 1.5 + 0.02, "and once it settles it is as smooth as before");
+        check(third.dryBlockCount() - dryAfterStorm < 8, "with no lasting stream of dry (late) blocks");
     }
 
     if (g_failures > 0) {
