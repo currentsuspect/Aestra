@@ -598,7 +598,10 @@ bool PluginUIController::openNativeEditorWindow(
 
     const auto& info = instance->getInfo();
     const std::string title = info.name.empty() ? info.id : info.name;
-    if (!window->open(instance, title)) {
+    // Linux: the app's X11 window, so the plugin's own window is transient for it. Null under native Wayland
+    // (getNativeHandle is only the X11 window), where there is nothing to hint.
+    void* appWindow = m_platformBridge ? m_platformBridge->getNativeHandle() : nullptr;
+    if (!window->open(instance, title, appWindow)) {
         Aestra::Log::warning("[PluginUI] " + info.id + " has an editor but the host would not open it; falling back to the parameter editor");
         return false;
     }
@@ -945,7 +948,10 @@ PluginEditorWindow::~PluginEditorWindow() {
 
 bool PluginEditorWindow::open(
     std::shared_ptr<Aestra::Audio::IPluginInstance> instance,
-    const std::string& title) {
+    const std::string& title, void* transientParent) {
+#ifdef _WIN32
+    (void)transientParent;
+#endif
     
     if (!instance || !instance->hasEditor()) {
         return false;
@@ -1033,7 +1039,8 @@ bool PluginEditorWindow::open(
     // Linux: a sandboxed plugin's window is the helper's, whatever the app does. The
     // helper creates it, attaches the plugin's own view and pumps it (HelperEditorHost.h),
     // so there is nothing here to attach to and an app window beside it would sit empty.
-    if (!instance->openEditor(nullptr)) {
+    // Only the sandbox helper reads the argument as a transient parent; in-process hosts would take it as an embed parent.
+    if (!instance->openEditor(instance->ownsEditorWindow() ? transientParent : nullptr)) {
         return false;
     }
     m_isOpen = true;

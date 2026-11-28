@@ -1,6 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "HelperEditorHost.h"
+#include "HelperEditorProtocol.h"
 #include "HelperLineReader.h"
 #include "HelperParamCommands.h"
 #include "SharedAudioBlock.h"
@@ -609,7 +610,7 @@ int main(int argc, char** argv) {
 #endif
             reply("OK INIT");
         } else if (command == "EDITOR") {
-            // V82-H3: EDITOR OPEN <titleHex> -> OK EDITOR <w> <h> | ERR; EDITOR RAISE; EDITOR CLOSE; EDITOR STATE -> OK EDITOR OPEN|CLOSED
+            // V82-H3: EDITOR OPEN <titleHex> [appXid] -> OK EDITOR <w> <h> | ERR; EDITOR RAISE; EDITOR CLOSE; EDITOR STATE -> OK EDITOR OPEN|CLOSED
             std::string sub;
             input >> sub;
 #if defined(AESTRA_HELPER_HAS_EDITORS)
@@ -620,6 +621,10 @@ int main(int argc, char** argv) {
                 input >> titleHex;
                 unsigned long long parent = 0;
                 if (sub == "EMBED" && !(input >> parent)) parent = 0;
+                // EDITOR OPEN <titleHex> [appXid]: the app's own window, for WM_TRANSIENT_FOR (HelperEditorProtocol.h).
+                std::string transientToken;
+                if (sub == "OPEN") input >> transientToken;
+                editorHost.setTransientParent(AestraHelper::parseTransientParent(transientToken));
                 int w = 0, h = 0;
                 AestraHelper::EditorBackend backend;
 #ifdef AESTRA_HAS_VST3

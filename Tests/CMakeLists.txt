@@ -5703,6 +5703,29 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/InputFocusPolicyTest.cpp")
     set_tests_properties(InputFocusPolicyTest PROPERTIES LABELS "ui;regression;contract:application")
 endif()
 
+# Which SDL video driver Aestra picks on Linux (X11 on a Wayland session so plugin editors embed). The decision is
+# a header-only pure function, so this links nothing and builds in every configuration.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraPlat/LinuxVideoDriverTest.cpp")
+    add_executable(LinuxVideoDriverTest AestraPlat/LinuxVideoDriverTest.cpp)
+    add_test(NAME LinuxVideoDriverTest COMMAND LinuxVideoDriverTest)
+    set_tests_properties(LinuxVideoDriverTest PROPERTIES LABELS "platform;regression;contract:application")
+endif()
+
+# When Aestra asks the window system to maximise (each request costs ~1 s on X11). Header-only pure decisions.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraPlat/WindowMaximizePolicyTest.cpp")
+    add_executable(WindowMaximizePolicyTest AestraPlat/WindowMaximizePolicyTest.cpp)
+    add_test(NAME WindowMaximizePolicyTest COMMAND WindowMaximizePolicyTest)
+    set_tests_properties(WindowMaximizePolicyTest PROPERTIES LABELS "platform;regression;contract:application")
+endif()
+
+# `EDITOR OPEN <titleHex> [parentXid]`: the optional transient-parent argument's parse and format. Header-only,
+# links nothing.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/HelperEditorProtocolTest.cpp")
+    add_executable(HelperEditorProtocolTest AestraAudio/HelperEditorProtocolTest.cpp)
+    add_test(NAME HelperEditorProtocolTest COMMAND HelperEditorProtocolTest)
+    set_tests_properties(HelperEditorProtocolTest PROPERTIES LABELS "audio;plugin;regression;contract:application")
+endif()
+
 # V8-C14 step 2 (FD-23): the store half of the resolution contract, driven through
 # UISurfaceGeometry — maximize restores the pre-maximize rect, dragging a maximized
 # surface restores it, absent entries resolve from defaults without writing.

@@ -2,6 +2,9 @@
 
 #include <SDL2/SDL_syswm.h>
 #include <algorithm>
+#include "../../include/LinuxVideoDriver.h"
+#include "../../include/WindowMaximizePolicy.h"
+#include <cstdlib>
 #include <iostream>
 #include <vector>
 #if defined(SDL_VIDEO_DRIVER_X11)
@@ -31,6 +34,14 @@ bool getX11WindowInfo(SDL_Window* window, Display*& display, ::Window& x11Window
     return (display != nullptr && x11Window != 0);
 }
 
+// Whether the desktop session is Wayland, read from the environment (the decision itself is LinuxVideo::isWaylandSession).
+bool runningInWaylandSession() {
+    Aestra::LinuxVideo::LinuxSessionEnv env;
+    if (const char* sessionType = std::getenv("XDG_SESSION_TYPE")) env.xdgSessionType = sessionType;
+    if (const char* waylandDisplay = std::getenv("WAYLAND_DISPLAY")) env.waylandDisplay = waylandDisplay;
+    return Aestra::LinuxVideo::isWaylandSession(env);
+}
+
 } // namespace
 
 PlatformWindowLinux::PlatformWindowLinux() {
@@ -46,8 +57,16 @@ bool PlatformWindowLinux::create(const WindowDesc& desc) {
     Uint32 flags = SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;
     if (desc.resizable)
         flags |= SDL_WINDOW_RESIZABLE;
-    if (desc.startMaximized)
-        flags |= SDL_WINDOW_MAXIMIZED;
+    // Under XWayland the maximise request is a ~1 s wait for nothing (see WindowMaximizePolicy.h); create at the
+    // saved size and let the compositor place the window. m_maximized below still records the intent, so the state
+    // persists as maximised and applyWindowState does not ask again.
+    {
+        const char* driver = SDL_GetCurrentVideoDriver();
+        const bool driverIsX11 = driver && std::string(driver) == "x11";
+        if (Aestra::WindowMaximize::shouldRequestMaximizeAtCreate(desc.startMaximized, driverIsX11,
+                                                                  runningInWaylandSession()))
+            flags |= SDL_WINDOW_MAXIMIZED;
+    }
     if (desc.startFullscreen)
         flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
     if (!desc.decorated)

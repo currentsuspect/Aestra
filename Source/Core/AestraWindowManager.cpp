@@ -20,6 +20,7 @@
 #include "../AestraUI/Core/NUICursorRegistry.h"
 #include "../AestraUI/Core/NUIPerfProbe.h"
 #include "../AestraCore/include/AestraLog.h"
+#include "../../AestraPlat/include/WindowMaximizePolicy.h"
 
 #include <chrono>
 #include <cmath>
@@ -1209,7 +1210,10 @@ void AestraWindowManager::applyWindowState(const WindowState& state) {
     }
 
     if (state.maximized) {
-        m_window->maximize();
+        // A window born maximised (SDL_WINDOW_MAXIMIZED from initialize()) needs no second request.
+        if (Aestra::WindowMaximize::shouldCallMaximize(state.maximized, m_window->isMaximized())) {
+            m_window->maximize();
+        }
     } else {
         // Explicitly leave the maximized state. The window is created with
         // SDL_WINDOW_MAXIMIZED (see initialize()), so without this a persisted

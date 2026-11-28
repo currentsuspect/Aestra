@@ -375,10 +375,12 @@ public:
      * @brief Open editor for a plugin instance
      * @param instance Plugin instance with editor support
      * @param title Window title
+     * @param transientParent Linux: the app's own X11 window id (null under native Wayland); a sandboxed plugin's
+     *        own window is made transient for it so it stays above the app. Ignored elsewhere.
      * @return true if window opened successfully
      */
     bool open(std::shared_ptr<Aestra::Audio::IPluginInstance> instance,
-              const std::string& title = "Plugin Editor");
+              const std::string& title = "Plugin Editor", void* transientParent = nullptr);
     
     /**
      * @brief Close the editor window

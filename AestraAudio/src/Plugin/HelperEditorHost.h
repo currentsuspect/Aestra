@@ -136,6 +136,8 @@ public:
                 return static_cast<std::uintptr_t>(m_window);
             }
             XStoreName(m_display, m_window, title.c_str());
+            // Transient for the app's window: kept above it, minimised and closed with it (see HelperEditorProtocol.h).
+            if (m_transientFor) XSetTransientForHint(m_display, m_window, static_cast<::Window>(m_transientFor));
             XSetWMProtocols(m_display, m_window, &m_wmDelete, 1);
             XSelectInput(m_display, m_window, StructureNotifyMask | KeyPressMask | KeyReleaseMask | FocusChangeMask);
             if (!resizable) {
@@ -168,6 +170,8 @@ public:
     /// Whether the plugin lets its view be resized (the app then offers a resize grip).
     bool resizable() const { return m_resizable; }
     bool embedded() const { return m_embedded; }
+    /// The app's X11 window to make the next non-embedded window transient for; 0 = none. Set before open().
+    void setTransientParent(std::uintptr_t xid) { m_transientFor = xid; }
     /// Embedding is X11 only for now.
     static constexpr bool windowIdUnsupported() { return false; }
     int width() const { return m_width; }
@@ -264,6 +268,7 @@ private:
     Window m_window = 0;
     bool m_resizable = false;
     bool m_embedded = false;
+    std::uintptr_t m_transientFor = 0;
     Atom m_wmDelete = 0;
     int m_screen = 0;
     int m_width = 0;
@@ -292,6 +297,8 @@ namespace AestraHelper {
 class EditorHost {
 public:
     ~EditorHost() { close(); }
+
+    void setTransientParent(std::uintptr_t) {} // X11 only: Windows owner windows are not used here
 
     bool open(EditorBackend backend, const std::string& title, int& width, int& height, std::uintptr_t parent = 0) {
         close();
