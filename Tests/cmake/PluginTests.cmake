@@ -752,3 +752,9 @@ add_test(NAME MarkerRoundTripTest COMMAND MarkerRoundTripTest)
 set_tests_properties(MarkerRoundTripTest PROPERTIES
     LABELS "integration;serialization;markers;contract:durability"
     TIMEOUT 120)
+
+# The sandbox helper's standalone editor window carries a WM class and a dialog type, so tiling compositors float it.
+add_executable(EditorWindowIdentityTest AestraAudio/EditorWindowIdentityTest.cpp)
+target_include_directories(EditorWindowIdentityTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)
+add_test(NAME EditorWindowIdentityTest COMMAND EditorWindowIdentityTest)
+set_tests_properties(EditorWindowIdentityTest PROPERTIES LABELS "audio;plugins;editor;regression;contract:plugins" TIMEOUT 30)
