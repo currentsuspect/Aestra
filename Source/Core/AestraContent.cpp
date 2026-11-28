@@ -921,7 +921,7 @@ void AestraContent::setupBrowserPanels() {
             });
     });
 
-    // Plugin load callback (double-click)
+    // Plugin load callback (single click)
     m_pluginBrowser->setOnPluginLoadRequested([this](const AestraUI::PluginListItem& plugin) {
         AESTRA_LOG_DEBUG("Plugin load requested: " + plugin.name + " (" + plugin.typeName + ")");
         if (plugin.typeName == "Effect") {

@@ -141,7 +141,40 @@ void testKeyboardScrollsSelectionIntoView() {
 }
 
 
-// V8-S5: recents. A load request (Enter or double-click) moves the plugin to the front.
+// A single left-click on a plugin row loads it (no double-click required).
+void testSingleClickLoadsPlugin() {
+    PluginBrowserPanel browser;
+    browser.setVisible(true);
+    browser.setBounds(NUIRect(0.0f, 0.0f, 300.0f, 400.0f));
+    browser.setPluginList(threePlugins());
+    std::vector<std::string> loaded;
+    browser.setOnPluginLoadRequested([&loaded](const PluginListItem& item) { loaded.push_back(item.id); });
+
+    const float listTop = 4.0f + 38.0f + 52.0f + 4.0f + 40.0f * 0.5f; // CONTENT_TOP_PAD+HEADER+FILTER+4 + row/2
+    NUIMouseEvent press; press.button = NUIMouseButton::Left; press.pressed = true; press.released = false;
+    press.position = NUIPoint(10.0f, listTop);
+    NUIMouseEvent release; release.button = NUIMouseButton::Left; release.pressed = false; release.released = true;
+    release.position = NUIPoint(10.0f, listTop);
+
+    browser.onMouseEvent(press);
+    browser.onMouseEvent(release);
+    check(loaded.size() == 1 && loaded.back() == "fx-a", "single click loads the plugin");
+}
+
+// Inserts: a single click on an empty insert slot adds an effect (no double-click).
+void testSingleClickAddsEffectOnEmptySlot() {
+    EffectChainRack rack;
+    rack.setBounds(NUIRect(0.0f, 0.0f, 300.0f, 400.0f));
+    int addedSlot = -1;
+    rack.setOnAddPluginRequested([&addedSlot](int slot) { addedSlot = slot; });
+
+    NUIMouseEvent press; press.button = NUIMouseButton::Left; press.pressed = true; press.released = false;
+    press.position = NUIPoint(10.0f, 8.0f + 10.0f); // inside first slot
+    rack.onMouseEvent(press);
+    check(addedSlot == 0, "single click on empty insert slot adds an effect");
+}
+
+// V8-S5: recents. A load request (Enter or single click) moves the plugin to the front.
 void testRecentsFollowLoads() {
     PluginBrowserPanel browser;
     browser.setVisible(true);
@@ -191,6 +224,8 @@ int main() {
     testKeyboardMovesSelection();
     testKeyboardEnterWithoutSelectionLoadsNothing();
     testKeyboardScrollsSelectionIntoView();
+    testSingleClickLoadsPlugin();
+    testSingleClickAddsEffectOnEmptySlot();
     testRecentsFollowLoads();
     testRecentsAreCappedAndPersisted();
 
