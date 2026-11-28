@@ -1356,6 +1356,13 @@ void OutOfProcessPluginInstance::workerLoop() {
         m_workerStart = m_pendingStart;
         m_pendingState.store(0, std::memory_order_release);
 
+        // Deactivated while this block was queued (a double stop resets every plugin: deactivate, then activate). The
+        // helper would answer ERR for a deactivated plugin and the failure below would mark the plugin crashed for good.
+        // The block is dropped instead; the next callback plays that audio dry.
+        if (!m_active.load(std::memory_order_acquire)) {
+            continue;
+        }
+
         if (sampleCount > m_workerInput.size() || midiBytes > m_workerMidiData.size() ||
             !processBlockInHelper(m_workerInput, m_transportChannels, frames, m_workerMidiData, midiBytes,
                                   m_workerTransport, m_workerOutput)) {
