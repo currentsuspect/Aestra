@@ -7,6 +7,7 @@
 
 
 #include "ClapAbiMirror.h"
+#include "ClapReactivate.h"
 #include "HelperFakeClap.h"
 #include "HelperClapHostSupport.h"
 #include "HelperDynLib.h"
@@ -158,6 +159,7 @@ struct ClapModule {
                      hostGetExtension,       hostRequestRestart,
                      hostRequestProcess,     hostRequestCallback};
     bool active = false;
+    double activeSampleRate = 0.0; ///< what initialize() activated the plugin at, to prepare it again after a state load
     uint32_t maxBlockSize = 0;
     std::vector<float> inputStorage[2];
     std::vector<float> outputStorage[2];
@@ -417,6 +419,7 @@ struct ClapModule {
             error = "clap-activate-failed";
             return false;
         }
+        activeSampleRate = sampleRate;
         active = true;
         // start/stop_processing belong to the audio thread, and a plugin that checks says so: for us that is the
         // thread that also calls process().
@@ -779,7 +782,22 @@ struct ClapModule {
         }
         StateReadContext ctx{&stateData, 0};
         ClapIstream stream = {&ctx, readStateStream};
-        return state->load(plugin, &stream);
+        if (!state->load(plugin, &stream)) {
+            return false;
+        }
+        // A plugin that is processing when its state changes can be left out of step with it: the Riverflux plugins
+        // crash inside their engine on the next block (A/B in the plugin header made them vanish). Prepare it again,
+        // so the state is in force from a clean start (ClapReactivate.h).
+        if (active && activeSampleRate > 0.0) {
+            const bool back = reactivateClapPlugin(plugin, activeSampleRate, maxBlockSize, [](bool in) {
+                ClapHostContext::inProcess() = in;
+            });
+            if (!back) {
+                active = false;
+                return false;
+            }
+        }
+        return true;
     }
 
     /// Every plugin a bundle holds, not just the first: one .clap file can hold hundreds (LSP holds about 200). The
