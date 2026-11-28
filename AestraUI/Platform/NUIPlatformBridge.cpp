@@ -1,5 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIPlatformBridge.h"
+
+#include <chrono>
 #include <cstdio>
 #include "NUITypes.h"
 #include "NUIComponent.h"
@@ -207,6 +209,13 @@ void NUIPlatformBridge::setupEventBridges() {
             }
             event.pressed = pressed;
             event.released = !pressed;
+            if (pressed) {
+                // Nothing in the platform assigned this flag, so every control reading only the flag was dead.
+                const auto nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                       std::chrono::steady_clock::now().time_since_epoch())
+                                       .count();
+                event.doubleClick = m_pressPairer.registerPress(event.button, event.position.x, event.position.y, nowMs);
+            }
             event.wheelDelta = 0.0f;
             event.cursorCaptured = (m_currentCursorStyle == NUICursorStyle::Hidden);
             if (m_window) {
@@ -699,6 +708,8 @@ void NUIPlatformBridge::beginCursorCapture(NUIComponent* owner, NUICursorRestore
 
 void NUIPlatformBridge::endCursorCapture(int x, int y) {
     m_cursorService.endDragCapture(x, y);
+    // The cursor was warped here: the second press of a knob's double-click lands here, not where the first did.
+    m_pressPairer.noteCursorWarp(static_cast<float>(x), static_cast<float>(y));
     m_cursorCaptureOwner = nullptr;
     m_pendingStyleResolve = true;
 }

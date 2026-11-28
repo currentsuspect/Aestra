@@ -753,6 +753,11 @@ set_tests_properties(MarkerRoundTripTest PROPERTIES
     LABELS "integration;serialization;markers;contract:durability"
     TIMEOUT 120)
 
+# The bridge sets NUIMouseEvent::doubleClick (nothing ever did), so flag-only controls such as plugin knobs can reset on double-click.
+add_executable(PressPairerTest AestraUI/PressPairerTest.cpp)
+add_test(NAME PressPairerTest COMMAND PressPairerTest)
+set_tests_properties(PressPairerTest PROPERTIES LABELS "unit;ui;input;regression;contract:plugins" TIMEOUT 30)
+
 # The sandbox helper's standalone editor window carries a WM class and a dialog type, so tiling compositors float it.
 add_executable(EditorWindowIdentityTest AestraAudio/EditorWindowIdentityTest.cpp)
 target_include_directories(EditorWindowIdentityTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)

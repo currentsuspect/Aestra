@@ -5,6 +5,7 @@
 
 #include "../../AestraPlat/include/AestraPlatform.h"
 #include "NUICursorService.h"
+#include "../Core/NUIPressPairer.h"
 #include "NUICursorStyle.h"
 #include "NUITypes.h"
 #include <functional>
@@ -198,6 +199,7 @@ private:
     // service holds a reference to the host).
     CursorHostImpl m_cursorHost{*this};
     NUICursorService m_cursorService{m_cursorHost};
+    NUIPressPairer m_pressPairer; // sets NUIMouseEvent::doubleClick, which nothing else ever did
     // Component that owns the active capture; all mouse events route here
     // while the service is captured.
     NUIComponent* m_cursorCaptureOwner = nullptr;
