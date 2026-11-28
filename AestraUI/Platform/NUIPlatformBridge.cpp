@@ -630,6 +630,14 @@ void NUIPlatformBridge::reclaimInputFocus() {
     if (m_window) m_window->reclaimInputFocus();
 }
 
+bool NUIPlatformBridge::queryPointer(int& x, int& y, bool& anyButtonDown) const {
+    return m_window && m_window->queryPointer(x, y, anyButtonDown);
+}
+
+bool NUIPlatformBridge::inputFocusInsideChild(std::uintptr_t child) const {
+    return m_window && m_window->inputFocusInsideChild(child);
+}
+
 bool NUIPlatformBridge::placeChildWindow(std::uintptr_t child, int x, int y, int width, int height, bool visible) {
     return m_window && m_window->placeChildWindow(child, x, y, width, height, visible);
 }

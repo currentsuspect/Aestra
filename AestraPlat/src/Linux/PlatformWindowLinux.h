@@ -96,6 +96,8 @@ public:
     void setFocusCallback(std::function<void(bool focused)> callback) override { m_focusCallback = callback; }
     void requestFocus() override;
     void reclaimInputFocus() override;
+    bool queryPointer(int& x, int& y, bool& anyButtonDown) const override;
+    bool inputFocusInsideChild(std::uintptr_t child) const override;
     void setDPIChangeCallback(std::function<void(float dpiScale)> callback) override { m_dpiChangeCallback = callback; }
 
 private:

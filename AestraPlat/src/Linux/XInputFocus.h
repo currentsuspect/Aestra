@@ -23,6 +23,9 @@ std::string describe(const Snapshot& snapshot);
 inline bool known(const Snapshot& s) { return s.relation != Relation::Unknown; }
 inline bool isAestra(const Snapshot& s) { return s.relation == Relation::Aestra; }
 
+/// True when @p focus is @p child or lies somewhere below it: the plugin's own inner windows count as the plugin's.
+bool isWithin(Display* display, ::Window focus, ::Window child);
+
 /// A mapped child of Aestra's window that covers (x, y) in Aestra's coordinates.
 bool childUnder(Display* display, ::Window aestra, int x, int y);
 

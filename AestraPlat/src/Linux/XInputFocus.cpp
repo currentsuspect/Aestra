@@ -76,6 +76,15 @@ std::string describe(const Snapshot& s) {
     return out;
 }
 
+bool isWithin(Display* display, ::Window focus, ::Window child) {
+    if (!display || !focus || !child) return false;
+    if (focus == child) return true;
+    XErrorGuard guard(display);
+    for (const ::Window a : ancestors(display, focus))
+        if (a == child) return true;
+    return false;
+}
+
 bool childUnder(Display* display, ::Window aestra, int x, int y) {
     if (!display || !aestra) return false;
     XErrorGuard guard(display);

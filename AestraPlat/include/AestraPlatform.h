@@ -330,6 +330,20 @@ public:
     virtual void requestFocus() = 0;
     /** @brief Take keyboard focus back when an embedded child window (a plugin editor) holds it. Default: nothing. */
     virtual void reclaimInputFocus() {}
+    /**
+     * @brief Where the pointer is, in this window's client pixels, and whether any mouse button is down. Asked of the
+     * window system, so it answers while the pointer is over a child window that takes the events itself.
+     * @return false when the platform cannot say.
+     */
+    virtual bool queryPointer(int& x, int& y, bool& anyButtonDown) const {
+        (void)x; (void)y; (void)anyButtonDown;
+        return false;
+    }
+    /** @brief True when @p child, an embedded window (a plugin editor), or a window inside it holds keyboard focus. */
+    virtual bool inputFocusInsideChild(std::uintptr_t child) const {
+        (void)child;
+        return false;
+    }
     /** @brief Set the DPI-change callback. */
     virtual void setDPIChangeCallback(std::function<void(float dpiScale)> callback) = 0;
 };

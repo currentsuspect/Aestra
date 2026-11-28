@@ -6,6 +6,7 @@
 #include "../Graphics/NUIRenderer.h"
 #include "../Platform/NUIPlatformBridge.h"
 #include "EditorSurfacePlacement.h"
+#include "PluginFocusReturn.h"
 
 #include <algorithm>
 #include <cmath>
@@ -134,6 +135,8 @@ void NativePluginPanel::onUpdate(double deltaTime) {
         }
     }
 
+    returnFocusWhenPointerLeaves(deltaTime);
+
     // The plugin can change its own size (a zoom menu, a page with more controls). Ask the window system now and then
     // and follow, unless the user is dragging the grip, whose size wins.
     m_sizePoll += deltaTime;
@@ -159,6 +162,36 @@ void NativePluginPanel::onUpdate(double deltaTime) {
         setBounds(NUIRect{b.x, b.y, size.width, size.height});
         place(true);
         setDirty();
+    }
+}
+
+// Clicking the plugin gives its window keyboard focus and nothing gave it back, so Space stopped playing. While the pointer
+// is over the plugin, keys stay with it; a moment after the pointer leaves, with no button held, Aestra takes focus back
+// (PluginFocusReturn.h). Asked about 20 times a second, and only of the window system, never of the plugin.
+void NativePluginPanel::returnFocusWhenPointerLeaves(double deltaTime) {
+    m_focusPoll += deltaTime;
+    if (m_focusPoll < 0.05 || !m_bridge || !m_child)
+        return;
+    const double elapsed = m_focusPoll;
+    m_focusPoll = 0.0;
+    if (!m_bridge->inputFocusInsideChild(m_child)) {
+        m_pointerAway = 0.0; // not this plugin's focus: nothing to give back
+        return;
+    }
+    int px = 0, py = 0;
+    bool buttonDown = false;
+    if (!m_bridge->queryPointer(px, py, buttonDown))
+        return;
+    float scale = m_bridge->getDPIScale();
+    if (scale <= 0.0f)
+        scale = 1.0f;
+    const NUIRect view = viewRect();
+    const bool over = px >= view.x * scale && px < (view.x + view.width) * scale && py >= view.y * scale &&
+                      py < (view.y + view.height) * scale;
+    m_pointerAway = EditorFocus::awaySeconds(m_pointerAway, elapsed, over);
+    if (EditorFocus::shouldReturnFocusToApp(true, over, buttonDown, m_pointerAway)) {
+        m_bridge->reclaimInputFocus();
+        m_pointerAway = 0.0;
     }
 }
 
