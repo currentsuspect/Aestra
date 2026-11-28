@@ -206,6 +206,19 @@ void testDragReleasedOverTheTransportEnds() {
     check(!f.manager->isCustomCursorActive(), "with the drag over, the timeline must give the cursor back");
 }
 
+// The same journey when the move IS offered to the timeline (a gap in the transport bar consumes nothing, so the
+// dispatcher passes the move on and the timeline records it): being offered a move is not the pointer being over the
+// minimap, so its hover must clear and the claim lapse (second live repro, "when you move quickly").
+void testMoveOfferedFromOffTheMinimapReleasesTheClaim() {
+    Fixture f;
+    if (!f.build())
+        return;
+    f.timelineMove(f.onBar.x, Fixture::kTimelineTop - 40.0f); // window reports it AND the timeline is offered it
+    check(!f.manager->isCustomCursorActive(),
+          "a move offered from off the minimap (over a gap in the transport) must not leave its hover claiming the cursor");
+    check(!f.minimap->isViewportPanActive(), "the minimap's viewport hover must clear on a move from off it");
+}
+
 } // namespace
 
 int main() {
@@ -214,6 +227,7 @@ int main() {
     testComingBackResolvesFromTheNewMove();
     testDraggingTheBarKeepsTheClaim();
     testDragReleasedOverTheTransportEnds();
+    testMoveOfferedFromOffTheMinimapReleasesTheClaim();
     if (g_failures > 0) {
         std::cout << "[FAIL] TimelineMinimapCursorClaimTest: " << g_failures << " check(s) failed\n";
         return 1;
