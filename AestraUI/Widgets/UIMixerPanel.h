@@ -49,6 +49,7 @@ class NUILayoutRecorder; // NUILayoutExplain.h
  */
 class UIMixerPanel : public NUIComponent, public IDropTarget {
 public:
+    bool occludesNativeWindows() const override { return true; } // an opaque panel: a plugin editor's window hides behind it
     /**
      * @brief Construct a mixer panel.
      *

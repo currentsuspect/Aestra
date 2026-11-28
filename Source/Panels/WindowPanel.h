@@ -30,6 +30,7 @@ namespace Audio {
  */
 class WindowPanel : public AestraUI::NUIComponent {
 public:
+    bool occludesNativeWindows() const override { return true; } // an opaque panel: a plugin editor's window hides behind it
     WindowPanel(const std::string& title);
     ~WindowPanel() override = default;
 

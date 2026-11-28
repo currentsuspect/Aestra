@@ -662,6 +662,7 @@ void PluginUIController::openPluginEditor(
             if (m_popupLayer && panel->getParent() == m_popupLayer) {
                 m_popupLayer->removeChild(panel);
                 m_popupLayer->addChild(panel); // last child draws on top
+                m_popupLayer->bringToFrontPriority(); // and the layer above the mixer and the other panels
             }
             panel->setVisible(true);
             return;
@@ -835,6 +836,7 @@ void PluginUIController::openPluginEditor(
         }
 
         m_popupLayer->addChild(editorComp);
+        m_popupLayer->bringToFrontPriority(); // a deliberate open: above the mixer and the other panels
         m_activeEditors.push_back(editorComp);
         m_editorKeys.erase(std::remove_if(m_editorKeys.begin(), m_editorKeys.end(),
                                           [](const auto& entry) { return entry.first.expired(); }),

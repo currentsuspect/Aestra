@@ -116,6 +116,11 @@ public:
      */
     void bringToFrontPriority();
     
+    /// An opaque panel that a plugin editor's own window must not draw over. That window is a real X window, so it always
+    /// paints above anything Aestra draws; a panel raised over an editor therefore has to hide it (see NativeWindowOcclusion.h).
+    /// False for layers and controls.
+    virtual bool occludesNativeWindows() const { return false; }
+
     NUIComponent* getParent() const { return parent_; }
     const std::vector<std::shared_ptr<NUIComponent>>& getChildren() const { return children_; }
     

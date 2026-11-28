@@ -6,6 +6,7 @@
 #include "../Graphics/NUIRenderer.h"
 #include "../Platform/NUIPlatformBridge.h"
 #include "EditorSurfacePlacement.h"
+#include "NativeWindowOcclusion.h"
 
 #include <algorithm>
 #include <cmath>
@@ -98,7 +99,7 @@ void NativePluginPanel::place(bool force) {
         for (const auto& sibling : getParent()->getChildren())
             if (auto* menu = dynamic_cast<NUIContextMenu*>(sibling.get()); menu && menu->isVisible())
                 popoverOpen = true;
-    const bool visible = shownInTree() && !m_instance.expired() && !popoverOpen;
+    const bool visible = shownInTree() && !m_instance.expired() && !popoverOpen && !m_covered;
     const NUIRect view = viewRect();
     if (!force && m_everPlaced && visible == m_placedVisible && view.x == m_placed.x && view.y == m_placed.y &&
         view.width == m_placed.width && view.height == m_placed.height)
@@ -123,6 +124,14 @@ void NativePluginPanel::place(bool force) {
 
 void NativePluginPanel::onUpdate(double deltaTime) {
     AestraPanelWindow::onUpdate(deltaTime);
+    // The plugin's window is an X window and always paints over Aestra, so a panel raised over this one would leave it in front
+    // with its frame and controls hidden behind. While another panel is on top, the window is hidden (NativeWindowOcclusion.h).
+    m_coveredSeconds = awayCoveredSeconds(m_coveredSeconds, deltaTime, shownInTree() && coveredByPanelAbove(*this, viewRect()));
+    const bool covered = shouldHideNativeWindow(m_coveredSeconds);
+    if (covered != m_covered) {
+        m_covered = covered;
+        setDirty();
+    }
     place(false);
 
     // The plugin makes its inner windows after the editor opens; give them the arrow at ~0.5 s and ~2 s.
@@ -181,6 +190,13 @@ void NativePluginPanel::drawContent(NUIRenderer& renderer, const NUIRect& conten
     // Behind the plugin's window: the bed, in case the plugin is slow to draw its first frame.
     const auto& t = NUIThemeManager::getInstance().getCurrentTheme();
     renderer.fillRect(contentRect, t.backgroundPrimary);
+    if (m_covered) {
+        const std::string note = "Behind another panel. Click here to bring it to the front.";
+        const float size = 12.0f;
+        const NUISize text = renderer.measureText(note, size);
+        renderer.drawText(note, {contentRect.x + (contentRect.width - text.width) * 0.5f, contentRect.y + contentRect.height * 0.5f},
+                          size, t.textMuted);
+    }
 }
 
 bool NativePluginPanel::isInsideForOutsideClick(const NUIPoint& p) const {
@@ -190,6 +206,14 @@ bool NativePluginPanel::isInsideForOutsideClick(const NUIPoint& p) const {
 }
 
 bool NativePluginPanel::onMouseEvent(const NUIMouseEvent& event) {
+    // Clicking a panel brings it to the front: within its layer, and the layer above the other panels, so a plugin that was
+    // behind the mixer or another editor is no longer covered.
+    if (event.pressed && event.button == NUIMouseButton::Left && getBounds().contains(event.position)) {
+        if (auto* layer = getParent()) {
+            bringToFront();
+            layer->bringToFront();
+        }
+    }
     if (m_resizable) {
         const bool overGrip = gripRect().contains(event.position);
         if (overGrip != m_gripHover) {
