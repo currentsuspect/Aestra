@@ -161,6 +161,36 @@ void testSingleClickLoadsPlugin() {
     check(loaded.size() == 1 && loaded.back() == "fx-a", "single click loads the plugin");
 }
 
+// CodeRabbit on #1493: the clicked plugin is handed to the selection callback by reference into the filtered list,
+// and then indexed again to load it. A callback that changes the filter rebuilds that list and resets the pressed
+// index, so the load indexed -1 of a list that no longer held the plugin. The click must load the plugin that was
+// clicked, whatever the selection callback does to the list.
+void testSelectionCallbackThatFiltersTheListStillLoadsTheClickedPlugin() {
+    PluginBrowserPanel browser;
+    browser.setVisible(true);
+    browser.setBounds(NUIRect(0.0f, 0.0f, 300.0f, 400.0f));
+    browser.setPluginList(threePlugins());
+    std::vector<std::string> selected;
+    std::vector<std::string> loaded;
+    browser.setOnPluginSelected([&](const PluginListItem& item) {
+        selected.push_back(item.id);
+        browser.setSearchQuery("no-such-plugin"); // the list is rebuilt (empty) while the click is being handled
+    });
+    browser.setOnPluginLoadRequested([&loaded](const PluginListItem& item) { loaded.push_back(item.id); });
+
+    const float listTop = 4.0f + 38.0f + 52.0f + 4.0f + 40.0f * 0.5f;
+    NUIMouseEvent press; press.button = NUIMouseButton::Left; press.pressed = true; press.released = false;
+    press.position = NUIPoint(10.0f, listTop);
+    NUIMouseEvent release; release.button = NUIMouseButton::Left; release.pressed = false; release.released = true;
+    release.position = NUIPoint(10.0f, listTop);
+
+    browser.onMouseEvent(press);
+    browser.onMouseEvent(release);
+    check(selected.size() == 1 && selected.back() == "fx-a", "the selection callback hears the clicked plugin");
+    check(loaded.size() == 1 && loaded.back() == "fx-a",
+          "the click still loads the clicked plugin after the callback rebuilt the list");
+}
+
 // Inserts: a single click on an empty insert slot adds an effect (no double-click).
 void testSingleClickAddsEffectOnEmptySlot() {
     EffectChainRack rack;
@@ -225,6 +255,7 @@ int main() {
     testKeyboardEnterWithoutSelectionLoadsNothing();
     testKeyboardScrollsSelectionIntoView();
     testSingleClickLoadsPlugin();
+    testSelectionCallbackThatFiltersTheListStillLoadsTheClickedPlugin();
     testSingleClickAddsEffectOnEmptySlot();
     testRecentsFollowLoads();
     testRecentsAreCappedAndPersisted();

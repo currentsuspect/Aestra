@@ -449,11 +449,14 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
             // Was a click
             if (m_pressedIndex >= 0 && m_pressedIndex < static_cast<int>(m_filteredPlugins.size())) {
                 // Single click: select AND request load immediately (no double-click required).
+                // Copy the clicked item first: the selection callback is free to change the filter, which rebuilds
+                // m_filteredPlugins and resets m_pressedIndex, and the load must still be of the plugin clicked.
+                const PluginListItem clicked = m_filteredPlugins[m_pressedIndex];
                 m_selectedIndex = m_pressedIndex;
                 if (m_onPluginSelected) {
-                    m_onPluginSelected(m_filteredPlugins[m_pressedIndex]);
+                    m_onPluginSelected(clicked);
                 }
-                requestLoad(m_filteredPlugins[m_pressedIndex]);
+                requestLoad(clicked);
             }
             m_isPressed = false;
             m_pressedIndex = -1;
