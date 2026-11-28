@@ -219,6 +219,72 @@ void testCrashMidTakeKeepsAudioOnDisk(const std::filesystem::path& home) {
     check(bytes == 44u + static_cast<uintmax_t>(expected) * sizeof(float), "the file holds every frame's bytes");
 }
 
+/** What the performer played is what lands on disk and what plays back. A take
+ *  with a DC offset and a hot peak (over the old 0.85 conditioning ceiling) must
+ *  come out sample-for-sample identical, at unity clip gain: no DC removal, no
+ *  peak scaling baked into the file, no auto playback gain. */
+void testTakeIsTransparent() {
+    std::cout << "[4] a take is stored untouched and plays back at unity\n";
+    auto tm = makeRecorder();
+    const uint64_t trackId = armTrack(*tm, "Vocal", 0);
+    if (trackId == 0) {
+        check(false, "track created and armed");
+        return;
+    }
+    constexpr double kSeconds = 2.0;
+    const uint32_t frames = static_cast<uint32_t>(kSeconds * kSampleRate);
+    const uint32_t channels = std::max(1u, static_cast<uint32_t>(tm->getInputChannelCount()));
+    std::vector<float> input(static_cast<size_t>(frames) * channels);
+    std::vector<float> played(frames);
+    for (uint32_t f = 0; f < frames; ++f) {
+        // DC +0.05, sine 0.9: still 0.9 after DC removal, above the old 0.85 ceiling.
+        const float v = 0.05f + 0.9f * std::sin(2.0 * 3.14159265 * 440.0 * static_cast<double>(f) / kSampleRate);
+        played[f] = v;
+        for (uint32_t c = 0; c < channels; ++c) {
+            input[static_cast<size_t>(f) * channels + c] = v;
+        }
+    }
+    tm->record();
+    startTake(*tm);
+    constexpr uint32_t kBlock = 512;
+    size_t sinceDrain = 0;
+    for (uint32_t off = 0; off < frames; off += kBlock) {
+        const uint32_t n = std::min<uint32_t>(kBlock, frames - off);
+        tm->processInput(input.data() + static_cast<size_t>(off) * channels, n);
+        sinceDrain += n;
+        if (sinceDrain >= kSampleRate / 2) {
+            tm->drainRecordingCaptures();
+            sinceDrain = 0;
+        }
+    }
+    stopTake(*tm, kSeconds);
+
+    auto* lane = tm->getPlaylistModel().getLane(takeLaneOf(*tm, trackId));
+    check(lane != nullptr && !lane->clips.empty(), "the take landed on a lane");
+    if (!lane || lane->clips.empty()) {
+        return;
+    }
+    const auto& clip = lane->clips.front();
+    check(clip.edits.gainLinear == 1.0f,
+          "clip plays at unity gain (got " + std::to_string(clip.edits.gainLinear) + ")");
+
+    auto* pattern = tm->getPatternManager().getPattern(clip.patternId);
+    const auto& payload = std::get<AudioSlicePayload>(pattern->payload);
+    const auto* source = tm->getSourceManager().getSource(payload.audioSourceId);
+    check(source != nullptr && source->getBuffer() != nullptr, "take has a source buffer");
+    if (!source || !source->getBuffer()) {
+        return;
+    }
+    const auto buffer = source->getBuffer();
+    float maxDiff = 0.0f;
+    const size_t n = std::min<size_t>(buffer->numFrames, played.size());
+    for (size_t i = 0; i < n; ++i) {
+        maxDiff = std::max(maxDiff, std::abs(buffer->sampleAt(i * 2) - played[i]));
+    }
+    check(buffer->numFrames == frames, "take holds every frame");
+    check(maxDiff == 0.0f, "stored samples equal the input exactly (max diff " + std::to_string(maxDiff) + ")");
+}
+
 } // namespace
 
 int main() {
@@ -229,6 +295,7 @@ int main() {
     testLongTakeKeepsEverySecond();
     testFinishedTakeLeavesNoPartialFile(home.path());
     testCrashMidTakeKeepsAudioOnDisk(home.path());
+    testTakeIsTransparent();
 
     if (g_failures > 0) {
         std::cerr << g_failures << " failure(s)\n";

@@ -49,10 +49,10 @@ void TrackManager::commitRecordingTake(uint64_t trackId, const RecordingCapture&
         return;
     }
 
+    // A take is what the performer played: no DC removal, no peak scaling, no auto gain. Level belongs to the
+    // input gain before capture and to the clip gain the user sets afterwards.
     std::vector<float> conditionedSamples = std::move(capturedSamples);
-    const float rawPeak = analyzePeak(conditionedSamples);
-    conditionRecordedTakeSamples(conditionedSamples);
-    const float conditionedPeak = analyzePeak(conditionedSamples);
+    const float peak = analyzePeak(conditionedSamples);
 
     const double captureStartBeat = capture.startBeat.load(std::memory_order_acquire);
     double startBeat = forcePlacementStartBeat
@@ -82,7 +82,6 @@ void TrackManager::commitRecordingTake(uint64_t trackId, const RecordingCapture&
         }
         const double durationSeconds =
             static_cast<double>(samples.size()) / std::max(1.0, m_inputSampleRate);
-        const float playbackGain = computeRecordedTakeGain(samples);
 
         auto buffer = std::make_shared<AudioBufferData>();
         buffer->sampleRate = static_cast<uint32_t>(std::max(1.0, m_inputSampleRate));
@@ -134,7 +133,7 @@ void TrackManager::commitRecordingTake(uint64_t trackId, const RecordingCapture&
         clip.durationSeconds = durationSeconds;
         clip.patternId = patternId;
         clip.sourceId = patternId.value;
-        clip.edits.gainLinear = playbackGain;
+        clip.edits.gainLinear = 1.0f;
 
         if (recordTakeInPlace(m_playlistModel, m_commandHistory, *track, clip)) { // the armed lane, if the span is free
             requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged); m_modified.store(true, std::memory_order_relaxed);
@@ -189,8 +188,7 @@ void TrackManager::commitRecordingTake(uint64_t trackId, const RecordingCapture&
         }
         requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged); m_modified.store(true, std::memory_order_relaxed);
         Log::info("[TrackManager] Recorded take committed: " + takePath + " to mixer insert " + std::to_string(channelId) + " at beat " +
-                  std::to_string(placeBeat) + " with raw peak " + std::to_string(rawPeak) + ", conditioned peak " +
-                  std::to_string(conditionedPeak) + ", clip gain " + std::to_string(playbackGain));
+                  std::to_string(placeBeat) + " with peak " + std::to_string(peak) + ", clip gain 1.0");
 
         if (m_onTakeCommitted) m_onTakeCommitted(laneId);
         return true;

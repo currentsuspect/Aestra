@@ -13,9 +13,10 @@
 namespace Aestra {
 namespace Audio {
 
-/** New audio clips start below unity to preserve useful summing headroom. */
-constexpr float DEFAULT_AUDIO_CLIP_GAIN_DB = -5.0f;
-constexpr float DEFAULT_AUDIO_CLIP_GAIN_LINEAR = 0.56234133f;
+/** New audio clips start at unity: what you drop in is the level of the file. Headroom is the mixer's job (the mix
+ *  bus is 32-bit float), not a hidden cut on every clip. */
+constexpr float DEFAULT_AUDIO_CLIP_GAIN_DB = 0.0f;
+constexpr float DEFAULT_AUDIO_CLIP_GAIN_LINEAR = 1.0f;
 
 /**
  * @brief Unique identifier for a clip instance
