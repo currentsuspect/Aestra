@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AestraWindowManager.h"
+#include "CursorOwnership.h"
 #include "../AestraUI/Base/NUITextInput.h"
 #include "AestraRootComponent.h"
 #include "AestraContent.h"
@@ -297,7 +298,7 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
         // cursor: a single jump onto the play button drew the arrow, and a jump off it left the
         // hand behind, each until the next move. resolveActiveCursorStyle() combines per frame.
         const bool modalOpen = isModalDialogOpen();
-        if (m_content && !modalOpen) {
+        if (m_content && AestraUI::panelEdgesMayOwnCursor(modalOpen, AestraUI::NUIComponent::isAnyPopupOpen())) {
             m_panelCursorStyle = m_content->getPanelResizeCursorStyle(
                 AestraUI::NUIPoint(static_cast<float>(x), static_cast<float>(y))
             );
@@ -1003,7 +1004,9 @@ void AestraWindowManager::resolveCursorState() {
     // Arrow once, on open. This runs every frame, so a modal opened from the keyboard with the
     // pointer still is covered too, and it runs before the native-cursor early return.
     const bool modalOpen = isModalDialogOpen();
-    if (modalOpen && !m_modalWasOpen) {
+    const bool popupOpen = AestraUI::NUIComponent::isAnyPopupOpen();
+    if (AestraUI::shouldHandCursorBack(modalOpen, m_modalWasOpen) ||
+        AestraUI::shouldHandCursorBack(popupOpen, m_popupWasOpen)) {
         // The panel's style is recombined every frame (resolveActiveCursorStyle) and the content
         // gets no moves under a modal, so its last style would come straight back: clear it too.
         m_panelCursorStyle = AestraUI::NUICursorStyle::Arrow;
@@ -1019,6 +1022,7 @@ void AestraWindowManager::resolveCursorState() {
         }
     }
     m_modalWasOpen = modalOpen;
+    m_popupWasOpen = popupOpen;
 
     if (!m_useCustomCursor || !m_window) {
         return;

@@ -207,6 +207,7 @@ private:
 
     std::shared_ptr<Aestra::SettingsDialog> m_settingsDialog;
     bool m_modalWasOpen = false; // for the one-time cursor hand-back when a modal opens
+    bool m_popupWasOpen = false; // likewise for a menu/dropdown (File menu over a panel edge)
     std::function<bool()> m_inputHold; // setInputHold: a bounce rendering the live song
     /** True while any modal dialog covers the content (it then owns the cursor, not the content). */
     bool isModalDialogOpen() const;
