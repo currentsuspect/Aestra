@@ -760,7 +760,11 @@ public:
                     if (!isAudioClipUnlocked(clip) || clip.durationSeconds <= 0.0) {
                         continue;
                     }
-                    const double newDurationBeats = secondsToBeatsUnlocked(clip.durationSeconds);
+                    // durationSeconds is source-domain (#746), so the time the clip occupies on the timeline is that
+                    // times its varispeed. Leaving the factor out flattened every stretched clip on each project
+                    // load, which sets the tempo it already has.
+                    const double newDurationBeats = secondsToBeatsUnlocked(
+                        clip.durationSeconds * static_cast<double>(clip.edits.effectiveVarispeed()));
                     const double newSourceOffsetBeats = secondsToBeatsUnlocked(clip.sourceOffsetSeconds);
                     if (std::abs(newDurationBeats - clip.durationBeats) > 1.0e-9 ||
                         std::abs(newSourceOffsetBeats - clip.sourceOffset) > 1.0e-9) {
