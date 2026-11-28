@@ -758,3 +758,21 @@ add_executable(EditorWindowIdentityTest AestraAudio/EditorWindowIdentityTest.cpp
 target_include_directories(EditorWindowIdentityTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)
 add_test(NAME EditorWindowIdentityTest COMMAND EditorWindowIdentityTest)
 set_tests_properties(EditorWindowIdentityTest PROPERTIES LABELS "audio;plugins;editor;regression;contract:plugins" TIMEOUT 30)
+
+# An instrument that is playing keeps its editor and survives a save, over and over. Needs a real plugin and an X server:
+# it runs only when AESTRA_STRESS_PLUGIN and AESTRA_STRESS_PLUGIN_ID are set, and skips otherwise.
+if(UNIX AND NOT APPLE AND TARGET AestraPluginHost)
+    find_package(X11)
+    if(X11_FOUND)
+        add_executable(SandboxEditorStressTest AestraAudio/SandboxEditorStressTest.cpp)
+        target_include_directories(SandboxEditorStressTest PRIVATE
+            ${CMAKE_SOURCE_DIR}/AestraAudio/include
+            ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+            ${CMAKE_SOURCE_DIR}/AestraCore/include
+            ${X11_INCLUDE_DIR})
+        target_link_libraries(SandboxEditorStressTest PRIVATE AestraAudio ${X11_LIBRARIES})
+        add_test(NAME SandboxEditorStressTest COMMAND SandboxEditorStressTest $<TARGET_FILE:AestraPluginHost>)
+        set_tests_properties(SandboxEditorStressTest PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 180
+            LABELS "audio;plugins;regression;contract:plugins")
+    endif()
+endif()
