@@ -263,6 +263,27 @@ void testStaleTrimHoverStopsPaintingOverTheTransport() {
     f.up(x, y);
 }
 
+// Live report, 28 Nov 2026 (owner's own repro): resize a clip, then go straight up and let go over the transport bar.
+// The release never reaches the timeline's tree directly; the trim must still end with it, and the arrow with the trim.
+void testTrimReleasedOverTheTransportEndsTheTrim() {
+    Fixture f;
+    if (!f.build()) return;
+    const auto c = f.clip();
+    const float x = c.x + c.width - 3.0f;
+    const float y = c.y + c.height * 0.5f;
+
+    f.manager->setWindowPointerPosition(x, y);
+    f.move(x, y);
+    f.down(x, y);
+    check(f.lane->isTrimming(), "premise: a press on the edge starts a trim");
+
+    f.manager->setWindowPointerPosition(x, -40.0f); // dragged up into the transport bar
+    f.up(x, -40.0f);                                // and released there
+    f.manager->onWindowMouseReleased();             // what the window manager does on every left release
+    check(!f.lane->isTrimming(), "a release over the transport bar must end the trim");
+    check(!f.manager->isTrimCursorShown(), "with the trim over, the timeline must give the arrow back");
+}
+
 int main() {
     testEdgeStripResizesInTheBody();
     testTopCornerGrabsFade();
@@ -272,6 +293,7 @@ int main() {
     testSplitToolHeaderMovesTheClip();
     testSplitToolEdgeTrims();
     testStaleTrimHoverStopsPaintingOverTheTransport();
+    testTrimReleasedOverTheTransportEndsTheTrim();
     if (g_failures == 0) {
         std::cout << "Clip edge zone tests passed\n";
         return 0;

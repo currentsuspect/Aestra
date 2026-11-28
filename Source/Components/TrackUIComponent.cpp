@@ -2559,6 +2559,17 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         m_isTrimming = false;
         m_trimEdge = TrimEdge::None;
         m_activeClipId = ClipInstanceID{};  // Clear active clip
+        // The release can land off this row (the transport bar above it). Edge and move hovers are recomputed by the
+        // next move over the row, and none follows there, so they would stay lit: the timeline paints the resize
+        // arrow from them, and this very release has just made its pointer position look current (28 Nov 2026).
+        if (!isInsideBounds) {
+            const bool hadHover = m_hoverTrimEdge != TrimEdge::None || m_hoverMoveZone;
+            m_hoverTrimEdge = TrimEdge::None;
+            m_hoverMoveZone = false;
+            if (hadHover) {
+                repaint();
+            }
+        }
         // Only consume the event if we were doing something
         if (wasActive) {
             return true;

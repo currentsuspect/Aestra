@@ -14,7 +14,7 @@
 1979 AestraUI/Widgets/UnitRow.cpp
 2577 Source/App/AestraApp.cpp
 3840 Source/Components/FileBrowser.cpp
-3170 Source/Components/TrackUIComponent.cpp
+3181 Source/Components/TrackUIComponent.cpp
 4917 Source/Core/AestraContent.cpp
 2880 Source/Core/ProjectSerializer.cpp
 2097 Source/Panels/ArsenalPanel.cpp
