@@ -767,3 +767,9 @@ if(AESTRA_ENABLE_UI)
     add_test(NAME KnobDoubleClickResetTest COMMAND KnobDoubleClickResetTest)
     set_tests_properties(KnobDoubleClickResetTest PROPERTIES LABELS "unit;ui;plugin;regression;contract:plugins" TIMEOUT 30)
 endif()
+
+# The sandbox helper's standalone editor window carries a WM class and a dialog type, so tiling compositors float it.
+add_executable(EditorWindowIdentityTest AestraAudio/EditorWindowIdentityTest.cpp)
+target_include_directories(EditorWindowIdentityTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)
+add_test(NAME EditorWindowIdentityTest COMMAND EditorWindowIdentityTest)
+set_tests_properties(EditorWindowIdentityTest PROPERTIES LABELS "audio;plugins;editor;regression;contract:plugins" TIMEOUT 30)
