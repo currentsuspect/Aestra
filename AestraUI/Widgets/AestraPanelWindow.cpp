@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AestraPanelWindow.h"
+#include "Plugin/PluginHost.h"
 #include "../Platform/NUIPlatformBridge.h"
 #include "NUIThemeSystem.h"
 #include "NUIRenderer.h"
@@ -87,6 +88,22 @@ bool AestraPanelWindow::handleKnobDrag(const NUIMouseEvent& event, const KnobTar
             set(id, std::clamp(get(id) + knobDragStep(event, rangePx), 0.0f, 1.0f));
             setDirty();
             return true;
+        }
+    }
+    // A double-click on a knob puts it back to the plugin's default and takes no drag. Without a plugin to ask, or a
+    // default for that parameter, it falls through to an ordinary press.
+    if (event.pressed && event.button == NUIMouseButton::Left && event.doubleClick) {
+        if (const auto plugin = m_knobPlugin.lock()) {
+            for (size_t i = 0; i < count; ++i) {
+                if (!targets[i].rect.contains(event.position)) continue;
+                for (const auto& parameter : plugin->getParameters()) {
+                    if (parameter.id != targets[i].paramId) continue;
+                    set(parameter.id, std::clamp(parameter.defaultValue, 0.0f, 1.0f));
+                    setDirty();
+                    return true;
+                }
+                break;
+            }
         }
     }
     if (event.pressed && event.button == NUIMouseButton::Left) {

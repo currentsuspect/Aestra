@@ -752,3 +752,18 @@ add_test(NAME MarkerRoundTripTest COMMAND MarkerRoundTripTest)
 set_tests_properties(MarkerRoundTripTest PROPERTIES
     LABELS "integration;serialization;markers;contract:durability"
     TIMEOUT 120)
+
+# A double-click on a knob of one of Aestra's own plugins resets it to the plugin's default (nine editors share the helper).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(KnobDoubleClickResetTest AestraUI_Core AestraUI_Platform)
+    add_executable(KnobDoubleClickResetTest AestraUI/KnobDoubleClickResetTest.cpp)
+    target_link_libraries(KnobDoubleClickResetTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
+    target_include_directories(KnobDoubleClickResetTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include)
+    add_test(NAME KnobDoubleClickResetTest COMMAND KnobDoubleClickResetTest)
+    set_tests_properties(KnobDoubleClickResetTest PROPERTIES LABELS "unit;ui;plugin;regression;contract:plugins" TIMEOUT 30)
+endif()
