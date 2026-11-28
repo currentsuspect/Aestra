@@ -1949,6 +1949,26 @@ target_include_directories(ArsenalExportLiveParityTest PRIVATE
 add_test(NAME ArsenalExportLiveParityTest COMMAND ArsenalExportLiveParityTest)
 set_tests_properties(ArsenalExportLiveParityTest PROPERTIES LABELS "arsenal;offline;policy;regression;contract:audio")
 
+# The audio thread reads the Arsenal snapshot through the real-time reader, never getAudioSnapshot()
+add_executable(ArsenalSnapshotRealtimeReadTest AestraAudio/ArsenalSnapshotRealtimeReadTest.cpp)
+target_link_libraries(ArsenalSnapshotRealtimeReadTest PRIVATE AestraAudio)
+target_include_directories(ArsenalSnapshotRealtimeReadTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+)
+add_test(NAME ArsenalSnapshotRealtimeReadTest COMMAND ArsenalSnapshotRealtimeReadTest)
+set_tests_properties(ArsenalSnapshotRealtimeReadTest PROPERTIES LABELS "arsenal;rt-safety;regression;contract:audio")
+
 # Arsenal bridge metadata round-trip persistence guard (Phase 2D)
 add_executable(ArsenalBridgeModeRoundTripTest AestraAudio/ArsenalBridgeModeRoundTripTest.cpp)
 target_link_libraries(ArsenalBridgeModeRoundTripTest PRIVATE AestraAudioCore)
