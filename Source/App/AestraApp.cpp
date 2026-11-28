@@ -1194,7 +1194,8 @@ void AestraApp::finalizeAudioSetup() {
     StartupTimer t("Deferred audio stream start");
     // Pass nullptr so openDefaultStream falls back to 'this' (the controller)
     // as the audio-callback userData, which the callback expects.
-    if (m_audioController->openDefaultStream(nullptr)) {
+    const bool streamOpened = m_audioController->openDefaultStream(nullptr);
+    if (streamOpened) {
         // Establish the effective DSP configuration BEFORE the stream starts
         // producing callbacks. This is not merely tidier ordering: setThreadCount
         // replaces the engine's thread pool outright
@@ -1216,6 +1217,7 @@ void AestraApp::finalizeAudioSetup() {
             hud->setAudioEngine(m_audioController->getEngine());
         }
     }
+    announceAudioUnavailableAtStart(streamOpened);
 }
 
 // Apply the persisted DSP configuration once the engine exists (#649).

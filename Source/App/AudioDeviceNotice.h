@@ -10,7 +10,8 @@ namespace Aestra {
 struct AudioDeviceNotice {
     bool show = false;
     std::string text;
-    double seconds = 0.0;
+    // No duration here on purpose: every toast stays kToastSeconds (ToastStack.h), no caller picks its own. A field
+    // that claims 15 s while the toast shows 3.5 s is a lie in the type (CodeRabbit, #1491).
 };
 
 class AudioDeviceNoticeState {
@@ -19,7 +20,7 @@ public:
     AudioDeviceNotice onLost() {
         if (m_substituted) return {};
         m_substituted = true;
-        return {true, "Your audio interface disconnected. Aestra keeps running without sound until it's back.", 12.0};
+        return {true, "Your audio interface disconnected. Aestra keeps running without sound until it's back."};
     }
 
     /// Output is on a real device again. Only said if we told the user it had gone.
@@ -27,13 +28,22 @@ public:
         if (!m_substituted) return {};
         m_substituted = false;
         const std::string who = deviceName.empty() ? "Your audio interface" : "Your audio interface (" + deviceName + ")";
-        return {true, who + " is back.", 6.0};
+        return {true, who + " is back."};
+    }
+
+    /// Startup: no real audio device could be opened, so Aestra is running on the silent driver. Said once.
+    /// The technical reason goes to the log; the user is told what it means and what to try.
+    AudioDeviceNotice onUnavailableAtStart() {
+        if (m_unavailableAtStartSaid) return {};
+        m_unavailableAtStartSaid = true;
+        return {true, "Aestra couldn't open an audio device, so it's running without sound. Check your sound settings, then restart Aestra."};
     }
 
     bool substituted() const { return m_substituted; }
 
 private:
     bool m_substituted = false;
+    bool m_unavailableAtStartSaid = false;
 };
 
 } // namespace Aestra

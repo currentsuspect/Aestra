@@ -51,6 +51,14 @@ bool AudioDeviceManager::initialize(bool registerPlatformDrivers) {
         // Tests pass registerPlatformDrivers=false to run against only the drivers
         // they injected via addDriver() (no real hardware).
         if (registerPlatformDrivers) {
+            {
+                // A new registration attempt starts with a clean slate: a cause (and the fallback reason built
+                // from it) left by an earlier initialize()/shutdown() must not be reported for this one. Cleared
+                // briefly under the lock; registration itself runs unlocked because it calls back into addDriver().
+                std::lock_guard<std::mutex> lock(m_mutex);
+                m_driverRegistrationFailure.clear();
+                m_fallbackReason.clear();
+            }
             AESTRA_LOG_DEBUG("RegisterPlatformDrivers about to be called");
             RegisterPlatformDrivers(*this);
         }
@@ -219,6 +227,9 @@ bool AudioDeviceManager::openStreamLocked(const AudioStreamConfig& config, Audio
                 if (m_fallbackReason.empty()) {
                     m_fallbackReason = "Preferred driver (" + std::string(DriverTypeToString(m_preferredDriverType)) +
                                        ") was unavailable, fell back to " + m_activeDriver->getDisplayName();
+                    if (!m_driverRegistrationFailure.empty()) {
+                        m_fallbackReason += ": " + m_driverRegistrationFailure;
+                    }
                 }
             }
             return true;
@@ -1242,6 +1253,16 @@ bool AudioDeviceManager::isDitheringEnabled() const {
 std::string AudioDeviceManager::getFallbackReason() const {
     std::lock_guard<std::mutex> lock(m_mutex);
     return m_fallbackReason;
+}
+
+void AudioDeviceManager::setDriverRegistrationFailure(const std::string& reason) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_driverRegistrationFailure = reason;
+}
+
+std::string AudioDeviceManager::getDriverRegistrationFailure() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_driverRegistrationFailure;
 }
 
 std::string AudioDeviceManager::getPreferredDeviceName() const {

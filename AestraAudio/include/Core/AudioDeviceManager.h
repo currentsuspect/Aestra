@@ -270,6 +270,19 @@ public:
     std::string getFallbackReason() const;
 
     /**
+     * @brief Record why the platform's real driver could not be registered at startup.
+     *
+     * Called by RegisterPlatformDrivers when the real backend throws or reports itself unavailable. The
+     * manager then still has the silent Dummy driver to fall back to, and without this note the user would
+     * be running with no sound and no explanation. The reason is added to getFallbackReason() when that
+     * fallback happens, and the app reads it to tell the user.
+     */
+    void setDriverRegistrationFailure(const std::string& reason);
+
+    /** @return The recorded registration failure, or empty if the real driver registered normally. */
+    std::string getDriverRegistrationFailure() const;
+
+    /**
      * @brief Name of the last real (non-safety) output device that was opened.
      * @return The device name, or empty if unknown. Survives a fallback to the
      *         safety driver, so a "your interface is back" notice can name it.
@@ -419,6 +432,7 @@ private:
     // Driver mode change notification
     DriverModeChangeCallback m_driverModeChangeCallback;
     std::string m_fallbackReason;
+    std::string m_driverRegistrationFailure; // why the real driver is missing, if it is (guarded by m_mutex)
     // Automatic restore of the real device after a safety fallback (#650 stage 2). All guarded by m_mutex.
     bool m_restorePending = false;   // fell back and the user has not chosen anything since
     int m_restoreSightings = 0;      // consecutive probes that saw the device
