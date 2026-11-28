@@ -26,6 +26,8 @@ public:
     bool onMouseEvent(const NUIMouseEvent& event) override;
     using AestraPanelWindow::onResize;
     void onResize();
+    /// Where the first parameter row starts, in this editor's own coordinates (0 with no parameters).
+    float firstParameterTop() const { return m_parameters.empty() ? 0.0f : m_parameters.front().labelBounds.y; }
 
 private:
     struct ParameterWidget {
