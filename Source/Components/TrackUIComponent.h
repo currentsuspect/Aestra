@@ -340,6 +340,7 @@ private:
     enum class TrimEdge { None, Left, Right };
     TrimEdge m_trimEdge = TrimEdge::None;     // Which edge is being dragged
     TrimEdge m_hoverTrimEdge = TrimEdge::None; // Which edge is being hovered (for cursor)
+    void clearPointerHover(); // drop the trim-edge/move-zone hovers: the pointer is known to be off this row
     bool m_hoverMoveZone = false;               // Pointer is where a press would move a clip (hand cursor)
     bool m_isTrimming = false;                // True during trim operation
     double m_trimOriginalStart = 0.0;         // Original trim start before drag

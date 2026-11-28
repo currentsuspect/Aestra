@@ -1868,6 +1868,17 @@ void TrackUIComponent::onMouseEnter() {
     if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback();
 }
 
+// The hovers that decide which cursor the timeline paints (the trim-edge arrow, the move hand). They are recomputed by
+// the next move over the row, so whenever the pointer is known to be off the row they must be dropped here.
+void TrackUIComponent::clearPointerHover() {
+    const bool hadHover = m_hoverTrimEdge != TrimEdge::None || m_hoverMoveZone;
+    m_hoverTrimEdge = TrimEdge::None;
+    m_hoverMoveZone = false;
+    if (hadHover) {
+        repaint();
+    }
+}
+
 void TrackUIComponent::onMouseLeave() {
     NUIComponent::onMouseLeave();
     // Leaving the row straight off the menu glyph must not strand its hover or the hand cursor.
@@ -2044,6 +2055,9 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                               (m_recordButton && m_recordButton->isHovered());
     
     if (!isInsideBounds && !isActiveOperation && !controlsNeedEvents) {
+        // Offered a move from off the row (a gap in the transport bar the move crossed on its way up): the pointer is
+        // not on this row, so nothing here may stay hovered. The timeline paints its resize arrow from these flags.
+        clearPointerHover();
         return false;  // Let parent/siblings handle it (e.g., scrollbar)
     }
     
@@ -2563,12 +2577,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         // next move over the row, and none follows there, so they would stay lit: the timeline paints the resize
         // arrow from them, and this very release has just made its pointer position look current (28 Nov 2026).
         if (!isInsideBounds) {
-            const bool hadHover = m_hoverTrimEdge != TrimEdge::None || m_hoverMoveZone;
-            m_hoverTrimEdge = TrimEdge::None;
-            m_hoverMoveZone = false;
-            if (hadHover) {
-                repaint();
-            }
+            clearPointerHover();
         }
         // Only consume the event if we were doing something
         if (wasActive) {
