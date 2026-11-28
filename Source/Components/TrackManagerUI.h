@@ -846,7 +846,6 @@ private:
     float getTimelineGridWidthPixels() const;
     double secondsToBeats(double seconds) const;
     void renderTimeRuler(::AestraUI::NUIRenderer& renderer, const ::AestraUI::NUIRect& rulerBounds);
-    void renderLoopMarkers(::AestraUI::NUIRenderer& renderer, const ::AestraUI::NUIRect& rulerBounds);
     void renderPlayhead(::AestraUI::NUIRenderer& renderer);
     void renderDropPreview(::AestraUI::NUIRenderer& renderer);         // Render drop zone highlight
     void renderDeleteAnimations(::AestraUI::NUIRenderer& renderer);    // Render FL-style ripple delete

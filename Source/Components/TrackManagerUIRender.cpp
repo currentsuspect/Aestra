@@ -373,7 +373,6 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
                                     kTimelineRulerHeight);
         renderTimeRuler(renderer, rulerRect);
         renderSongMarkers(renderer, rulerRect);
-        renderLoopMarkers(renderer, rulerRect);
 
         const auto borderColor = themeManager.getColor("border");
         renderer.drawLine({bounds.x, bounds.y + kTimelineTimeBandHeight},
@@ -460,7 +459,8 @@ void TrackManagerUI::renderTrackManagerDynamic(AestraUI::NUIRenderer& renderer) 
                 AestraUI::NUIRect selectionRect(visibleStartX, trackAreaTop, selectionWidth, trackAreaHeight);
                 // The span is marked by its two edges over the lanes: a fill here would be drawn over the clips. The
                 // opaque fill lives in the ruler, where nothing but the ruler is under it.
-                const auto accentColor = themeManager.getColor("selectionEdge");
+                // A quiet guide, not a second highlight: the ruler already carries the span at full strength.
+                const auto accentColor = themeManager.getColor("selectionEdge").withAlpha(0.35f);
 
                 if (selStartX >= gridStartX && selStartX <= gridEndX) {
                     renderer.drawLine(AestraUI::NUIPoint(selStartX, trackAreaTop),
@@ -906,30 +906,45 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
     // === SET CLIP RECT for timeline grid area (prevents text/ticks bleeding outside) ===
     renderer.setClipRect(gridRulerRect);
 
-    // === RULER SELECTION HIGHLIGHT ===
-    // Draw selection highlight if active (either dragging or confirmed)
-    if (m_isDraggingRulerSelection || m_hasRulerSelection) {
-        double selStartBeat = std::min(m_rulerSelectionStartBeat, m_rulerSelectionEndBeat);
-        double selEndBeat = std::max(m_rulerSelectionStartBeat, m_rulerSelectionEndBeat);
-
+    // === LOOP AND RULER SELECTION HIGHLIGHT ===
+    // One highlight marks a span of the ruler: an opaque fill, drawn before the ticks and numbers so they sit on top of
+    // it (a wash over them would thin them out), with a solid edge on each side. The loop gets it whether or not a ruler
+    // zone is selected, so dropping the zone cannot hide a running loop. At rest an edge is 1 px; the edge the pointer is
+    // near, or is dragging, lights up and thickens, which is also the cue that it can be grabbed.
+    const auto drawSpan = [&](double startBeat, double endBeat, bool startLit, bool endLit) {
         // Convert beats to pixel positions
-        float selStartX = gridStartX + static_cast<float>(selStartBeat * m_pixelsPerBeat) - m_timelineScrollOffset;
-        float selEndX = gridStartX + static_cast<float>(selEndBeat * m_pixelsPerBeat) - m_timelineScrollOffset;
-
-        // Selection rendering - clip rect handles edge clipping
-        float selectionWidth = selEndX - selStartX;
-        if (selectionWidth > 0.0f) {
-            AestraUI::NUIRect selectionRect(selStartX, rulerBounds.y, selectionWidth, rulerBounds.height);
-
-            // An opaque fill, drawn before the ticks and numbers so they sit on top of it (a wash over them would
-            // thin them out), with a solid edge on each side.
-            renderer.fillRect(selectionRect, themeManager.getColor("selectionFill"));
-            const auto selEdge = themeManager.getColor("selectionEdge");
-            renderer.drawLine(AestraUI::NUIPoint(selStartX, rulerBounds.y),
-                              AestraUI::NUIPoint(selStartX, rulerBounds.bottom()), 1.0f, selEdge);
-            renderer.drawLine(AestraUI::NUIPoint(selEndX, rulerBounds.y),
-                              AestraUI::NUIPoint(selEndX, rulerBounds.bottom()), 1.0f, selEdge);
-        }
+        const float spanStartX = gridStartX + static_cast<float>(startBeat * m_pixelsPerBeat) - m_timelineScrollOffset;
+        const float spanEndX = gridStartX + static_cast<float>(endBeat * m_pixelsPerBeat) - m_timelineScrollOffset;
+        const float spanWidth = spanEndX - spanStartX;
+        if (spanWidth <= 0.0f)
+            return; // the clip rect handles edge clipping
+        renderer.fillRect(AestraUI::NUIRect(spanStartX, rulerBounds.y, spanWidth, rulerBounds.height),
+                          themeManager.getColor("selectionFill"));
+        const auto edge = [&](float x, bool lit) {
+            if (lit) {
+                renderer.fillRect(AestraUI::NUIRect(x - 1.0f, rulerBounds.y, 2.0f, rulerBounds.height),
+                                  themeManager.getColor("hoverSelected"));
+            } else {
+                renderer.drawLine(AestraUI::NUIPoint(x, rulerBounds.y), AestraUI::NUIPoint(x, rulerBounds.bottom()), 1.0f,
+                                  themeManager.getColor("selectionEdge"));
+            }
+        };
+        edge(spanStartX, startLit);
+        edge(spanEndX, endLit);
+    };
+    const bool loopShown = m_loopEnabled && m_loopEndBeat > m_loopStartBeat;
+    if (loopShown) {
+        drawSpan(m_loopStartBeat, m_loopEndBeat, m_hoveringLoopStart || m_isDraggingLoopStart,
+                 m_hoveringLoopEnd || m_isDraggingLoopEnd);
+    }
+    if (m_isDraggingRulerSelection || m_hasRulerSelection) {
+        const double selStartBeat = std::min(m_rulerSelectionStartBeat, m_rulerSelectionEndBeat);
+        const double selEndBeat = std::max(m_rulerSelectionStartBeat, m_rulerSelectionEndBeat);
+        // A zone that is the loop is already drawn; drawing it again would thin the lit edge.
+        const bool sameAsLoop = loopShown && std::abs(selStartBeat - m_loopStartBeat) < 1e-3 &&
+                                std::abs(selEndBeat - m_loopEndBeat) < 1e-3;
+        if (!sameAsLoop)
+            drawSpan(selStartBeat, selEndBeat, false, false);
     }
 
 
@@ -1033,79 +1048,6 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
                       AestraUI::NUIPoint(cornerRect.right(), cornerRect.bottom()), 1.0f, borderColor.withAlpha(0.28f));
 }
 
-// Render loop markers on ruler
-void TrackManagerUI::renderLoopMarkers(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& rulerBounds) {
-    if (!m_loopEnabled)
-        return;
-
-    if (m_loopEndBeat <= m_loopStartBeat)
-        return; // Invalid loop region
-
-    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    const auto& layout = themeManager.getLayoutDimensions();
-
-    // Calculate grid start (same as ruler)
-    float controlAreaWidth = layout.trackControlsWidth;
-    float gridStartX = rulerBounds.x + controlAreaWidth + kTimelineGridInsetX;
-    float scrollbarWidth = kTimelineScrollbarWidth;
-    float trackWidth = rulerBounds.width - scrollbarWidth;
-    float gridWidth = trackWidth - controlAreaWidth - 10.0f;
-    gridWidth = std::max(0.0f, gridWidth);
-    float gridEndX = gridStartX + gridWidth;
-
-    // Convert loop beats to pixel positions
-    float loopStartX = gridStartX + (static_cast<float>(m_loopStartBeat) * m_pixelsPerBeat) - m_timelineScrollOffset;
-    float loopEndX = gridStartX + (static_cast<float>(m_loopEndBeat) * m_pixelsPerBeat) - m_timelineScrollOffset;
-
-    // Check whether the range intersects the visible ruler. A loop can span the
-    // whole viewport while both handles are off-screen; the band should remain
-    // visible in that case.
-    bool startVisible = (loopStartX >= gridStartX && loopStartX <= gridEndX);
-    bool endVisible = (loopEndX >= gridStartX && loopEndX <= gridEndX);
-    if (loopEndX < gridStartX || loopStartX > gridEndX)
-        return;
-
-    // Color based on enabled state and hover
-    const auto accentColor = themeManager.getColor("hoverSelected");
-    // Opaque in both states: active is the selection edge, inactive the quieter guide shade.
-    const AestraUI::NUIColor markerColor =
-        themeManager.getColor(m_loopEnabled ? "selectionEdge" : "controlGuide");
-
-    // A thin ruler-locked range band is visually distinct from the neutral
-    // minimap viewport and from canvas selection.
-    const float visibleStartX = std::max(gridStartX, loopStartX);
-    const float visibleEndX = std::min(gridEndX, loopEndX);
-    const float bandY = rulerBounds.bottom() - 4.0f;
-    renderer.fillRect({visibleStartX, bandY, std::max(0.0f, visibleEndX - visibleStartX), 3.0f},
-                      themeManager.getColor("selectionTint"));
-    renderer.drawLine({visibleStartX, bandY}, {visibleEndX, bandY}, 1.0f, markerColor);
-
-    const float handleWidth = 4.0f;
-    const float handleHeight = 9.0f;
-    const float handleY = rulerBounds.bottom() - handleHeight;
-
-    // === RENDER LOOP START MARKER ===
-    if (startVisible) {
-        AestraUI::NUIColor startColor = markerColor;
-        if (m_hoveringLoopStart || m_isDraggingLoopStart) {
-            startColor = accentColor; // Full brightness on hover/drag
-        }
-
-        renderer.fillRoundedRect({loopStartX + 1.0f, handleY, handleWidth, handleHeight},
-                                 1.5f, startColor);
-    }
-
-    // === RENDER LOOP END MARKER ===
-    if (endVisible) {
-        AestraUI::NUIColor endColor = markerColor;
-        if (m_hoveringLoopEnd || m_isDraggingLoopEnd) {
-            endColor = accentColor; // Full brightness on hover/drag
-        }
-
-        renderer.fillRoundedRect({loopEndX - handleWidth - 1.0f, handleY, handleWidth, handleHeight},
-                                 1.5f, endColor);
-    }
-}
 // Draw playhead (vertical line showing current playback position)
 // Draw playhead (vertical line showing current playback position)
 void TrackManagerUI::renderPlayhead(AestraUI::NUIRenderer& renderer) {
