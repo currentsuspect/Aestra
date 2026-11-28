@@ -626,6 +626,8 @@ public:
     PianoRollTool getTool() const { return tool_; }
     /** @brief The hover cursor over empty grid for the active tool (pencil, eraser, arrow). */
     NUICursorStyle toolCursor() const;
+
+    void onUpdate(double deltaTime) override;
     
     /** @brief Set the snap grid used for note edits. */
     void setSnap(SnapGrid snap) { snap_ = snap; }
@@ -791,6 +793,7 @@ private:
     std::function<void(int pitch, bool down)> onKeyPressChanged_;
     std::vector<int> pressedPitches_; // keys shown pressed for the current gesture
     uint64_t defaultUnitId_ = 0;
+    void applyCursor(NUICursorStyle style); // the one place this layer sets the cursor (popup-aware)
     bool pointerInside_ = false; // the pointer was last over the grid (so leaving it restores the arrow)
 
     // Tool
