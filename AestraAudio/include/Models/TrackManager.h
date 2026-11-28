@@ -2483,48 +2483,12 @@ private:
         return file.good();
     }
 
-    float computeRecordedTakeGain(const std::vector<float>& samples) const {
-        float peak = analyzePeak(samples);
-        if (peak <= 0.0f) {
-            return 1.0f;
-        }
-
-        constexpr float targetPeak = 0.35f;
-        return std::clamp(targetPeak / peak, 0.18f, 1.0f);
-    }
-
     float analyzePeak(const std::vector<float>& samples) const {
         float peak = 0.0f;
         for (float sample : samples) {
             peak = std::max(peak, std::abs(sample));
         }
         return peak;
-    }
-
-    void conditionRecordedTakeSamples(std::vector<float>& samples) const {
-        if (samples.empty()) {
-            return;
-        }
-
-        // Remove DC bias first so the recorded waveform sits more naturally around zero.
-        double mean = 0.0;
-        for (float sample : samples) {
-            mean += sample;
-        }
-        mean /= static_cast<double>(samples.size());
-        for (float& sample : samples) {
-            sample = static_cast<float>(sample - mean);
-        }
-
-        // If the capture came in too hot, scale it before it ever hits clip playback.
-        float peak = analyzePeak(samples);
-        constexpr float targetPeak = 0.85f;
-        if (peak > targetPeak && peak > 0.0f) {
-            const float scale = targetPeak / peak;
-            for (float& sample : samples) {
-                sample *= scale;
-            }
-        }
     }
 
     size_t findChannelIndexById(uint32_t channelId) const {
