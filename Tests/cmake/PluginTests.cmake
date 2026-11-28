@@ -752,3 +752,8 @@ add_test(NAME MarkerRoundTripTest COMMAND MarkerRoundTripTest)
 set_tests_properties(MarkerRoundTripTest PROPERTIES
     LABELS "integration;serialization;markers;contract:durability"
     TIMEOUT 120)
+
+# The pointer leaving an embedded plugin editor hands keyboard focus back to Aestra, so Space plays again.
+add_executable(PluginFocusReturnTest AestraUI/PluginFocusReturnTest.cpp)
+add_test(NAME PluginFocusReturnTest COMMAND PluginFocusReturnTest)
+set_tests_properties(PluginFocusReturnTest PROPERTIES LABELS "unit;plugin;input;regression;contract:plugins" TIMEOUT 30)

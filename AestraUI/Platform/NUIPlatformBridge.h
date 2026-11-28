@@ -93,6 +93,8 @@ public:
     /// A plugin's editor window, made by the helper as a child of ours: place, show or hide it (window pixels).
     /// Takes X input focus back from an embedded plugin editor (no-op elsewhere or when Aestra already holds it).
     void reclaimInputFocus();
+    bool queryPointer(int& x, int& y, bool& anyButtonDown) const;
+    bool inputFocusInsideChild(std::uintptr_t child) const;
     bool placeChildWindow(std::uintptr_t child, int x, int y, int width, int height, bool visible);
     /// Arrow pointer on a plugin's window and all windows below it (the native pointer is hidden over Aestra's own).
     bool applyArrowCursorToSubtree(std::uintptr_t child);

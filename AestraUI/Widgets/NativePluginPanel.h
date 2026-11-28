@@ -55,6 +55,7 @@ private:
     NUIRect viewRect() const;
     bool shownInTree() const;
     void place(bool force);
+    void returnFocusWhenPointerLeaves(double deltaTime);
     NUIRect gripRect() const;
 
     std::weak_ptr<Aestra::Audio::IPluginInstance> m_instance;
@@ -72,6 +73,8 @@ private:
     int m_cursorPasses = 0;     ///< arrow-cursor passes done: 0 none, 1 at placement, 2 at ~0.5 s, 3 at ~2 s
     double m_sinceOpen = 0.0;
     double m_sizePoll = 0.0;
+    double m_focusPoll = 0.0;     ///< since the focus rule was last asked
+    double m_pointerAway = 0.0;   ///< seconds the pointer has been away from the plugin while it holds focus
     bool m_resizing = false;
     NUIPoint m_resizeStart;
     int m_resizeStartW = 0;

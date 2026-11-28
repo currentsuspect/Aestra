@@ -132,4 +132,37 @@ void PlatformWindowLinux::reclaimInputFocus() {
 #endif
 }
 
+bool PlatformWindowLinux::queryPointer(int& x, int& y, bool& anyButtonDown) const {
+#if defined(SDL_VIDEO_DRIVER_X11)
+    Display* display = nullptr;
+    ::Window win = 0;
+    if (!x11Handles(m_window, display, win)) return false;
+    ::Window root = 0, child = 0;
+    int rootX = 0, rootY = 0, winX = 0, winY = 0;
+    unsigned int mask = 0;
+    if (!XQueryPointer(display, win, &root, &child, &rootX, &rootY, &winX, &winY, &mask)) return false;
+    x = winX;
+    y = winY;
+    anyButtonDown = (mask & (Button1Mask | Button2Mask | Button3Mask | Button4Mask | Button5Mask)) != 0;
+    return true;
+#else
+    (void)x; (void)y; (void)anyButtonDown;
+    return false;
+#endif
+}
+
+bool PlatformWindowLinux::inputFocusInsideChild(std::uintptr_t child) const {
+#if defined(SDL_VIDEO_DRIVER_X11)
+    Display* display = nullptr;
+    ::Window win = 0;
+    if (!child || !x11Handles(m_window, display, win)) return false;
+    const auto snap = XInputFocus::query(display, win);
+    return XInputFocus::known(snap) && !XInputFocus::isAestra(snap) &&
+           XInputFocus::isWithin(display, snap.window, static_cast<::Window>(child));
+#else
+    (void)child;
+    return false;
+#endif
+}
+
 } // namespace Aestra
