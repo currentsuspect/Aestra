@@ -108,6 +108,7 @@ int main() {
     // 1. No approval callback: untrusted plugin is skipped.
     // ------------------------------------------------------------------
     {
+        std::cerr << "[PluginFirstLoadApprovalTest] scenario 1 start" << std::endl;
         const Aestra::Tests::ScopedTempDirectory dirScope{"FirstLoadApproval_NoCb"};
         const auto clapPath = makeUntrustedClap(dirScope.path());
 
@@ -124,6 +125,7 @@ int main() {
     // 2. Approval callback returns true: plugin proceeds to scanning.
     // ------------------------------------------------------------------
     {
+        std::cerr << "[PluginFirstLoadApprovalTest] scenario 2 start" << std::endl;
         const Aestra::Tests::ScopedTempDirectory dirScope{"FirstLoadApproval_Allow"};
         const auto clapPath = makeUntrustedClap(dirScope.path());
 
@@ -152,6 +154,7 @@ int main() {
     // 3. Approval callback returns false: plugin is skipped.
     // ------------------------------------------------------------------
     {
+        std::cerr << "[PluginFirstLoadApprovalTest] scenario 3 start" << std::endl;
         const Aestra::Tests::ScopedTempDirectory dirScope{"FirstLoadApproval_Deny"};
         const auto clapPath = makeUntrustedClap(dirScope.path());
 
@@ -176,6 +179,7 @@ int main() {
     //    scan completes as cancelled (not successful).
     // ------------------------------------------------------------------
     {
+        std::cerr << "[PluginFirstLoadApprovalTest] scenario 4 start" << std::endl;
         const Aestra::Tests::ScopedTempDirectory dirScope{"FirstLoadApproval_Cancel"};
         const auto clapPath = makeUntrustedClap(dirScope.path());
 
@@ -255,6 +259,7 @@ int main() {
     //     caller must deny rather than wait.)
     // ------------------------------------------------------------------
     {
+        std::cerr << "[PluginFirstLoadApprovalTest] scenario 5 start" << std::endl;
         const Aestra::Tests::ScopedTempDirectory dirScope{"FirstLoadApproval_QueueReject"};
         const auto clapPath = makeUntrustedClap(dirScope.path());
 
@@ -287,6 +292,7 @@ int main() {
     // 6. Shutdown with an outstanding approval does not deadlock.
     // ------------------------------------------------------------------
     {
+        std::cerr << "[PluginFirstLoadApprovalTest] scenario 6 start" << std::endl;
         const Aestra::Tests::ScopedTempDirectory dirScope{"FirstLoadApproval_Shutdown"};
         const auto clapPath = makeUntrustedClap(dirScope.path());
 
@@ -333,6 +339,7 @@ int main() {
     // 7. A cancelled scan is not reported as successful; no partial results.
     // ------------------------------------------------------------------
     {
+        std::cerr << "[PluginFirstLoadApprovalTest] scenario 7 start" << std::endl;
         const Aestra::Tests::ScopedTempDirectory dirScope{"FirstLoadApproval_CancelledResults"};
         const auto clapPath = makeUntrustedClap(dirScope.path());
 
@@ -446,6 +453,7 @@ int main() {
     //    + join, so no work can reference destroyed content.
     // ------------------------------------------------------------------
     {
+        std::cerr << "[PluginFirstLoadApprovalTest] scenario 8 start" << std::endl;
         const Aestra::Tests::ScopedTempDirectory dirScope{"FirstLoadApproval_NoCallbacksAfterJoin"};
         const auto clapPath = makeUntrustedClap(dirScope.path());
 
@@ -481,6 +489,7 @@ int main() {
         require(completionAfterJoin == completionCallbacks.load(), "no completion callbacks after join");
     }
 
+    std::cerr << "[PluginFirstLoadApprovalTest] all scenarios done" << std::endl;
     std::cout << "[PASS] PluginFirstLoadApprovalTest\n";
     return 0;
 }
