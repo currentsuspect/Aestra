@@ -72,6 +72,8 @@ private:
     int m_cursorPasses = 0;     ///< arrow-cursor passes done: 0 none, 1 at placement, 2 at ~0.5 s, 3 at ~2 s
     double m_sinceOpen = 0.0;
     double m_sizePoll = 0.0;
+    double m_coveredSeconds = 0.0; ///< how long another panel has been over this one
+    bool m_covered = false;        ///< covered long enough that the plugin's window is hidden
     bool m_resizing = false;
     NUIPoint m_resizeStart;
     int m_resizeStartW = 0;

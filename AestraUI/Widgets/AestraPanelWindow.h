@@ -89,6 +89,7 @@ public:
  */
 class AestraPanelWindow : public NUIComponent {
 public:
+    bool occludesNativeWindows() const override { return true; } // an opaque panel: a plugin editor's window hides behind it
     AestraPanelWindow();
 
     void onRender(NUIRenderer& renderer) override;
