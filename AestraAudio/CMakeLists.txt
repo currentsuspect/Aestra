@@ -323,6 +323,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Plugin/PluginHostStatus.cpp
     src/Plugin/OutOfProcessPluginInstance.cpp
     src/Plugin/OutOfProcessPluginInstanceRt.cpp
+    src/Plugin/OutOfProcessPluginInstanceDiagnostics.cpp
     src/Plugin/InternalPluginRegistry.cpp
     src/Plugin/BuiltInPlugins.cpp
     src/Plugin/SamplerPlugin.cpp

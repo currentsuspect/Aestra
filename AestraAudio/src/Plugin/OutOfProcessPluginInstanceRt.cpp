@@ -137,32 +137,43 @@ void OutOfProcessPluginInstance::process(const float* const* inputs, float** out
     if (chunk > 0 && m_inFifo.frames() > 0) { // nothing before the first frames (a 0-frame callback)
         // The worker holds the slot (3) only while it copies the chunk out: a bounded copy of at most one block. The second part
         // of a split callback arrives right then often enough to be heard (the first part's post is what woke the worker), so
-        // wait out that copy, for a hard-capped few microseconds; past the cap it is treated as busy, as before.
-        for (int spin = 0; spin < 512 && m_pendingState.load(std::memory_order_acquire) == 3; ++spin) {
+        // wait out that copy, for a hard-capped few microseconds. The worker can also take the chunk between this thread's two
+        // attempts (send to a free slot, join a posted one), so a failed round where the worker was seen taking it goes again,
+        // a few times at most. Past those caps the frames count as unsent, as before.
+        bool handed = false;
+        for (int round = 0; round < 4 && !handed; ++round) {
+            for (int spin = 0; spin < 512 && m_pendingState.load(std::memory_order_acquire) == 3; ++spin) {
 #if defined(__x86_64__) || defined(__i386__)
-            __builtin_ia32_pause();
+                __builtin_ia32_pause();
 #endif
-        }
-        uint8_t pendingEmpty = 0;
-        if (m_pendingState.compare_exchange_strong(pendingEmpty, 1, std::memory_order_acq_rel)) {
-            if (m_inFifo.frames() > chunk) {
-                m_inFifo.discard(m_inFifo.frames() - chunk);
             }
-            const auto sendFrames = static_cast<uint32_t>(m_inFifo.frames());
-            const uint64_t chunkStart = m_inFifoEnd - sendFrames;
-            m_inFifo.popInterleaved(m_pendingInput.data(), sendFrames);
-            const size_t midiBytes = m_midiQueue.takeChunk(chunkStart, chunkStart + sendFrames, m_pendingMidiData.data(),
-                                                           m_pendingMidiData.size());
-            m_pendingTransport = HostTransportClock::current();
-            m_pendingStart = chunkStart;
-            m_pendingMidiBytes.store(midiBytes, std::memory_order_release);
-            m_pendingFrames.store(sendFrames, std::memory_order_release);
-            m_pendingState.store(2, std::memory_order_release);
-            wakeWorker();
-            sentChunk = true;
-        } else if (appendToPendingChunk()) {
-            // A callback split in two (a loop wrap renders up to the loop end, then from the loop start): the second part
-            // arrives before the helper has picked up the first, and joins it, so both come back by the next callback.
+            uint8_t pendingEmpty = 0;
+            if (m_pendingState.compare_exchange_strong(pendingEmpty, 1, std::memory_order_acq_rel)) {
+                if (m_inFifo.frames() > chunk) {
+                    m_inFifo.discard(m_inFifo.frames() - chunk);
+                }
+                const auto sendFrames = static_cast<uint32_t>(m_inFifo.frames());
+                const uint64_t chunkStart = m_inFifoEnd - sendFrames;
+                m_inFifo.popInterleaved(m_pendingInput.data(), sendFrames);
+                const size_t midiBytes = m_midiQueue.takeChunk(chunkStart, chunkStart + sendFrames, m_pendingMidiData.data(),
+                                                               m_pendingMidiData.size());
+                m_pendingTransport = HostTransportClock::current();
+                m_pendingStart = chunkStart;
+                m_pendingMidiBytes.store(midiBytes, std::memory_order_release);
+                m_pendingFrames.store(sendFrames, std::memory_order_release);
+                m_pendingState.store(2, std::memory_order_release);
+                wakeWorker();
+                handed = true;
+            } else if (appendToPendingChunk()) {
+                // A callback split in two (a loop wrap renders up to the loop end, then from the loop start): the second part
+                // arrives before the helper has picked up the first, and joins it, so both come back by the next callback.
+                handed = true;
+            } else if (m_pendingState.load(std::memory_order_acquire) != 3 &&
+                       m_pendingState.load(std::memory_order_acquire) != 0) {
+                break; // posted but not joinable (not contiguous, or too large): no point trying again
+            }
+        }
+        if (handed) {
             sentChunk = true;
         } else {
             m_unsentBlocks.fetch_add(1, std::memory_order_relaxed);
