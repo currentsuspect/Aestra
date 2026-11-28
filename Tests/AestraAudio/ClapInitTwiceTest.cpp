@@ -26,8 +26,10 @@ struct Fake {
     static inline std::vector<std::string> calls;
     static inline bool isActive = false;
     static inline int activeTwice = 0;
+    static inline double lastRate = 0.0;
     static bool activate(const AestraHelper::ClapAbi::ClapPlugin*, double rate, uint32_t, uint32_t maxFrames) {
         if (isActive) ++activeTwice;
+        lastRate = rate;
         isActive = true;
         calls.push_back("activate(" + std::to_string(static_cast<int>(rate)) + "," + std::to_string(maxFrames) + ")");
         return true;
@@ -63,7 +65,7 @@ int main() {
     check(Fake::activeTwice == 0, "the plugin was deactivated before it was activated again (CLAP: activate only when inactive)");
     check(module.initialize(48000.0, 512, error) && Fake::activeTwice == 0, "and again when the render ends");
     check(Fake::calls.back() == "start" && module.active, "the plugin ends active and processing, at the last rate and block size");
-    check(module.activeSampleRate == 48000.0 && module.maxBlockSize == 512, "and the module remembers them");
+    check(Fake::lastRate == 48000.0 && module.maxBlockSize == 512, "the plugin was last activated at 48 kHz, and the module keeps the block size");
 
     if (g_failures > 0) {
         std::cerr << g_failures << " check(s) failed\n";

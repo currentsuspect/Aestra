@@ -1356,12 +1356,14 @@ void OutOfProcessPluginInstance::workerLoop() {
         }
         m_workerTransport = m_pendingTransport;
         m_workerStart = m_pendingStart;
+        m_workerBusy.store(true, std::memory_order_release); // before the slot is freed: a render start waits for this call
         m_pendingState.store(0, std::memory_order_release);
 
         if (sampleCount > m_workerInput.size() || midiBytes > m_workerMidiData.size() ||
             !processBlockInHelper(m_workerInput, m_transportChannels, frames, m_workerMidiData, midiBytes,
                                   m_workerTransport, m_workerOutput)) {
             markCrashed();
+            m_workerBusy.store(false, std::memory_order_release);
             continue;
         }
 
@@ -1387,6 +1389,7 @@ void OutOfProcessPluginInstance::workerLoop() {
             }
             m_readyState.store(2, std::memory_order_release);
         }
+        m_workerBusy.store(false, std::memory_order_release); // published, or lost: either way no longer in flight
         if (posted) {
             // Published last, so an observer that sees this advance is guaranteed
             // to find the result readable rather than half-written.
@@ -1417,6 +1420,9 @@ bool OutOfProcessPluginInstance::processBlockInHelper(const std::vector<float>& 
                                                       size_t midiBytes, const HostTransport& transport,
                                                       std::vector<float>& output) {
     const size_t sampleCount = static_cast<size_t>(channels) * frames;
+    // A render waits up to 5 s for each block (OutOfProcessPluginInstanceRt.cpp); the request must allow as long, or a heavy plugin
+    // is marked crashed half-way through a bounce. Live keeps the short deadline.
+    const auto blockTimeout = OfflineRenderMode::active() ? std::chrono::milliseconds(5000) : std::chrono::milliseconds(500);
     if (sampleCount > input.size()) {
         return false;
     }
@@ -1429,7 +1435,7 @@ bool OutOfProcessPluginInstance::processBlockInHelper(const std::vector<float>& 
         const std::string command = "PROCESSSHM " + std::to_string(channels) + " " + std::to_string(frames) + " " +
                                     std::to_string(midiBytes) + transport.toWire();
         std::string response;
-        if (!sendCommand(command, &response) || response != "OK") {
+        if (!sendCommand(command, &response, blockTimeout) || response != "OK") {
             return false;
         }
         if (output.size() < sampleCount) {
@@ -1449,7 +1455,7 @@ bool OutOfProcessPluginInstance::processBlockInHelper(const std::vector<float>& 
     }
     command << transport.toWire();
     std::string response;
-    if (!sendCommand(command.str(), &response)) {
+    if (!sendCommand(command.str(), &response, blockTimeout)) {
         return false;
     }
     constexpr const char* kPrefix = "OK ";

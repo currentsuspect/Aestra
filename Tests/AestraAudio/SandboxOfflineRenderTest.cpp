@@ -8,6 +8,7 @@
 // output is the input delayed by exactly one chunk, with no dropped or dry block. The echo fake returns its input unchanged and
 // every input sample is its own position + 1, so each output sample says where it came from.
 
+#include "Plugin/HostTransport.h"
 #include "Plugin/MidiSlice.h"
 #include "Plugin/OfflineRenderMode.h"
 #include "Plugin/OutOfProcessPluginInstance.h"
@@ -51,6 +52,21 @@ PluginInfo echoInfo() {
 } // namespace
 
 int main(int argc, char** argv) {
+    // --- Each slice of a render reports its own playhead (CodeRabbit on #1510) ------------------------------------------------------
+    // A 4096-frame render block is processed as plugin-sized slices; every slice used the transport of the block's first sample,
+    // so a tempo-synced plugin (arpeggiator, synced LFO or delay) saw the same position up to 16 times and drifted in a bounce.
+    {
+        const HostTransport block = HostTransport::at(48000, 48000.0, 120.0, 4, true, false, 0.0, 0.0); // 1 s in: beat 2
+        const HostTransport slice = block.advancedBy(24000);                                             // half a second on
+        check(slice.samplePosition == 72000, "a slice's transport starts at the slice's own sample");
+        check(slice.ppqPosition == 3.0, "its position in beats follows at the same tempo (2 + 1 beat)");
+        check(slice.barStartPpq == 0.0 && block.advancedBy(96000).barStartPpq == 4.0, "and its bar start is the bar it is in");
+        check(slice.tempo == block.tempo && slice.playing == block.playing, "tempo and play state are the block's");
+        check(block.advancedBy(0).samplePosition == block.samplePosition, "no offset leaves the transport as it was");
+        HostTransport none;
+        check(!none.advancedBy(512).valid && none.advancedBy(512).samplePosition == 0, "a transport nobody published stays empty");
+    }
+
     if (argc < 2 || !std::filesystem::exists(argv[1])) {
         std::cout << "AestraPluginHost not given or not found; skipping.\n";
         return 77;

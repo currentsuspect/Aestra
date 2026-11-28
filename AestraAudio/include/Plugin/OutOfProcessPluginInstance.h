@@ -241,6 +241,8 @@ private:
     ChunkMidiQueue m_midiQueue;
     uint64_t m_inFifoEnd{0};                ///< frames ever queued into m_inFifo: the MIDI queue's timeline
     uint64_t m_outStart{0};                 ///< timeline position of m_outFifo's first frame
+    uint32_t m_sliceOffset = 0;              ///< audio thread: where the slice being processed starts in its render block
+    std::atomic<bool> m_workerBusy{false};   ///< the worker holds a chunk: from taking it until its result is published or dropped
     uint32_t m_seenRenderEpoch = 0;          ///< OfflineRenderMode::epoch() this instance last flushed for
     void flushForRenderBoundary(bool startingRender);
     bool appendToPendingChunk(); ///< audio thread: the frames waiting join a chunk the helper has not picked up yet ///< empties the hand-off and silences the plugin when a render starts or ends

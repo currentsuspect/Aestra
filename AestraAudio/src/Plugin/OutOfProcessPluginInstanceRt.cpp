@@ -67,8 +67,14 @@ void OutOfProcessPluginInstance::process(const float* const* inputs, float** out
             for (uint32_t c = 0; c < outCount; ++c) outSlice[c] = (outputs && outputs[c]) ? outputs[c] + start : nullptr;
             MidiBuffer sliceMidi;
             if (midiInput) splitMidiForSlice(*midiInput, start, frames, sliceMidi);
+            m_sliceOffset = start; // the slice's own playhead (step 3), not the block's
             process(inputs ? inSlice.data() : nullptr, outSlice.data(), inCount, outCount, frames, midiInput ? &sliceMidi : nullptr,
                     nullptr);
+        }
+        m_sliceOffset = 0;
+        // Channels past the transport's are never processed by the slices: silence them, as the unsliced path does.
+        for (uint32_t c = outCount; outputs && c < numOutputChannels; ++c) {
+            if (outputs[c]) std::fill(outputs[c], outputs[c] + numFrames, 0.0f);
         }
         return;
     }
@@ -157,7 +163,7 @@ void OutOfProcessPluginInstance::process(const float* const* inputs, float** out
                 m_inFifo.popInterleaved(m_pendingInput.data(), sendFrames);
                 const size_t midiBytes = m_midiQueue.takeChunk(chunkStart, chunkStart + sendFrames, m_pendingMidiData.data(),
                                                                m_pendingMidiData.size());
-                m_pendingTransport = HostTransportClock::current();
+                m_pendingTransport = HostTransportClock::current().advancedBy(m_sliceOffset);
                 m_pendingStart = chunkStart;
                 m_pendingMidiBytes.store(midiBytes, std::memory_order_release);
                 m_pendingFrames.store(sendFrames, std::memory_order_release);
@@ -237,8 +243,11 @@ void OutOfProcessPluginInstance::flushForRenderBoundary(bool startingRender) {
     // flight (each offline block waited for its answer).
     if (startingRender) {
         const auto giveUpAt = std::chrono::steady_clock::now() + std::chrono::seconds(1);
+        // The worker frees the pending slot before it calls the helper, so "pending and ready both empty" can still mean a live
+        // chunk is with the helper; its result would then satisfy the render's first wait and land in the bounce. m_workerBusy
+        // covers that call too.
         while ((m_pendingState.load(std::memory_order_acquire) == 1 || m_pendingState.load(std::memory_order_acquire) == 2 ||
-                m_readyState.load(std::memory_order_acquire) == 1) &&
+                m_readyState.load(std::memory_order_acquire) == 1 || m_workerBusy.load(std::memory_order_acquire)) &&
                !m_crashed.load(std::memory_order_acquire) && std::chrono::steady_clock::now() < giveUpAt) {
             std::this_thread::yield();
         }
