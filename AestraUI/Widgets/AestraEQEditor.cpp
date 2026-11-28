@@ -24,10 +24,23 @@ constexpr float kPi = 3.14159265358979323846f;
 NUIColor accent() {
     return NUIColor(0.30f, 0.86f, 0.66f, 1.0f);
 }
-NUIColor accentSoft() {
-    return NUIColor(0.30f, 0.86f, 0.66f, 0.30f);
+NUIColor graphBg() { return NUIThemeManager::getInstance().getCurrentTheme().editorWell; }
+
+// One skin for every chip in the EQ's header and analyzer strip, from the theme's opaque tokens (FD-100): a control
+// at rest, a quiet tint under the pointer, the solid selection fill when the chip is ON. No alpha wash over content.
+struct PillSkin {
+    NUIColor fill;
+    NUIColor edge;
+    NUIColor ink; // icon and label
+};
+PillSkin pillSkin(bool on, bool hovered) {
+    const auto& t = NUIThemeManager::getInstance().getCurrentTheme();
+    if (on)
+        return {hovered ? t.hoverSelected : t.selectionFill, t.selectionEdge, t.textPrimary};
+    if (hovered)
+        return {t.selectionTint, editorInk(0.22f), t.textPrimary};
+    return {t.editorControl, editorInk(0.14f), t.textSecondary};
 }
-NUIColor graphBg() { return editorNeutral(0.045f, 0.96f); }
 
 std::shared_ptr<NUIIcon> makeSvgIcon(const char* svg) {
     return std::make_shared<NUIIcon>(svg);
@@ -1552,12 +1565,9 @@ void AestraEQEditor::drawBypassPill(NUIRenderer& renderer) {
 void AestraEQEditor::drawOutputGainPill(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
     const float gain = outputGain();
-    const NUIColor outline =
-        m_outputGainHovered || m_draggingOutputGain ? accent().withAlpha(0.44f) : editorInk(0.14f);
-    const NUIColor fill = m_outputGainHovered || m_draggingOutputGain ? accent().withAlpha(0.11f)
-                                                                      : editorNeutral(0.035f, 0.88f);
-    renderer.fillRoundedRect(m_outputGainRect, 7.0f, fill);
-    renderer.strokeRoundedRect(m_outputGainRect, 7.0f, 1.0f, outline);
+    const PillSkin skin = pillSkin(false, m_outputGainHovered || m_draggingOutputGain);
+    renderer.fillRoundedRect(m_outputGainRect, 7.0f, skin.fill);
+    renderer.strokeRoundedRect(m_outputGainRect, 7.0f, 1.0f, skin.edge);
     std::string gainText = formatGain(gain);
     drawSvgIcon(renderer, outputIcon(), {m_outputGainRect.x + 7.0f, m_outputGainRect.y + 5.0f, 14.0f, 14.0f},
                 theme.getColor("textSecondary").withAlpha(m_outputGainHovered ? 0.92f : 0.66f), 13.0f);
@@ -1572,13 +1582,12 @@ void AestraEQEditor::drawOutputGainPill(NUIRenderer& renderer) {
 void AestraEQEditor::drawPolarityPill(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
     const bool inverted = polarityInverted();
-    const NUIColor base = inverted ? NUIColor(0.95f, 0.68f, 0.32f, 1.0f) : accent();
-    const NUIColor fill = inverted ? base.withAlpha(m_polarityHovered ? 0.23f : 0.16f)
-                                   : NUIColor(0.035f, 0.035f, 0.035f, m_polarityHovered ? 0.96f : 0.88f);
+    const PillSkin skin = pillSkin(false, m_polarityHovered);
+    const NUIColor base = NUIColor(0.95f, 0.68f, 0.32f, 1.0f); // status colour: the phase is inverted
+    const NUIColor fill = inverted ? base.withAlpha(m_polarityHovered ? 0.23f : 0.16f) : skin.fill;
     renderer.fillRoundedRect(m_polarityRect, 7.0f, fill);
     renderer.strokeRoundedRect(m_polarityRect, 7.0f, 1.0f,
-                               inverted ? base.withAlpha(m_polarityHovered ? 0.56f : 0.42f)
-                                        : editorInk(m_polarityHovered ? 0.22f : 0.14f));
+                               inverted ? base.withAlpha(m_polarityHovered ? 0.56f : 0.42f) : skin.edge);
     drawSvgIcon(renderer, polarityIcon(), {m_polarityRect.x + 8.0f, m_polarityRect.y + 5.0f, 14.0f, 14.0f},
                 inverted ? base.withAlpha(1.0f) : theme.getColor("textSecondary").withAlpha(0.72f), 13.0f);
     renderer.drawText(inverted ? "INV" : "POL",
@@ -1589,15 +1598,10 @@ void AestraEQEditor::drawPolarityPill(NUIRenderer& renderer) {
 void AestraEQEditor::drawComparePills(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
     auto drawSlot = [&](const NUIRect& r, const char* label, bool active, bool hovered) {
-        const NUIColor base = active ? accent() : editorInk(1);
-        renderer.fillRoundedRect(r, 7.0f,
-                                 active ? accent().withAlpha(hovered ? 0.16f : 0.10f)
-                                        : NUIColor(0.035f, 0.035f, 0.035f, hovered ? 0.98f : 0.88f));
-        renderer.strokeRoundedRect(r, 7.0f, 1.0f,
-                                   active ? base.withAlpha(hovered ? 0.50f : 0.34f)
-                                          : editorInk(hovered ? 0.22f : 0.13f));
-        const NUIColor glyph =
-            active ? theme.getColor("textPrimary").withAlpha(0.90f) : theme.getColor("textSecondary").withAlpha(0.46f);
+        const PillSkin skin = pillSkin(active, hovered);
+        renderer.fillRoundedRect(r, 7.0f, skin.fill);
+        renderer.strokeRoundedRect(r, 7.0f, 1.0f, skin.edge);
+        const NUIColor glyph = active ? skin.ink : theme.getColor("textSecondary").withAlpha(0.46f);
         drawSvgIcon(renderer, compareSlotIcon(), {r.x + 6.0f, r.y + 6.0f, 12.0f, 12.0f}, glyph, 11.0f);
         renderer.drawText(label, {r.x + 23.0f, topPillTextY(renderer, r, 8.4f)}, 8.4f,
                           active ? theme.getColor("textPrimary") : theme.getColor("textSecondary").withAlpha(0.76f));
@@ -1607,11 +1611,9 @@ void AestraEQEditor::drawComparePills(NUIRenderer& renderer) {
     drawSlot(m_compareBRect, "B", m_compareActiveSlot == 1, m_compareBHovered);
 
     const char* label = m_compareActiveSlot == 0 ? "A>B" : "B>A";
-    renderer.fillRoundedRect(m_compareCopyRect, 7.0f,
-                             m_compareCopyHovered ? accent().withAlpha(0.11f)
-                                                  : editorNeutral(0.035f, 0.88f));
-    renderer.strokeRoundedRect(m_compareCopyRect, 7.0f, 1.0f,
-                               m_compareCopyHovered ? accent().withAlpha(0.42f) : editorInk(0.13f));
+    const PillSkin copySkin = pillSkin(false, m_compareCopyHovered);
+    renderer.fillRoundedRect(m_compareCopyRect, 7.0f, copySkin.fill);
+    renderer.strokeRoundedRect(m_compareCopyRect, 7.0f, 1.0f, copySkin.edge);
     drawSvgIcon(renderer, compareCopyIcon(), {m_compareCopyRect.x + 7.0f, m_compareCopyRect.y + 5.0f, 14.0f, 14.0f},
                 theme.getColor("textSecondary").withAlpha(m_compareCopyHovered ? 0.92f : 0.66f), 13.0f);
     renderer.drawText(label, {m_compareCopyRect.x + 28.0f, topPillTextY(renderer, m_compareCopyRect, 8.0f)}, 8.0f,
@@ -1623,9 +1625,9 @@ void AestraEQEditor::drawCurveScalePill(NUIRenderer& renderer) {
     const float range = curveDbRange();
     char label[16];
     std::snprintf(label, sizeof(label), "\u00B1%.0f", range);
-    renderer.fillRoundedRect(m_curveScaleRect, 7.0f,
-                             NUIColor(0.045f, 0.045f, 0.045f, m_curveScaleHovered ? 0.94f : 0.76f));
-    renderer.strokeRoundedRect(m_curveScaleRect, 7.0f, 1.0f, accent().withAlpha(m_curveScaleHovered ? 0.50f : 0.28f));
+    const PillSkin skin = pillSkin(false, m_curveScaleHovered);
+    renderer.fillRoundedRect(m_curveScaleRect, 7.0f, skin.fill);
+    renderer.strokeRoundedRect(m_curveScaleRect, 7.0f, 1.0f, skin.edge);
     drawSvgIcon(renderer, rangeIcon(), {m_curveScaleRect.x + 5.0f, m_curveScaleRect.y + 5.0f, 14.0f, 14.0f},
                 theme.getColor("textSecondary").withAlpha(m_curveScaleHovered ? 0.92f : 0.66f), 12.5f);
     renderer.drawText(label, {m_curveScaleRect.x + 20.0f, topPillTextY(renderer, m_curveScaleRect, 8.0f)}, 8.0f,
@@ -1634,14 +1636,13 @@ void AestraEQEditor::drawCurveScalePill(NUIRenderer& renderer) {
 
 void AestraEQEditor::drawAnalyzerMenuPill(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
-    const NUIColor outline = accent().withAlpha(m_analyzerMenuHovered || m_analyzerPanelOpen ? 0.54f : 0.28f);
-    const NUIColor fill = accent().withAlpha(m_analyzerPanelOpen ? 0.18f : (m_analyzerMenuHovered ? 0.13f : 0.08f));
-    renderer.fillRoundedRect(m_analyzerMenuRect, 7.0f, fill);
-    renderer.strokeRoundedRect(m_analyzerMenuRect, 7.0f, 1.0f, outline);
+    const PillSkin skin = pillSkin(m_analyzerPanelOpen, m_analyzerMenuHovered);
+    renderer.fillRoundedRect(m_analyzerMenuRect, 7.0f, skin.fill);
+    renderer.strokeRoundedRect(m_analyzerMenuRect, 7.0f, 1.0f, skin.edge);
     drawSvgIcon(renderer, analyzerIcon(), {m_analyzerMenuRect.x + 6.0f, m_analyzerMenuRect.y + 5.0f, 14.0f, 14.0f},
-                accent().withAlpha(m_analyzerPanelOpen ? 0.98f : (m_analyzerMenuHovered ? 0.86f : 0.64f)), 13.0f);
+                skin.ink, 13.0f);
     renderer.drawText("ANL", {m_analyzerMenuRect.x + 23.0f, topPillTextY(renderer, m_analyzerMenuRect, 8.0f)}, 8.0f,
-                      theme.getColor("textSecondary").withAlpha(m_analyzerPanelOpen ? 0.96f : 0.84f));
+                      skin.ink);
 }
 
 void AestraEQEditor::drawAnalyzerSettingsPanel(NUIRenderer& renderer) {
@@ -1649,8 +1650,8 @@ void AestraEQEditor::drawAnalyzerSettingsPanel(NUIRenderer& renderer) {
         return;
 
     auto& theme = NUIThemeManager::getInstance();
-    renderer.fillRoundedRect(m_analyzerPanelRect, 8.0f, editorNeutral(0.031f, 0.94f));
-    renderer.strokeRoundedRect(m_analyzerPanelRect, 8.0f, 1.0f, accent().withAlpha(0.34f));
+    renderer.fillRoundedRect(m_analyzerPanelRect, 8.0f, theme.getCurrentTheme().editorCard);
+    renderer.strokeRoundedRect(m_analyzerPanelRect, 8.0f, 1.0f, editorInk(0.22f));
     renderer.drawText("Analyzer", {m_analyzerPanelRect.x + 10.0f, m_analyzerPanelRect.y + 9.0f}, 9.5f,
                       theme.getColor("textPrimary").withAlpha(0.92f));
     renderer.drawText(m_analyzerSourceIndex == 0 ? "Pre vs Post" : "Post vs Pre",
@@ -1674,10 +1675,9 @@ void AestraEQEditor::drawAnalyzerTiltPill(NUIRenderer& renderer) {
     } else {
         std::snprintf(label, sizeof(label), "T %.1f", tilt);
     }
-    renderer.fillRoundedRect(m_analyzerTiltRect, 7.0f,
-                             NUIColor(0.045f, 0.045f, 0.045f, m_analyzerTiltHovered ? 0.94f : 0.76f));
-    renderer.strokeRoundedRect(m_analyzerTiltRect, 7.0f, 1.0f,
-                               accent().withAlpha(m_analyzerTiltHovered ? 0.50f : 0.28f));
+    const PillSkin skin = pillSkin(false, m_analyzerTiltHovered);
+    renderer.fillRoundedRect(m_analyzerTiltRect, 7.0f, skin.fill);
+    renderer.strokeRoundedRect(m_analyzerTiltRect, 7.0f, 1.0f, skin.edge);
     drawSvgIcon(renderer, tiltIcon(), {m_analyzerTiltRect.x + 6.0f, m_analyzerTiltRect.y + 5.0f, 13.0f, 13.0f},
                 theme.getColor("textSecondary").withAlpha(m_analyzerTiltHovered ? 0.90f : 0.58f), 12.0f);
     renderer.drawText(label,
@@ -1688,14 +1688,13 @@ void AestraEQEditor::drawAnalyzerTiltPill(NUIRenderer& renderer) {
 void AestraEQEditor::drawAnalyzerSourcePill(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
     const bool pre = m_analyzerSourceIndex == 0;
-    renderer.fillRoundedRect(m_analyzerSourceRect, 7.0f,
-                             NUIColor(0.045f, 0.045f, 0.045f, m_analyzerSourceHovered ? 0.94f : 0.76f));
-    renderer.strokeRoundedRect(
-        m_analyzerSourceRect, 7.0f, 1.0f,
-        (pre ? NUIColor(0.46f, 0.78f, 1.0f, 1.0f) : accent()).withAlpha(m_analyzerSourceHovered ? 0.52f : 0.30f));
+    const PillSkin skin = pillSkin(false, m_analyzerSourceHovered);
+    renderer.fillRoundedRect(m_analyzerSourceRect, 7.0f, skin.fill);
+    renderer.strokeRoundedRect(m_analyzerSourceRect, 7.0f, 1.0f, skin.edge);
+    // The glyph keeps the two analyzer-trace hues (pre = sky, post = mint), so the chip says which trace it reads.
     drawSvgIcon(
         renderer, sourceIcon(), {m_analyzerSourceRect.x + 6.0f, m_analyzerSourceRect.y + 5.0f, 13.0f, 13.0f},
-        (pre ? NUIColor(0.46f, 0.78f, 1.0f, 1.0f) : accent()).withAlpha(m_analyzerSourceHovered ? 0.90f : 0.62f),
+        (pre ? NUIColor(0.46f, 0.78f, 1.0f, 1.0f) : accent()).withAlpha(m_analyzerSourceHovered ? 0.90f : 0.74f),
         12.0f);
     renderer.drawText(pre ? "PRE" : "POST",
                       {m_analyzerSourceRect.x + 22.0f, std::round(renderer.calculateTextY(m_analyzerSourceRect, 8.0f))},
@@ -1706,10 +1705,9 @@ void AestraEQEditor::drawAnalyzerStereoPill(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
     static constexpr const char* kLabels[] = {"ST", "L", "R", "M", "S"};
     const size_t idx = std::min<size_t>(m_analyzerStereoIndex, 4u);
-    renderer.fillRoundedRect(m_analyzerStereoRect, 7.0f,
-                             NUIColor(0.045f, 0.045f, 0.045f, m_analyzerStereoHovered ? 0.94f : 0.76f));
-    renderer.strokeRoundedRect(m_analyzerStereoRect, 7.0f, 1.0f,
-                               accent().withAlpha(m_analyzerStereoHovered ? 0.50f : 0.28f));
+    const PillSkin skin = pillSkin(false, m_analyzerStereoHovered);
+    renderer.fillRoundedRect(m_analyzerStereoRect, 7.0f, skin.fill);
+    renderer.strokeRoundedRect(m_analyzerStereoRect, 7.0f, 1.0f, skin.edge);
     renderer.drawTextCentered(kLabels[idx], m_analyzerStereoRect, 8.5f,
                               theme.getColor("textSecondary").withAlpha(0.86f));
 }
@@ -1718,10 +1716,9 @@ void AestraEQEditor::drawAnalyzerDecayPill(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
     static constexpr const char* kLabels[] = {"D F", "D M", "D S"};
     const size_t idx = std::min<size_t>(m_analyzerDecayIndex, 2u);
-    renderer.fillRoundedRect(m_analyzerDecayRect, 7.0f,
-                             NUIColor(0.045f, 0.045f, 0.045f, m_analyzerDecayHovered ? 0.94f : 0.76f));
-    renderer.strokeRoundedRect(m_analyzerDecayRect, 7.0f, 1.0f,
-                               accent().withAlpha(m_analyzerDecayHovered ? 0.50f : 0.28f));
+    const PillSkin skin = pillSkin(false, m_analyzerDecayHovered);
+    renderer.fillRoundedRect(m_analyzerDecayRect, 7.0f, skin.fill);
+    renderer.strokeRoundedRect(m_analyzerDecayRect, 7.0f, 1.0f, skin.edge);
     drawSvgIcon(renderer, decayIcon(), {m_analyzerDecayRect.x + 6.0f, m_analyzerDecayRect.y + 5.0f, 13.0f, 13.0f},
                 theme.getColor("textSecondary").withAlpha(m_analyzerDecayHovered ? 0.90f : 0.58f), 12.0f);
     renderer.drawText(kLabels[idx],
@@ -1731,14 +1728,14 @@ void AestraEQEditor::drawAnalyzerDecayPill(NUIRenderer& renderer) {
 
 void AestraEQEditor::drawAnalyzerFreezePill(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
-    const NUIColor base = m_analyzerFrozen ? NUIColor(0.46f, 0.78f, 1.0f, 1.0f) : accent();
+    const PillSkin skin = pillSkin(false, m_analyzerFreezeHovered);
+    const NUIColor frozen(0.46f, 0.78f, 1.0f, 1.0f); // status colour: the trace is held
     renderer.fillRoundedRect(m_analyzerFreezeRect, 7.0f,
-                             base.withAlpha(m_analyzerFrozen ? (m_analyzerFreezeHovered ? 0.30f : 0.22f)
-                                                             : (m_analyzerFreezeHovered ? 0.18f : 0.09f)));
+                             m_analyzerFrozen ? frozen.withAlpha(m_analyzerFreezeHovered ? 0.30f : 0.22f) : skin.fill);
     renderer.strokeRoundedRect(m_analyzerFreezeRect, 7.0f, 1.0f,
-                               base.withAlpha(m_analyzerFrozen || m_analyzerFreezeHovered ? 0.52f : 0.25f));
+                               m_analyzerFrozen ? frozen.withAlpha(0.52f) : skin.edge);
     drawSvgIcon(renderer, freezeIcon(), {m_analyzerFreezeRect.x + 6.0f, m_analyzerFreezeRect.y + 5.0f, 13.0f, 13.0f},
-                base.withAlpha(m_analyzerFrozen ? 0.98f : (m_analyzerFreezeHovered ? 0.84f : 0.58f)), 12.0f);
+                m_analyzerFrozen ? frozen.withAlpha(0.98f) : skin.ink, 12.0f);
     renderer.drawText(
         "FRZ", {m_analyzerFreezeRect.x + 21.0f, std::round(renderer.calculateTextY(m_analyzerFreezeRect, 8.0f))}, 8.0f,
         m_analyzerFrozen ? theme.getColor("textPrimary") : theme.getColor("textSecondary").withAlpha(0.82f));
@@ -1747,16 +1744,15 @@ void AestraEQEditor::drawAnalyzerFreezePill(NUIRenderer& renderer) {
 void AestraEQEditor::drawAnalyzerCollisionPill(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
     const NUIColor warn(1.0f, 0.42f, 0.22f, 1.0f);
-    const NUIColor base = m_analyzerCollisionEnabled ? warn : accent();
+    const PillSkin skin = pillSkin(false, m_analyzerCollisionHovered);
     renderer.fillRoundedRect(m_analyzerCollisionRect, 7.0f,
-                             base.withAlpha(m_analyzerCollisionEnabled ? (m_analyzerCollisionHovered ? 0.30f : 0.20f)
-                                                                       : (m_analyzerCollisionHovered ? 0.16f : 0.07f)));
-    renderer.strokeRoundedRect(
-        m_analyzerCollisionRect, 7.0f, 1.0f,
-        base.withAlpha(m_analyzerCollisionEnabled || m_analyzerCollisionHovered ? 0.52f : 0.24f));
-    drawSvgIcon(
-        renderer, maskIcon(), {m_analyzerCollisionRect.x + 7.0f, m_analyzerCollisionRect.y + 5.0f, 13.0f, 13.0f},
-        base.withAlpha(m_analyzerCollisionEnabled ? 0.96f : (m_analyzerCollisionHovered ? 0.82f : 0.56f)), 12.0f);
+                             m_analyzerCollisionEnabled ? warn.withAlpha(m_analyzerCollisionHovered ? 0.30f : 0.20f)
+                                                        : skin.fill);
+    renderer.strokeRoundedRect(m_analyzerCollisionRect, 7.0f, 1.0f,
+                               m_analyzerCollisionEnabled ? warn.withAlpha(0.52f) : skin.edge);
+    drawSvgIcon(renderer, maskIcon(),
+                {m_analyzerCollisionRect.x + 7.0f, m_analyzerCollisionRect.y + 5.0f, 13.0f, 13.0f},
+                m_analyzerCollisionEnabled ? warn.withAlpha(0.96f) : skin.ink, 12.0f);
     renderer.drawText(
         "MASK", {m_analyzerCollisionRect.x + 23.0f, std::round(renderer.calculateTextY(m_analyzerCollisionRect, 8.0f))},
         8.0f,
@@ -1768,14 +1764,13 @@ void AestraEQEditor::drawAnalyzerCollisionStrengthPill(NUIRenderer& renderer) {
     static constexpr const char* kLabels[] = {"S L", "S M", "S H"};
     const uint32_t idx = std::min<uint32_t>(m_analyzerCollisionStrengthIndex.load(std::memory_order_relaxed), 2u);
     const NUIColor warn(1.0f, 0.42f, 0.22f, 1.0f);
-    const NUIColor base = m_analyzerCollisionEnabled ? warn : accent();
-    renderer.fillRoundedRect(m_analyzerCollisionStrengthRect, 7.0f,
-                             base.withAlpha(m_analyzerCollisionStrengthHovered ? 0.17f : 0.08f));
+    const PillSkin skin = pillSkin(false, m_analyzerCollisionStrengthHovered);
+    renderer.fillRoundedRect(m_analyzerCollisionStrengthRect, 7.0f, skin.fill);
     renderer.strokeRoundedRect(m_analyzerCollisionStrengthRect, 7.0f, 1.0f,
-                               base.withAlpha(m_analyzerCollisionStrengthHovered ? 0.50f : 0.26f));
+                               m_analyzerCollisionEnabled ? warn.withAlpha(0.40f) : skin.edge);
     drawSvgIcon(renderer, strengthIcon(),
                 {m_analyzerCollisionStrengthRect.x + 6.0f, m_analyzerCollisionStrengthRect.y + 5.0f, 13.0f, 13.0f},
-                base.withAlpha(m_analyzerCollisionStrengthHovered ? 0.86f : 0.56f), 12.0f);
+                m_analyzerCollisionEnabled ? warn.withAlpha(0.86f) : skin.ink, 12.0f);
     renderer.drawText(kLabels[idx],
                       {m_analyzerCollisionStrengthRect.x + 21.0f,
                        std::round(renderer.calculateTextY(m_analyzerCollisionStrengthRect, 8.0f))},
@@ -2599,7 +2594,7 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
     auto& theme = NUIThemeManager::getInstance();
 
     renderer.fillRoundedRect(bounds, 10.0f, graphBg());
-    renderer.strokeRoundedRect(bounds, 10.0f, 1.0f, accentSoft());
+    renderer.strokeRoundedRect(bounds, 10.0f, 1.0f, editorInk(0.18f));
 
     const auto inner = graphInnerBounds(bounds);
     m_lastGraphInner = inner;

@@ -8,7 +8,7 @@
 4352 AestraAudio/src/Core/AudioEngine.cpp
 1525 AestraUI/Base/NUITextInput.cpp
 3588 AestraUI/Graphics/OpenGL/NUIRendererGL.cpp
-5646 AestraUI/Widgets/AestraEQEditor.cpp
+5641 AestraUI/Widgets/AestraEQEditor.cpp
 1585 AestraUI/Widgets/AestraVerbEditor.cpp
 1944 AestraUI/Widgets/PianoRollNoteLayer.cpp
 1979 AestraUI/Widgets/UnitRow.cpp
