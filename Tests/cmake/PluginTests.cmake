@@ -776,3 +776,14 @@ add_executable(ClapInitTwiceTest AestraAudio/ClapInitTwiceTest.cpp)
 target_include_directories(ClapInitTwiceTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include ${CMAKE_SOURCE_DIR}/AestraAudio/src ${CMAKE_SOURCE_DIR}/AestraAudio/src/Plugin)
 add_test(NAME ClapInitTwiceTest COMMAND ClapInitTwiceTest)
 set_tests_properties(ClapInitTwiceTest PROPERTIES LABELS "audio;plugins;regression;contract:plugins" TIMEOUT 30)
+
+# A real plugin sounds the same live before and after a render, and after being prepared again (needs AESTRA_STRESS_PLUGIN).
+add_executable(SandboxRenderBoundaryRealPluginTest AestraAudio/SandboxRenderBoundaryRealPluginTest.cpp)
+target_include_directories(SandboxRenderBoundaryRealPluginTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include)
+target_link_libraries(SandboxRenderBoundaryRealPluginTest PRIVATE AestraAudio)
+add_test(NAME SandboxRenderBoundaryRealPluginTest COMMAND SandboxRenderBoundaryRealPluginTest $<TARGET_FILE:AestraPluginHost>)
+set_tests_properties(SandboxRenderBoundaryRealPluginTest PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120
+    LABELS "audio;plugins;regression;contract:plugins")
