@@ -209,7 +209,7 @@ void AudioClipEditorPanel::buildUI() {
     m_pitchLabel = makeLabel("Pitch");
     m_speedLabel = makeLabel("Speed");
     m_sourceStartLabel = makeLabel("Start");
-    m_gainValueLabel = makeLabel("-5.0 dB", 11.5f);
+    m_gainValueLabel = makeLabel("0.0 dB", 11.5f);
     m_panValueLabel = makeLabel("Center", 11.5f);
     m_fadeInValueLabel = makeLabel("0.00 beats", 11.5f);
     m_fadeOutValueLabel = makeLabel("0.00 beats", 11.5f);
