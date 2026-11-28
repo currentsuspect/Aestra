@@ -182,3 +182,27 @@ target_link_libraries(LegacyTrackRepairTest PRIVATE AestraAudioCore)
 target_include_directories(LegacyTrackRepairTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include ${CMAKE_SOURCE_DIR}/AestraCore/include)
 add_test(NAME LegacyTrackRepairTest COMMAND LegacyTrackRepairTest)
 set_tests_properties(LegacyTrackRepairTest PROPERTIES LABELS "project;serialization;regression;contract:durability")
+
+# setBPM re-derived an audio clip's beat span without the varispeed, so a project load flattened every stretched clip.
+add_executable(SetBpmKeepsClipStretchTest AestraAudio/SetBpmKeepsClipStretchTest.cpp)
+target_link_libraries(SetBpmKeepsClipStretchTest PRIVATE AestraAudio)
+target_include_directories(SetBpmKeepsClipStretchTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME SetBpmKeepsClipStretchTest COMMAND SetBpmKeepsClipStretchTest)
+set_tests_properties(SetBpmKeepsClipStretchTest PROPERTIES TIMEOUT 60 LABELS "audio;model;varispeed;regression;contract:durability")
+
+# Renders and recordings go beside the project file even when it has no extension (Projects/EROS is a file, not a folder).
+add_executable(ProjectSubfolderTest AestraAudio/ProjectSubfolderTest.cpp)
+target_link_libraries(ProjectSubfolderTest PRIVATE AestraAudio)
+target_include_directories(ProjectSubfolderTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME ProjectSubfolderTest COMMAND ProjectSubfolderTest)
+set_tests_properties(ProjectSubfolderTest PROPERTIES TIMEOUT 60 LABELS "audio;project;recording;regression;contract:durability")
