@@ -1166,6 +1166,13 @@ bool OutOfProcessPluginInstance::loadState(const std::vector<uint8_t>& state) {
     return sendCommand(command.str(), &response, std::chrono::seconds(5)) && response.find("OK") == 0;
 }
 
+std::string OutOfProcessPluginInstance::editorUnavailableReason() const {
+    if (m_crashed.load(std::memory_order_acquire)) return "the plugin was marked crashed";
+    if (!m_loaded.load(std::memory_order_acquire)) return "the plugin is not loaded";
+    if (!m_process || !m_process->isRunning()) return "the helper process is not running";
+    return "the helper is running and the plugin is loaded";
+}
+
 bool OutOfProcessPluginInstance::hasEditor() const {
 #if defined(__linux__) || defined(_WIN32)
     return (m_info.format == PluginFormat::VST3 || m_info.format == PluginFormat::CLAP) &&
@@ -1177,11 +1184,21 @@ bool OutOfProcessPluginInstance::hasEditor() const {
 
 bool OutOfProcessPluginInstance::openEditor(void* parentWindow) {
     (void)parentWindow; // the helper makes the window; there is nothing of the app's to embed into
-    if (!hasEditor()) return false;
+    if (!hasEditor()) {
+        Log::warning("[PluginHost] " + m_info.name + ": no editor to open: " + editorUnavailableReason());
+        return false;
+    }
     std::string response;
-    if (!sendCommand("EDITOR OPEN " + hexEncode(m_info.name), &response, std::chrono::seconds(15))) return false;
+    if (!sendCommand("EDITOR OPEN " + hexEncode(m_info.name), &response, std::chrono::seconds(15))) {
+        Log::warning("[PluginHost] " + m_info.name + ": EDITOR OPEN got no answer from the helper (" +
+                     editorUnavailableReason() + ")");
+        return false;
+    }
     int width = 0, height = 0;
-    if (std::sscanf(response.c_str(), "OK EDITOR %d %d", &width, &height) != 2) return false;
+    if (std::sscanf(response.c_str(), "OK EDITOR %d %d", &width, &height) != 2) {
+        Log::warning("[PluginHost] " + m_info.name + ": the helper refused EDITOR OPEN: \"" + response.substr(0, 120) + "\"");
+        return false;
+    }
     m_editorWidth.store(width, std::memory_order_relaxed);
     m_editorHeight.store(height, std::memory_order_relaxed);
     m_editorOpen.store(true, std::memory_order_release);
@@ -1194,16 +1211,25 @@ void OutOfProcessPluginInstance::closeEditor() {
 }
 
 std::uintptr_t OutOfProcessPluginInstance::openEditorEmbedded(std::uintptr_t parentWindow) {
-    if (!parentWindow || !hasEditor()) return 0;
+    if (!parentWindow) return 0;
+    if (!hasEditor()) {
+        Log::warning("[PluginHost] " + m_info.name + ": no editor to embed: " + editorUnavailableReason());
+        return 0;
+    }
     std::string response;
     if (!sendCommand("EDITOR EMBED " + hexEncode(m_info.name) + " " +
                          std::to_string(static_cast<unsigned long long>(parentWindow)),
-                     &response, std::chrono::seconds(15)))
+                     &response, std::chrono::seconds(15))) {
+        Log::warning("[PluginHost] " + m_info.name + ": EDITOR EMBED got no answer from the helper (" +
+                     editorUnavailableReason() + ")");
         return 0;
+    }
     int width = 0, height = 0, resizable = 0;
     unsigned long long window = 0;
-    if (std::sscanf(response.c_str(), "OK EDITOR %d %d %llu %d", &width, &height, &window, &resizable) != 4 || !window)
+    if (std::sscanf(response.c_str(), "OK EDITOR %d %d %llu %d", &width, &height, &window, &resizable) != 4 || !window) {
+        Log::warning("[PluginHost] " + m_info.name + ": the helper refused EDITOR EMBED: \"" + response.substr(0, 120) + "\"");
         return 0;
+    }
     m_editorWidth.store(width, std::memory_order_relaxed);
     m_editorHeight.store(height, std::memory_order_relaxed);
     m_editorResizable.store(resizable != 0, std::memory_order_relaxed);
@@ -1444,6 +1470,14 @@ bool OutOfProcessPluginInstance::processBlockInHelper(const std::vector<float>& 
 uint64_t OutOfProcessPluginInstance::helperPipeReadCount() const { return m_process ? m_process->readCalls() : 0; }
 
 void OutOfProcessPluginInstance::markCrashed() {
+    // Said once, on the way in: a plugin that is marked crashed is bypassed and loses its editor for good, and nothing
+    // else in the log says it happened (the editor then falls back to the generic one with no reason given).
+    if (!m_crashed.exchange(true, std::memory_order_acq_rel)) {
+        Log::warning("[PluginHost] " + m_info.name + " (" + m_info.id + ") marked crashed: helper " +
+                     (m_process && m_process->isRunning() ? "still running, a block or command failed"
+                                                          : "is no longer running") +
+                     "; it is bypassed and its editor is unavailable until it is reloaded");
+    }
     m_crashed.store(true, std::memory_order_release);
     m_active.store(false, std::memory_order_release);
     m_watchdogBypassed.store(true, std::memory_order_release);
