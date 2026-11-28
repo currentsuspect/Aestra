@@ -16,6 +16,7 @@
 // getLatencySamples() reports that chunk, which is what PDC must compensate.
 #include "OutOfProcessPluginInstance.h"
 
+#include "Plugin/MidiSlice.h"
 #include "Plugin/OfflineRenderMode.h"
 
 #include <algorithm>
@@ -37,6 +38,30 @@ void OutOfProcessPluginInstance::process(const float* const* inputs, float** out
                                          MidiBuffer* midiOutput) {
     if (midiOutput) {
         midiOutput->clear();
+    }
+
+    // An offline render (export, bounce, freeze) uses much larger blocks than the plugin was prepared for (the exporter renders 4096
+    // frames, the plugin was initialised for the device's few hundred), and a block over the plugin's maximum is passed straight
+    // through: silence for an instrument, dry for an effect, so a bounce lost every sandboxed plugin's audio. Offline, such a block
+    // is cut into slices of the plugin's own chunk size and each slice is processed in turn, which is what playback does. The slice
+    // is the chunk the plugin already uses live, so the delay it reports for delay compensation stays the one it applies here.
+    if (OfflineRenderMode::active() && m_maxBlockSize > 0 && numFrames > m_maxBlockSize && !m_crashed.load(std::memory_order_acquire)) {
+        const uint32_t learned = m_chunkFrames.load(std::memory_order_relaxed);
+        const uint32_t slice = learned > 0 ? std::min(learned, m_maxBlockSize) : m_maxBlockSize;
+        std::array<const float*, kMaxOutputChannels> inSlice{};
+        std::array<float*, kMaxOutputChannels> outSlice{};
+        const uint32_t inCount = std::min<uint32_t>(numInputChannels, kMaxOutputChannels);
+        const uint32_t outCount = std::min<uint32_t>(numOutputChannels, kMaxOutputChannels);
+        for (uint32_t start = 0; start < numFrames; start += slice) {
+            const uint32_t frames = std::min(slice, numFrames - start);
+            for (uint32_t c = 0; c < inCount; ++c) inSlice[c] = (inputs && inputs[c]) ? inputs[c] + start : nullptr;
+            for (uint32_t c = 0; c < outCount; ++c) outSlice[c] = (outputs && outputs[c]) ? outputs[c] + start : nullptr;
+            MidiBuffer sliceMidi;
+            if (midiInput) splitMidiForSlice(*midiInput, start, frames, sliceMidi);
+            process(inputs ? inSlice.data() : nullptr, outSlice.data(), inCount, outCount, frames, midiInput ? &sliceMidi : nullptr,
+                    nullptr);
+        }
+        return;
     }
 
     if (m_crashed.load(std::memory_order_acquire) || m_maxBlockSize == 0 || numFrames > m_maxBlockSize) {

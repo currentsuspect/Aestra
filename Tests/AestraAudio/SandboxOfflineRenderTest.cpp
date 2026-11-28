@@ -8,6 +8,7 @@
 // output is the input delayed by exactly one chunk, with no dropped or dry block. The echo fake returns its input unchanged and
 // every input sample is its own position + 1, so each output sample says where it came from.
 
+#include "Plugin/MidiSlice.h"
 #include "Plugin/OfflineRenderMode.h"
 #include "Plugin/OutOfProcessPluginInstance.h"
 #include "Plugin/PluginFactory.h"
@@ -94,6 +95,74 @@ int main(int argc, char** argv) {
     check(plugin.dryBlockCount() == 0, "no block was played dry (" + std::to_string(plugin.dryBlockCount()) + ")");
     check(plugin.unsentBlockCount() == 0, "no block was left unsent (" + std::to_string(plugin.unsentBlockCount()) + ")");
     check(!created->isCrashed(), "and the plugin was not marked crashed");
+
+    // --- The block an export really renders: 4096 frames, to a plugin that was initialised for at most 64 ---------------------
+    // process() treats a block larger than the plugin's maximum as "cannot handle" and passes the audio straight through: silence
+    // for an instrument, dry for an effect. That is what the founder's bounces did: 8 s rendered in under a second, peak -80 dB.
+    // Offline, a large block is cut into slices of the plugin's own size, so the render is the same as playback with that block size.
+    {
+        PluginInstancePtr big;
+        factory.createPluginAsync(echoInfo(), [&](PluginInstancePtr instance) { big = std::move(instance); });
+        if (!big || !big->initialize(48000.0, kFrames)) {
+            std::cerr << "could not start the second echo plugin\n";
+            return 1;
+        }
+        big->activate();
+        auto& bigPlugin = *static_cast<OutOfProcessPluginInstance*>(big.get());
+        constexpr uint32_t kRenderBlock = 4096;
+        constexpr int kRenderBlocks = 12;
+        OfflineRenderMode::setActive(true);
+        int wrong = 0;
+        for (int k = 0; k < kRenderBlocks; ++k) {
+            std::vector<float> inL(kRenderBlock), inR(kRenderBlock), outL(kRenderBlock, -1.0f), outR(kRenderBlock, -1.0f);
+            for (uint32_t i = 0; i < kRenderBlock; ++i) {
+                inL[i] = inR[i] = static_cast<float>(static_cast<uint64_t>(k) * kRenderBlock + i + 1);
+            }
+            const float* in[2] = {inL.data(), inR.data()};
+            float* out[2] = {outL.data(), outR.data()};
+            bigPlugin.process(in, out, 2, 2, kRenderBlock, nullptr, nullptr);
+            for (uint32_t i = 0; i < kRenderBlock; ++i) {
+                const uint64_t n = static_cast<uint64_t>(k) * kRenderBlock + i;
+                const float expected = n < kFrames ? 0.0f : static_cast<float>(n - kFrames + 1); // one 64-frame chunk behind
+                if (outL[i] != expected || outR[i] != expected) ++wrong;
+            }
+        }
+        OfflineRenderMode::setActive(false);
+        check(wrong == 0, "a 4096-frame render block through a plugin initialised for 64 is the input delayed by one chunk (" +
+                              std::to_string(wrong) + " wrong samples)");
+        check(bigPlugin.dryBlockCount() == 0 && bigPlugin.unsentBlockCount() == 0, "with no dry or unsent block");
+    }
+
+    // --- Cutting MIDI into slices: nothing lost, nothing doubled, offsets rebased, note identities kept -------------------------
+    {
+        MidiBuffer in;
+        const uint8_t on[3] = {0x90, 60, 100}, off[3] = {0x80, 60, 0};
+        in.addEvent(0, on, 3, 11);
+        in.addEvent(63, off, 3, 11);
+        in.addEvent(64, on, 3, 12);
+        in.addEvent(130, off, 3, 12);
+        in.addEvent(4095, on, 3, 13);
+        int total = 0;
+        bool ordered = true, idsKept = true;
+        const uint32_t expectedSlice[5] = {0, 0, 1, 2, 63};
+        const uint32_t expectedOffset[5] = {0, 63, 0, 2, 63};
+        int seen = 0;
+        for (uint32_t start = 0; start < 4096; start += 64) {
+            MidiBuffer slice;
+            splitMidiForSlice(in, start, 64, slice);
+            total += static_cast<int>(slice.getEventCount());
+            for (size_t i = 0; i < slice.getEventCount(); ++i) {
+                const auto& e = slice.getEvent(i);
+                if (e.sampleOffset >= 64) ordered = false;
+                if (seen < 5 && (start / 64 != expectedSlice[seen] || e.sampleOffset != expectedOffset[seen])) idsKept = false;
+                if (e.noteId < 11 || e.noteId > 13) idsKept = false;
+                ++seen;
+            }
+        }
+        check(total == 5, "every MIDI event lands in exactly one slice (" + std::to_string(total) + " of 5)");
+        check(ordered, "with its offset rebased to inside the slice");
+        check(idsKept, "in the right slice, keeping its note identity");
+    }
 
     if (g_failures > 0) {
         std::cerr << g_failures << " check(s) failed\n";
