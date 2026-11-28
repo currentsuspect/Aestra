@@ -206,14 +206,6 @@ bool NativePluginPanel::isInsideForOutsideClick(const NUIPoint& p) const {
 }
 
 bool NativePluginPanel::onMouseEvent(const NUIMouseEvent& event) {
-    // Clicking a panel brings it to the front: within its layer, and the layer above the other panels, so a plugin that was
-    // behind the mixer or another editor is no longer covered.
-    if (event.pressed && event.button == NUIMouseButton::Left && getBounds().contains(event.position)) {
-        if (auto* layer = getParent()) {
-            bringToFront();
-            layer->bringToFront();
-        }
-    }
     if (m_resizable) {
         const bool overGrip = gripRect().contains(event.position);
         if (overGrip != m_gripHover) {

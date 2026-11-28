@@ -121,6 +121,12 @@ public:
     /// False for layers and controls.
     virtual bool occludesNativeWindows() const { return false; }
 
+    /// A child marked always-on-top stays last among its siblings: raising or adding another sibling never puts that one over it.
+    /// The plugin editors' layer uses it, because an editor's own window is a real X window that always paints over Aestra, so
+    /// nothing Aestra draws may ever sit over an editor's frame.
+    void setAlwaysOnTop(bool onTop) { alwaysOnTop_ = onTop; }
+    bool isAlwaysOnTop() const { return alwaysOnTop_; }
+
     NUIComponent* getParent() const { return parent_; }
     const std::vector<std::shared_ptr<NUIComponent>>& getChildren() const { return children_; }
     
@@ -203,6 +209,7 @@ public:
     NUIKeyCallback onKeyUp;
     
 protected:
+    void keepAlwaysOnTopLast();
     void renderChildren(NUIRenderer& renderer);
     void updateChildren(double deltaTime);
     bool containsPoint(const NUIPoint& point) const;
@@ -222,6 +229,7 @@ private:
     bool dirty_ = true;
     float opacity_ = 1.0f;
     bool hitTestVisible_ = true;
+    bool alwaysOnTop_ = false;
     bool dropPassThrough_ = false;
     NUILayer layer_ = NUILayer::Content;
     

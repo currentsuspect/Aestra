@@ -41,6 +41,27 @@ inline Layout::NUIWindowRect editorIntrinsicBounds(float currentWidth, float cur
     return Layout::NUIWindowRect(0.0f, 0.0f, width, height);
 }
 
+/** @brief How far each further editor opens from the centre, down and to the right. */
+constexpr double kCascadeStepPx = 28.0;
+/** @brief After this many steps the cascade starts over, instead of walking off the screen. */
+constexpr int kCascadeSteps = 5;
+
+/**
+ * @brief Where a NEW editor with no stored position opens while @p openCount others are already showing: a step down and to the
+ * right of the centre for each, so an older editor's title bar is never exactly under the newer one and can still be clicked to
+ * bring it forward. Only the anchor moves (it still goes through the anchored-placement resolve), the size is never touched.
+ * @p freeWidth / @p freeHeight are the room the editor has to move in (region minus its own size); with none it stays put.
+ */
+inline Layout::NUIAnchoredRect cascadedOpenPreference(const Layout::NUIAnchoredRect& base, int openCount, double freeWidth,
+                                                      double freeHeight) {
+    if (openCount <= 0 || freeWidth <= 0.0 || freeHeight <= 0.0) return base;
+    const int step = ((openCount - 1) % kCascadeSteps) + 1;
+    Layout::NUIAnchoredRect result = base;
+    result.anchorX = std::clamp(base.anchorX + step * kCascadeStepPx / freeWidth, 0.0, 1.0);
+    result.anchorY = std::clamp(base.anchorY + step * kCascadeStepPx / freeHeight, 0.0, 1.0);
+    return result;
+}
+
 /**
  * @brief The preference an editor opens with: the stored anchor when the user
  * placed this surface before, centred otherwise — and always the CURRENT

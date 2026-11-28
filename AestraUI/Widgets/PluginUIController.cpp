@@ -88,6 +88,9 @@ void PluginUIController::setPluginManager(Aestra::Audio::PluginManager* manager)
 
 void PluginUIController::setPopupLayer(NUIComponent* layer) {
     m_popupLayer = layer;
+    // Plugin editors are real X windows and always paint over Aestra, so nothing Aestra draws (the mixer, the other panels) may
+    // ever be raised over their layer: it stays on top of its siblings.
+    if (layer) layer->setAlwaysOnTop(true);
 }
 
 void PluginUIController::setMixerCatalogProvider(
@@ -662,7 +665,6 @@ void PluginUIController::openPluginEditor(
             if (m_popupLayer && panel->getParent() == m_popupLayer) {
                 m_popupLayer->removeChild(panel);
                 m_popupLayer->addChild(panel); // last child draws on top
-                m_popupLayer->bringToFrontPriority(); // and the layer above the mixer and the other panels
             }
             panel->setVisible(true);
             return;
@@ -757,12 +759,20 @@ void PluginUIController::openPluginEditor(
         if (m_editorAnchorGetter) {
             stored = m_editorAnchorGetter(key);
         }
-        const Layout::NUIAnchoredRect preference =
-            EditorPlacement::editorOpenPreference(stored, intrinsic.width, intrinsic.height);
-
         const auto layerBounds = m_popupLayer->getBounds();
         const auto below = EditorPlacement::editorPlacementRegion(layerBounds.y, layerBounds.width, layerBounds.height,
                                                                   editorContentTop());
+        Layout::NUIAnchoredRect preference =
+            EditorPlacement::editorOpenPreference(stored, intrinsic.width, intrinsic.height);
+        if (!stored.has_value()) {
+            // Never placed by the user: step down and right of the centre for each editor already showing, so an older one's
+            // title bar stays visible and clickable (it can be brought forward from there).
+            int showing = 0;
+            for (const auto& other : m_activeEditors)
+                if (other && other != editorComp && other->isVisible() && other->getParent() == m_popupLayer) ++showing;
+            preference = EditorPlacement::cascadedOpenPreference(preference, showing, below.width - intrinsic.width,
+                                                                 below.height - intrinsic.height);
+        }
         const Layout::NUILocalRect localRegion(below.x, below.y, below.width, below.height);
         const bool holdSize = std::dynamic_pointer_cast<NativePluginPanel>(editorComp) != nullptr;
         const auto popupGlobal = m_popupLayer->getBounds(); // window-absolute: the layer's origin
@@ -836,7 +846,6 @@ void PluginUIController::openPluginEditor(
         }
 
         m_popupLayer->addChild(editorComp);
-        m_popupLayer->bringToFrontPriority(); // a deliberate open: above the mixer and the other panels
         m_activeEditors.push_back(editorComp);
         m_editorKeys.erase(std::remove_if(m_editorKeys.begin(), m_editorKeys.end(),
                                           [](const auto& entry) { return entry.first.expired(); }),

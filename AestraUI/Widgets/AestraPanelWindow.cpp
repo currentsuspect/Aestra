@@ -292,6 +292,12 @@ bool AestraPanelWindow::onMouseEvent(const NUIMouseEvent& event)
 {
     auto b = getBounds();
 
+    // A press on an editor brings it to the front of the others. The one on top took the press first where they overlap, so this
+    // is what lets an editor that sticks out from behind another be raised.
+    if (event.pressed && event.button == NUIMouseButton::Left && b.contains(event.position)) {
+        bringToFront();
+    }
+
     // Hover for the editors' controls; cleared when the pointer is reported outside the window.
     const bool inside = b.contains(event.position);
     if (inside != m_hoverIn || (inside && (event.position.x != m_hoverPos.x || event.position.y != m_hoverPos.y))) {

@@ -282,6 +282,7 @@ void NUIComponent::addChild(std::shared_ptr<NUIComponent> child) {
     child->parent_ = this; // Raw pointer is safe because parent owns child (strong ref)
     // No shared_from_this() needed unless we want weak_ptr parent, but here we use raw * for parent back-pointer
     children_.push_back(child);
+    keepAlwaysOnTopLast(); // a child added after an always-on-top sibling does not go over it
     
     // Inherit theme if child doesn't have one
     if (!child->theme_ && theme_) {
@@ -452,6 +453,14 @@ void NUIComponent::bringToFront() {
         store.push_back(self);
         parent_->setDirty();
     }
+    parent_->keepAlwaysOnTopLast();
+}
+
+void NUIComponent::keepAlwaysOnTopLast() {
+    // Stable: children marked always-on-top move to the end, in the order they already had.
+    const auto firstOnTop = std::stable_partition(children_.begin(), children_.end(),
+                                                  [](const std::shared_ptr<NUIComponent>& c) { return !c->isAlwaysOnTop(); });
+    if (firstOnTop != children_.end()) setDirty();
 }
 
 void NUIComponent::bringToFrontPriority() {

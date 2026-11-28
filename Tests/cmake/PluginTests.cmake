@@ -763,8 +763,9 @@ set_tests_properties(EditorWindowIdentityTest PROPERTIES LABELS "audio;plugins;e
 if(AESTRA_ENABLE_UI)
     aestra_require_ui_targets(NativeWindowOcclusionTest AestraUI_Core AestraUI_Platform)
     add_executable(NativeWindowOcclusionTest AestraUI/NativeWindowOcclusionTest.cpp)
-    target_link_libraries(NativeWindowOcclusionTest PRIVATE AestraUI_Core AestraUI_Platform)
-    target_include_directories(NativeWindowOcclusionTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraUI ${CMAKE_SOURCE_DIR}/AestraUI/Widgets)
+    target_link_libraries(NativeWindowOcclusionTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
+    target_include_directories(NativeWindowOcclusionTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraUI ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin ${CMAKE_SOURCE_DIR}/AestraCore/include)
     add_test(NAME NativeWindowOcclusionTest COMMAND NativeWindowOcclusionTest)
     set_tests_properties(NativeWindowOcclusionTest PROPERTIES LABELS "unit;ui;plugin;regression;contract:plugins" TIMEOUT 30)
 endif()
