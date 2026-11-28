@@ -14,13 +14,17 @@ GenericPluginEditor::GenericPluginEditor(std::shared_ptr<Aestra::Audio::IPluginI
 
     setId("GenericPluginEditor");
     setEnforceParentBounds(true);
+    // The two-row header every plugin window uses (FD-73): row one is the title, the context and close; row two is the
+    // preset bar. Without it the preset bar was squeezed beside the title and the close button had no room. On before the
+    // rows are laid out, because they start below the header.
+    setTwoRowHeader(true);
     buildParameterWidgets();
 
     std::string title = m_instance ? m_instance->getInfo().name : "Plugin Editor";
     setPanelTitle(title);
 
-    // Fixed reasonable size
-    setSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+    // Fixed reasonable size: the parameter area keeps its height, under a header that is now two rows tall.
+    setSize(WINDOW_WIDTH, WINDOW_HEIGHT + headerHeight() - AestraPanelWindow::TITLE_BAR_H);
 }
 
 GenericPluginEditor::~GenericPluginEditor() {
@@ -53,7 +57,7 @@ void GenericPluginEditor::buildParameterWidgets() {
 }
 
 void GenericPluginEditor::layoutParameters() {
-    float y = AestraPanelWindow::TITLE_BAR_H + PADDING - m_scrollOffset;
+    float y = headerHeight() + PADDING - m_scrollOffset;
 
     for (auto& p : m_parameters) {
         float x = PADDING;
@@ -86,11 +90,11 @@ void GenericPluginEditor::drawContent(NUIRenderer& renderer, const NUIRect& cont
         std::string msg = "No editable parameters";
         renderer.drawText(msg,
                          {bounds.x + bounds.width * 0.5f - 60,
-                          bounds.y + AestraPanelWindow::TITLE_BAR_H
-                              + (bounds.height - AestraPanelWindow::TITLE_BAR_H) * 0.5f},
+                          bounds.y + headerHeight()
+                              + (bounds.height - headerHeight()) * 0.5f},
                          11.0f, theme.getColor("textSecondary").withAlpha(0.5f));
     } else {
-        float viewportTop = AestraPanelWindow::TITLE_BAR_H;
+        float viewportTop = headerHeight();
         float viewportBottom = viewportTop + contentRect.height;
 
         for (size_t i = 0; i < m_parameters.size(); ++i) {
@@ -190,7 +194,7 @@ bool GenericPluginEditor::onMouseEvent(const NUIMouseEvent& event) {
 
         // Clamp scroll
         float contentHeight = m_parameters.size() * PARAMETER_HEIGHT + PADDING * 2;
-        float viewHeight = bounds.height - AestraPanelWindow::TITLE_BAR_H;
+        float viewHeight = bounds.height - headerHeight();
         m_scrollOffset = std::clamp(m_scrollOffset, 0.0f, std::max(0.0f, contentHeight - viewHeight));
 
         layoutParameters();

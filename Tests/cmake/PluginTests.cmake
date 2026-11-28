@@ -752,3 +752,18 @@ add_test(NAME MarkerRoundTripTest COMMAND MarkerRoundTripTest)
 set_tests_properties(MarkerRoundTripTest PROPERTIES
     LABELS "integration;serialization;markers;contract:durability"
     TIMEOUT 120)
+
+# The generic plugin editor uses the same two-row header as every other plugin window (founder report: RF-480R RVRB).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(GenericPluginEditorHeaderTest AestraUI_Core AestraUI_Platform)
+    add_executable(GenericPluginEditorHeaderTest AestraUI/GenericPluginEditorHeaderTest.cpp)
+    target_link_libraries(GenericPluginEditorHeaderTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
+    target_include_directories(GenericPluginEditorHeaderTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include)
+    add_test(NAME GenericPluginEditorHeaderTest COMMAND GenericPluginEditorHeaderTest)
+    set_tests_properties(GenericPluginEditorHeaderTest PROPERTIES LABELS "unit;ui;plugin;regression;contract:plugins" TIMEOUT 30)
+endif()
