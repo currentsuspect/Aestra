@@ -13,7 +13,7 @@
 1925 AestraUI/Widgets/PianoRollNoteLayer.cpp
 1979 AestraUI/Widgets/UnitRow.cpp
 2577 Source/App/AestraApp.cpp
-3840 Source/Components/FileBrowser.cpp
+3839 Source/Components/FileBrowser.cpp
 3170 Source/Components/TrackUIComponent.cpp
 4917 Source/Core/AestraContent.cpp
 2880 Source/Core/ProjectSerializer.cpp
