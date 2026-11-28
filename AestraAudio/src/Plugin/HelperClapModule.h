@@ -7,6 +7,7 @@
 
 
 #include "ClapAbiMirror.h"
+#include "ClapGuiResize.h"
 #include "HelperFakeClap.h"
 #include "HelperClapHostSupport.h"
 #include "HelperDynLib.h"
@@ -574,7 +575,13 @@ struct ClapModule {
     bool canResizeGui() const { return guiOpen && guiExt && guiExt->canResize && guiExt->canResize(plugin); }
     void resizeGui(int width, int height) {
         if (!guiOpen || !guiExt || !guiExt->setSize) return;
-        guiExt->setSize(plugin, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+        // Take the plugin's own idea of the nearest size it can draw, and size the window to it (ClapGuiResize.h).
+        std::function<void(int, int)> resizeWindow;
+        {
+            std::lock_guard<std::mutex> lock(hostContext.mutex);
+            resizeWindow = hostContext.requestResize;
+        }
+        applyClapGuiResize(*guiExt, plugin, width, height, resizeWindow);
     }
 
     bool process(const std::vector<float>& interleavedInput, uint32_t channels, uint32_t frames,
