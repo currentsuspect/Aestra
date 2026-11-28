@@ -17,7 +17,9 @@
 #include <cstdint>
 #include <filesystem>
 #include <iostream>
+#include <chrono>
 #include <string>
+#include <thread>
 #include <vector>
 
 using namespace Aestra::Audio;
@@ -131,6 +133,97 @@ int main(int argc, char** argv) {
         check(wrong == 0, "a 4096-frame render block through a plugin initialised for 64 is the input delayed by one chunk (" +
                               std::to_string(wrong) + " wrong samples)");
         check(bigPlugin.dryBlockCount() == 0 && bigPlugin.unsentBlockCount() == 0, "with no dry or unsent block");
+    }
+
+    // --- Starting a render after live playback: nothing of the live signal may leak into the start of the render --------------------
+    // Reported by the founder: a bounce renders, but with a click in its first millisecond, and not the same click each time. The
+    // plugin's FIFOs and timeline carry on from live playback, so whatever live audio was still queued came out at the start of the
+    // render. A render of silence has to be silent from its first sample.
+    {
+        PluginInstancePtr second;
+        factory.createPluginAsync(echoInfo(), [&](PluginInstancePtr instance) { second = std::move(instance); });
+        if (!second || !second->initialize(48000.0, kFrames)) {
+            std::cerr << "could not start the third echo plugin\n";
+            return 1;
+        }
+        second->activate();
+        auto& live = *static_cast<OutOfProcessPluginInstance*>(second.get());
+        OfflineRenderMode::setActive(false);
+        std::vector<float> loud(kFrames, 0.5f), sinkL(kFrames), sinkR(kFrames);
+        for (int k = 0; k < 40; ++k) { // paced like a device callback
+            const float* in[2] = {loud.data(), loud.data()};
+            float* out[2] = {sinkL.data(), sinkR.data()};
+            live.process(in, out, 2, 2, kFrames, nullptr, nullptr);
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        OfflineRenderMode::setActive(true); // the exporter starts a render
+        std::vector<float> silence(kFrames, 0.0f), outL(kFrames), outR(kFrames);
+        int leaked = 0;
+        for (int k = 0; k < 10; ++k) {
+            const float* in[2] = {silence.data(), silence.data()};
+            float* out[2] = {outL.data(), outR.data()};
+            live.process(in, out, 2, 2, kFrames, nullptr, nullptr);
+            for (uint32_t i = 0; i < kFrames; ++i) {
+                if (outL[i] != 0.0f || outR[i] != 0.0f) ++leaked;
+            }
+        }
+        OfflineRenderMode::setActive(false);
+        check(leaked == 0, "a render of silence started after live playback is silent from its first sample (" +
+                               std::to_string(leaked) + " samples of the live signal leaked in)");
+    }
+
+    // --- After a render the plugin must play cleanly: the exporter changes the sample rate, which re-initialises every plugin --------
+    // Reported by the founder: after a bounce the plugin is so crackly it cannot be used. Re-initialising a running instance resets
+    // its buffers and shared memory under the worker thread that is using them. Live audio after that must still be the input
+    // delayed by exactly one chunk, with no dry block.
+    {
+        PluginInstancePtr third;
+        factory.createPluginAsync(echoInfo(), [&](PluginInstancePtr instance) { third = std::move(instance); });
+        if (!third || !third->initialize(48000.0, kFrames)) {
+            std::cerr << "could not start the fourth echo plugin\n";
+            return 1;
+        }
+        third->activate();
+        auto& after = *static_cast<OutOfProcessPluginInstance*>(third.get());
+        std::vector<float> a(kFrames, 0.25f), b(kFrames), c(kFrames);
+        OfflineRenderMode::setActive(false);
+        for (int k = 0; k < 30; ++k) {
+            const float* in[2] = {a.data(), a.data()};
+            float* out[2] = {b.data(), c.data()};
+            after.process(in, out, 2, 2, kFrames, nullptr, nullptr);
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        OfflineRenderMode::setActive(true);
+        third->initialize(44100.0, kFrames); // what the exporter's sample-rate change does
+        third->activate();
+        for (int k = 0; k < 20; ++k) {
+            const float* in[2] = {a.data(), a.data()};
+            float* out[2] = {b.data(), c.data()};
+            after.process(in, out, 2, 2, kFrames, nullptr, nullptr);
+        }
+        OfflineRenderMode::setActive(false);
+        third->initialize(48000.0, kFrames); // and back at the end
+        third->activate();
+        const uint64_t dryBefore = after.dryBlockCount();
+        int wrong = 0, blocks = 0;
+        for (int k = 0; k < 300; ++k) {
+            std::vector<float> ramp(kFrames), outA(kFrames, -1.0f), outB(kFrames, -1.0f);
+            for (uint32_t i = 0; i < kFrames; ++i) ramp[i] = static_cast<float>(k * kFrames + i + 1);
+            const float* in[2] = {ramp.data(), ramp.data()};
+            float* out[2] = {outA.data(), outB.data()};
+            after.process(in, out, 2, 2, kFrames, nullptr, nullptr);
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            if (k < 8) continue; // let the hand-off settle
+            ++blocks;
+            // every output sample is some earlier input sample (a ramp value) or silence: never garbage, never the same value twice
+            for (uint32_t i = 1; i < kFrames; ++i) {
+                if (outA[i] != 0.0f && outA[i - 1] != 0.0f && outA[i] != outA[i - 1] + 1.0f) ++wrong;
+            }
+        }
+        check(wrong == 0, "after a render's re-initialisations, live audio is a clean ramp, no garbage or repeats (" +
+                              std::to_string(wrong) + " broken samples in " + std::to_string(blocks) + " blocks)");
+        check(after.dryBlockCount() - dryBefore <= 2, "and almost no dry blocks (" + std::to_string(after.dryBlockCount() - dryBefore) + ")");
+        check(!after.isCrashed(), "and the plugin is not crash-marked");
     }
 
     // --- Cutting MIDI into slices: nothing lost, nothing doubled, offsets rebased, note identities kept -------------------------

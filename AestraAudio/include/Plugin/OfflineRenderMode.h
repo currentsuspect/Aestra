@@ -2,6 +2,7 @@
 #pragma once
 
 #include <atomic>
+#include <cstdint>
 
 namespace Aestra {
 namespace Audio {
@@ -19,9 +20,18 @@ namespace Audio {
 class OfflineRenderMode {
 public:
     static bool active() { return flag().load(std::memory_order_acquire); }
-    static void setActive(bool on) { flag().store(on, std::memory_order_release); }
+    static void setActive(bool on) {
+        flag().store(on, std::memory_order_release);
+        epochCounter().fetch_add(1, std::memory_order_acq_rel);
+    }
+    /// Changes every time a render starts or ends, so a plugin can tell it has crossed from live playback to a render or back.
+    static uint32_t epoch() { return epochCounter().load(std::memory_order_acquire); }
 
 private:
+    static std::atomic<uint32_t>& epochCounter() {
+        static std::atomic<uint32_t> value{0};
+        return value;
+    }
     static std::atomic<bool>& flag() {
         static std::atomic<bool> value{false};
         return value;

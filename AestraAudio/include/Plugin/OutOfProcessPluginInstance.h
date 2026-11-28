@@ -241,6 +241,8 @@ private:
     ChunkMidiQueue m_midiQueue;
     uint64_t m_inFifoEnd{0};                ///< frames ever queued into m_inFifo: the MIDI queue's timeline
     uint64_t m_outStart{0};                 ///< timeline position of m_outFifo's first frame
+    uint32_t m_seenRenderEpoch = 0;          ///< OfflineRenderMode::epoch() this instance last flushed for
+    void flushForRenderBoundary(bool startingRender); ///< empties the hand-off and silences the plugin when a render starts or ends
     std::atomic<uint32_t> m_chunkFrames{0}; ///< chunk size: the largest callback seen, 0 before the first
     std::atomic<uint64_t> m_midiDrops{0};
 

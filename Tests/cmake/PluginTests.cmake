@@ -770,3 +770,9 @@ target_link_libraries(SandboxOfflineRenderTest PRIVATE AestraAudio)
 add_test(NAME SandboxOfflineRenderTest COMMAND SandboxOfflineRenderTest $<TARGET_FILE:AestraPluginHost>)
 set_tests_properties(SandboxOfflineRenderTest PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120
     LABELS "audio;plugins;regression;contract:plugins")
+
+# Preparing an already-active CLAP plugin deactivates it first (the exporter's sample-rate change re-inits every plugin).
+add_executable(ClapInitTwiceTest AestraAudio/ClapInitTwiceTest.cpp)
+target_include_directories(ClapInitTwiceTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include ${CMAKE_SOURCE_DIR}/AestraAudio/src ${CMAKE_SOURCE_DIR}/AestraAudio/src/Plugin)
+add_test(NAME ClapInitTwiceTest COMMAND ClapInitTwiceTest)
+set_tests_properties(ClapInitTwiceTest PROPERTIES LABELS "audio;plugins;regression;contract:plugins" TIMEOUT 30)

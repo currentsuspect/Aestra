@@ -40,6 +40,14 @@ void OutOfProcessPluginInstance::process(const float* const* inputs, float** out
         midiOutput->clear();
     }
 
+    // A render starting or ending changes what this plugin's hand-off means: its FIFOs, timeline and queued MIDI belong to the
+    // other mode, and the plugin may still be ringing. Left alone, live audio leaks into the first samples of a bounce (a click
+    // that differs each time) and the render's tail leaks into live playback afterwards (crackle).
+    if (const uint32_t epoch = OfflineRenderMode::epoch(); epoch != m_seenRenderEpoch) {
+        m_seenRenderEpoch = epoch;
+        flushForRenderBoundary(OfflineRenderMode::active());
+    }
+
     // An offline render (export, bounce, freeze) uses much larger blocks than the plugin was prepared for (the exporter renders 4096
     // frames, the plugin was initialised for the device's few hundred), and a block over the plugin's maximum is passed straight
     // through: silence for an instrument, dry for an effect, so a bounce lost every sandboxed plugin's audio. Offline, such a block
@@ -187,6 +195,31 @@ void OutOfProcessPluginInstance::process(const float* const* inputs, float** out
     }
     m_outFifo.popPlanar(at.data(), channels, wet); // channels past the transport's are silenced
     m_outStart += wet;
+}
+
+void OutOfProcessPluginInstance::flushForRenderBoundary(bool startingRender) {
+    // A chunk may be with the helper. A render can wait for it; the live callback must not, and at the end of a render nothing is in
+    // flight (each offline block waited for its answer).
+    if (startingRender) {
+        const auto giveUpAt = std::chrono::steady_clock::now() + std::chrono::seconds(1);
+        while ((m_pendingState.load(std::memory_order_acquire) == 1 || m_pendingState.load(std::memory_order_acquire) == 2 ||
+                m_readyState.load(std::memory_order_acquire) == 1) &&
+               !m_crashed.load(std::memory_order_acquire) && std::chrono::steady_clock::now() < giveUpAt) {
+            std::this_thread::yield();
+        }
+    }
+    uint8_t readyFull = 2;
+    m_readyState.compare_exchange_strong(readyFull, 0, std::memory_order_acq_rel); // a finished chunk of the other mode is dropped
+    m_inFifo.reset(static_cast<size_t>(std::max<uint32_t>(1, m_maxBlockSize)) * 3, m_transportChannels);
+    m_outFifo.reset(static_cast<size_t>(std::max<uint32_t>(1, m_maxBlockSize)) * 3, m_transportChannels);
+    m_midiQueue.clear();
+    m_inFifoEnd = 0;
+    m_outStart = 0;
+    // All Sound Off on every channel: notes still ringing from the other mode must not run into this one.
+    for (uint8_t channel = 0; channel < 16; ++channel) {
+        const uint8_t soundOff[3] = {static_cast<uint8_t>(0xB0 | channel), 120, 0};
+        m_midiQueue.push(0, soundOff);
+    }
 }
 
 } // namespace Audio
