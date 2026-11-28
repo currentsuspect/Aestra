@@ -281,6 +281,39 @@ int main(int argc, char** argv) {
                                                             std::to_string(synth.getLatencySamples()) + ")");
     }
 
+    // --- Live callbacks that change size: PipeWire resampling 48 kHz to 44.1 kHz delivers 411 and 412 frames in turn ---------------
+    // Reported by the founder: crackle that pulses, on a quiet DSP meter. The log showed 2-3 late blocks every second from every
+    // sandboxed plugin, chunk 412. The hand-off's one-chunk delay assumed every callback is the chunk's size.
+    {
+        PluginInstancePtr wob;
+        factory.createPluginAsync(echoInfo(), [&](PluginInstancePtr instance) { wob = std::move(instance); });
+        if (!wob || !wob->initialize(44100.0, 1024)) {
+            std::cerr << "could not start the wobble echo\n";
+            return 1;
+        }
+        wob->activate();
+        auto& live = *static_cast<OutOfProcessPluginInstance*>(wob.get());
+        OfflineRenderMode::setActive(false);
+        const uint64_t dryBefore = live.dryBlockCount();
+        int partial = 0;
+        for (int k = 0; k < 300; ++k) {
+            const uint32_t n = (k % 2 == 0) ? 411 : 412;
+            std::vector<float> one(n, 1.0f), l(n, -1.0f), r(n, -1.0f);
+            const float* in[2] = {one.data(), one.data()};
+            float* out[2] = {l.data(), r.data()};
+            live.process(in, out, 2, 2, n, nullptr, nullptr);
+            if (k >= 10) {
+                for (uint32_t i = 0; i < n; ++i) {
+                    if (l[i] != 1.0f) { ++partial; break; }
+                }
+            }
+            std::this_thread::sleep_for(std::chrono::microseconds(n * 1000000 / 44100));
+        }
+        const uint64_t dry = live.dryBlockCount() - dryBefore;
+        check(dry == 0 && partial == 0, "callbacks of 411 and 412 frames play every block wet (" + std::to_string(dry) +
+                                            " dry, " + std::to_string(partial) + " with a gap, of 290)");
+    }
+
     // --- Cutting MIDI into slices: nothing lost, nothing doubled, offsets rebased, note identities kept -------------------------
     {
         MidiBuffer in;

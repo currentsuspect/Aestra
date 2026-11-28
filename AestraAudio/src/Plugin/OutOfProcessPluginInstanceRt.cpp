@@ -128,23 +128,27 @@ void OutOfProcessPluginInstance::process(const float* const* inputs, float** out
         }
     }
 
-    // 3. One chunk goes to the helper when its slot is free. Two chunks or more waiting means
-    //    the helper fell behind: their time has passed (they played dry), so only the newest
-    //    goes. Their MIDI is kept and lands at the start of the chunk that does go.
-    if (chunk > 0 && m_inFifo.frames() >= chunk) { // no chunk before the first frames (a 0-frame callback)
+    // 3. What has come in goes to the helper when its slot is free, at most one chunk of it: the newest. More than a chunk
+    //    waiting means the helper fell behind and the older frames' time has passed (they played dry). Their MIDI is kept and
+    //    lands at the start of what does go. Everything is sent, not whole chunks only: callbacks need not all be the chunk's
+    //    size (PipeWire resampling 48 kHz to 44.1 kHz delivers 411 and 412 frames in turn), and fixed chunks then drift against
+    //    the callbacks, so every callback wanted frames that had not gone yet: a short silence in every block, a pulsing crackle.
+    //    Sent this way, each callback's frames come back by the next one, which the one-chunk delay (the largest callback) covers.
+    if (chunk > 0 && m_inFifo.frames() > 0) { // nothing before the first frames (a 0-frame callback)
         uint8_t pendingEmpty = 0;
         if (m_pendingState.compare_exchange_strong(pendingEmpty, 1, std::memory_order_acq_rel)) {
-            while (m_inFifo.frames() >= 2 * static_cast<size_t>(chunk)) {
-                m_inFifo.discard(chunk);
+            if (m_inFifo.frames() > chunk) {
+                m_inFifo.discard(m_inFifo.frames() - chunk);
             }
-            const uint64_t chunkStart = m_inFifoEnd - m_inFifo.frames();
-            m_inFifo.popInterleaved(m_pendingInput.data(), chunk);
-            const size_t midiBytes = m_midiQueue.takeChunk(chunkStart, chunkStart + chunk, m_pendingMidiData.data(),
+            const auto sendFrames = static_cast<uint32_t>(m_inFifo.frames());
+            const uint64_t chunkStart = m_inFifoEnd - sendFrames;
+            m_inFifo.popInterleaved(m_pendingInput.data(), sendFrames);
+            const size_t midiBytes = m_midiQueue.takeChunk(chunkStart, chunkStart + sendFrames, m_pendingMidiData.data(),
                                                            m_pendingMidiData.size());
             m_pendingTransport = HostTransportClock::current();
             m_pendingStart = chunkStart;
             m_pendingMidiBytes.store(midiBytes, std::memory_order_release);
-            m_pendingFrames.store(chunk, std::memory_order_release);
+            m_pendingFrames.store(sendFrames, std::memory_order_release);
             m_pendingState.store(2, std::memory_order_release);
             wakeWorker();
             sentChunk = true;
