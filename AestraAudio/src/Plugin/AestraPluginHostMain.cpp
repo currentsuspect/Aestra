@@ -318,6 +318,7 @@ int main(int argc, char** argv) {
     bool loaded = false;
     bool active = false;
     uint32_t maxBlockSize = 0;
+    double initSampleRate = 0.0; // what INIT activated the plugin at, so ACTIVATE can activate it again after DEACTIVATE
     std::vector<float> processBuffer;
     std::vector<uint8_t> midiBuffer;
     std::vector<uint8_t> stateBuffer;
@@ -587,6 +588,7 @@ int main(int argc, char** argv) {
             }
             double sampleRate = 0.0;
             input >> sampleRate >> maxBlockSize;
+            initSampleRate = sampleRate;
             if (sampleRate <= 0.0 || maxBlockSize == 0 || maxBlockSize > 65536) {
                 reply("ERR invalid-init");
                 continue;
@@ -701,6 +703,16 @@ int main(int argc, char** argv) {
                 continue;
             }
 #endif
+            // DEACTIVATE really deactivates a CLAP plugin, so ACTIVATE has to activate it again. It only set a flag, and
+            // the next audio block failed; the app takes a failed block for a crash and bypasses the plugin for good.
+            // A double stop does exactly this (AudioEngine::panic -> EffectChain::reset: deactivate, then activate).
+            if (clapModule.plugin && !clapModule.active && initSampleRate > 0.0) {
+                std::string error;
+                if (!clapModule.initialize(initSampleRate, maxBlockSize, error)) {
+                    reply("ERR " + error);
+                    continue;
+                }
+            }
             active = true;
             reply("OK ACTIVE");
         } else if (command == "DEACTIVATE") {

@@ -753,6 +753,18 @@ set_tests_properties(MarkerRoundTripTest PROPERTIES
     LABELS "integration;serialization;markers;contract:durability"
     TIMEOUT 120)
 
+# deactivate() then activate() (a double stop's EffectChain::reset) leaves a sandboxed CLAP plugin working, not crashed.
+add_executable(SandboxReactivateTest AestraAudio/SandboxReactivateTest.cpp)
+target_include_directories(SandboxReactivateTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include)
+target_compile_definitions(SandboxReactivateTest PRIVATE AESTRA_ENABLE_TEST_HOOKS)
+target_link_libraries(SandboxReactivateTest PRIVATE AestraAudio)
+add_test(NAME SandboxReactivateTest COMMAND SandboxReactivateTest $<TARGET_FILE:AestraPluginHost>)
+set_tests_properties(SandboxReactivateTest PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 60
+    LABELS "audio;plugins;regression;contract:plugins")
+
 # The sandbox helper's standalone editor window carries a WM class and a dialog type, so tiling compositors float it.
 add_executable(EditorWindowIdentityTest AestraAudio/EditorWindowIdentityTest.cpp)
 target_include_directories(EditorWindowIdentityTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)

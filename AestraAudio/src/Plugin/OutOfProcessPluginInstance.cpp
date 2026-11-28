@@ -965,8 +965,11 @@ void OutOfProcessPluginInstance::activate() {
 }
 
 void OutOfProcessPluginInstance::deactivate() {
-    sendCommand("DEACTIVATE", nullptr);
+    // The flag goes down under the IPC mutex, before DEACTIVATE is sent, so the worker's "active, then send" transaction
+    // (workerLoop) cannot interleave with it.
+    std::lock_guard<std::mutex> lock(m_ipcMutex);
     m_active.store(false, std::memory_order_release);
+    sendCommandLocked("DEACTIVATE", nullptr);
 }
 
 // process() — the audio-thread side of the hand-over — lives in OutOfProcessPluginInstanceRt.cpp.
@@ -1264,6 +1267,11 @@ void OutOfProcessPluginInstance::resetWatchdog() {
 bool OutOfProcessPluginInstance::sendCommand(const std::string& command, std::string* response,
                                              std::chrono::milliseconds timeout) {
     std::lock_guard<std::mutex> lock(m_ipcMutex);
+    return sendCommandLocked(command, response, timeout);
+}
+
+bool OutOfProcessPluginInstance::sendCommandLocked(const std::string& command, std::string* response,
+                                                   std::chrono::milliseconds timeout) {
     if (!m_process || !m_process->isRunning()) {
         return false;
     }
@@ -1356,9 +1364,27 @@ void OutOfProcessPluginInstance::workerLoop() {
         m_workerStart = m_pendingStart;
         m_pendingState.store(0, std::memory_order_release);
 
-        if (sampleCount > m_workerInput.size() || midiBytes > m_workerMidiData.size() ||
-            !processBlockInHelper(m_workerInput, m_transportChannels, frames, m_workerMidiData, midiBytes,
-                                  m_workerTransport, m_workerOutput)) {
+        // Deactivated while this block was queued (a double stop resets every plugin: deactivate, then activate). The
+        // helper answers ERR for a deactivated plugin, and a failed block marks the plugin crashed for good. So "is it
+        // active" and the send are ONE transaction under the IPC mutex, and deactivate() clears the flag under the same
+        // lock before it sends DEACTIVATE: either this block reaches a plugin that is still active, or it is dropped (the
+        // next callback plays that audio dry). Checking first and sending later left a gap deactivate() could slip into.
+        const bool oversize = sampleCount > m_workerInput.size() || midiBytes > m_workerMidiData.size();
+        bool dropped = false;
+        bool answered = false;
+        {
+            std::lock_guard<std::mutex> lock(m_ipcMutex);
+            if (!m_active.load(std::memory_order_acquire)) {
+                dropped = true;
+            } else if (!oversize) {
+                answered = processBlockInHelper(m_workerInput, m_transportChannels, frames, m_workerMidiData, midiBytes,
+                                                m_workerTransport, m_workerOutput);
+            }
+        }
+        if (dropped) {
+            continue;
+        }
+        if (oversize || !answered) {
             markCrashed();
             continue;
         }
@@ -1411,7 +1437,7 @@ bool OutOfProcessPluginInstance::processBlockInHelper(const std::vector<float>& 
         const std::string command = "PROCESSSHM " + std::to_string(channels) + " " + std::to_string(frames) + " " +
                                     std::to_string(midiBytes) + transport.toWire();
         std::string response;
-        if (!sendCommand(command, &response) || response != "OK") {
+        if (!sendCommandLocked(command, &response) || response != "OK") {
             return false;
         }
         if (output.size() < sampleCount) {
@@ -1431,7 +1457,7 @@ bool OutOfProcessPluginInstance::processBlockInHelper(const std::vector<float>& 
     }
     command << transport.toWire();
     std::string response;
-    if (!sendCommand(command.str(), &response)) {
+    if (!sendCommandLocked(command.str(), &response)) {
         return false;
     }
     constexpr const char* kPrefix = "OK ";
