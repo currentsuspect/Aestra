@@ -1088,9 +1088,31 @@ void AestraWindowManager::resolveActiveCursorStyle() {
     // lane) is something being carried: the closed hand, wherever the pointer
     // travels. The source only set the open hand on hover, and nothing else
     // owns the cursor between drag start and drop.
-    if (AestraUI::NUIDragDropManager::getInstance().isDragging()) {
+    const bool dragging = AestraUI::NUIDragDropManager::getInstance().isDragging();
+    if (dragging) {
         m_activeCursorStyle = AestraUI::NUICursorStyle::Grabbing;
     }
+
+    // A resize cursor that sticks while the pointer travels over something else only shows live, so every time the
+    // drawn cursor enters or leaves a resize style the log says which source decided it: the position-based panel
+    // resolver (re-run on every move) or a style a component left on the bridge (held until something resets it).
+    const auto isResize = [](AestraUI::NUICursorStyle s) {
+        return s == AestraUI::NUICursorStyle::ResizeNS || s == AestraUI::NUICursorStyle::ResizeEW ||
+               s == AestraUI::NUICursorStyle::ResizeNWSE || s == AestraUI::NUICursorStyle::ResizeNESW;
+    };
+    if (m_activeCursorStyle != m_lastResolvedCursorStyle &&
+        (isResize(m_activeCursorStyle) || isResize(m_lastResolvedCursorStyle))) {
+        const auto pos = m_window->getCursorPosition();
+        const char* source = dragging                                ? "drag-drop"
+                             : (m_activeCursorStyle == m_panelCursorStyle) ? "panel-edge (per move)"
+                                                                           : "bridge (held by a component)";
+        Log::info(std::string("[Cursor] resize style ") + std::to_string(static_cast<int>(m_lastResolvedCursorStyle)) +
+                  " -> " + std::to_string(static_cast<int>(m_activeCursorStyle)) + " decided by " + source +
+                  " panel=" + std::to_string(static_cast<int>(m_panelCursorStyle)) +
+                  " bridge=" + std::to_string(static_cast<int>(bridgeStyle)) +
+                  " at=" + std::to_string(static_cast<int>(pos.x)) + "," + std::to_string(static_cast<int>(pos.y)));
+    }
+    m_lastResolvedCursorStyle = m_activeCursorStyle;
 }
 
 void AestraWindowManager::initializeCustomCursors() {

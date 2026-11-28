@@ -247,6 +247,7 @@ private:
     AestraUI::NUICursorStyle m_panelCursorStyle{AestraUI::NUICursorStyle::Arrow}; // set per mouse move
     AestraUI::NUICursorStyle m_activeCursorStyle{AestraUI::NUICursorStyle::Arrow}; // the drawn glyph
     bool m_cachedNativeCursorHidden{false};
+    AestraUI::NUICursorStyle m_lastResolvedCursorStyle{AestraUI::NUICursorStyle::Arrow}; // for the resize-style trace
 
     // Input State
     std::function<void(TransportAction)> m_transportCallback;
