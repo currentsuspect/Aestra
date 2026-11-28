@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "ConfirmationDialog.h"
+#include "ConfirmationDialogWrap.h"
 #include "../AestraUI/Widgets/AestraPanelWindow.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
@@ -8,37 +9,6 @@
 #include <cmath>
 
 namespace Aestra {
-
-namespace {
-// Split `text` into paragraphs on \n, then greedily word-wrap each to `maxWidth`.
-// No renderer needed: approximate char width (matches renderer fallback fontSize*0.5).
-std::vector<std::string> wrapMessageLines(const std::string& text, float maxWidth, float fontSize) {
-    std::vector<std::string> lines;
-    const float charWidth = fontSize * 0.5f;
-    if (maxWidth <= 0.0f || charWidth <= 0.0f) { lines.push_back(text); return lines; }
-    const size_t maxChars = static_cast<size_t>(std::max(1.0f, maxWidth / charWidth));
-    size_t start = 0;
-    while (true) {
-        const size_t nl = text.find('\n', start);
-        const std::string paragraph = text.substr(start, nl == std::string::npos ? std::string::npos : nl - start);
-        std::string current;
-        size_t wordStart = 0;
-        while (wordStart <= paragraph.size()) {
-            const size_t sp = paragraph.find(' ', wordStart);
-            const std::string word = paragraph.substr(wordStart, sp == std::string::npos ? std::string::npos : sp - wordStart);
-            const std::string trial = current.empty() ? word : current + " " + word;
-            if (!current.empty() && trial.size() > maxChars) { lines.push_back(current); current = word; }
-            else { current = trial; }
-            if (sp == std::string::npos) break;
-            wordStart = sp + 1;
-        }
-        lines.push_back(current);
-        if (nl == std::string::npos) break;
-        start = nl + 1;
-    }
-    return lines;
-}
-} // namespace
 
 ConfirmationDialog::ConfirmationDialog()
     : m_response(DialogResponse::None)
