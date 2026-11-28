@@ -752,3 +752,22 @@ add_test(NAME MarkerRoundTripTest COMMAND MarkerRoundTripTest)
 set_tests_properties(MarkerRoundTripTest PROPERTIES
     LABELS "integration;serialization;markers;contract:durability"
     TIMEOUT 120)
+
+# The helper answers an audio block while its main thread is busy with the editor: a late block plays dry, a click.
+add_executable(SandboxAudioThreadTest AestraAudio/SandboxAudioThreadTest.cpp)
+target_include_directories(SandboxAudioThreadTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include)
+target_compile_definitions(SandboxAudioThreadTest PRIVATE AESTRA_ENABLE_TEST_HOOKS)
+target_link_libraries(SandboxAudioThreadTest PRIVATE AestraAudio)
+add_test(NAME SandboxAudioThreadTest COMMAND SandboxAudioThreadTest $<TARGET_FILE:AestraPluginHost>)
+set_tests_properties(SandboxAudioThreadTest PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 60
+    LABELS "audio;plugins;rt-safety;regression;contract:plugins")
+
+# The hand-over between the helper's pipe thread and its main thread keeps one-command-at-a-time order.
+add_executable(HelperCommandMailboxTest AestraAudio/HelperCommandMailboxTest.cpp)
+target_include_directories(HelperCommandMailboxTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/src)
+target_link_libraries(HelperCommandMailboxTest PRIVATE Threads::Threads)
+add_test(NAME HelperCommandMailboxTest COMMAND HelperCommandMailboxTest)
+set_tests_properties(HelperCommandMailboxTest PROPERTIES TIMEOUT 30 LABELS "audio;plugins;threading;regression;contract:plugins")
