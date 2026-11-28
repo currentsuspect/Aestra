@@ -771,3 +771,12 @@ target_include_directories(HelperCommandMailboxTest PRIVATE ${CMAKE_SOURCE_DIR}/
 target_link_libraries(HelperCommandMailboxTest PRIVATE Threads::Threads)
 add_test(NAME HelperCommandMailboxTest COMMAND HelperCommandMailboxTest)
 set_tests_properties(HelperCommandMailboxTest PROPERTIES TIMEOUT 30 LABELS "audio;plugins;threading;regression;contract:plugins")
+
+# The helper exits when told to: EXIT used to leave main() under a waiting pipe thread, and the process never ended.
+if(UNIX AND TARGET AestraPluginHost)
+    add_executable(SandboxHelperExitTest AestraAudio/SandboxHelperExitTest.cpp)
+    target_compile_definitions(SandboxHelperExitTest PRIVATE HELPER_PATH="$<TARGET_FILE:AestraPluginHost>")
+    add_dependencies(SandboxHelperExitTest AestraPluginHost)
+    add_test(NAME SandboxHelperExitTest COMMAND SandboxHelperExitTest)
+    set_tests_properties(SandboxHelperExitTest PROPERTIES TIMEOUT 120 LABELS "audio;plugins;regression;contract:plugins")
+endif()

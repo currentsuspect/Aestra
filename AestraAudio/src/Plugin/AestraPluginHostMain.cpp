@@ -1069,7 +1069,10 @@ int main(int argc, char** argv) {
             vst3Module.close();
 #endif
             reply("OK EXIT");
-            return 0;
+            // Not `return 0`: the pipe thread is waiting for this command to finish, and returning from main() destroyed the
+            // hand-over's mutex and condition variable under it, so the process never ended. Leaving the loop takes the safe
+            // shutdown path below, the same as end of input does.
+            break;
         } else if (command == "STATUS") {
             reply(active ? "OK ACTIVE" : (loaded ? "OK LOADED" : "OK EMPTY"));
         } else if (command == "SHM") {
