@@ -207,6 +207,7 @@ private:
 
     std::shared_ptr<Aestra::SettingsDialog> m_settingsDialog;
     bool m_modalWasOpen = false; // for the one-time cursor hand-back when a modal opens
+    bool m_popupWasOpen = false; // likewise for a menu/dropdown (File menu over a panel edge)
     std::function<bool()> m_inputHold; // setInputHold: a bounce rendering the live song
     /** True while any modal dialog covers the content (it then owns the cursor, not the content). */
     bool isModalDialogOpen() const;
@@ -247,6 +248,7 @@ private:
     AestraUI::NUICursorStyle m_panelCursorStyle{AestraUI::NUICursorStyle::Arrow}; // set per mouse move
     AestraUI::NUICursorStyle m_activeCursorStyle{AestraUI::NUICursorStyle::Arrow}; // the drawn glyph
     bool m_cachedNativeCursorHidden{false};
+    AestraUI::NUICursorStyle m_lastResolvedCursorStyle{AestraUI::NUICursorStyle::Arrow}; // for the resize-style trace
 
     // Input State
     std::function<void(TransportAction)> m_transportCallback;

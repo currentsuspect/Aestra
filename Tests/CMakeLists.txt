@@ -5915,3 +5915,10 @@ target_include_directories(AsyncFileDialogTest PRIVATE ${CMAKE_SOURCE_DIR}/Aestr
 add_test(NAME AsyncFileDialogTest COMMAND AsyncFileDialogTest)
 set_tests_properties(AsyncFileDialogTest PROPERTIES LABELS "platform;dialog;threading;regression;contract:application" TIMEOUT 30
     SKIP_RETURN_CODE 77)
+
+# Who may own the cursor: panel edges yield to an open modal AND an open popup (File menu over a panel's edge).
+# Pure header, no UI libraries.
+add_executable(CursorOwnershipTest AestraUI/CursorOwnershipTest.cpp)
+target_include_directories(CursorOwnershipTest PRIVATE ${CMAKE_SOURCE_DIR}/Source/Core)
+add_test(NAME CursorOwnershipTest COMMAND CursorOwnershipTest)
+set_tests_properties(CursorOwnershipTest PROPERTIES LABELS "unit;cursor;contract:core")
