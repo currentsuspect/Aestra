@@ -168,6 +168,20 @@ bool TrackManagerUI::isMinimapResizeCursorActive() const {
            m_timelineMinimap->getCursorHint() == AestraUI::TimelineMinimapCursorHint::ResizeHorizontal;
 }
 
+bool TrackManagerUI::isTrimCursorShown() const {
+    // One answer for the claim and for the paint. A row's trim hover only clears when the row hears the pointer
+    // move or leave, and the transport bar or a panel over the timeline takes those moves: the hover goes stale
+    // and the arrow rode the pointer along the whole transport (28 Nov 2026). The window reports every move, so
+    // a hover is only honoured from a current pointer position. An active trim owns the pointer wherever it goes.
+    const bool hoverCurrent = isHoverPointerCurrent();
+    for (const auto& trackUI : m_trackUIComponents) {
+        if (trackUI && (trackUI->isTrimming() || (hoverCurrent && trackUI->isHoveringTrimEdge()))) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool TrackManagerUI::isRulerPointerActive() const {
     // A hidden timeline receives no mouse events, so m_lastMousePos freezes at
     // whatever position it had when the view switched — gating on visibility
@@ -216,12 +230,8 @@ bool TrackManagerUI::isCustomCursorActive() const {
     const bool hoverCurrent = isHoverPointerCurrent();
 
     // 1. Trim edge active, or hovered from a current pointer position
-    for (const auto& trackUI : m_trackUIComponents) {
-        if (!trackUI)
-            continue;
-        if (trackUI->isTrimming() || (hoverCurrent && trackUI->isHoveringTrimEdge())) {
-            return true;
-        }
+    if (isTrimCursorShown()) {
+        return true;
     }
 
     // 1b. A clip being moved, or hovered where a drag would move it → hand.
@@ -765,23 +775,10 @@ bool TrackManagerUI::handleToolbarClick(const AestraUI::NUIPoint& position) {
 
 void TrackManagerUI::renderToolCursor(AestraUI::NUIRenderer& renderer, const AestraUI::NUIPoint& position) {
     // Check if any track is hovering a trim edge - render horizontal resize cursor
-    bool isHoveringTrimEdge = false;
-    bool isTrimming = false;
-    for (auto& trackUI : m_trackUIComponents) {
-        if (!trackUI)
-            continue;
-        if (trackUI->isHoveringTrimEdge() || trackUI->isTrimming()) {
-            isHoveringTrimEdge = true;
-            isTrimming = trackUI->isTrimming();
-            break;
-        }
-    }
-
-    if (isHoveringTrimEdge) {
+    if (isTrimCursorShown()) {
         // Render horizontal resize cursor — the canonical white ResizeEW glyph,
         // drawn untinted so it matches every other resize cursor. Hover and an
         // active trim share it; the clip edge itself shows the trim in progress.
-        (void)isTrimming;
         if (m_trimCursorIcon) {
             AestraUI::NUIRect iconRect(position.x - 9, position.y - 9, 18, 18);
             m_trimCursorIcon->setBounds(iconRect);
@@ -964,12 +961,8 @@ void TrackManagerUI::renderMinimapResizeCursor(AestraUI::NUIRenderer& renderer, 
     // === EXCLUSION: Don't render minimap resize cursor if any other custom cursor is active ===
 
     // 1. Check if trim cursor is active (hovering or actively trimming clip edges)
-    for (auto& trackUI : m_trackUIComponents) {
-        if (!trackUI)
-            continue;
-        if (trackUI->isHoveringTrimEdge() || trackUI->isTrimming()) {
-            return; // Trim cursor takes priority
-        }
+    if (isTrimCursorShown()) {
+        return; // Trim cursor takes priority
     }
 
     // 2. Split and Paint tools own the cursor while we're over the clip grid.

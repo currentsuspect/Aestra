@@ -158,6 +158,8 @@ public:
     // Cursor visibility callback (for custom cursor support)
     void setOnCursorVisibilityChanged(std::function<void(bool)> callback) { m_onCursorVisibilityChanged = callback; }
     bool isMinimapResizeCursorActive() const;
+    /** @brief True while the timeline wants its trim-edge glyph (the white left-right arrow) drawn at the pointer. */
+    bool isTrimCursorShown() const;
     bool isCustomCursorActive() const; // Returns true if any tool/resize cursor is active
 
     // --- Track heights (TrackManagerUIView.cpp) ---

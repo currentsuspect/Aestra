@@ -232,6 +232,80 @@ void testSplitToolEdgeTrims() {
 
 } // namespace
 
+// Live report, 28 Nov 2026: hover a clip's trim edge, then move up into the transport bar. The transport takes those
+// moves, so the clip row never hears the pointer leave and its trim hover stays set; the timeline kept painting the
+// left-right arrow at the real pointer position for the whole journey along the transport. The window reports every
+// pointer move, so a position the timeline did not hear is the signal that its hover is stale (the claim already
+// honours it; the paint did not). An active trim owns the pointer wherever it goes.
+void testStaleTrimHoverStopsPaintingOverTheTransport() {
+    Fixture f;
+    if (!f.build()) return;
+    const auto c = f.clip();
+    const float x = c.x + c.width - 3.0f;
+    const float y = c.y + c.height * 0.5f;
+
+    f.manager->setWindowPointerPosition(x, y); // the window reports every move
+    f.move(x, y);                              // and this one reaches the timeline
+    check(f.lane->isHoveringTrimEdge(), "premise: the pointer is on the clip's trim edge");
+    check(f.manager->isTrimCursorShown(), "on the edge the trim arrow is drawn");
+
+    f.manager->setWindowPointerPosition(x, -40.0f); // up into the transport bar: the timeline never hears this move
+    check(f.lane->isHoveringTrimEdge(), "premise: the row never heard the pointer leave, so its hover is stale");
+    check(!f.manager->isTrimCursorShown(), "a stale trim hover must not keep painting the arrow at the pointer");
+
+    f.manager->setWindowPointerPosition(x, y); // back at the position the timeline last heard
+    check(f.manager->isTrimCursorShown(), "back on the edge the arrow returns");
+
+    f.down(x, y);
+    check(f.lane->isTrimming(), "premise: a press on the edge starts a trim");
+    f.manager->setWindowPointerPosition(x, -40.0f);
+    check(f.manager->isTrimCursorShown(), "an active trim keeps its arrow wherever the pointer goes");
+    f.up(x, y);
+}
+
+// Live report, 28 Nov 2026 (owner's own repro): resize a clip, then go straight up and let go over the transport bar.
+// The release never reaches the timeline's tree directly; the trim must still end with it, and the arrow with the trim.
+void testTrimReleasedOverTheTransportEndsTheTrim() {
+    Fixture f;
+    if (!f.build()) return;
+    const auto c = f.clip();
+    const float x = c.x + c.width - 3.0f;
+    const float y = c.y + c.height * 0.5f;
+
+    f.manager->setWindowPointerPosition(x, y);
+    f.move(x, y);
+    f.down(x, y);
+    check(f.lane->isTrimming(), "premise: a press on the edge starts a trim");
+
+    f.manager->setWindowPointerPosition(x, -40.0f); // dragged up into the transport bar
+    f.up(x, -40.0f);                                // and released there
+    f.manager->onWindowMouseReleased();             // what the window manager does on every left release
+    check(!f.lane->isTrimming(), "a release over the transport bar must end the trim");
+    check(!f.manager->isTrimCursorShown(), "with the trim over, the timeline must give the arrow back");
+}
+
+// Live report, 28 Nov 2026 (second repro, "when you move quickly"): hover a clip edge on track 1, then go straight up
+// across the transport. The empty gaps of the transport bar consume no move, so the dispatcher OFFERS it on to the
+// timeline, which records every event it is offered as the position it last heard. The window's position and the
+// timeline's then agree, the hover looks current, and the arrow stays: being offered a move is not the pointer being
+// over the row. The row must drop its edge hover when it is offered a move that is off it.
+void testMoveOffTheRowClearsTheEdgeHover() {
+    Fixture f;
+    if (!f.build()) return;
+    const auto c = f.clip();
+    const float x = c.x + c.width - 3.0f;
+    const float y = c.y + c.height * 0.5f;
+
+    f.manager->setWindowPointerPosition(x, y);
+    f.move(x, y);
+    check(f.lane->isHoveringTrimEdge(), "premise: the pointer is on the clip's trim edge");
+
+    f.manager->setWindowPointerPosition(x, -40.0f); // the window reports the move
+    f.move(x, -40.0f);                              // and the timeline is offered it too (a gap in the transport)
+    check(!f.lane->isHoveringTrimEdge(), "a move offered to the row from off it must clear its edge hover");
+    check(!f.manager->isTrimCursorShown(), "so the timeline must not paint the trim arrow over the transport");
+}
+
 int main() {
     testEdgeStripResizesInTheBody();
     testTopCornerGrabsFade();
@@ -240,6 +314,9 @@ int main() {
     testSplitToolSplitsTheBody();
     testSplitToolHeaderMovesTheClip();
     testSplitToolEdgeTrims();
+    testStaleTrimHoverStopsPaintingOverTheTransport();
+    testTrimReleasedOverTheTransportEndsTheTrim();
+    testMoveOffTheRowClearsTheEdgeHover();
     if (g_failures == 0) {
         std::cout << "Clip edge zone tests passed\n";
         return 0;

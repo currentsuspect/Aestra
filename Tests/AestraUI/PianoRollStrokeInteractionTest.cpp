@@ -342,8 +342,40 @@ void testLeavingTheGridHandsTheCursorBack() {
     check(bridge.getCursorStyle() == NUICursorStyle::Arrow, "left of the grid the pencil is handed back as the arrow");
 }
 
+// A menu or dropdown opened over the grid owns the pointer: the grid hears no more moves while the pointer is over
+// it, so a pencil set a moment earlier would stay on top of the menu. While any popup is open the grid shows the arrow,
+// and gives the pencil back when the last popup closes.
+void testPopupOverTheGridHandsThePencilBack() {
+    NUIPlatformBridge bridge;
+    PianoRollNoteLayer layer;
+    layer.setBounds({100.0f, 100.0f, 800.0f, 600.0f});
+    layer.setPlatformBridge(&bridge);
+    layer.setTool(GlobalTool::Pencil);
+
+    NUIMouseEvent move;
+    move.type = NUIMouseEventType::Move;
+    move.position = {400.0f, 300.0f};
+    layer.onMouseEvent(move);
+    check(bridge.getCursorStyle() == NUICursorStyle::Pencil, "popup: over the grid with Draw the cursor is the pencil");
+
+    int popupToken = 0; // any address stands in for an open menu
+    NUIComponent::setPopupOpen(&popupToken, true);
+    layer.onUpdate(0.016); // the frame after the menu opens on top of the pointer
+    check(bridge.getCursorStyle() == NUICursorStyle::Arrow, "popup: a menu opening over the pencil hands the arrow back");
+
+    move.position = {420.0f, 310.0f}; // a move the grid still hears, beside the menu
+    layer.onMouseEvent(move);
+    check(bridge.getCursorStyle() == NUICursorStyle::Arrow, "popup: the pencil does not come back while a popup is open");
+
+    NUIComponent::setPopupOpen(&popupToken, false);
+    move.position = {440.0f, 320.0f};
+    layer.onMouseEvent(move);
+    check(bridge.getCursorStyle() == NUICursorStyle::Pencil, "popup: the pencil returns once the popup has closed");
+}
+
 int main() {
     testLeavingTheGridHandsTheCursorBack();
+    testPopupOverTheGridHandsThePencilBack();
     testChordBrushPaintsCompleteTriadsAsOneEdit();
     testRightDragEraseCommitsOnce();
     testSelectionHandleStretchesPhraseTimingAsOneEdit();

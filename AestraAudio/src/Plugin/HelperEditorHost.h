@@ -9,6 +9,7 @@
 // Everything here runs on the helper's command thread, between commands (see HelperLineReader.h): no thread of its own.
 
 #include "Plugin/EditorLoopPump.h"
+#include "Plugin/EditorWindowIdentity.h"
 
 #include <cstdint>
 #include <functional>
@@ -136,9 +137,20 @@ public:
                 return static_cast<std::uintptr_t>(m_window);
             }
             XStoreName(m_display, m_window, title.c_str());
+            // Say what this window is: a class a compositor rule can match, and a dialog type so tiling compositors
+            // float it at its own size instead of squeezing it into a tile.
+            {
+                const auto& identity = Aestra::Audio::kStandaloneEditorWindow;
+                XClassHint classHint{const_cast<char*>(identity.resName), const_cast<char*>(identity.resClass)};
+                XSetClassHint(m_display, m_window, &classHint);
+                const Atom typeProperty = XInternAtom(m_display, "_NET_WM_WINDOW_TYPE", False);
+                const Atom typeValue = XInternAtom(m_display, identity.windowType, False);
+                XChangeProperty(m_display, m_window, typeProperty, XA_ATOM, 32, PropModeReplace,
+                                reinterpret_cast<const unsigned char*>(&typeValue), 1);
+            }
             XSetWMProtocols(m_display, m_window, &m_wmDelete, 1);
             XSelectInput(m_display, m_window, StructureNotifyMask | KeyPressMask | KeyReleaseMask | FocusChangeMask);
-            if (!resizable) {
+            if (Aestra::Audio::editorSizeIsPinned(resizable)) {
                 XSizeHints hints{};
                 hints.flags = PMinSize | PMaxSize;
                 hints.min_width = hints.max_width = w;

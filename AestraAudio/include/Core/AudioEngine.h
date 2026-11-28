@@ -103,10 +103,10 @@ public:
      *
      * Not yet AESTRA_RT_NONBLOCKING. Annotating this entry point pulls its whole
      * callee graph under the compile-time check (RealtimeThreadGuard.h), and a
-     * survey of that graph found real work behind it — including a shared_ptr
-     * returned by value from UnitManager::getAudioSnapshot(), whose destructor
-     * can free on the audio thread. Tracked separately; do not annotate this
-     * without doing that work, because a red gate teaches people to skip gates.
+     * survey of that graph found real work behind it. The Arsenal snapshot is no longer
+     * part of it: the live path reads UnitManager::readAudioSnapshotRt(), and
+     * ArsenalSnapshotRealtimeReadTest fails on a return to getAudioSnapshot(). Tracked
+     * in #886; do not annotate this without finishing that work (a red gate teaches skipping).
      */
     int processBlock(float* outputBuffer, const float* inputBuffer, uint32_t numFrames, double streamTime);
     void beginManualRender(); // non-RT; see ManualRenderLease (Core/ManualRenderLease.h)

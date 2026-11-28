@@ -838,19 +838,38 @@ NUICursorStyle PianoRollNoteLayer::toolCursor() const {
     }
 }
 
+// Every cursor this layer sets goes through here. While any popup (menu, dropdown, picker) is open and no gesture
+// is running, the pointer belongs to the popup, not to the grid: the grid shows the arrow instead of the pencil,
+// eraser or edge handle it would otherwise draw under a menu it cannot see.
+void PianoRollNoteLayer::applyCursor(NUICursorStyle style) {
+    if (!platformBridge_) return;
+    const bool popupOwnsPointer = state_ == State::None && NUIComponent::isAnyPopupOpen();
+    platformBridge_->setCursorStyle(popupOwnsPointer ? NUICursorStyle::Arrow : style);
+}
+
+// A menu that opens on top of a pointer already over the grid sends the grid no further moves, so nothing else would
+// take the pencil back: hand it back on the next frame.
+void PianoRollNoteLayer::onUpdate(double deltaTime) {
+    NUIComponent::onUpdate(deltaTime);
+    if (pointerInside_ && state_ == State::None && NUIComponent::isAnyPopupOpen()) {
+        applyCursor(NUICursorStyle::Arrow);
+        pointerInside_ = false;
+    }
+}
+
 bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
     if (state_ == State::None && !getBounds().contains(event.position)) {
-        if (pointerInside_ && platformBridge_) platformBridge_->setCursorStyle(NUICursorStyle::Arrow); pointerInside_ = false; // leaving the grid hands the pencil/eraser back
+        if (pointerInside_ && platformBridge_) applyCursor(NUICursorStyle::Arrow); pointerInside_ = false; // leaving the grid hands the pencil/eraser back
         if (hoveredNoteIndex_ != -1) {
             hoveredNoteIndex_ = -1;
             hoverOnRightEdge_ = false;
             hoverOnLeftEdge_ = false;
-            if (platformBridge_) platformBridge_->setCursorStyle(NUICursorStyle::Arrow);
+            if (platformBridge_) applyCursor(NUICursorStyle::Arrow);
         }
         if (m_hoverOnSelectionStretch) {
             m_hoverOnSelectionStretch = false;
             if (platformBridge_)
-                platformBridge_->setCursorStyle(NUICursorStyle::Arrow);
+                applyCursor(NUICursorStyle::Arrow);
             repaint();
         }
         if (hoveredPitch_ != -1) {
@@ -905,7 +924,7 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             hoverOnLeftEdge_ = false;
             hoverBeat_ = -1.0;
             if (platformBridge_)
-                platformBridge_->setCursorStyle(NUICursorStyle::ResizeEW);
+                applyCursor(NUICursorStyle::ResizeEW);
             return true;
         }
 
@@ -929,7 +948,7 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
                 repaint();
             }
             if (platformBridge_) {
-                platformBridge_->setCursorStyle(toolCursor());
+                applyCursor(toolCursor());
             }
         } else {
             const auto& n = notes_[hitIdx];
@@ -948,11 +967,11 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             if (platformBridge_) {
                 // The eraser deletes what it touches: it never offers to grab or resize.
                 if (tool_ == GlobalTool::Eraser)
-                    platformBridge_->setCursorStyle(NUICursorStyle::Eraser);
+                    applyCursor(NUICursorStyle::Eraser);
                 else if (onLeftEdge || onRightEdge)
-                    platformBridge_->setCursorStyle(NUICursorStyle::ResizeEW);
+                    applyCursor(NUICursorStyle::ResizeEW);
                 else
-                    platformBridge_->setCursorStyle(NUICursorStyle::Grab);
+                    applyCursor(NUICursorStyle::Grab);
             }
         }
     }
@@ -1038,7 +1057,7 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             dragStartNotes_ = notes_;
             m_hoverOnSelectionStretch = true;
             if (platformBridge_)
-                platformBridge_->setCursorStyle(NUICursorStyle::ResizeEW);
+                applyCursor(NUICursorStyle::ResizeEW);
             repaint();
             return true;
         }
@@ -1273,7 +1292,7 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
                 dragStartPos_ = event.position;
                 dragStartScrollX_ = scrollX_;
                 dragStartScrollY_ = scrollY_;
-                if (platformBridge_) platformBridge_->setCursorStyle(NUICursorStyle::Grabbing);
+                if (platformBridge_) applyCursor(NUICursorStyle::Grabbing);
                 repaint();
                 return true;
             }
@@ -1322,7 +1341,7 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             lastNoteDuration_ = notes_[clickedIndex].durationBeats;
 
             if (platformBridge_) {
-                platformBridge_->setCursorStyle(
+                applyCursor(
                     (isLeftEdge || isRightEdge) ? NUICursorStyle::ResizeEW : NUICursorStyle::Grabbing);
             }
 
@@ -1574,7 +1593,7 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             // and notes inside the box were selected during drag.
             state_ = State::None;
             selectionRect_ = NUIRect(0, 0, 0, 0);
-            if (platformBridge_) platformBridge_->setCursorStyle(NUICursorStyle::Arrow);
+            if (platformBridge_) applyCursor(NUICursorStyle::Arrow);
             repaint();
             return true;
         }
@@ -1596,7 +1615,7 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             copyDragIndices_.clear();
             m_hoverOnSelectionStretch = false;
             m_selectionStretchChanged = false;
-            if (platformBridge_) platformBridge_->setCursorStyle(NUICursorStyle::Arrow);
+            if (platformBridge_) applyCursor(NUICursorStyle::Arrow);
             if (shouldCommit) {
                 continuingEdit_ = continuesCopyDrag;
                 commitNotes();
