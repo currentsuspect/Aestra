@@ -10,6 +10,12 @@
 #include <memory>
 #include <string>
 
+namespace Aestra {
+namespace Audio {
+class IPluginInstance;
+}
+} // namespace Aestra
+
 namespace AestraUI {
 
 // Forward declaration
@@ -206,6 +212,13 @@ protected:
     // The parameter being dragged, or -1. Read-only for subclasses that draw a
     // drag highlight; handleKnobDrag() owns it.
     int knobDragParam() const { return m_knobDragParam; }
+
+public:
+    /// The plugin whose knobs this window shows, so a double-click on a knob can put it back to the plugin's default.
+    void setKnobDefaultsFrom(std::weak_ptr<Aestra::Audio::IPluginInstance> plugin) { m_knobPlugin = std::move(plugin); }
+
+protected:
+    std::weak_ptr<Aestra::Audio::IPluginInstance> m_knobPlugin;
 
     int m_knobDragParam = -1;
 

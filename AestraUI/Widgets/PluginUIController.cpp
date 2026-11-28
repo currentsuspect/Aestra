@@ -1135,6 +1135,8 @@ void PluginEditorWindow::setOnClose(std::function<void()> callback) {
 void PluginUIController::attachPresetBar(const std::shared_ptr<AestraPanelWindow>& editor,
                                          const std::shared_ptr<Aestra::Audio::IPluginInstance>& instance) {
     if (!editor || !instance || !m_presetContext) return;
+    // A double-click on one of this window's knobs puts it back to the plugin's default (AestraPanelWindow::handleKnobDrag).
+    editor->setKnobDefaultsFrom(instance);
     auto context = m_presetContext(instance);
     if (!context) return;
     if (!m_presetLibrary)
