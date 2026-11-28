@@ -677,7 +677,7 @@ std::vector<PluginInfo> PluginScanner::rescanPlugin(const std::filesystem::path&
 // Results
 // ==============================
 
-const std::vector<PluginInfo>& PluginScanner::getScannedPlugins() const {
+std::vector<PluginInfo> PluginScanner::getScannedPlugins() const {
     std::lock_guard<std::mutex> lock(m_mutex);
     return m_scannedPlugins;
 }

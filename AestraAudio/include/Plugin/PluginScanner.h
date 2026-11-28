@@ -217,9 +217,11 @@ public:
 
     /**
      * @brief Get all scanned plugins
-     * @return Vector of plugin info (may be empty if not scanned)
+     * @return A snapshot of the catalog, copied under the scanner's lock (may be empty if not scanned). Never a
+     *         reference: a scan on the worker thread replaces the catalog, which would free the storage under a
+     *         caller still iterating it.
      */
-    const std::vector<PluginInfo>& getScannedPlugins() const;
+    std::vector<PluginInfo> getScannedPlugins() const;
 
     /**
      * @brief Get plugins filtered by type
