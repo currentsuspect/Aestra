@@ -764,3 +764,9 @@ target_link_libraries(SandboxReactivateTest PRIVATE AestraAudio)
 add_test(NAME SandboxReactivateTest COMMAND SandboxReactivateTest $<TARGET_FILE:AestraPluginHost>)
 set_tests_properties(SandboxReactivateTest PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 60
     LABELS "audio;plugins;regression;contract:plugins")
+
+# The sandbox helper's standalone editor window carries a WM class and a dialog type, so tiling compositors float it.
+add_executable(EditorWindowIdentityTest AestraAudio/EditorWindowIdentityTest.cpp)
+target_include_directories(EditorWindowIdentityTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)
+add_test(NAME EditorWindowIdentityTest COMMAND EditorWindowIdentityTest)
+set_tests_properties(EditorWindowIdentityTest PROPERTIES LABELS "audio;plugins;editor;regression;contract:plugins" TIMEOUT 30)
