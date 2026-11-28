@@ -16,9 +16,13 @@
 // getLatencySamples() reports that chunk, which is what PDC must compensate.
 #include "OutOfProcessPluginInstance.h"
 
+#include "Plugin/OfflineRenderMode.h"
+
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cstring>
+#include <thread>
 #include <vector>
 
 namespace Aestra {
@@ -49,17 +53,22 @@ void OutOfProcessPluginInstance::process(const float* const* inputs, float** out
 
     // 1. A finished chunk joins the output, at its place on the timeline. A gap (a result the
     //    helper could not hand over) restarts the output there.
-    uint8_t readyFull = 2;
-    if (m_readyState.compare_exchange_strong(readyFull, 3, std::memory_order_acq_rel)) {
-        const uint32_t frames = std::min(m_readyFrames.load(std::memory_order_acquire), m_maxBlockSize);
-        if (m_outFifo.frames() == 0 || m_readyStart != m_outStart + m_outFifo.frames()) {
-            m_outFifo.clear();
-            m_outStart = m_readyStart;
+    const auto takeFinishedChunk = [&] {
+        uint8_t readyFull = 2;
+        if (m_readyState.compare_exchange_strong(readyFull, 3, std::memory_order_acq_rel)) {
+            const uint32_t frames = std::min(m_readyFrames.load(std::memory_order_acquire), m_maxBlockSize);
+            if (m_outFifo.frames() == 0 || m_readyStart != m_outStart + m_outFifo.frames()) {
+                m_outFifo.clear();
+                m_outStart = m_readyStart;
+            }
+            m_outFifo.pushInterleaved(m_readyOutput.data(), frames);
+            m_readyState.store(0, std::memory_order_release);
+            m_helperBlocks.fetch_add(1, std::memory_order_relaxed);
         }
-        m_outFifo.pushInterleaved(m_readyOutput.data(), frames);
-        m_readyState.store(0, std::memory_order_release);
-        m_helperBlocks.fetch_add(1, std::memory_order_relaxed);
-    }
+    };
+    takeFinishedChunk();
+    const uint64_t processedBeforeSend = m_processedBlocks.load(std::memory_order_acquire);
+    bool sentChunk = false;
 
     // 2. This callback's input and MIDI join the input FIFO.
     const uint64_t callbackStart = m_inFifoEnd;
@@ -97,12 +106,26 @@ void OutOfProcessPluginInstance::process(const float* const* inputs, float** out
             m_pendingFrames.store(chunk, std::memory_order_release);
             m_pendingState.store(2, std::memory_order_release);
             wakeWorker();
+            sentChunk = true;
         } else {
             m_unsentBlocks.fetch_add(1, std::memory_order_relaxed);
         }
     }
     if (queued < numFrames) {
         m_unsentBlocks.fetch_add(1, std::memory_order_relaxed); // the helper fell a whole FIFO behind
+    }
+
+    // 3b. An offline render (a bounce, a freeze, an export) runs flat out, far faster than the helper can follow, so with the
+    //     hand-off above nearly every block would play dry or go unsent and be baked into the audio. Offline, the chunk just
+    //     handed over is waited for and taken at once: the same one-chunk delay (so delay compensation lines up), but exact.
+    //     Never on the live audio thread: only the exporter sets this, around a render on its own thread.
+    if (sentChunk && OfflineRenderMode::active()) {
+        const auto giveUpAt = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+        while (m_processedBlocks.load(std::memory_order_acquire) == processedBeforeSend &&
+               !m_crashed.load(std::memory_order_acquire) && std::chrono::steady_clock::now() < giveUpAt) {
+            std::this_thread::yield();
+        }
+        takeFinishedChunk();
     }
 
     // 4. Play the wet frames for one chunk ago. Late ones are skipped. Before the first chunk
