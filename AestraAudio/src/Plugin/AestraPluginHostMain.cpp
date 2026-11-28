@@ -23,6 +23,11 @@
 #include <thread>
 #include <vector>
 
+#if defined(__linux__)
+#include <pthread.h> // SCHED_FIFO for the audio thread
+#include <sched.h>
+#endif
+
 #ifdef _WIN32
 #include <fcntl.h>
 #include <io.h>
@@ -480,6 +485,15 @@ int main(int argc, char** argv) {
     // command to be answered before it reads the next, so the app still sees one command at a time, in order.
     AestraHelper::CommandMailbox mailbox;
     std::thread pipeThread([&] {
+#if defined(__linux__)
+        // This thread does the plugin's audio. The app runs its own sandbox worker at SCHED_FIFO mid-range minus one so
+        // ordinary work never holds it back; this one sits just below it. At normal priority it lost to everything else
+        // on a busy machine, including the plugin's own GUI threads (a Vital editor open with the CPU busy: 10% of blocks
+        // late). Best effort: without RLIMIT_RTPRIO the call fails and the thread stays a normal one.
+        sched_param param{};
+        param.sched_priority = (sched_get_priority_max(SCHED_FIFO) + sched_get_priority_min(SCHED_FIFO)) / 2 - 2;
+        pthread_setschedparam(pthread_self(), SCHED_FIFO, &param);
+#endif
         AestraHelper::LineReader lineReader;
         std::string text;
         for (;;) {

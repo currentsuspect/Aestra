@@ -780,3 +780,13 @@ if(UNIX AND TARGET AestraPluginHost)
     add_test(NAME SandboxHelperExitTest COMMAND SandboxHelperExitTest)
     set_tests_properties(SandboxHelperExitTest PROPERTIES TIMEOUT 120 LABELS "audio;plugins;regression;contract:plugins")
 endif()
+
+# The helper's audio thread runs at real-time priority where RLIMIT_RTPRIO allows it (the app's worker already does).
+if(UNIX AND NOT APPLE AND TARGET AestraPluginHost)
+    add_executable(SandboxHelperPriorityTest AestraAudio/SandboxHelperPriorityTest.cpp)
+    target_compile_definitions(SandboxHelperPriorityTest PRIVATE HELPER_PATH="$<TARGET_FILE:AestraPluginHost>")
+    add_dependencies(SandboxHelperPriorityTest AestraPluginHost)
+    add_test(NAME SandboxHelperPriorityTest COMMAND SandboxHelperPriorityTest)
+    set_tests_properties(SandboxHelperPriorityTest PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 60
+        LABELS "audio;plugins;rt-safety;regression;contract:plugins")
+endif()
