@@ -232,6 +232,37 @@ void testSplitToolEdgeTrims() {
 
 } // namespace
 
+// Live report, 28 Nov 2026: hover a clip's trim edge, then move up into the transport bar. The transport takes those
+// moves, so the clip row never hears the pointer leave and its trim hover stays set; the timeline kept painting the
+// left-right arrow at the real pointer position for the whole journey along the transport. The window reports every
+// pointer move, so a position the timeline did not hear is the signal that its hover is stale (the claim already
+// honours it; the paint did not). An active trim owns the pointer wherever it goes.
+void testStaleTrimHoverStopsPaintingOverTheTransport() {
+    Fixture f;
+    if (!f.build()) return;
+    const auto c = f.clip();
+    const float x = c.x + c.width - 3.0f;
+    const float y = c.y + c.height * 0.5f;
+
+    f.manager->setWindowPointerPosition(x, y); // the window reports every move
+    f.move(x, y);                              // and this one reaches the timeline
+    check(f.lane->isHoveringTrimEdge(), "premise: the pointer is on the clip's trim edge");
+    check(f.manager->isTrimCursorShown(), "on the edge the trim arrow is drawn");
+
+    f.manager->setWindowPointerPosition(x, -40.0f); // up into the transport bar: the timeline never hears this move
+    check(f.lane->isHoveringTrimEdge(), "premise: the row never heard the pointer leave, so its hover is stale");
+    check(!f.manager->isTrimCursorShown(), "a stale trim hover must not keep painting the arrow at the pointer");
+
+    f.manager->setWindowPointerPosition(x, y); // back at the position the timeline last heard
+    check(f.manager->isTrimCursorShown(), "back on the edge the arrow returns");
+
+    f.down(x, y);
+    check(f.lane->isTrimming(), "premise: a press on the edge starts a trim");
+    f.manager->setWindowPointerPosition(x, -40.0f);
+    check(f.manager->isTrimCursorShown(), "an active trim keeps its arrow wherever the pointer goes");
+    f.up(x, y);
+}
+
 int main() {
     testEdgeStripResizesInTheBody();
     testTopCornerGrabsFade();
@@ -240,6 +271,7 @@ int main() {
     testSplitToolSplitsTheBody();
     testSplitToolHeaderMovesTheClip();
     testSplitToolEdgeTrims();
+    testStaleTrimHoverStopsPaintingOverTheTransport();
     if (g_failures == 0) {
         std::cout << "Clip edge zone tests passed\n";
         return 0;
