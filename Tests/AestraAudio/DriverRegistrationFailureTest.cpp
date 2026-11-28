@@ -20,7 +20,7 @@ namespace {
 int g_failures = 0;
 
 void check(bool condition, const std::string& label) {
-    std::cout << (condition ? "PASS: " : "FAIL: ") << label << "\n";
+    std::cout << (condition ? "PASS: " : "FAIL: ") << label << std::endl; // flushed: a crash must show the last line reached
     if (!condition) {
         ++g_failures;
     }
@@ -98,7 +98,9 @@ int main() {
         manager->closeStream();
 
         manager->shutdown();
+        std::cout << "step: re-initialising with platform drivers" << std::endl;
         manager->initialize(true);
+        std::cout << "step: re-initialised" << std::endl;
         check(manager->getDriverRegistrationFailure().find(stale) == std::string::npos,
               "a new initialization does not report the previous cause");
         check(manager->getFallbackReason().find(stale) == std::string::npos,

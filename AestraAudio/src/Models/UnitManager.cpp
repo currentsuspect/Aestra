@@ -1,6 +1,7 @@
 #include "UnitManager.h"
 
 #include "GarbageCollector.h"
+#include "RealtimeThreadGuard.h"
 #include "Models/PatternManager.h"
 #include "IO/MetadataParser.h"
 #include "IO/MiniAudioDecoder.h"
@@ -310,6 +311,9 @@ void UnitManager::publishSnapshot() {
 }
 
 std::shared_ptr<const AudioArsenalSnapshot> UnitManager::getAudioSnapshot() const {
+    // Control threads only. AtomicSharedPtr is not guaranteed lock-free (a pooled mutex in a C++17 build, a
+    // lock bit in std::atomic<shared_ptr>), so the audio thread reads readAudioSnapshotRt() instead.
+    reportRealtimeMisuse("UnitManager::getAudioSnapshot");
     auto snapshot = m_publishedSnapshot.load(std::memory_order_acquire);
     return std::const_pointer_cast<const AudioArsenalSnapshot>(snapshot);
 }

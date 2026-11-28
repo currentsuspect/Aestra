@@ -201,7 +201,7 @@ std::shared_ptr<NUITheme> NUITheme::loadFromFile(const std::string& filepath) {
         return theme;
     }
 
-    Aestra::JSON root = Aestra::JSON::parse(content);
+    const Aestra::JSON root = Aestra::JSON::parse(content);
     if (!root.isObject()) {
         Aestra::Log::error("[NUITheme] Theme file '" + filepath + "' is not a valid JSON object — using default theme");
         return theme;
@@ -212,11 +212,10 @@ std::shared_ptr<NUITheme> NUITheme::loadFromFile(const std::string& filepath) {
     int applied = 0;
     int skipped = 0;
 
-    // NOTE: Aestra::JSON's const asObject() intentionally returns an empty map
-    // (SEC-RTM-014); iterate via the non-const copy-returning overload.
-    auto rootObj = root.asObject();
+    const auto& rootObj = root.asObject();
 
-    auto forEachEntry = [&](const char* section, const std::function<bool(const std::string&, Aestra::JSON&)>& apply) {
+    auto forEachEntry = [&](const char* section,
+                            const std::function<bool(const std::string&, const Aestra::JSON&)>& apply) {
         auto it = rootObj.find(section);
         if (it == rootObj.end()) {
             return;
@@ -226,8 +225,8 @@ std::shared_ptr<NUITheme> NUITheme::loadFromFile(const std::string& filepath) {
                                  "' is not an object — ignored");
             return;
         }
-        auto entries = it->second.asObject();
-        for (auto& [key, value] : entries) {
+        const auto& entries = it->second.asObject();
+        for (const auto& [key, value] : entries) {
             if (apply(key, value)) {
                 ++applied;
             } else {
@@ -238,7 +237,7 @@ std::shared_ptr<NUITheme> NUITheme::loadFromFile(const std::string& filepath) {
         }
     };
 
-    forEachEntry("colors", [&](const std::string& key, Aestra::JSON& value) {
+    forEachEntry("colors", [&](const std::string& key, const Aestra::JSON& value) {
         NUIColor color;
         if (!value.isString() || !parseHexColor(value.asString(), color)) {
             return false;
@@ -247,7 +246,7 @@ std::shared_ptr<NUITheme> NUITheme::loadFromFile(const std::string& filepath) {
         return true;
     });
 
-    auto numericEntry = [](Aestra::JSON& value, float& out, bool requirePositive) {
+    auto numericEntry = [](const Aestra::JSON& value, float& out, bool requirePositive) {
         if (!value.isNumber() || !std::isfinite(value.asNumber())) {
             return false;
         }
@@ -258,7 +257,7 @@ std::shared_ptr<NUITheme> NUITheme::loadFromFile(const std::string& filepath) {
         return true;
     };
 
-    forEachEntry("dimensions", [&](const std::string& key, Aestra::JSON& value) {
+    forEachEntry("dimensions", [&](const std::string& key, const Aestra::JSON& value) {
         float v = 0.0f;
         if (!numericEntry(value, v, requiresPositiveDimension(key)))
             return false;
@@ -266,7 +265,7 @@ std::shared_ptr<NUITheme> NUITheme::loadFromFile(const std::string& filepath) {
         return true;
     });
 
-    forEachEntry("effects", [&](const std::string& key, Aestra::JSON& value) {
+    forEachEntry("effects", [&](const std::string& key, const Aestra::JSON& value) {
         float v = 0.0f;
         if (!numericEntry(value, v, false))
             return false;
@@ -274,7 +273,7 @@ std::shared_ptr<NUITheme> NUITheme::loadFromFile(const std::string& filepath) {
         return true;
     });
 
-    forEachEntry("fontSizes", [&](const std::string& key, Aestra::JSON& value) {
+    forEachEntry("fontSizes", [&](const std::string& key, const Aestra::JSON& value) {
         float v = 0.0f;
         if (!numericEntry(value, v, true))
             return false; // font sizes must be > 0

@@ -199,13 +199,7 @@ HostVerbResult HostVerbRegistry::invoke(const std::string& name, const JSON& arg
     // Checked BEFORE required args on purpose. Typing "framez" for "frames"
     // otherwise reports the required arg as missing, which sends the caller
     // looking for an argument they did in fact pass, spelled wrong.
-    // The non-const copy is load-bearing: JSON's const asObject() returns an
-    // EMPTY static, while the non-const overload returns the real map by value.
-    // Inlining provided.asObject() here would make this loop iterate nothing and
-    // silently stop rejecting misspelled args. Same footgun as jsonArgsToFlags
-    // in MuseService.cpp.
-    JSON mutableArgs = provided;
-    for (const auto& entry : mutableArgs.asObject()) {
+    for (const auto& entry : provided.asObject()) {
         const bool declared =
             std::any_of(spec.args.begin(), spec.args.end(),
                         [&](const HostVerbArg& arg) { return arg.name == entry.first; });
