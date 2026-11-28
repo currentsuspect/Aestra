@@ -84,6 +84,28 @@ int main() {
         manager->closeStream();
     }
 
+    {
+        // A second initialization must not inherit the first one's cause (CodeRabbit, #1491). The cause is recorded
+        // while platform drivers register, so it is cleared just before they register again. Whether real
+        // registration succeeds here depends on the machine; either way the stale text must be gone, and so must
+        // the fallback reason that was derived from it.
+        const std::string stale = "STALE-CAUSE-FROM-A-PREVIOUS-INITIALIZE";
+        auto manager = managerWithOnlyTheSilentDriver();
+        manager->setDriverRegistrationFailure(stale);
+        check(manager->openStream(silentConfig(*manager), silentCallback, nullptr), "stale: the silent driver opens");
+        check(manager->getFallbackReason().find(stale) != std::string::npos,
+              "stale: the first fallback reason carries the first cause (premise)");
+        manager->closeStream();
+
+        manager->shutdown();
+        manager->initialize(true);
+        check(manager->getDriverRegistrationFailure().find(stale) == std::string::npos,
+              "a new initialization does not report the previous cause");
+        check(manager->getFallbackReason().find(stale) == std::string::npos,
+              "a new initialization does not keep a fallback reason built from the previous cause");
+        manager->shutdown();
+    }
+
     if (g_failures > 0) {
         std::cerr << g_failures << " check(s) failed\n";
         return 1;

@@ -51,6 +51,14 @@ bool AudioDeviceManager::initialize(bool registerPlatformDrivers) {
         // Tests pass registerPlatformDrivers=false to run against only the drivers
         // they injected via addDriver() (no real hardware).
         if (registerPlatformDrivers) {
+            {
+                // A new registration attempt starts with a clean slate: a cause (and the fallback reason built
+                // from it) left by an earlier initialize()/shutdown() must not be reported for this one. Cleared
+                // briefly under the lock; registration itself runs unlocked because it calls back into addDriver().
+                std::lock_guard<std::mutex> lock(m_mutex);
+                m_driverRegistrationFailure.clear();
+                m_fallbackReason.clear();
+            }
             AESTRA_LOG_DEBUG("RegisterPlatformDrivers about to be called");
             RegisterPlatformDrivers(*this);
         }

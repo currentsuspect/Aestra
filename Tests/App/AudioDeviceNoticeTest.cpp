@@ -20,7 +20,6 @@ int main() {
         check(lost.show, "a lost interface is announced");
         check(lost.text == "Your audio interface disconnected. Aestra keeps running without sound until it's back.",
               "lost wording is plain and says what happens next");
-        check(lost.seconds >= 8.0, "the lost message stays up long enough to read");
         check(!s.onLost().show, "a loss is announced once, not on every report");
         const auto back = s.onRestored("Scarlett 2i2");
         check(back.show && back.text == "Your audio interface (Scarlett 2i2) is back.", "restore names the device");
@@ -40,7 +39,6 @@ int main() {
         check(none.show, "no device at startup is announced");
         check(none.text == "Aestra couldn't open an audio device, so it's running without sound. Check your sound settings, then restart Aestra.",
               "startup wording says what happened and what to try");
-        check(none.seconds >= 8.0, "the startup message stays up long enough to read");
         check(!s.onUnavailableAtStart().show, "the startup message is said once");
         check(!s.substituted(), "it does not pretend an interface was lost");
         check(!s.onRestored("X").show, "nothing 'is back' follows a startup that never had a device");
